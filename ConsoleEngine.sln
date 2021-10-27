@@ -1,0 +1,22 @@
+﻿
+Microsoft Visual Studio Solution File, Format Version 12.00
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "ConsoleEngine", "ConsoleEngine\ConsoleEngine.csproj", "{CC763EA2-7C5E-45C2-948C-BA0279D3C04F}"
+EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "ConsoleGame", "ConsoleGame\ConsoleGame.csproj", "{579B7370-9428-4D62-BC2D-3D689B2C4D94}"
+EndProject
+Global
+	GlobalSection(SolutionConfigurationPlatforms) = preSolution
+		Debug|Any CPU = Debug|Any CPU
+		Release|Any CPU = Release|Any CPU
+	EndGlobalSection
+	GlobalSection(ProjectConfigurationPlatforms) = postSolution
+		{CC763EA2-7C5E-45C2-948C-BA0279D3C04F}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{CC763EA2-7C5E-45C2-948C-BA0279D3C04F}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{CC763EA2-7C5E-45C2-948C-BA0279D3C04F}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{CC763EA2-7C5E-45C2-948C-BA0279D3C04F}.Release|Any CPU.Build.0 = Release|Any CPU
+		{579B7370-9428-4D62-BC2D-3D689B2C4D94}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{579B7370-9428-4D62-BC2D-3D689B2C4D94}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{579B7370-9428-4D62-BC2D-3D689B2C4D94}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{579B7370-9428-4D62-BC2D-3D689B2C4D94}.Release|Any CPU.Build.0 = Release|Any CPU
+	EndGlobalSection
+EndGlobal
