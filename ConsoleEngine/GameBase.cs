@@ -15,10 +15,11 @@ namespace ConsoleEngine
         //** ctor
         //**********************************************************
 
-        protected GameBase(RenderConsole console)
+        protected GameBase(RenderConsole console) : this(console, "Game") {}
+        protected GameBase(RenderConsole console, string name)
         {
             _console = console;
-            Name = "Game";
+            Name = name;
         }
               
         //**********************************************************
@@ -28,20 +29,23 @@ namespace ConsoleEngine
         public RenderConsole Console => _console;
         public string Name { get; set; }
         public bool ShowFps { get; set; }
+        public bool ClearScreenOnEachFrame { get; set; } = true;
         
         //**********************************************************
         //** abstract methods:
         //**********************************************************
 
-        protected abstract void Update();
-        protected abstract void Render();
+        protected abstract void OnInitialize();
+        protected abstract void OnUpdate();
+        protected abstract void OnRender();
         
         //**********************************************************
         //** methods:
         //**********************************************************
 
-        public virtual void Initialize()
+        public void Initialize()
         {
+            OnInitialize();
             _console.Initialize();
         }
         
@@ -52,11 +56,16 @@ namespace ConsoleEngine
             {
                 GameTimer.Update();
                 Input.Instance.Update();
-                _console.Clear();
-                Update();
-                Render();
+                
+                if (ClearScreenOnEachFrame)
+                    _console.Clear();
+                
+                OnUpdate();
+                OnRender();
+                
                 if (ShowFps) 
                     _console.SetTitle($"{Name} - {GameTimer.Fps}");
+                
                 _console.Display();
             }
         }

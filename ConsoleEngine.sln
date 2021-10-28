@@ -4,6 +4,8 @@ Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "ConsoleEngine", "ConsoleEng
 EndProject
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "ConsoleGame", "ConsoleGame\ConsoleGame.csproj", "{579B7370-9428-4D62-BC2D-3D689B2C4D94}"
 EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Snake", "Snake\Snake.csproj", "{78CF52EC-2625-4E0E-8EBF-733FF4076309}"
+EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
 		Debug|Any CPU = Debug|Any CPU
@@ -18,5 +20,9 @@ Global
 		{579B7370-9428-4D62-BC2D-3D689B2C4D94}.Debug|Any CPU.Build.0 = Debug|Any CPU
 		{579B7370-9428-4D62-BC2D-3D689B2C4D94}.Release|Any CPU.ActiveCfg = Release|Any CPU
 		{579B7370-9428-4D62-BC2D-3D689B2C4D94}.Release|Any CPU.Build.0 = Release|Any CPU
+		{78CF52EC-2625-4E0E-8EBF-733FF4076309}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{78CF52EC-2625-4E0E-8EBF-733FF4076309}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{78CF52EC-2625-4E0E-8EBF-733FF4076309}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{78CF52EC-2625-4E0E-8EBF-733FF4076309}.Release|Any CPU.Build.0 = Release|Any CPU
 	EndGlobalSection
 EndGlobal

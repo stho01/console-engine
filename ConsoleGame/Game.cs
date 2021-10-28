@@ -11,10 +11,7 @@ namespace ConsoleGame
         private readonly char[,] _display = new char[40,40];
 
         public Game()
-            : base(new RenderConsole(40, 40)
-            {
-                Resizeable = false,
-                HideCursor = true,
+            : base(new RenderConsole(40, 40) {
                 FontWidth = 20,
                 FontHeight = 20
             })
@@ -22,7 +19,7 @@ namespace ConsoleGame
             
         }
 
-        public override void Initialize()
+        protected override void OnInitialize()
         {
             GameTimer.SetInterval(500, () => {
                 for (var x = 0; x < 40; x++)
@@ -31,17 +28,15 @@ namespace ConsoleGame
                     _display[x, y] = Chars[Random.Next(0, Chars.Length)];    
                 }
             });
-            
-            base.Initialize();
         }
 
-        protected override void Update()
+        protected override void OnUpdate()
         {
             if (Input.Instance.GetKey(Key.ESCAPE).Pressed) 
                 Stop();
         }
 
-        protected override void Render()
+        protected override void OnRender()
         {
             Console.Draw(0,0, _display);
         }

@@ -26,6 +26,10 @@ namespace ConsoleEngine.Infrastructure
         {
             Width = width;
             Height = height;
+            Area = Width * height;
+            FontWidth = 14;
+            FontHeight = 14;
+            HideCursor = true;
             _chars = new CharInfo[width*height];
             _writeRegion = new SmallRect(0, 0, (short)Width, (short)Height);
             _consoleOutBuffer = GetStdHandle(StdHandle.OutputHandle);
@@ -37,6 +41,8 @@ namespace ConsoleEngine.Infrastructure
 
         public int Width { get; }
         public int Height { get; }
+        /// <summary> The total Screen area. W * H </summary>
+        public int Area { get; }
         public int FontWidth { get; init; }
         public int FontHeight { get; init; }
         public bool Resizeable { get; init; }
@@ -53,7 +59,6 @@ namespace ConsoleEngine.Infrastructure
 
         internal RenderConsole Initialize()
         {
-            
             InitBuffer(_consoleOutBuffer);
             
             if (!Resizeable) 
@@ -61,7 +66,6 @@ namespace ConsoleEngine.Infrastructure
 
             SetCursorVisible(_cursorVisible);
             
-
             return this;
         }
         
@@ -84,6 +88,8 @@ namespace ConsoleEngine.Infrastructure
                 _chars[index].Attributes = (ushort)(CharAttributes.FOREGROUND_GREEN | CharAttributes.FOREGROUND_INTENSITY); 
             }
         }
+
+        public char GetCharAt(int x, int y) => _chars[y * Width + x].UnicodeChar;
         
         internal void Display()
         {
