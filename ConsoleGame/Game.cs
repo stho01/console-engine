@@ -21,7 +21,7 @@ namespace ConsoleGame
 
         protected override void OnInitialize()
         {
-            GameTimer.SetInterval(500, () => {
+            GameTime.SetInterval(500, () => {
                 for (var x = 0; x < 40; x++)
                 for (var y = 0; y < 40; y++)
                 {

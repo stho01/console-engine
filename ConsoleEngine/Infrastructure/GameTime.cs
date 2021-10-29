@@ -3,7 +3,7 @@ using System.Collections.Generic;
 
 namespace ConsoleEngine.Infrastructure
 {
-     public static class GameTimer
+     public static class GameTime
     {
         //**********************************************************
         //** fields:

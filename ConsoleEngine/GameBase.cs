@@ -46,6 +46,7 @@ namespace ConsoleEngine
         public void Initialize()
         {
             OnInitialize();
+            _console.SetTitle(Name);
             _console.Initialize();
         }
         
@@ -54,7 +55,7 @@ namespace ConsoleEngine
             _running = true;
             while (_running)
             {
-                GameTimer.Update();
+                GameTime.Update();
                 Input.Instance.Update();
                 
                 if (ClearScreenOnEachFrame)
@@ -64,7 +65,7 @@ namespace ConsoleEngine
                 OnRender();
                 
                 if (ShowFps) 
-                    _console.SetTitle($"{Name} - {GameTimer.Fps}");
+                    _console.SetTitle($"{Name} - {GameTime.Fps}");
                 
                 _console.Display();
             }

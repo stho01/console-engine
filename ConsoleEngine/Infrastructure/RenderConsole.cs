@@ -1,5 +1,6 @@
 ﻿using System;
 using System.Runtime.InteropServices;
+using ConsoleEngine.Extensions;
 using ConsoleEngine.LowLevel;
 
 namespace ConsoleEngine.Infrastructure
@@ -68,12 +69,15 @@ namespace ConsoleEngine.Infrastructure
             
             return this;
         }
+
+        public void Draw(int x, int y, Sprite sprite) => Draw(x, y, sprite.Data);
         
         public void Draw(int x, int y, char[,] data)
         {
-            for (var dataY = 0; dataY < data.GetLength(1); dataY++)
-            for (var dataX = 0; dataX < data.GetLength(0); dataX++) {
-                Draw(dataX + x, dataY + y, data[dataX, dataY]);
+            var d = data.Transpose();
+            for (var dataX = 0; dataX < d.GetLength(0); dataX++)
+            for (var dataY = 0; dataY < d.GetLength(1); dataY++) {
+                Draw(dataX + x, dataY + y, d[dataX, dataY]);
             }
         }
         
@@ -89,6 +93,18 @@ namespace ConsoleEngine.Infrastructure
             }
         }
 
+        public void Draw(int x, int y, string[] mapTiles)
+        {
+            for (var dataY = 0; dataY < mapTiles.Length; dataY++)
+            for (var dataX = 0; dataX < mapTiles[dataY].Length; dataX++)
+            {
+                var index = (dataY + y) * Width + (dataX + x);
+                _chars[index].UnicodeChar = mapTiles[dataY][dataX];
+                _chars[index].Attributes = (ushort)(CharAttributes.FOREGROUND_GREEN | CharAttributes.FOREGROUND_INTENSITY); 
+            }
+        }
+        
+        
         public char GetCharAt(int x, int y) => _chars[y * Width + x].UnicodeChar;
         
         internal void Display()
@@ -164,5 +180,6 @@ namespace ConsoleEngine.Infrastructure
         {
             Environment.Exit(0);
         }
+
     }
 }
