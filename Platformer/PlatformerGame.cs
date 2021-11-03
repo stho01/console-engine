@@ -1,5 +1,6 @@
 ﻿using ConsoleEngine;
 using ConsoleEngine.Infrastructure;
+using ConsoleEngine.Windows;
 using Microsoft.Xna.Framework;
 using Platformer.Maps;
 using Platformer.Player;
@@ -16,10 +17,10 @@ namespace Platformer
         public static readonly Vector2 Gravity = new(0, 0.01f);
 
         public PlatformerGame() 
-            : base(new RenderConsole(60, 60) {
+            : base(new RenderConsole(new ConsoleHandler(60, 60,new FontInfo {
                 FontWidth = 10,
                 FontHeight = 10,
-            }, "Platformer game") {}
+            })), "Platformer game") {}
 
         protected override void OnInitialize()
         {

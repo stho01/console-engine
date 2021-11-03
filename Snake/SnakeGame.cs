@@ -1,6 +1,7 @@
 ﻿using System;
 using ConsoleEngine;
 using ConsoleEngine.Infrastructure;
+using ConsoleEngine.Windows;
 
 namespace Snake
 {
@@ -23,10 +24,10 @@ namespace Snake
         private static readonly Random Random = new((int)DateTime.Now.Ticks);
         
         public SnakeGame() 
-            : base(new RenderConsole(30, 30) {
+            : base(new RenderConsole(new ConsoleHandler(30, 30, new FontInfo {
                 FontWidth = 14,
                 FontHeight = 14,
-            }) {}
+            }))) {}
 
         protected override void OnInitialize()
         {

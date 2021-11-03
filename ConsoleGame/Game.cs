@@ -1,6 +1,7 @@
 ﻿using System;
 using ConsoleEngine;
 using ConsoleEngine.Infrastructure;
+using ConsoleEngine.Windows;
 
 namespace ConsoleGame
 {
@@ -11,10 +12,11 @@ namespace ConsoleGame
         private readonly char[,] _display = new char[40,40];
 
         public Game()
-            : base(new RenderConsole(40, 40) {
-                FontWidth = 20,
-                FontHeight = 20
-            })
+            : base(new RenderConsole(
+                new ConsoleHandler(40, 40, new FontInfo {
+                    FontWidth = 20,
+                    FontHeight = 20    
+                })))
         {
             
         }

@@ -1,4 +1,6 @@
 ﻿using System;
+using ConsoleEngine.Infrastructure;
+using ConsoleEngine.Windows;
 
 namespace Platformer
 {
@@ -6,6 +8,8 @@ namespace Platformer
     {
         static void Main(string[] args)
         {
+            Input.Instance.SetHandler(new InputHandler());
+            
             var game = new PlatformerGame();
             game.Initialize();
             game.Start();
