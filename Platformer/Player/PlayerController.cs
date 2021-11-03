@@ -6,6 +6,13 @@ namespace Platformer.Player
 {
     public class PlayerController
     {
+        private readonly PlatformerGame _game;
+
+        public PlayerController(PlatformerGame game)
+        {
+            _game = game;
+        }
+        
         public float MovementStrength { get; set; } = 10f;
         public float DragCoefficient { get; set; } = 0.95f;
 
@@ -25,39 +32,39 @@ namespace Platformer.Player
             player.Acceleration += force;
         }
 
-        public void Update(PlayerModel player, Func<Vector2, bool> updateStep)
+        public void Update(PlayerModel player)
         {
+            if (player.IsAirborne)
+                ApplyForce(player, PlatformerGame.Gravity);
+            
             ApplyForce(player, -player.Velocity * DragCoefficient); // apply drag. 
 
             var previousPos = player.Position;
-            var dtStep = GameTime.DeltaTimeSeconds / 100;
-            for (var i = 0; i < 100; i++)
+            const int steps = 25;
+            var stepTime = GameTime.DeltaTimeSeconds / steps;
+            
+            for (var i = 0; i < steps; i++)
             {
-                player.Velocity += player.Acceleration * dtStep;
+                player.Velocity += player.Acceleration * (float)stepTime;
                 player.Position += player.Velocity;
-                player.Acceleration = Vector2.Zero;
                 
-                if (!updateStep(previousPos)) {
+                if (_game.Console.GetCharAt(player.BoundingBox.Top, player.BoundingBox.Left) != ' '
+                || _game.Console.GetCharAt(player.BoundingBox.Top, player.BoundingBox.Right) != ' '
+                || _game.Console.GetCharAt(player.BoundingBox.Bottom, player.BoundingBox.Left) != ' '
+                || _game.Console.GetCharAt(player.BoundingBox.Bottom, player.BoundingBox.Right) != ' ')
+                {
+                    player.Position = previousPos;
+                    player.Velocity = Vector2.Zero;
+                    player.Acceleration = Vector2.Zero;
+                    player.IsAirborne = false;
                     break;
                 }
             }
-        }
-
-        public bool IsPlayerColliding(PlayerModel player, Rectangle[] boundingBoxes)
-        {
-            for (var i = 0; i < boundingBoxes.Length; i++)
-                if (player.BoundingBox.Intersects(boundingBoxes[i]))
-                    return true;
-
-            return false;
-        }
-
-        public void PlayerGrounded(PlayerModel player, Vector2 position)
-        {
-            player.Velocity = Vector2.Zero;
+            
+            if (player.Velocity.LengthSquared() <= 1)
+                player.Velocity = Vector2.Zero;
+            
             player.Acceleration = Vector2.Zero;
-            player.Position = position;
-            player.IsAirborne = false;
         }
     }
 }

@@ -1,4 +1,5 @@
 ﻿using System;
+using ConsoleEngine.Infrastructure;
 using Microsoft.Xna.Framework;
 
 namespace Platformer.Player

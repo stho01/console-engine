@@ -15,9 +15,9 @@ namespace ConsoleEngine.Infrastructure
         //** props:
         //**********************************************************
 
-        public static float DeltaTime { get; private set; }
-        public static float DeltaTimeSeconds => DeltaTime / 10_000_000;
-        public static float DeltaTimeMilliseconds => DeltaTime / 10_000;
+        public static double DeltaTime { get; private set; }
+        public static double DeltaTimeSeconds => DeltaTime / 10_000_000;
+        public static double DeltaTimeMilliseconds => DeltaTime / 10_000;
         public static int Fps { get; private set; }
 
         private static readonly List<Interval> _intervals = new List<Interval>();
@@ -58,7 +58,7 @@ namespace ConsoleEngine.Infrastructure
         {
             private int _ms;
             private readonly Action _callback;
-            private float _elapsed = 0;
+            private double _elapsed = 0;
 
             internal Interval(int ms, Action callback)
             {

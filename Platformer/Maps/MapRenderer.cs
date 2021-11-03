@@ -11,7 +11,7 @@ namespace Platformer.Maps
             _console = console;
         }
 
-        public void Draw(IMap map)
+        public void Draw(IMap map) 
         {
             _console.Draw(0, 0, map.Tiles);
         }

@@ -1,7 +1,9 @@
 ﻿using System;
+using System.Data;
 using System.Runtime.InteropServices;
 using ConsoleEngine.Extensions;
 using ConsoleEngine.LowLevel;
+using Microsoft.Toolkit.HighPerformance;
 
 namespace ConsoleEngine.Infrastructure
 {
@@ -70,47 +72,61 @@ namespace ConsoleEngine.Infrastructure
             return this;
         }
 
-        public void Draw(int x, int y, Sprite sprite) => Draw(x, y, sprite.Data);
-        
-        public void Draw(int x, int y, char[,] data)
+        public void Draw(int x, int y, Sprite sprite)
         {
-            var d = data.Transpose();
-            for (var dataX = 0; dataX < d.GetLength(0); dataX++)
-            for (var dataY = 0; dataY < d.GetLength(1); dataY++) {
-                Draw(dataX + x, dataY + y, d[dataX, dataY]);
+            for (var dataX = 0; dataX < sprite.DataSpan.Width; dataX++)
+            for (var dataY = 0; dataY < sprite.DataSpan.Height; dataY++) {
+                var pixel = sprite.DataSpan[dataX, dataY];
+                Draw(dataX + x, dataY + y, pixel.Char, pixel.ForegroundColor, pixel.BackgroundColor);
+            }
+        }
+
+        public void Draw(int x, int y, Span2D<char> data)
+        {
+            //var d = data.Transpose(); // TODO: Transpose (?)
+            for (var dataX = 0; dataX < data.Width; dataX++)
+            for (var dataY = 0; dataY < data.Height; dataY++) {
+                Draw(dataX + x, dataY + y, data[dataX, dataY]);
             }
         }
         
         public void Draw(int x, int y, short charCode) => Draw(x, y, (char)charCode);
         
-        public void Draw(int x, int y, char character)
+        public void Draw(int x, int y, char character, ConsoleColor foregroundColor = ConsoleColor.White, ConsoleColor backgroundColor = ConsoleColor.Black)
         {
             if (x >= 0 && x < Width && y >= 0 && y < Height)
             {
                 var index = y * Width + x;
                 _chars[index].UnicodeChar = character;
-                _chars[index].Attributes = (ushort)(CharAttributes.FOREGROUND_GREEN | CharAttributes.FOREGROUND_INTENSITY); 
+                _chars[index].Attributes = GetColorValue(foregroundColor, backgroundColor);
             }
         }
 
-        public void Draw(int x, int y, string[] mapTiles)
+        public void Draw(int x, int y, Span<string> rows)
         {
-            for (var dataY = 0; dataY < mapTiles.Length; dataY++)
-            for (var dataX = 0; dataX < mapTiles[dataY].Length; dataX++)
+            for (var dataY = 0; dataY < rows.Length; dataY++)
+            for (var dataX = 0; dataX < rows[dataY].Length; dataX++)
             {
                 var index = (dataY + y) * Width + (dataX + x);
-                _chars[index].UnicodeChar = mapTiles[dataY][dataX];
-                _chars[index].Attributes = (ushort)(CharAttributes.FOREGROUND_GREEN | CharAttributes.FOREGROUND_INTENSITY); 
+                _chars[index].UnicodeChar = rows[dataY][dataX];
+                _chars[index].Attributes = GetColorValue(ConsoleColor.Green, ConsoleColor.Black);
             }
         }
         
-        
-        public char GetCharAt(int x, int y) => _chars[y * Width + x].UnicodeChar;
-        
+        public char? GetCharAt(int x, int y)
+        {
+            if (x < 0 || x >= Width || y < 0 || y >= Height)
+                return null;
+            
+            return _chars[y * Width + x].UnicodeChar;
+        }
+
         internal void Display()
         {
             var resolution = new Coord((short)Width, (short)Height);
-            WriteConsoleOutput(_consoleOutBuffer, _chars, resolution, Coord.Zero, ref _writeRegion);
+            
+            //TODO: Fix memory leak here.. 
+            WriteConsoleOutput(_consoleOutBuffer, _chars, resolution, Coord.Zero, ref _writeRegion);    
         }
         
         public void Clear()
@@ -118,7 +134,7 @@ namespace ConsoleEngine.Infrastructure
             for (var i = 0; i < _chars.Length; i++)
             {
                 _chars[i].UnicodeChar = ' ';
-                _chars[i].Attributes = (ushort)CharAttributes.None;
+                _chars[i].Attributes = 0;
             }
         }
 
@@ -180,6 +196,7 @@ namespace ConsoleEngine.Infrastructure
         {
             Environment.Exit(0);
         }
-
+        
+        private static ushort GetColorValue(ConsoleColor fg, ConsoleColor bg) => (ushort)((int)fg | ((int)bg<<4));
     }
 }

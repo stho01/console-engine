@@ -6,7 +6,7 @@ namespace Platformer.Player
     {
         private readonly RenderConsole _console;
 
-        private static readonly Sprite _playerSprite = new ({
+        private static readonly Sprite _playerSprite = Sprite.FromStringArray(new[]{
             " () ",
             "/##\\",
             " ## ",

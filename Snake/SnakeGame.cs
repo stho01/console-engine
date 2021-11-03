@@ -15,7 +15,7 @@ namespace Snake
     public class SnakeGame : GameBase
     {
         private readonly Deque<(int x, int y)> _snake = new();
-        private float _time = 0f;
+        private double _time = 0f;
         private const int UpdateThreshold = 150; // ms
         private (int x, int y)? _cleared = null;
         private Direction _direction = Direction.East;
@@ -34,7 +34,6 @@ namespace Snake
             
             for (var i = 5; i >= 0; i--) { 
                 _snake.PushBack((i, 0));
-                Console.Draw(i, 0, '#'); // draw initial snake
             }
             
             SpawnFood();
@@ -76,7 +75,7 @@ namespace Snake
             Console.Draw(_food.x, _food.y, '@');
             
             foreach (var (x, y) in _snake) {
-                Console.Draw(x, y, '#');
+                Console.Draw(x, y, '█');
             }   
 
             if (_cleared.HasValue) {

@@ -3,7 +3,7 @@ using System.Runtime.InteropServices;
 
 namespace ConsoleEngine.LowLevel
 {
-    [StructLayout(LayoutKind.Explicit)]
+    [StructLayout(LayoutKind.Explicit, CharSet=CharSet.Unicode)]
     internal struct CharInfo
     {
         [FieldOffset(0)]

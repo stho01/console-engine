@@ -1,10 +1,10 @@
-﻿using Microsoft.Xna.Framework;
+﻿using System;
+using Microsoft.Xna.Framework;
 
 namespace Platformer.Maps
 {
     public interface IMap
     {
-        public string[] Tiles { get; }
-        public Rectangle[] BoundingBoxes { get; }
+        public Span<string> Tiles { get; }
     }
 }
