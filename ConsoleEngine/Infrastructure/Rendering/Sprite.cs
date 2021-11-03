@@ -1,9 +1,8 @@
 ﻿using System;
-using System.Collections.Generic;
 using System.Linq;
 using Microsoft.Toolkit.HighPerformance;
 
-namespace ConsoleEngine.Infrastructure
+namespace ConsoleEngine.Infrastructure.Rendering
 {
     public class Sprite
     { 

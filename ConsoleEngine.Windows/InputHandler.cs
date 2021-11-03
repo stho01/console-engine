@@ -1,4 +1,5 @@
 ﻿using ConsoleEngine.Infrastructure;
+using ConsoleEngine.Infrastructure.Inputs;
 
 
 namespace ConsoleEngine.Windows

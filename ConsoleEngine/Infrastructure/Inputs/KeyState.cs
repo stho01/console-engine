@@ -1,4 +1,4 @@
-namespace ConsoleEngine.Infrastructure
+namespace ConsoleEngine.Infrastructure.Inputs
 {
     public struct KeyState
     {

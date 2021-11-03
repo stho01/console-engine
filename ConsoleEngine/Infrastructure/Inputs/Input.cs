@@ -1,12 +1,9 @@
 ﻿using System;
 
-namespace ConsoleEngine.Infrastructure
+namespace ConsoleEngine.Infrastructure.Inputs
 {
     public class Input
     {
-        
-        
-        
         //**********************************************************
         //** fields:
         //**********************************************************

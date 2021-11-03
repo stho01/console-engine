@@ -1,7 +1,4 @@
-﻿using System;
-using System.Linq;
-using ConsoleEngine;
-using ConsoleEngine.Infrastructure;
+﻿using ConsoleEngine.Infrastructure.Inputs;
 using ConsoleEngine.Windows;
 
 namespace ConsoleGame

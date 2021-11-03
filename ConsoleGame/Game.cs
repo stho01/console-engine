@@ -1,6 +1,8 @@
 ﻿using System;
 using ConsoleEngine;
 using ConsoleEngine.Infrastructure;
+using ConsoleEngine.Infrastructure.Inputs;
+using ConsoleEngine.Infrastructure.Rendering;
 using ConsoleEngine.Windows;
 
 namespace ConsoleGame

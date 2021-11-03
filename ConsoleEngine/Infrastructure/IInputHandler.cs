@@ -1,4 +1,6 @@
-﻿namespace ConsoleEngine.Infrastructure
+﻿using ConsoleEngine.Infrastructure.Inputs;
+
+namespace ConsoleEngine.Infrastructure
 {
     public interface IInputHandler
     {

@@ -1,4 +1,6 @@
 ﻿using ConsoleEngine.Infrastructure;
+using ConsoleEngine.Infrastructure.Inputs;
+using ConsoleEngine.Infrastructure.Rendering;
 
 namespace ConsoleEngine
 {

@@ -1,6 +1,7 @@
 ﻿using System;
 using System.Runtime.InteropServices;
 using ConsoleEngine.Infrastructure;
+using ConsoleEngine.Infrastructure.Rendering;
 using ConsoleEngine.LowLevel;
 
 namespace ConsoleEngine.Windows

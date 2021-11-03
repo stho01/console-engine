@@ -1,4 +1,5 @@
 ﻿using System;
+using ConsoleEngine.Infrastructure.Rendering;
 
 namespace ConsoleEngine.Infrastructure
 {

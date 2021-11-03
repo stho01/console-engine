@@ -1,6 +1,7 @@
 ﻿using System;
 using System.Collections.Generic;
 using ConsoleEngine.Infrastructure;
+using ConsoleEngine.Infrastructure.Inputs;
 using ConsoleEngine.Windows;
 
 namespace Snake

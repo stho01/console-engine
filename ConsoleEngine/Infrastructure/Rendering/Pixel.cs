@@ -1,6 +1,6 @@
 ﻿using System;
 
-namespace ConsoleEngine.Infrastructure
+namespace ConsoleEngine.Infrastructure.Rendering
 {
     public struct Pixel
     {

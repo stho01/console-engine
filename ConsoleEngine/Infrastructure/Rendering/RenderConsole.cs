@@ -1,7 +1,7 @@
 ﻿using System;
 using Microsoft.Toolkit.HighPerformance;
 
-namespace ConsoleEngine.Infrastructure
+namespace ConsoleEngine.Infrastructure.Rendering
 {
     public class RenderConsole
     {
@@ -108,7 +108,7 @@ namespace ConsoleEngine.Infrastructure
                 var index = (dataY + y) * Width + (dataX + x);
                 _pixels[index].Char = rows[dataY][dataX];
                 _pixels[index].ForegroundColor = ConsoleColor.Green;
-                _pixels[index].ForegroundColor = ConsoleColor.Black;
+                _pixels[index].BackgroundColor = ConsoleColor.Black;
             }
         }
         
@@ -132,8 +132,7 @@ namespace ConsoleEngine.Infrastructure
         public void SetTitle(string title) => _consoleHandler.SetTitle(title);
         public void SetCursorVisible(bool show) => _consoleHandler.SetCursorVisible(show);
 
-        public void Close()
-        {
+        public void Close() {
             Environment.Exit(0);
         }
     }

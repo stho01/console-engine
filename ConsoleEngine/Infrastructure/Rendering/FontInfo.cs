@@ -1,4 +1,4 @@
-﻿namespace ConsoleEngine.Infrastructure
+﻿namespace ConsoleEngine.Infrastructure.Rendering
 {
     public class FontInfo
     {

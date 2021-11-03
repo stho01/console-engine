@@ -2,7 +2,7 @@
 using System.Collections;
 using System.Collections.Generic;
 
-namespace Snake
+namespace ConsoleEngine.Collections
 {
     public class Deque<T> : IEnumerable<T>
     {
