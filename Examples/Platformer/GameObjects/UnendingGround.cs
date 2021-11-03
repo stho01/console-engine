@@ -1,6 +1,4 @@
-﻿using System.Collections.Generic;
-using ConsoleEngine.Collections;
-using ConsoleEngine.Infrastructure;
+﻿using ConsoleEngine.Collections;
 using ConsoleEngine.Infrastructure.Rendering;
 using Microsoft.Xna.Framework;
 
@@ -38,14 +36,12 @@ namespace Platformer.GameObjects
             {
                 var (x, y) = tile - _game.Camera.Position;
 
-                if ((x + _tileSprite.Width) < 0)
-                {
+                if ((x + _tileSprite.Width) < 0) {
                     _tiles.PopFront();
                     _tiles.PushBack(new Vector2(_tiles.Back.X + _tileSprite.Width, _tiles.Back.Y));
                 }
 
-                if (x > _game.Console.Width)
-                {
+                if (x > _game.Console.Width) {
                     _tiles.PopBack();
                     _tiles.PushFront(new Vector2(_tiles.Front.X - _tileSprite.Width, _tiles.Front.Y));
                 }

@@ -8,10 +8,10 @@ namespace Platformer.GameObjects
     {
         private readonly PlatformerGame _game;
         private static readonly Sprite _playerSprite = Sprite.FromStringArray(new[]{
-            " 0 ",
-            "╔▓╗",
-            "╝▓╚",
-            "╝ ╚ "
+            " ☻ ",
+            "╭▓╮",
+            "╯▓╰",
+            " ╿ "
         });
         
         public Player(PlatformerGame game) {
@@ -26,7 +26,6 @@ namespace Platformer.GameObjects
         public float MovementStrength { get; set; } = 0.1f;
         public float DragCoefficient { get; set; } = 0.90f;
         
-        
         public void MoveLeft() => ApplyForce(new Vector2(-1, 0) * MovementStrength);
         public void MoveRight() => ApplyForce(new Vector2(1, 0) * MovementStrength);
         public void Jump()
@@ -38,10 +37,7 @@ namespace Platformer.GameObjects
             IsAirborne = true;
         }
         
-        public void ApplyForce(Vector2 force)
-        {
-            Acceleration += force;
-        }
+        public void ApplyForce(Vector2 force) => Acceleration += force;
 
         public void Update()
         {

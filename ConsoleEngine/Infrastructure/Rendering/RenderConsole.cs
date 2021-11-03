@@ -71,24 +71,34 @@ namespace ConsoleEngine.Infrastructure.Rendering
 
         public void Draw(int x, int y, Sprite sprite)
         {
-            for (var dataX = 0; dataX < sprite.DataSpan.Width; dataX++)
-            for (var dataY = 0; dataY < sprite.DataSpan.Height; dataY++) {
-                var pixel = sprite.DataSpan[dataX, dataY];
+            Draw(x, y, sprite.DataSpan);
+        }
+        
+        public void Draw(int x, int y, Span2D<Pixel> pixels)
+        {
+            for (var dataX = 0; dataX < pixels.Height; dataX++)
+            for (var dataY = 0; dataY < pixels.Width; dataY++) {
+                var pixel = pixels[dataX, dataY];
                 Draw(dataX + x, dataY + y, pixel.Char, pixel.ForegroundColor, pixel.BackgroundColor);
+            }  
+        }
+
+        public void Draw(int x, int y, Span2D<char> data, ConsoleColor foregroundColor = ConsoleColor.White, ConsoleColor backgroundColor = ConsoleColor.Black)
+        {
+            for (var dataX = 0; dataX < data.Height; dataX++)
+            for (var dataY = 0; dataY < data.Width; dataY++) {
+                Draw(dataX + x, dataY + y, data[dataX, dataY], foregroundColor, backgroundColor);
             }
         }
 
-        public void Draw(int x, int y, Span2D<char> data)
+        public void Draw(int x, int y, string value, ConsoleColor foregroundColor = ConsoleColor.White, ConsoleColor backgroundColor = ConsoleColor.Black)
         {
-            //var d = data.Transpose(); // TODO: Transpose (?)
-            for (var dataX = 0; dataX < data.Width; dataX++)
-            for (var dataY = 0; dataY < data.Height; dataY++) {
-                Draw(dataX + x, dataY + y, data[dataX, dataY]);
-            }
+            for (var i = 0; i < value.Length; i++)
+                Draw(x+i, y, value[i], foregroundColor, backgroundColor);
         }
         
         public void Draw(int x, int y, short charCode) => Draw(x, y, (char)charCode);
-        
+
         public void Draw(int x, int y, char character, ConsoleColor foregroundColor = ConsoleColor.White, ConsoleColor backgroundColor = ConsoleColor.Black)
         {
             if (x >= 0 && x < Width && y >= 0 && y < Height)
@@ -100,18 +110,19 @@ namespace ConsoleEngine.Infrastructure.Rendering
             }
         }
 
-        public void Draw(int x, int y, Span<string> rows)
+        public void Draw(int x, int y, Span<string> rows, ConsoleColor foregroundColor = ConsoleColor.White, ConsoleColor backgroundColor = ConsoleColor.Black)
         {
             for (var dataY = 0; dataY < rows.Length; dataY++)
             for (var dataX = 0; dataX < rows[dataY].Length; dataX++)
             {
                 var index = (dataY + y) * Width + (dataX + x);
                 _pixels[index].Char = rows[dataY][dataX];
-                _pixels[index].ForegroundColor = ConsoleColor.Green;
-                _pixels[index].BackgroundColor = ConsoleColor.Black;
+                _pixels[index].ForegroundColor = foregroundColor;
+                _pixels[index].BackgroundColor = backgroundColor;
             }
         }
-        
+
+   
         public char? GetCharAt(int x, int y)
         {
             if (x < 0 || x >= Width || y < 0 || y >= Height)

@@ -1,9 +1,8 @@
-﻿using ConsoleEngine;
-using ConsoleEngine.Infrastructure;
+﻿using System.Numerics;
+using ConsoleEngine;
 using ConsoleEngine.Infrastructure.Inputs;
 using ConsoleEngine.Infrastructure.Rendering;
 using ConsoleEngine.Windows;
-using Microsoft.Xna.Framework;
 using Platformer.GameObjects;
 
 namespace Platformer
@@ -19,6 +18,7 @@ namespace Platformer
             : base(new RenderConsole(new ConsoleHandler(60, 60,new FontInfo {
                 FontWidth = 10,
                 FontHeight = 10,
+                FontFace = "Consolas"
             })), "Platformer game") {}
 
         public Camera Camera => _camera;

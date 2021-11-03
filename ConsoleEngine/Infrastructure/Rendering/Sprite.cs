@@ -21,11 +21,13 @@ namespace ConsoleEngine.Infrastructure.Rendering
             }
             return new Sprite(pxData);
         }
+        
         public static Sprite FromString(string data)
         {
             var lines = data.Split(Environment.NewLine);
             return FromStringArray(lines);
         }
+        
         public static Sprite FromStringArray(string[] data)
         {
             var width = data.Max(x => x.Length);

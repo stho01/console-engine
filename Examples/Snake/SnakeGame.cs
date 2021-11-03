@@ -30,11 +30,12 @@ namespace Snake
             : base(new RenderConsole(new ConsoleHandler(30, 30, new FontInfo {
                 FontWidth = 14,
                 FontHeight = 14,
+                FontFace = "Consolas"
             }))) {}
 
         protected override void OnInitialize()
         {
-            ClearScreenOnEachFrame = true;
+            ClearScreenOnEachFrame = false;
             
             for (var i = 5; i >= 0; i--) { 
                 _snake.PushBack((i, 0));
@@ -78,9 +79,10 @@ namespace Snake
         {
             Console.Draw(_food.x, _food.y, '@');
             
-            foreach (var (x, y) in _snake) {
-                Console.Draw(x, y, '█');
-            }   
+            foreach (var part in _snake) {
+                var color = _snake.Front == part ? ConsoleColor.Red : ConsoleColor.White; 
+                Console.Draw(part.x, part.y, '█', color);
+            }
 
             if (_cleared.HasValue) {
                 Console.Draw(_cleared.Value.x, _cleared.Value.y, ' ');
