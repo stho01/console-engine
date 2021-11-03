@@ -6,7 +6,7 @@ namespace ConsoleEngine.Infrastructure.Rendering
 {
     public class Sprite
     { 
-        public static Sprite FromCharArray(char[,] data)
+        public static Sprite FromCharArray(char[,] data, ConsoleColor fg = ConsoleColor.White, ConsoleColor bg = ConsoleColor.Black)
         {
             var pxData = new Pixel[data.GetLength(0), data.GetLength(1)];
             
@@ -15,20 +15,21 @@ namespace ConsoleEngine.Infrastructure.Rendering
             {
                 pxData[x, y] = new Pixel {
                     Char = data[x, y],
-                    ForegroundColor = ConsoleColor.White,
-                    BackgroundColor = ConsoleColor.Black
+                    ForegroundColor = fg,
+                    BackgroundColor = bg
                 };
             }
+            
             return new Sprite(pxData);
         }
         
-        public static Sprite FromString(string data)
+        public static Sprite FromString(string data, ConsoleColor fg = ConsoleColor.White, ConsoleColor bg = ConsoleColor.Black)
         {
             var lines = data.Split(Environment.NewLine);
-            return FromStringArray(lines);
+            return FromStringArray(lines, fg, bg);
         }
         
-        public static Sprite FromStringArray(string[] data)
+        public static Sprite FromStringArray(string[] data, ConsoleColor fg = ConsoleColor.White, ConsoleColor bg = ConsoleColor.Black)
         {
             var width = data.Max(x => x.Length);
             
@@ -41,8 +42,8 @@ namespace ConsoleEngine.Infrastructure.Rendering
                 {
                     pxData[x, y] = new Pixel {
                         Char = row[x],
-                        ForegroundColor = ConsoleColor.White,
-                        BackgroundColor = ConsoleColor.Black
+                        ForegroundColor = fg,
+                        BackgroundColor = bg
                     };
                 }
             }

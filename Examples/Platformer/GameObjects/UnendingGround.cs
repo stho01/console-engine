@@ -1,4 +1,5 @@
-﻿using ConsoleEngine.Collections;
+﻿using System;
+using ConsoleEngine.Collections;
 using ConsoleEngine.Infrastructure.Rendering;
 using Microsoft.Xna.Framework;
 
@@ -12,7 +13,7 @@ namespace Platformer.GameObjects
             "░░██",
             "██▒░",
             "▒░██",
-        });
+        }, ConsoleColor.Red);
         private readonly Deque<Vector2> _tiles = new();
 
         public UnendingGround(PlatformerGame game)
