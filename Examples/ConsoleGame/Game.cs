@@ -24,6 +24,7 @@ namespace ConsoleGame
 
         protected override void OnInitialize()
         {
+            // callback called every 500ms
             GameTime.SetInterval(500, () => {
                 for (var x = 0; x < 40; x++)
                 for (var y = 0; y < 40; y++) {

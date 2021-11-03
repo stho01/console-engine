@@ -16,11 +16,11 @@ namespace ConsoleEngine.Infrastructure
         //**********************************************************
 
         public static double DeltaTime { get; private set; }
-        public static double DeltaTimeSeconds => DeltaTime / 10_000_000;
-        public static double DeltaTimeMilliseconds => DeltaTime / 10_000;
+        public static double DeltaTimeSeconds { get; private set; }
+        public static double DeltaTimeMilliseconds { get; private set; }
         public static int Fps { get; private set; }
 
-        private static readonly List<Interval> _intervals = new List<Interval>();
+        private static readonly List<Interval> _intervals = new();
           
         //**********************************************************
         //** methods:
@@ -32,6 +32,9 @@ namespace ConsoleEngine.Infrastructure
             var now = DateTime.UtcNow.Ticks;
             var dt = (now - _previous.Value); 
             DeltaTime = dt;
+            DeltaTimeSeconds = DeltaTime / 10_000_000;
+            DeltaTimeMilliseconds = DeltaTime / 10_000;
+            
             _previous = now;
             
             Fps = (int)(1f / DeltaTimeSeconds);

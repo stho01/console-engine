@@ -16,6 +16,7 @@ namespace ConsoleEngine.Collections
 
         public void PushFront(T item)
         {
+            // TODO: is it possible to avoid allocation? pooling? :/ 
             var newNode = new Node(item);
 
             newNode.LinkRight(_frontNode);
@@ -27,6 +28,7 @@ namespace ConsoleEngine.Collections
 
         public void PushBack(T item)
         {
+            // TODO: is it possible to avoid allocation? pooling? :/
             var newNode = new Node(item);
             
             newNode.LinkLeft(_backNode);

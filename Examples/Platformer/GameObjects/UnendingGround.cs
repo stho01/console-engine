@@ -37,7 +37,7 @@ namespace Platformer.GameObjects
             {
                 var (x, y) = tile - _game.Camera.Position;
 
-                if ((x + _tileSprite.Width) < 0) {
+                if (x + _tileSprite.Width < 0) {
                     _tiles.PopFront();
                     _tiles.PushBack(new Vector2(_tiles.Back.X + _tileSprite.Width, _tiles.Back.Y));
                 }
