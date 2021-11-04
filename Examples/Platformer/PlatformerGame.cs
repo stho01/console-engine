@@ -2,7 +2,7 @@
 using ConsoleEngine;
 using ConsoleEngine.Infrastructure.Inputs;
 using ConsoleEngine.Infrastructure.Rendering;
-using ConsoleEngine.Windows;
+using ConsoleEngine.Native;
 using Platformer.GameObjects;
 
 namespace Platformer

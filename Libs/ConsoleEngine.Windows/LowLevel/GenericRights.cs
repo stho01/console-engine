@@ -1,6 +1,6 @@
 ﻿using System;
 
-namespace ConsoleEngine.LowLevel
+namespace ConsoleEngine.Native.LowLevel
 {
     [Flags]
     internal enum GenericRights : ulong

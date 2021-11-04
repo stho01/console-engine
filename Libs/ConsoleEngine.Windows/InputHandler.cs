@@ -1,8 +1,7 @@
 ﻿using ConsoleEngine.Infrastructure;
 using ConsoleEngine.Infrastructure.Inputs;
 
-
-namespace ConsoleEngine.Windows
+namespace ConsoleEngine.Native
 {
     using static LowLevel.Kernel32;
     

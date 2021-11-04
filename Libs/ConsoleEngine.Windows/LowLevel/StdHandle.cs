@@ -1,4 +1,4 @@
-﻿namespace ConsoleEngine.LowLevel
+﻿namespace ConsoleEngine.Native.LowLevel
 {
     internal enum StdHandle : int
     {

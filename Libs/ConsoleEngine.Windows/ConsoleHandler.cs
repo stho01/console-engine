@@ -2,9 +2,9 @@
 using System.Runtime.InteropServices;
 using ConsoleEngine.Infrastructure;
 using ConsoleEngine.Infrastructure.Rendering;
-using ConsoleEngine.LowLevel;
+using ConsoleEngine.Native.LowLevel;
 
-namespace ConsoleEngine.Windows
+namespace ConsoleEngine.Native
 {
     using static LowLevel.Kernel32;
     using static LowLevel.User32;

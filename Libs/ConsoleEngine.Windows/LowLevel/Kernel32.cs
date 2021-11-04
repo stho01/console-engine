@@ -1,9 +1,8 @@
 ﻿using System;
-using System.Runtime.ConstrainedExecution;
 using System.Runtime.InteropServices;
 using System.Security;
 
-namespace ConsoleEngine.LowLevel
+namespace ConsoleEngine.Native.LowLevel
 {
     /// <summary>
     /// https://www.pinvoke.net/

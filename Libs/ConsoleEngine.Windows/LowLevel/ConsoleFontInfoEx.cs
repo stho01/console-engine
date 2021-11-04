@@ -1,6 +1,6 @@
 ﻿using System.Runtime.InteropServices;
 
-namespace ConsoleEngine.LowLevel
+namespace ConsoleEngine.Native.LowLevel
 {
     [StructLayout(LayoutKind.Sequential, CharSet = CharSet.Unicode)]
     internal struct ConsoleFontInfoEx

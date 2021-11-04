@@ -1,7 +1,7 @@
 ﻿using System;
 using System.Runtime.InteropServices;
 
-namespace ConsoleEngine.LowLevel
+namespace ConsoleEngine.Native.LowLevel
 {
     [StructLayout(LayoutKind.Explicit, CharSet=CharSet.Unicode)]
     internal struct CharInfo

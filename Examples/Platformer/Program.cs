@@ -1,7 +1,7 @@
 ﻿using System;
 using ConsoleEngine.Infrastructure;
 using ConsoleEngine.Infrastructure.Inputs;
-using ConsoleEngine.Windows;
+using ConsoleEngine.Native;
 
 namespace Platformer
 {

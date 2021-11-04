@@ -4,7 +4,7 @@ using ConsoleEngine.Collections;
 using ConsoleEngine.Infrastructure;
 using ConsoleEngine.Infrastructure.Inputs;
 using ConsoleEngine.Infrastructure.Rendering;
-using ConsoleEngine.Windows;
+using ConsoleEngine.Native;
 
 namespace Snake
 {
