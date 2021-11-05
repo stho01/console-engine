@@ -9,7 +9,11 @@ namespace ConsoleGame
         {
             Input.Instance.SetHandler(new InputHandler());
             
-            var game = new Game { ShowFps = true };
+            var game = new Game {
+                ShowFps = true, 
+                EnableLogger = true
+            };
+            
             game.Initialize();
             game.Start();
         }
