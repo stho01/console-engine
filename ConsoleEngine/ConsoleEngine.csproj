@@ -6,8 +6,10 @@
         <AllowUnsafeBlocks>true</AllowUnsafeBlocks>
         <Configurations>OSX Debug;Windows Debug;OSX Release;Windows Release</Configurations>
         <Platforms>AnyCPU</Platforms>
+        <GeneratePackageOnBuild>true</GeneratePackageOnBuild>
+        <PackageVersion>0.1.0</PackageVersion>
     </PropertyGroup>
-
+   
     <PropertyGroup Condition=" '$(Configuration)' == 'OSX Debug' ">
       <DebugSymbols Condition=" '$(DebugSymbols)' == '' ">true</DebugSymbols>
       <Optimize Condition=" '$(Optimize)' == '' ">false</Optimize>

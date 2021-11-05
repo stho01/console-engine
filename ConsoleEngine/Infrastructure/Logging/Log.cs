@@ -12,7 +12,7 @@ namespace ConsoleEngine.Infrastructure.Logging
         private static readonly Socket Socket;
         private static readonly IPEndPoint EndPoint;
         private static readonly ConcurrentQueue<string> Messages = new();
-        private static readonly Thread LoggerThread = new(PollMessages);
+        private static readonly Thread LoggerThread = new(DispatchMessages);
         private static Socket _loggerConnection;
         private static Process _loggerProcess;
         private static bool _running;
@@ -46,7 +46,7 @@ namespace ConsoleEngine.Infrastructure.Logging
             Messages.Clear();
         }
 
-        private static void PollMessages()
+        private static void DispatchMessages()
         {
             while (_running)
             {
