@@ -1,6 +1,5 @@
 ﻿using System.Collections.Concurrent;
 using System.Diagnostics;
-using System.IO;
 using System.Net;
 using System.Net.Sockets;
 using System.Text;
@@ -27,27 +26,25 @@ namespace ConsoleEngine.Infrastructure.Logging
             EndPoint = new IPEndPoint(ipAddress, 11000);
             Socket = new Socket(ipAddress.AddressFamily, SocketType.Stream, ProtocolType.Tcp);
         }
-
-        internal static void Start(GameBase game)
+        
+        public static void Debug(string message)
         {
-            _game = game;
-            _running = true;
-            Socket.Bind(EndPoint);
-            Socket.Listen(10);
-            LoggerThread.Start();
-            
-            _loggerProcess = new Process();
-            _loggerProcess.StartInfo.FileName = "ConsoleEngine.Logger.exe";
-            _loggerProcess.StartInfo.UseShellExecute = true;
-            _loggerProcess.Start();
+            var sb = new StringBuilder(message);
+            EnqueueMessage(sb);
         }
 
-        internal static void Stop()
+        public static void ReportFps(int fps)
         {
-            _running = false;
-            _loggerConnection.Dispose();
-            Socket.Dispose();
-            Messages.Clear();
+            var sb = new StringBuilder($"#<FPS>:{fps}");
+            EnqueueMessage(sb);
+        }
+
+        private static void EnqueueMessage(StringBuilder messageBuilder)
+        {
+            if (!_game.EnableLogger)
+                return;
+            messageBuilder.Append(EndOfMessage);
+            Messages.Enqueue(messageBuilder.ToString());
         }
 
         private static void DispatchMessages()
@@ -70,25 +67,27 @@ namespace ConsoleEngine.Infrastructure.Logging
                 Thread.Sleep(32); 
             }
         }
-
-        public static void Debug(string message)
+        
+        internal static void Start(GameBase game)
         {
-            var sb = new StringBuilder(message);
-            EnqueueMessage(sb);
+            _game = game;
+            _running = true;
+            Socket.Bind(EndPoint);
+            Socket.Listen(10);
+            LoggerThread.Start();
+            
+            _loggerProcess = new Process();
+            _loggerProcess.StartInfo.FileName = "ConsoleEngine.Logger.exe";
+            _loggerProcess.StartInfo.UseShellExecute = true;
+            _loggerProcess.Start();
         }
 
-        public static void ReportFps(int fps)
+        internal static void Stop()
         {
-            var sb = new StringBuilder($"#<FPS>:{fps}");
-            EnqueueMessage(sb);
-        }
-
-        private static void EnqueueMessage(StringBuilder messageBuilder)
-        {
-            if (!_game.EnableLogger)
-                return;
-            messageBuilder.Append(EndOfMessage);
-            Messages.Enqueue(messageBuilder.ToString());
+            _running = false;
+            _loggerConnection.Dispose();
+            Socket.Dispose();
+            Messages.Clear();
         }
     }
 }
