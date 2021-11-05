@@ -4,7 +4,7 @@ using Microsoft.Xna.Framework;
 
 namespace Platformer.GameObjects
 {
-    public class Player
+    public class Player : GameObject
     {
         private readonly PlatformerGame _game;
         private static readonly Sprite _playerSprite = Sprite.FromStringArray(new[]{
@@ -15,13 +15,15 @@ namespace Platformer.GameObjects
         });
         
         public Player(PlatformerGame game) {
-            _game = game;
+            _game = game; 
         }
         
-        public Vector2 Position { get; set; }
-        public Vector2 Velocity { get; set; }
-        public Vector2 Acceleration { get; set; }
-        public Rectangle BoundingBox => new((int)Position.X, (int)Position.Y, 3, 4);
+        public override Rectangle CollisionBox => new(
+            (int)Position.X, 
+            (int)Position.Y,
+            _playerSprite.Width, // height is actually width...
+            _playerSprite.Height); // and width is actually height :-D
+        
         public bool IsAirborne { get; set; } = true;
         public float MovementStrength { get; set; } = 0.1f;
         public float DragCoefficient { get; set; } = 0.90f;
@@ -43,7 +45,7 @@ namespace Platformer.GameObjects
         {
             ApplyForce(-Velocity * DragCoefficient); // apply drag. 
 
-            Velocity += Acceleration * (float)GameTime.DeltaTimeSeconds;
+            Velocity += Acceleration * (float)GameTime.Delta.TotalSeconds;
             Position += Velocity;
             
             Acceleration = Vector2.Zero;
@@ -51,7 +53,7 @@ namespace Platformer.GameObjects
 
         public void Draw()
         {
-            var (x, y) = (Position - _game.Camera.Position);
+            var (x, y) = _game.Camera.WorldPosToScreenPos(Position);
 
             _game.Console.Draw(
                 (int)x,

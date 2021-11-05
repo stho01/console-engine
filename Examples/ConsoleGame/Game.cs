@@ -12,8 +12,8 @@ namespace ConsoleGame
         private static readonly char[] Chars = { '*', '#', 'A', '?', 'H' };
         private static readonly ConsoleColor[] Colors = { ConsoleColor.Cyan, ConsoleColor.Red, ConsoleColor.Green, ConsoleColor.White, ConsoleColor.DarkGray };
         private static readonly Random Random = new(DateTime.Now.Millisecond);
-        private const int Width = 40;
-        private const int Height = 40;
+        private const int Width = 256/2;
+        private const int Height = 240/2;
         private readonly Pixel[,] _display = new Pixel[Width,Height];
 
         public Game()
@@ -27,14 +27,13 @@ namespace ConsoleGame
         protected override void OnInitialize()
         {
             // callback called every 500ms
-            GameTime.SetInterval(500, () => {
-                for (var x = 0; x < Width; x++)
-                for (var y = 0; y < Height; y++)
-                {
-                    _display[x, y].Char = '█'; //Chars[Random.Next(0, Chars.Length)];
-                    _display[x, y].ForegroundColor = Colors[Random.Next(0, Colors.Length)];
-                }
-            });
+            // GameTime.SetInterval(500, () => {
+            //     for (var x = 0; x < Width; x++)
+            //     for (var y = 0; y < Height; y++) {
+            //         _display[x, y].Char = '█'; //Chars[Random.Next(0, Chars.Length)];
+            //         _display[x, y].ForegroundColor = Colors[Random.Next(0, Colors.Length)];
+            //     }
+            // });
         }
 
         protected override void OnUpdate()
@@ -45,7 +44,15 @@ namespace ConsoleGame
 
         protected override void OnRender()
         {
-            Console.Draw(0,0, _display);
+            // Console.Draw(0,0, _display);
+            
+            Console.Draw(10, 10, new string[]
+            {
+                "Dette ",
+                "test a",
+                "som se",
+                "som no"
+            });
         }
     }
 }

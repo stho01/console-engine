@@ -1,4 +1,5 @@
 ﻿using System;
+using System.IO;
 using System.Runtime.InteropServices;
 using System.Security;
 
@@ -54,7 +55,7 @@ namespace ConsoleEngine.Native.LowLevel
         internal static extern bool SetConsoleCP(uint wCodePageID);
         
         [DllImport("kernel32.dll", SetLastError = true, CharSet = CharSet.Unicode)]
-        internal static extern bool SetConsoleTitle(string lpConsoleTitle);
+        internal static extern bool SetConsoleTitle(char[] lpConsoleTitle);
         
         [DllImport("kernel32.dll", SetLastError = true, CharSet = CharSet.Unicode)]
         internal static extern bool GetConsoleCursorInfo(IntPtr hConsoleOutput, out ConsoleCursorInfo lpConsoleCursorInfo);

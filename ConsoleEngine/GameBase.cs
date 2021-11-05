@@ -1,4 +1,6 @@
 ﻿using System;
+using System.IO;
+using System.Text;
 using ConsoleEngine.Infrastructure;
 using ConsoleEngine.Infrastructure.Inputs;
 using ConsoleEngine.Infrastructure.Rendering;
@@ -66,10 +68,12 @@ namespace ConsoleEngine
                 
                 OnUpdate();
                 
-                if (ShowFps) {
-                    _console.SetTitle($"{Name} - {GameTime.Fps}");
+                if (ShowFps)
+                {
+                    // _console.SetTitle($"{Name} - {GameTime.Fps}");
                     // _console.Draw(0, 0, $"FPS: {GameTime.Fps}", ConsoleColor.Red);
                 }
+                
                 OnRender();
                 _console.Display();
             }

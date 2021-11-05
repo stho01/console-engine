@@ -116,12 +116,11 @@ namespace ConsoleEngine.Infrastructure.Rendering
             for (var dataX = 0; dataX < rows[dataY].Length; dataX++)
             {
                 var index = (dataY + y) * Width + (dataX + x);
-                _pixels[index].Char = rows[dataY][dataX];
+                _pixels[index].Char = rows[dataY][dataX]; // < rows & cols are flipped 
                 _pixels[index].ForegroundColor = foregroundColor;
                 _pixels[index].BackgroundColor = backgroundColor;
             }
         }
-
    
         public char? GetCharAt(int x, int y)
         {

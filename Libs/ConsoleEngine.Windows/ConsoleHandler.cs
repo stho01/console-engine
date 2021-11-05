@@ -1,4 +1,5 @@
 ﻿using System;
+using System.Linq;
 using System.Runtime.InteropServices;
 using ConsoleEngine.Infrastructure;
 using ConsoleEngine.Infrastructure.Rendering;
@@ -46,7 +47,7 @@ namespace ConsoleEngine.Native
             SetConsoleWindowInfo(_consoleOutBuffer, true, ref windowRect);
         }
 
-        public void SetTitle(string title) => SetConsoleTitle(title);
+        public void SetTitle(string title) => SetConsoleTitle(title.ToCharArray());
 
         public void SetCursorVisible(bool visible)
         {
@@ -86,13 +87,12 @@ namespace ConsoleEngine.Native
         {
             var resolution = new Coord((short)Width, (short)Height);
 
-            for (int i = 0; i < pixels.Length; i++)
+            for (var i = 0; i < pixels.Length; i++)
             {
                 _chars[i].UnicodeChar = pixels[i].Char;
                 _chars[i].Attributes = GetColorValue(pixels[i].ForegroundColor, pixels[i].BackgroundColor);
             }
             
-            //TODO: Fix memory leak here.. 
             WriteConsoleOutput(_consoleOutBuffer, _chars, resolution, Coord.Zero, ref _writeRegion);
         }
 

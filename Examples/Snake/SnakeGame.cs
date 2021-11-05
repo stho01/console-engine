@@ -46,7 +46,7 @@ namespace Snake
 
         protected override void OnUpdate()
         {
-            _time += GameTime.DeltaTimeMilliseconds;
+            _time += GameTime.Delta.TotalMilliseconds;
 
             if (Input.Instance.GetKey(Key.A).Pressed) _direction = _direction != Direction.East  ? Direction.West  : _direction;
             if (Input.Instance.GetKey(Key.D).Pressed) _direction = _direction != Direction.West  ? Direction.East  : _direction;

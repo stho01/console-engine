@@ -35,7 +35,7 @@ namespace Platformer.GameObjects
         {
             foreach (var tile in _tiles)
             {
-                var (x, y) = tile - _game.Camera.Position;
+                var (x, y) = _game.Camera.WorldPosToScreenPos(tile);
 
                 if (x + _tileSprite.Width < 0) {
                     _tiles.PopFront();

@@ -10,16 +10,16 @@ namespace ConsoleEngine.Infrastructure
         //**********************************************************
 
         private static long? _previous;
+        private static TimeSpan _delta;
           
         //**********************************************************
         //** props:
         //**********************************************************
 
-        public static double DeltaTime { get; private set; }
-        public static double DeltaTimeSeconds { get; private set; }
-        public static double DeltaTimeMilliseconds { get; private set; }
+        /// <summary>Time elapsed since last frame.</summary>
+        public static TimeSpan Delta => _delta;
         public static int Fps { get; private set; }
-
+        
         private static readonly List<Interval> _intervals = new();
           
         //**********************************************************
@@ -30,14 +30,11 @@ namespace ConsoleEngine.Infrastructure
         {
             _previous ??= DateTime.UtcNow.Ticks;
             var now = DateTime.UtcNow.Ticks;
-            var dt = (now - _previous.Value); 
-            DeltaTime = dt;
-            DeltaTimeSeconds = DeltaTime / 10_000_000;
-            DeltaTimeMilliseconds = DeltaTime / 10_000;
-            
+            var dt = (now - _previous.Value);
+            _delta = new TimeSpan(dt);
             _previous = now;
             
-            Fps = (int)(1f / DeltaTimeSeconds);
+            Fps = (int)(1f / _delta.TotalSeconds);
             
             _intervals.ForEach(x =>
             {
@@ -61,7 +58,7 @@ namespace ConsoleEngine.Infrastructure
         {
             private int _ms;
             private readonly Action _callback;
-            private double _elapsed = 0;
+            private double _intervalElapsed = 0;
 
             internal Interval(int ms, Action callback)
             {
@@ -79,12 +76,12 @@ namespace ConsoleEngine.Infrastructure
 
             public void UpdateInterval()
             {
-                _elapsed += DeltaTimeMilliseconds;
-                if (_elapsed < _ms) 
+                _intervalElapsed += GameTime.Delta.TotalMilliseconds;
+                if (_intervalElapsed < _ms) 
                     return;
                 
                 _callback.Invoke();
-                _elapsed = 0f;
+                _intervalElapsed = 0f;
             }
         }
     }
