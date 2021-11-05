@@ -3,6 +3,7 @@ using System.IO;
 using System.Text;
 using ConsoleEngine.Infrastructure;
 using ConsoleEngine.Infrastructure.Inputs;
+using ConsoleEngine.Infrastructure.Logging;
 using ConsoleEngine.Infrastructure.Rendering;
 
 namespace ConsoleEngine
@@ -34,6 +35,7 @@ namespace ConsoleEngine
         public RenderConsole Console => _console;
         public string Name { get; set; }
         public bool ShowFps { get; set; }
+        public bool EnableLogger { get; init; }
         public bool ClearScreenOnEachFrame { get; set; } = true;
         
         //**********************************************************
@@ -50,6 +52,11 @@ namespace ConsoleEngine
 
         public void Initialize()
         {
+            if (EnableLogger) {
+                Log.Start();
+                Log.Debug("Logger started...");
+            }
+            
             OnInitialize();
             _console.SetTitle(Name);
             _console.Initialize();
@@ -72,6 +79,7 @@ namespace ConsoleEngine
                 {
                     // _console.SetTitle($"{Name} - {GameTime.Fps}");
                     // _console.Draw(0, 0, $"FPS: {GameTime.Fps}", ConsoleColor.Red);
+                    Log.ReportFps(GameTime.Fps);
                 }
                 
                 OnRender();
