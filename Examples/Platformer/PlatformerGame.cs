@@ -1,6 +1,7 @@
 ﻿using System.Numerics;
 using ConsoleEngine;
 using ConsoleEngine.Infrastructure.Inputs;
+using ConsoleEngine.Infrastructure.Logging;
 using ConsoleEngine.Infrastructure.Rendering;
 using ConsoleEngine.Native;
 using Platformer.GameObjects;
@@ -41,8 +42,12 @@ namespace Platformer
         protected override void OnUpdate() 
         {
             if (Input.Instance.GetKey(Key.A).Held) _player.MoveLeft();
-            if (Input.Instance.GetKey(Key.D).Held) _player.MoveRight();
-            if (Input.Instance.GetKey(Key.SPACE).Pressed) _player.Jump();
+            if (Input.Instance.GetKey(Key.D).Held)
+            {
+                Log.Debug("Right");
+                _player.MoveRight();
+            }
+            if (Input.Instance.GetKey(Key.SPACE).Held) _player.Jump();
 
             _player.Update();
             _camera.Update();

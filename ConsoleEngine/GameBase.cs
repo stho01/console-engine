@@ -1,6 +1,7 @@
 ﻿using System;
 using System.IO;
 using System.Text;
+using System.Threading;
 using ConsoleEngine.Infrastructure;
 using ConsoleEngine.Infrastructure.Inputs;
 using ConsoleEngine.Infrastructure.Logging;
@@ -53,13 +54,20 @@ namespace ConsoleEngine
         public void Initialize()
         {
             if (EnableLogger) {
-                Log.Start();
+                Log.Start(this);
                 Log.Debug("Logger started...");
             }
             
             OnInitialize();
             _console.SetTitle(Name);
             _console.Initialize();
+
+            if (ShowFps)
+            {
+                GameTime.SetInterval(100, () => {
+                    Log.ReportFps(GameTime.Fps);
+                });
+            }
         }
         
         public void Start()
@@ -74,14 +82,6 @@ namespace ConsoleEngine
                     _console.Clear();
                 
                 OnUpdate();
-                
-                if (ShowFps)
-                {
-                    // _console.SetTitle($"{Name} - {GameTime.Fps}");
-                    // _console.Draw(0, 0, $"FPS: {GameTime.Fps}", ConsoleColor.Red);
-                    Log.ReportFps(GameTime.Fps);
-                }
-                
                 OnRender();
                 _console.Display();
             }

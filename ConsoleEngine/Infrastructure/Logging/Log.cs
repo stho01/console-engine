@@ -1,5 +1,6 @@
 ﻿using System.Collections.Concurrent;
 using System.Diagnostics;
+using System.IO;
 using System.Net;
 using System.Net.Sockets;
 using System.Text;
@@ -16,6 +17,8 @@ namespace ConsoleEngine.Infrastructure.Logging
         private static Socket _loggerConnection;
         private static Process _loggerProcess;
         private static bool _running;
+        private static GameBase _game;
+        private const string EndOfMessage = "<EOM>";
 
         static Log()
         {
@@ -25,8 +28,9 @@ namespace ConsoleEngine.Infrastructure.Logging
             Socket = new Socket(ipAddress.AddressFamily, SocketType.Stream, ProtocolType.Tcp);
         }
 
-        internal static void Start()
+        internal static void Start(GameBase game)
         {
+            _game = game;
             _running = true;
             Socket.Bind(EndPoint);
             Socket.Listen(10);
@@ -69,12 +73,22 @@ namespace ConsoleEngine.Infrastructure.Logging
 
         public static void Debug(string message)
         {
-            Messages.Enqueue(message);
+            var sb = new StringBuilder(message);
+            EnqueueMessage(sb);
         }
 
         public static void ReportFps(int fps)
         {
-            Messages.Enqueue($"#<FPS>:{fps}");
+            var sb = new StringBuilder($"#<FPS>:{fps}");
+            EnqueueMessage(sb);
+        }
+
+        private static void EnqueueMessage(StringBuilder messageBuilder)
+        {
+            if (!_game.EnableLogger)
+                return;
+            messageBuilder.Append(EndOfMessage);
+            Messages.Enqueue(messageBuilder.ToString());
         }
     }
 }

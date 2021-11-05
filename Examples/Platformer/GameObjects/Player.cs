@@ -1,4 +1,5 @@
 ﻿using ConsoleEngine.Infrastructure;
+using ConsoleEngine.Infrastructure.Logging;
 using ConsoleEngine.Infrastructure.Rendering;
 using Microsoft.Xna.Framework;
 
@@ -34,6 +35,8 @@ namespace Platformer.GameObjects
         {
             if (IsAirborne) 
                 return;
+            
+            Log.Debug("Player jumped");
             
             ApplyForce(new Vector2(0, -30));
             IsAirborne = true;

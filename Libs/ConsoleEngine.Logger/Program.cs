@@ -1,4 +1,7 @@
 ﻿using System;
+using System.Collections.Generic;
+using System.Data;
+using System.IO;
 using System.Net;
 using System.Net.Sockets;
 using System.Text;
@@ -9,6 +12,7 @@ namespace ConsoleEngine.Logger
     class Program
     {
         private const string FpsPrefix = "#<FPS>:";
+        private const string EndOfMessage = "<EOM>";
         
         static void Main(string[] args)
         {
@@ -16,8 +20,6 @@ namespace ConsoleEngine.Logger
 
             try
             {
-                var bytes = new byte[1024];
-
                 var host = Dns.GetHostEntry("localhost");
                 var ipAddress = host.AddressList[0];
                 var endpoint = new IPEndPoint(ipAddress, 11000);
@@ -26,20 +28,39 @@ namespace ConsoleEngine.Logger
 
                 sender.Connect(endpoint);
 
+                var lines = new List<string>();
+                
                 while (true)
                 {
-                    var count = sender.Receive(bytes);
-                    var msg = Encoding.UTF8.GetString(bytes, 0, count);
+                    var bytes = new byte[1024];
+                    var msg = string.Empty;
+                    
+                    while (true)
+                    {
+                        var count = sender.Receive(bytes);
+                        msg += Encoding.UTF8.GetString(bytes, 0, count);
+                        if (msg.IndexOf(EndOfMessage) > -1) 
+                            break;
+                    }
 
-                    if (msg.StartsWith(FpsPrefix))
+                    ReadOnlySpan<char> chars = msg;
+                    var lastIndex = chars.LastIndexOf(EndOfMessage);
+                    lines.AddRange(chars[..lastIndex].ToString().Split(EndOfMessage));
+                    
+                    foreach (var line in lines)
                     {
-                        ReadOnlySpan<char> fps = msg;
-                        Console.Title = $"Game FPS: {fps.Slice(FpsPrefix.Length).ToString()}";
+                        if (line.StartsWith(FpsPrefix))
+                        {
+                            ReadOnlySpan<char> fps = line;
+                            Console.Title = $"Game FPS: {fps.Slice(FpsPrefix.Length).ToString()}";
+                        }
+                        else
+                        {
+                            Console.WriteLine(line);
+                        }
                     }
-                    else
-                    {
-                        Console.WriteLine(msg);
-                    }
+                    
+                    lines.Clear();
                 }
             }
             catch (SocketException)

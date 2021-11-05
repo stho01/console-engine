@@ -10,8 +10,13 @@ namespace Platformer
         static void Main(string[] args)
         {
             Input.Instance.SetHandler(new InputHandler());
+
+            var game = new PlatformerGame {
+#if WINDOWS_DEBUG
+                EnableLogger = true
+#endif
+            };
             
-            var game = new PlatformerGame();
             game.Initialize();
             game.Start();
         }
