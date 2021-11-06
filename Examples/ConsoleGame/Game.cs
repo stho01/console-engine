@@ -12,8 +12,8 @@ namespace ConsoleGame
         private static readonly char[] Chars = { '*', '#', 'A', '?', 'H' };
         private static readonly ConsoleColor[] Colors = { ConsoleColor.Cyan, ConsoleColor.Red, ConsoleColor.Green, ConsoleColor.White, ConsoleColor.DarkGray };
         private static readonly Random Random = new(DateTime.Now.Millisecond);
-        private const int Width = 256/2;
-        private const int Height = 240/2;
+        private const int Width = 64;
+        private const int Height = 64;
         private readonly Pixel[,] _display = new Pixel[Width,Height];
 
         public Game()
