@@ -12,9 +12,7 @@ namespace Platformer
             Input.Instance.SetHandler(new InputHandler());
 
             var game = new PlatformerGame {
-#if WINDOWS_DEBUG
                 EnableLogger = true
-#endif
             };
             
             game.Initialize();

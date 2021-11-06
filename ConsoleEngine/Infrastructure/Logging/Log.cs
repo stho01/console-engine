@@ -12,12 +12,12 @@ namespace ConsoleEngine.Infrastructure.Logging
         private static readonly Socket Socket;
         private static readonly IPEndPoint EndPoint;
         private static readonly ConcurrentQueue<string> Messages = new();
-        private static readonly Thread LoggerThread = new(DispatchMessages);
+        private static readonly Thread LoggerThread = new(DispatchMessages) { Name = "Logger" };
         private static Socket _loggerConnection;
         private static Process _loggerProcess;
         private static bool _running;
         private static GameBase _game;
-        private const string EndOfMessage = "<EOM>";
+        private const char EndOfMessage = '\0';
 
         static Log()
         {

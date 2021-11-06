@@ -42,12 +42,8 @@ namespace Platformer
         {
             if (Input.Instance.GetKey(Key.A).Held) _player.MoveLeft();
             if (Input.Instance.GetKey(Key.D).Held) _player.MoveRight();
-            if (Input.Instance.GetKey(Key.SPACE).Held)
-            {
-                Log.Debug("Space");
-                _player.Jump();
-            }
-
+            if (Input.Instance.GetKey(Key.SPACE).Held) _player.Jump();
+            
             _player.Update();
             _camera.Update();
         }

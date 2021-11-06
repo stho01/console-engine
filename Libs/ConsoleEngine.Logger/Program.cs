@@ -10,7 +10,7 @@ namespace ConsoleEngine.Logger
     class Program
     {
         private const string FpsPrefix = "#<FPS>:";
-        private const string EndOfMessage = "<EOM>";
+        private const char EndOfMessage = '\0';
         
         static void Main(string[] args)
         {
@@ -64,12 +64,14 @@ namespace ConsoleEngine.Logger
             catch (SocketException)
             {
                 // yummy!
+                Environment.Exit(0);
             }
             catch (Exception ex)
             {
                 Console.WriteLine(ex);
-                Thread.Sleep(10000);
             }
+            Thread.Sleep(10000);
+            Console.ReadKey();
         }
     }
 }

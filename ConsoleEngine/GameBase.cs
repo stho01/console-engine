@@ -1,8 +1,4 @@
-﻿using System;
-using System.IO;
-using System.Text;
-using System.Threading;
-using ConsoleEngine.Infrastructure;
+﻿using ConsoleEngine.Infrastructure;
 using ConsoleEngine.Infrastructure.Inputs;
 using ConsoleEngine.Infrastructure.Logging;
 using ConsoleEngine.Infrastructure.Rendering;
@@ -86,6 +82,8 @@ namespace ConsoleEngine
         {
             _running = false;
             _console.Close();
+            if (EnableLogger) 
+                Log.Stop();
         }
     }
 }
