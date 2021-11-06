@@ -19,20 +19,18 @@ namespace Platformer.GameObjects
             _game = game; 
         }
         
-        public override Rectangle CollisionBox => new(
+        public override Rectangle? CollisionBox => new(
             (int)Position.X, 
             (int)Position.Y,
             _playerSprite.Width, 
             _playerSprite.Height); 
         
-        public bool IsAirborne { get; set; } = true;
+        public bool IsAirborne { get; set; } = false;
         public float MovementStrength { get; set; } = 0.1f;
         public float DragCoefficient { get; set; } = 0.90f;
         
         public void MoveLeft() => ApplyForce(new Vector2(-1, 0) * MovementStrength);
         public void MoveRight() => ApplyForce(new Vector2(1, 0) * MovementStrength);
-        public void MoveUp() => ApplyForce(new Vector2(0, -1) * MovementStrength);
-        public void MoveDown() => ApplyForce(new Vector2(0, 1) * MovementStrength);
         
         public void Jump()
         {
@@ -53,7 +51,6 @@ namespace Platformer.GameObjects
 
             Velocity += Acceleration * (float)GameTime.Delta.TotalSeconds;
             Position += Velocity;
-            
             Acceleration = Vector2.Zero;
         }
 

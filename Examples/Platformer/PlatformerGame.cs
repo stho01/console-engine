@@ -1,6 +1,7 @@
 ﻿using System.Numerics;
 using ConsoleEngine;
 using ConsoleEngine.Infrastructure.Inputs;
+using ConsoleEngine.Infrastructure.Logging;
 using ConsoleEngine.Infrastructure.Rendering;
 using ConsoleEngine.Native;
 using Platformer.GameObjects;
@@ -41,10 +42,11 @@ namespace Platformer
         {
             if (Input.Instance.GetKey(Key.A).Held) _player.MoveLeft();
             if (Input.Instance.GetKey(Key.D).Held) _player.MoveRight();
-            if (Input.Instance.GetKey(Key.W).Held) _player.MoveUp();
-            if (Input.Instance.GetKey(Key.S).Held) _player.MoveDown();
-            
-            if (Input.Instance.GetKey(Key.SPACE).Held) _player.Jump();
+            if (Input.Instance.GetKey(Key.SPACE).Held)
+            {
+                Log.Debug("Space");
+                _player.Jump();
+            }
 
             _player.Update();
             _camera.Update();
