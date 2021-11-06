@@ -1,40 +1,45 @@
 ﻿using System;
+using ConsoleEngine;
+using ConsoleEngine.Infrastructure.Logging;
 using Microsoft.Xna.Framework;
 
 namespace Platformer.GameObjects
 {
     public class Camera
     {
-        private readonly PlatformerGame _game;
+        private readonly GameBase _game;
         private GameObject _gameObject;
 
-        public Camera(PlatformerGame game)
+        public Camera(GameBase game)
         {
             _game = game;
         }
         
         public Vector2 Position { get; set; }
-        public int Padding { get; set; } = 2;
         
-        public void Follow(GameObject gameObject) {
+        public void Follow(GameObject gameObject) 
+        {
             _gameObject = gameObject;
         }
 
+        public Vector2 WorldToScreenPos(Vector2 worldPos) => (worldPos - Position);
+        public Vector2 ScreenToWorldPos(Vector2 worldPos) => (worldPos + Position);
+        
         public void Update()
         {
-            var screenPos = (_gameObject.Position - Position);
-            if (screenPos.X < 0) {
-                Position += new Vector2((float)Math.Floor(screenPos.X), Position.Y);
-            }
-            
-            if ((screenPos.X + _gameObject.CollisionBox.Width) >= (_game.Console.Width))
-            {
-                var displacement = Math.Ceiling((screenPos.X + _gameObject.CollisionBox.Width) - _game.Console.Width);
-                Position += new Vector2((float)displacement, Position.Y);
-            }
-            
-        }
+            var (x, y) = WorldToScreenPos(_gameObject.Position);
 
-        public Vector2 WorldPosToScreenPos(Vector2 worldPos) => (worldPos - Position);
+            if (x < 0) {
+                Position += new Vector2((float)Math.Floor(x), 0);
+            } else if (x + _gameObject.CollisionBox.Width > _game.Console.Width) {
+                Position += new Vector2((float)Math.Ceiling((x + _gameObject.CollisionBox.Width)-_game.Console.Width-1), 0);
+            }
+            
+            if (y < 0) {
+                Position += new Vector2(0, (float)Math.Floor(y));
+            } else  if (y + _gameObject.CollisionBox.Height > _game.Console.Height) {
+                Position += new Vector2(0, (float)Math.Ceiling((y + _gameObject.CollisionBox.Height)-_game.Console.Height-1));
+            }
+        }
     }
 }

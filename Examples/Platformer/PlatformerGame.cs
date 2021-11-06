@@ -1,7 +1,6 @@
 ﻿using System.Numerics;
 using ConsoleEngine;
 using ConsoleEngine.Infrastructure.Inputs;
-using ConsoleEngine.Infrastructure.Logging;
 using ConsoleEngine.Infrastructure.Rendering;
 using ConsoleEngine.Native;
 using Platformer.GameObjects;
@@ -11,7 +10,6 @@ namespace Platformer
     public class PlatformerGame : GameBase
     {
         private Player _player;
-        public static readonly Vector2 Gravity = new(0, 0.01f);
         private Camera _camera;
         private UnendingGround _ground;
         
@@ -42,11 +40,10 @@ namespace Platformer
         protected override void OnUpdate() 
         {
             if (Input.Instance.GetKey(Key.A).Held) _player.MoveLeft();
-            if (Input.Instance.GetKey(Key.D).Held)
-            {
-                Log.Debug("Right");
-                _player.MoveRight();
-            }
+            if (Input.Instance.GetKey(Key.D).Held) _player.MoveRight();
+            if (Input.Instance.GetKey(Key.W).Held) _player.MoveUp();
+            if (Input.Instance.GetKey(Key.S).Held) _player.MoveDown();
+            
             if (Input.Instance.GetKey(Key.SPACE).Held) _player.Jump();
 
             _player.Update();

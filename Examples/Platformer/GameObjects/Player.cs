@@ -22,8 +22,8 @@ namespace Platformer.GameObjects
         public override Rectangle CollisionBox => new(
             (int)Position.X, 
             (int)Position.Y,
-            _playerSprite.Width, // height is actually width...
-            _playerSprite.Height); // and width is actually height :-D
+            _playerSprite.Width, 
+            _playerSprite.Height); 
         
         public bool IsAirborne { get; set; } = true;
         public float MovementStrength { get; set; } = 0.1f;
@@ -31,6 +31,9 @@ namespace Platformer.GameObjects
         
         public void MoveLeft() => ApplyForce(new Vector2(-1, 0) * MovementStrength);
         public void MoveRight() => ApplyForce(new Vector2(1, 0) * MovementStrength);
+        public void MoveUp() => ApplyForce(new Vector2(0, -1) * MovementStrength);
+        public void MoveDown() => ApplyForce(new Vector2(0, 1) * MovementStrength);
+        
         public void Jump()
         {
             if (IsAirborne) 
@@ -56,7 +59,7 @@ namespace Platformer.GameObjects
 
         public void Draw()
         {
-            var (x, y) = _game.Camera.WorldPosToScreenPos(Position);
+            var (x, y) = _game.Camera.WorldToScreenPos(Position);
 
             _game.Console.Draw(
                 (int)x,

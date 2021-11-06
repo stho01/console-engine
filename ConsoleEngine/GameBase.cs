@@ -55,7 +55,6 @@ namespace ConsoleEngine
         {
             if (EnableLogger) {
                 Log.Start(this);
-                Log.Debug("Logger started...");
             }
             
             OnInitialize();
@@ -63,11 +62,7 @@ namespace ConsoleEngine
             _console.Initialize();
 
             if (ShowFps)
-            {
-                GameTime.SetInterval(100, () => {
-                    Log.ReportFps(GameTime.Fps);
-                });
-            }
+                GameTime.SetInterval(100, () => Log.ReportFps(GameTime.Fps));
         }
         
         public void Start()

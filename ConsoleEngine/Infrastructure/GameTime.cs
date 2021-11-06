@@ -16,7 +16,7 @@ namespace ConsoleEngine.Infrastructure
         //** props:
         //**********************************************************
 
-        /// <summary>Time elapsed since last frame.</summary>
+        /// <summary>Elapsed time since last frame.</summary>
         public static TimeSpan Delta => _delta;
         public static int Fps { get; private set; }
         
