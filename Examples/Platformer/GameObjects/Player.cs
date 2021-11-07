@@ -10,11 +10,11 @@ namespace Platformer.GameObjects
     {
         private readonly PlatformerGame _game;
         private static readonly Sprite _playerSprite = Sprite.FromStringArray(new[]{
-            " ☻ ",
-            "╭▓╮",
-            " ╿ "
+            "▓▓▓",
+            "▓▓▓",
+            "▓▓▓"
         });
-        
+   
         public Player(PlatformerGame game) {
             _game = game; 
         }
