@@ -1,6 +1,6 @@
 ﻿using System;
 
-namespace ConsoleEngine.Infrastructure.Rendering
+namespace ConsoleEngine.Abstractions.Rendering
 {
     public struct Pixel
     {

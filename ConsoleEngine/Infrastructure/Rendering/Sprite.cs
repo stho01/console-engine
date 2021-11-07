@@ -1,5 +1,6 @@
 ﻿using System;
 using System.Linq;
+using ConsoleEngine.Abstractions.Rendering;
 using Microsoft.Toolkit.HighPerformance;
 
 namespace ConsoleEngine.Infrastructure.Rendering

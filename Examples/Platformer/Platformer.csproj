@@ -31,12 +31,4 @@
       <ProjectReference Include="..\..\ConsoleEngine\ConsoleEngine.csproj" />
     </ItemGroup>
 
-    <ItemGroup Condition=" '$(Configuration)' == 'Windows Release' OR '$(Configuration)'=='Windows Debug' ">
-        <ProjectReference Include="..\..\Libs\ConsoleEngine.Windows\ConsoleEngine.Windows.csproj" />
-    </ItemGroup>
-
-    <ItemGroup Condition=" '$(Configuration)' == 'OSX Release' OR '$(Configuration)'=='OSX Debug' ">
-
-    </ItemGroup>
-
 </Project>

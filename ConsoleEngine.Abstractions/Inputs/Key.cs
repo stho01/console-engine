@@ -1,4 +1,4 @@
-namespace ConsoleEngine.Infrastructure.Inputs
+namespace ConsoleEngine.Abstractions.Inputs
 {
     public enum Key : short
     {

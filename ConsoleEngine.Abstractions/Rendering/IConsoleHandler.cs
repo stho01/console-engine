@@ -1,7 +1,6 @@
 ﻿using System;
-using ConsoleEngine.Infrastructure.Rendering;
 
-namespace ConsoleEngine.Infrastructure
+namespace ConsoleEngine.Abstractions.Rendering
 {
     public interface IConsoleHandler
     {

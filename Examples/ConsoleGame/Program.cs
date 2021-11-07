@@ -1,21 +1,9 @@
-﻿using ConsoleEngine.Infrastructure.Inputs;
-using ConsoleEngine.Native;
+﻿using ConsoleGame;
 
-namespace ConsoleGame
-{
-    class Program
-    {
-        static void Main(string[] args)
-        {
-            Input.Instance.SetHandler(new InputHandler());
+var game = new Game {
+    ShowFps = true, 
+    EnableLogger = true
+};
             
-            var game = new Game {
-                ShowFps = true, 
-                EnableLogger = true
-            };
-            
-            game.Initialize();
-            game.Start();
-        }
-    }
-}
+game.Initialize();
+game.Start();

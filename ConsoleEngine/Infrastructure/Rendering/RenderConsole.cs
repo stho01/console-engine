@@ -1,6 +1,8 @@
 ﻿using System;
 using System.Numerics;
 using Microsoft.Toolkit.HighPerformance;
+using ConsoleEngine.Abstractions;
+using ConsoleEngine.Abstractions.Rendering;
 
 namespace ConsoleEngine.Infrastructure.Rendering
 {

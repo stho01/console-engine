@@ -1,4 +1,6 @@
 ﻿using System;
+using ConsoleEngine.Abstractions.Inputs;
+using ConsoleEngine.Native;
 
 namespace ConsoleEngine.Infrastructure.Inputs
 {
@@ -9,7 +11,7 @@ namespace ConsoleEngine.Infrastructure.Inputs
         //**********************************************************
 
         public static readonly Input Instance = new();
-        private IInputHandler _handler;
+        private static readonly IInputHandler _handler = new InputHandler();
         
         //**********************************************************
         //** ctor:
@@ -20,11 +22,6 @@ namespace ConsoleEngine.Infrastructure.Inputs
         //**********************************************************
         //** public methods:
         //**********************************************************
-
-        public void SetHandler(IInputHandler handler)
-        {
-            _handler = handler;
-        }
         
         public KeyState GetKey(Key key) => GetKey((int)key);
         public KeyState GetKey(int id) 

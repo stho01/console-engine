@@ -1,5 +1,7 @@
 ﻿using System;
 using ConsoleEngine;
+using ConsoleEngine.Abstractions.Inputs;
+using ConsoleEngine.Abstractions.Rendering;
 using ConsoleEngine.Collections;
 using ConsoleEngine.Infrastructure;
 using ConsoleEngine.Infrastructure.Inputs;
@@ -19,7 +21,7 @@ namespace Snake
     public class SnakeGame : GameBase
     {
         private readonly Deque<(int x, int y)> _snake = new();
-        private double _time = 0f;
+        private double _time;
         private const int UpdateThreshold = 150; // ms
         private (int x, int y)? _cleared = null;
         private Direction _direction = Direction.East;
@@ -27,11 +29,11 @@ namespace Snake
         private static readonly Random Random = new((int)DateTime.Now.Ticks);
         
         public SnakeGame() 
-            : base(new RenderConsole(new ConsoleHandler(30, 30, new FontInfo {
+            : base(30, 30, new FontInfo {
                 FontWidth = 14,
                 FontHeight = 14,
                 FontFace = "Consolas"
-            }))) {}
+            }) {}
 
         protected override void OnInitialize()
         {

@@ -1,8 +1,10 @@
 ﻿using System.Threading;
+using ConsoleEngine.Abstractions.Rendering;
 using ConsoleEngine.Infrastructure;
 using ConsoleEngine.Infrastructure.Inputs;
 using ConsoleEngine.Infrastructure.Logging;
 using ConsoleEngine.Infrastructure.Rendering;
+using ConsoleEngine.Native;
 
 namespace ConsoleEngine
 {
@@ -19,11 +21,17 @@ namespace ConsoleEngine
         //** ctor
         //**********************************************************
 
-        protected GameBase(RenderConsole console) : this(console, "Game") {}
-        protected GameBase(RenderConsole console, string name)
+        protected GameBase(int width, int height, int fontWidth, int fontHeight) 
+            : this(width, height, new FontInfo {
+                FontFace = "Consolas",
+                FontWidth = fontWidth,
+                FontHeight = fontHeight
+            }) {}
+        
+        protected GameBase(int width, int height, FontInfo fontInfo) 
         {
-            _console = console;
-            Name = name;
+            _console = new RenderConsole(new ConsoleHandler(width, height, fontInfo));
+            Name = "Game";
         }
               
         //**********************************************************
@@ -31,7 +39,7 @@ namespace ConsoleEngine
         //**********************************************************
 
         public RenderConsole Console => _console;
-        public string Name { get; set; }
+        public string Name { get; init; }
         public bool ShowFps { get; set; }
         public bool EnableLogger { get; init; }
         public bool ClearScreenOnEachFrame { get; set; } = true;

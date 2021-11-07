@@ -1,6 +1,4 @@
-﻿using ConsoleEngine.Infrastructure.Inputs;
-
-namespace ConsoleEngine.Infrastructure
+﻿namespace ConsoleEngine.Abstractions.Inputs
 {
     public interface IInputHandler
     {
