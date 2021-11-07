@@ -1,5 +1,4 @@
 ﻿using System;
-using ConsoleEngine.Infrastructure;
 using ConsoleEngine.Infrastructure.Inputs;
 using ConsoleEngine.Native;
 
@@ -10,10 +9,14 @@ namespace Platformer
         static void Main(string[] args)
         {
             Input.Instance.SetHandler(new InputHandler());
+
+            var game = new PlatformerGame {
+                EnableLogger = true
+            };
             
-            var game = new PlatformerGame();
             game.Initialize();
             game.Start();
+            Console.ReadKey();
         }
     }
 }

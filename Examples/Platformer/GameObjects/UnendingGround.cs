@@ -5,6 +5,8 @@ using Microsoft.Xna.Framework;
 
 namespace Platformer.GameObjects
 {
+    // NOTE: Not currently in use 
+    // <summary>Displays a ground on the bottom of the screen that scrolls forever in x direction.</summary>
     public class UnendingGround
     {
         private readonly PlatformerGame _game;
@@ -35,7 +37,7 @@ namespace Platformer.GameObjects
         {
             foreach (var tile in _tiles)
             {
-                var (x, y) = _game.Camera.WorldPosToScreenPos(tile);
+                var (x, y) = _game.Camera.WorldToScreenPos(tile);
 
                 if (x + _tileSprite.Width < 0) {
                     _tiles.PopFront();

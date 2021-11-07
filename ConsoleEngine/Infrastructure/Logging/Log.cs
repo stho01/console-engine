@@ -12,10 +12,12 @@ namespace ConsoleEngine.Infrastructure.Logging
         private static readonly Socket Socket;
         private static readonly IPEndPoint EndPoint;
         private static readonly ConcurrentQueue<string> Messages = new();
-        private static readonly Thread LoggerThread = new(DispatchMessages);
+        private static readonly Thread LoggerThread = new(DispatchMessages) { Name = "Logger", IsBackground = true };
         private static Socket _loggerConnection;
         private static Process _loggerProcess;
         private static bool _running;
+        private static GameBase _game;
+        private const char EndOfMessage = '\0';
 
         static Log()
         {
@@ -24,26 +26,26 @@ namespace ConsoleEngine.Infrastructure.Logging
             EndPoint = new IPEndPoint(ipAddress, 11000);
             Socket = new Socket(ipAddress.AddressFamily, SocketType.Stream, ProtocolType.Tcp);
         }
-
-        internal static void Start()
+        
+        public static void Debug(object message)
         {
-            _running = true;
-            Socket.Bind(EndPoint);
-            Socket.Listen(10);
-            LoggerThread.Start();
-            
-            _loggerProcess = new Process();
-            _loggerProcess.StartInfo.FileName = "ConsoleEngine.Logger.exe";
-            _loggerProcess.StartInfo.UseShellExecute = true;
-            _loggerProcess.Start();
+            var sb = new StringBuilder();
+            sb.Append(message);
+            EnqueueMessage(sb);
         }
 
-        internal static void Stop()
+        public static void ReportFps(int fps)
         {
-            _running = false;
-            _loggerConnection.Dispose();
-            Socket.Dispose();
-            Messages.Clear();
+            var sb = new StringBuilder($"#<FPS>:{fps}");
+            EnqueueMessage(sb);
+        }
+
+        private static void EnqueueMessage(StringBuilder messageBuilder)
+        {
+            if (!_game.EnableLogger)
+                return;
+            messageBuilder.Append(EndOfMessage);
+            Messages.Enqueue(messageBuilder.ToString());
         }
 
         private static void DispatchMessages()
@@ -63,18 +65,30 @@ namespace ConsoleEngine.Infrastructure.Logging
                     _loggerConnection.Send(bytes);
                 }
 
-                Thread.Sleep(32); 
+                Thread.Sleep(100); 
             }
         }
-
-        public static void Debug(string message)
+        
+        internal static void Start(GameBase game)
         {
-            Messages.Enqueue(message);
+            _game = game;
+            _running = true;
+            Socket.Bind(EndPoint);
+            Socket.Listen(10);
+            LoggerThread.Start();
+            
+            _loggerProcess = new Process();
+            _loggerProcess.StartInfo.FileName = "ConsoleEngine.Logger.exe";
+            _loggerProcess.StartInfo.UseShellExecute = true;
+            _loggerProcess.Start();
         }
 
-        public static void ReportFps(int fps)
+        internal static void Stop()
         {
-            Messages.Enqueue($"#<FPS>:{fps}");
+            _running = false;
+            _loggerConnection.Dispose();
+            Socket.Dispose();
+            Messages.Clear();
         }
     }
 }
