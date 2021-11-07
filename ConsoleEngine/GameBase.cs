@@ -64,7 +64,8 @@ namespace ConsoleEngine
         
         public void Start()
         {
-            Thread.Sleep(100);
+            Thread.Sleep(100); // lazy way to wait for the console to load and initialize xD. 
+            
             _running = true;
             while (_running)
             {

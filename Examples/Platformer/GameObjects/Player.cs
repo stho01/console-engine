@@ -1,6 +1,5 @@
 ﻿using System;
 using ConsoleEngine.Infrastructure;
-using ConsoleEngine.Infrastructure.Logging;
 using ConsoleEngine.Infrastructure.Rendering;
 using Microsoft.Xna.Framework;
 
@@ -13,20 +12,13 @@ namespace Platformer.GameObjects
             "▓▓▓",
             "▓▓▓",
             "▓▓▓"
-        });
+        }, ConsoleColor.Red);
    
         public Player(PlatformerGame game) {
             _game = game; 
         }
         
-        public override Rectangle? CollisionBox => new(
-            (int)Position.X, 
-            (int)Position.Y,
-            _playerSprite.Width, 
-            _playerSprite.Height); 
-        
-        public bool IsAirborne { get; set; } = false;
-
+        public bool IsAirborne { get; private set; }
         public float MovementStrength => IsAirborne ? 0.1f : .4f;
         
         public void MoveLeft() => ApplyForce(new Vector2(-1, 0) * MovementStrength);
@@ -55,7 +47,7 @@ namespace Platformer.GameObjects
 
             Position = ResolveCollision(newX, newY);
             
-            if (Velocity.LengthSquared() < 0.1)
+            if (Velocity.LengthSquared() < 0.1) 
                 Velocity = Vector2.Zero;
             Acceleration = Vector2.Zero;
         }

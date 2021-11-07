@@ -22,7 +22,7 @@ namespace Platformer
 
         public Camera Camera => _camera;
         public World World => _world;
-        public bool IsDebugMode { get; set; } = true;
+        public bool IsDebugMode { get; set; }
 
         protected override void OnInitialize()
         {

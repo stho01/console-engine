@@ -1,7 +1,5 @@
 ﻿using System;
-using System.Collections.Generic;
 using System.Linq;
-using ConsoleEngine.Extensions;
 using ConsoleEngine.Infrastructure.Rendering;
 using Microsoft.Xna.Framework;
 
@@ -10,7 +8,7 @@ namespace Platformer
     public class World
     {
         private readonly PlatformerGame _game;
-        private static readonly string[] TileMap = {
+        private static readonly string[] TileMap = { // TODO: Let different chars be different tile types. coins, consumables, destructible blocks etc. 
             "#.............................................................................................#",
             "#.............................................................................................#",
             "#.............................................................................................#",
@@ -66,23 +64,17 @@ namespace Platformer
 
                     if (_game.IsDebugMode)
                     {
-                        _game.Console.Draw(posX, posY, x.ToString());
-                        _game.Console.Draw(posX, posY+1, y.ToString());    
+                        _game.Console.Draw(posX, posY, x.ToString(), ConsoleColor.Black, ConsoleColor.White);
+                        _game.Console.Draw(posX, posY+1, y.ToString(), ConsoleColor.Black, ConsoleColor.White);    
                     }
                 }
             }
         }
 
-        public char GetTile(float x, float y) => GetTileFromMapCoords((int)(x/4), (int)(y/4));
-        public char GetTile(int x, int y)
-        {
-            var mapX = x / TileSprite.Width;
-            var mapY = y / TileSprite.Height;
+        public char GetTile(float x, float y) => GetTileFromMapCoords((int)(x/TileSprite.Width), (int)(y/TileSprite.Height));
+        public char GetTile(int x, int y) => GetTileFromMapCoords(x / TileSprite.Width, y / TileSprite.Height);
 
-            return GetTileFromMapCoords(mapX, mapY);
-        }
-
-        public char GetTileFromMapCoords(int mapX, int mapY)
+        private char GetTileFromMapCoords(int mapX, int mapY)
         {
             if (mapX >= 0 && mapX < Width 
              && mapY >= 0 && mapY < Height)

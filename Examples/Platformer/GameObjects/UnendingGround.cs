@@ -5,6 +5,8 @@ using Microsoft.Xna.Framework;
 
 namespace Platformer.GameObjects
 {
+    // NOTE: Not currently in use 
+    // <summary>Displays a ground on the bottom of the screen that scrolls forever in x direction.</summary>
     public class UnendingGround
     {
         private readonly PlatformerGame _game;
