@@ -1,5 +1,4 @@
 ﻿using System;
-using ConsoleEngine.Infrastructure;
 using ConsoleEngine.Infrastructure.Inputs;
 using ConsoleEngine.Native;
 
@@ -17,6 +16,7 @@ namespace Platformer
             
             game.Initialize();
             game.Start();
+            Console.ReadKey();
         }
     }
 }

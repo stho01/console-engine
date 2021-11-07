@@ -1,4 +1,5 @@
-﻿using ConsoleEngine.Infrastructure;
+﻿using System.Threading;
+using ConsoleEngine.Infrastructure;
 using ConsoleEngine.Infrastructure.Inputs;
 using ConsoleEngine.Infrastructure.Logging;
 using ConsoleEngine.Infrastructure.Rendering;
@@ -63,6 +64,7 @@ namespace ConsoleEngine
         
         public void Start()
         {
+            Thread.Sleep(100);
             _running = true;
             while (_running)
             {

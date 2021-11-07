@@ -12,7 +12,7 @@ namespace ConsoleEngine.Infrastructure.Logging
         private static readonly Socket Socket;
         private static readonly IPEndPoint EndPoint;
         private static readonly ConcurrentQueue<string> Messages = new();
-        private static readonly Thread LoggerThread = new(DispatchMessages) { Name = "Logger" };
+        private static readonly Thread LoggerThread = new(DispatchMessages) { Name = "Logger", IsBackground = true };
         private static Socket _loggerConnection;
         private static Process _loggerProcess;
         private static bool _running;
@@ -27,9 +27,10 @@ namespace ConsoleEngine.Infrastructure.Logging
             Socket = new Socket(ipAddress.AddressFamily, SocketType.Stream, ProtocolType.Tcp);
         }
         
-        public static void Debug(string message)
+        public static void Debug(object message)
         {
-            var sb = new StringBuilder(message);
+            var sb = new StringBuilder();
+            sb.Append(message);
             EnqueueMessage(sb);
         }
 
@@ -64,7 +65,7 @@ namespace ConsoleEngine.Infrastructure.Logging
                     _loggerConnection.Send(bytes);
                 }
 
-                Thread.Sleep(32); 
+                Thread.Sleep(100); 
             }
         }
         
