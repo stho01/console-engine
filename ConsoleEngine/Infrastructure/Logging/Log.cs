@@ -42,8 +42,9 @@ namespace ConsoleEngine.Infrastructure.Logging
 
         private static void EnqueueMessage(StringBuilder messageBuilder)
         {
-            if (!_game.EnableLogger)
+            if (!(_game?.EnableLogger ?? false))
                 return;
+            
             messageBuilder.Append(EndOfMessage);
             Messages.Enqueue(messageBuilder.ToString());
         }
