@@ -1,22 +1,10 @@
 ﻿using System;
-using ConsoleEngine.Infrastructure.Inputs;
-using ConsoleEngine.Native;
+using Platformer;
 
-namespace Platformer
-{
-    class Program
-    {
-        static void Main(string[] args)
-        {
-            Input.Instance.SetHandler(new InputHandler());
-
-            var game = new PlatformerGame {
-                EnableLogger = true
-            };
+var game = new PlatformerGame {
+    EnableLogger = true
+};
             
-            game.Initialize();
-            game.Start();
-            Console.ReadKey();
-        }
-    }
-}
+game.Initialize();
+game.Start();
+Console.ReadKey();

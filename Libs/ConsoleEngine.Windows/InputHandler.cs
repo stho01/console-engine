@@ -1,5 +1,4 @@
-﻿using ConsoleEngine.Infrastructure;
-using ConsoleEngine.Infrastructure.Inputs;
+﻿using ConsoleEngine.Abstractions.Inputs;
 
 namespace ConsoleEngine.Native
 {

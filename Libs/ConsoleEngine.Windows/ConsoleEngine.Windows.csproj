@@ -26,7 +26,6 @@
     </PropertyGroup>
 
     <ItemGroup>
-      <ProjectReference Include="..\..\ConsoleEngine\ConsoleEngine.csproj" />
+      <ProjectReference Include="..\..\ConsoleEngine.Abstractions\ConsoleEngine.Abstractions.csproj" />
     </ItemGroup>
-
 </Project>

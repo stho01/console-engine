@@ -18,6 +18,8 @@ Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Snake", "Examples\Snake\Sna
 EndProject
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "ConsoleEngine.Logger", "Libs\ConsoleEngine.Logger\ConsoleEngine.Logger.csproj", "{4C3C2CB2-D212-4DBF-8247-C3C75A22D6EC}"
 EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "ConsoleEngine.Abstractions", "ConsoleEngine.Abstractions\ConsoleEngine.Abstractions.csproj", "{A4209E56-1ECD-4616-BB13-DF77864F462C}"
+EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
 		OSX Debug|Any CPU = OSX Debug|Any CPU
@@ -82,6 +84,14 @@ Global
 		{4C3C2CB2-D212-4DBF-8247-C3C75A22D6EC}.OSX Release|Any CPU.Build.0 = Debug|Any CPU
 		{4C3C2CB2-D212-4DBF-8247-C3C75A22D6EC}.Windows Release|Any CPU.ActiveCfg = Debug|Any CPU
 		{4C3C2CB2-D212-4DBF-8247-C3C75A22D6EC}.Windows Release|Any CPU.Build.0 = Debug|Any CPU
+		{A4209E56-1ECD-4616-BB13-DF77864F462C}.OSX Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{A4209E56-1ECD-4616-BB13-DF77864F462C}.OSX Debug|Any CPU.Build.0 = Debug|Any CPU
+		{A4209E56-1ECD-4616-BB13-DF77864F462C}.Windows Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{A4209E56-1ECD-4616-BB13-DF77864F462C}.Windows Debug|Any CPU.Build.0 = Debug|Any CPU
+		{A4209E56-1ECD-4616-BB13-DF77864F462C}.OSX Release|Any CPU.ActiveCfg = Debug|Any CPU
+		{A4209E56-1ECD-4616-BB13-DF77864F462C}.OSX Release|Any CPU.Build.0 = Debug|Any CPU
+		{A4209E56-1ECD-4616-BB13-DF77864F462C}.Windows Release|Any CPU.ActiveCfg = Debug|Any CPU
+		{A4209E56-1ECD-4616-BB13-DF77864F462C}.Windows Release|Any CPU.Build.0 = Debug|Any CPU
 	EndGlobalSection
 	GlobalSection(NestedProjects) = preSolution
 		{99309207-1847-4EB9-A009-C7B92BC2CE64} = {CA22425D-FB6C-45C6-A14C-561DF6D969B6}

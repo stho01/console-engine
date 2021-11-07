@@ -1,9 +1,9 @@
 ﻿using System;
 using ConsoleEngine;
+using ConsoleEngine.Abstractions.Inputs;
+using ConsoleEngine.Abstractions.Rendering;
 using ConsoleEngine.Infrastructure;
 using ConsoleEngine.Infrastructure.Inputs;
-using ConsoleEngine.Infrastructure.Rendering;
-using ConsoleEngine.Native;
 
 namespace ConsoleGame
 {
@@ -16,13 +16,7 @@ namespace ConsoleGame
         private const int Height = 64;
         private readonly Pixel[,] _display = new Pixel[Width,Height];
 
-        public Game()
-            : base(new RenderConsole(
-                new ConsoleHandler(Width, Height, new FontInfo {
-                    FontWidth = 8,
-                    FontHeight = 8,
-                    FontFace = "Consolas"
-                }))) {}
+        public Game() : base(Width, Height, fontWidth: 8, fontHeight:8) {}
 
         protected override void OnInitialize()
         {

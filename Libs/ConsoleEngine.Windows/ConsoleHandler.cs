@@ -1,8 +1,6 @@
 ﻿using System;
-using System.Linq;
 using System.Runtime.InteropServices;
-using ConsoleEngine.Infrastructure;
-using ConsoleEngine.Infrastructure.Rendering;
+using ConsoleEngine.Abstractions.Rendering;
 using ConsoleEngine.Native.LowLevel;
 
 namespace ConsoleEngine.Native
@@ -10,7 +8,7 @@ namespace ConsoleEngine.Native
     using static LowLevel.Kernel32;
     using static LowLevel.User32;
     
-    public class ConsoleHandler : IConsoleHandler
+    public sealed class ConsoleHandler : IConsoleHandler
     {
         private readonly FontInfo _fontInfo;
         private readonly IntPtr _consoleOutBuffer;

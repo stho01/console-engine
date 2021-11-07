@@ -1,8 +1,8 @@
 ﻿using System.Numerics;
 using ConsoleEngine;
+using ConsoleEngine.Abstractions.Inputs;
+using ConsoleEngine.Abstractions.Rendering;
 using ConsoleEngine.Infrastructure.Inputs;
-using ConsoleEngine.Infrastructure.Rendering;
-using ConsoleEngine.Native;
 using Platformer.GameObjects;
 
 namespace Platformer
@@ -12,14 +12,17 @@ namespace Platformer
         private Player _player;
         private Camera _camera;
         private World _world;
-        
-        public PlatformerGame() 
-            : base(new RenderConsole(new ConsoleHandler(60, 60,new FontInfo {
+
+        public PlatformerGame()
+            : base(60, 60, new FontInfo {
                 FontWidth = 10,
                 FontHeight = 10,
                 FontFace = "Consolas"
-            })), "Platformer game") {}
-
+            }) 
+        {
+            Name = "Platformer game";
+        }
+        
         public Camera Camera => _camera;
         public World World => _world;
         public bool IsDebugMode { get; set; }
