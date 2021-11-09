@@ -118,6 +118,7 @@ namespace ConsoleEngine.Infrastructure.Rendering
             => DrawLine(new Point(x1, y1), new Point(x2, y2), character, foregroundColor, backgroundColor);
         public void DrawLine(Point p1, Point p2, char character, ConsoleColor foregroundColor = ConsoleColor.White, ConsoleColor backgroundColor = ConsoleColor.Black)
         {
+            // Creds goes to olc. https://github.com/OneLoneCoder
             int x, y, dx1, dy1, px, py, xe, ye, i;
             var d = p2 - p1;
 
