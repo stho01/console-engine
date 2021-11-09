@@ -1,6 +1,6 @@
-﻿using Astroids;
+﻿using Asteroids;
 
-var game = new AstroidsGame()
+var game = new AsteroidsGame()
 {
     EnableLogger = true
 };

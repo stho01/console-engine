@@ -3,18 +3,18 @@ using System.Collections.Generic;
 using ConsoleEngine.Infrastructure;
 using Microsoft.Xna.Framework;
 
-namespace Astroids.GameObjects
+namespace Asteroids.GameObjects
 {
     public class Player : GameObject
     {
-        private readonly AstroidsGame _game;
+        private readonly AsteroidsGame _game;
         private readonly Vector2[] _vertices = {
             new( 0f, -1f),
             new( .7f,  .7f),
             new(-.7f,  .7f)
         };
         
-        public Player(AstroidsGame game)
+        public Player(AsteroidsGame game)
         {
             _game = game;
         }

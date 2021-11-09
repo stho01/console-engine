@@ -20,7 +20,7 @@ Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "ConsoleEngine.Logger", "Lib
 EndProject
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "ConsoleEngine.Abstractions", "ConsoleEngine.Abstractions\ConsoleEngine.Abstractions.csproj", "{A4209E56-1ECD-4616-BB13-DF77864F462C}"
 EndProject
-Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Astroids", "Examples\Astroids\Astroids.csproj", "{87EB68ED-18DD-41C9-8A33-B305C4DF210F}"
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Asteroids", "Examples\Asteroids\Asteroids.csproj", "{87EB68ED-18DD-41C9-8A33-B305C4DF210F}"
 EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution

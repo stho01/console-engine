@@ -1,6 +1,6 @@
 ﻿using Microsoft.Xna.Framework;
 
-namespace Astroids.GameObjects
+namespace Asteroids.GameObjects
 {
     public abstract class GameObject
     {

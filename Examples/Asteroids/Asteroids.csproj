@@ -4,6 +4,8 @@
         <OutputType>Exe</OutputType>
         <TargetFramework>net5.0</TargetFramework>
         <DockerDefaultTargetOS>Linux</DockerDefaultTargetOS>
+        <RootNamespace>Asteroids</RootNamespace>
+        <AssemblyName>Asteroids</AssemblyName>
     </PropertyGroup>
 
     <ItemGroup>

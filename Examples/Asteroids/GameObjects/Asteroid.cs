@@ -2,17 +2,17 @@
 using System.Collections.Generic;
 using Microsoft.Xna.Framework;
 
-namespace Astroids.GameObjects
+namespace Asteroids.GameObjects
 {
-    public class Astroid : GameObject
+    public class Asteroid : GameObject
     {
         private const int Sides = 20; 
-        private readonly AstroidsGame _game;
+        private readonly AsteroidsGame _game;
         private readonly int _radius; 
 
         private readonly List<Vector2> _vertices = new(); 
 
-        public Astroid(AstroidsGame game)
+        public Asteroid(AsteroidsGame game)
         {
             _game = game;
 

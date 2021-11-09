@@ -1,22 +1,22 @@
 ﻿using System;
 using System.Collections.Generic;
 using System.Linq;
-using Astroids.GameObjects;
+using Asteroids.GameObjects;
 using ConsoleEngine;
 using ConsoleEngine.Abstractions.Inputs;
 using ConsoleEngine.Infrastructure.Inputs;
 using Microsoft.Xna.Framework;
 
-namespace Astroids
+namespace Asteroids
 {
-    public class AstroidsGame : GameBase
+    public class AsteroidsGame : GameBase
     {
         private Player _player;
         private Camera _camera;
-        private readonly HashSet<Astroid> _astroids = new();
+        private readonly HashSet<Asteroid> _asteroids = new();
         private static readonly Random _random = new((int)DateTime.Now.Ticks);
 
-        public AstroidsGame() : base(200, 200, 4, 4) { }
+        public AsteroidsGame() : base(200, 200, 4, 4) { }
 
         public Camera Camera => _camera;
         public Random Random => _random;
@@ -32,17 +32,17 @@ namespace Astroids
 
             for (var i = 0; i < 50; i++)
             {
-                var astroid = new Astroid(this);
+                var asteroid = new Asteroid(this);
 
                 do // dont spawn on top of each other. 
                 {
-                    astroid.Position = new Vector2(
+                    asteroid.Position = new Vector2(
                         _random.Next(-Console.Width, Console.Width * 2),
                         _random.Next(-Console.Height, Console.Height * 2)
                     );
-                } while (_astroids.Any(x => x.Intersects(astroid.Position, astroid.Radius)));
+                } while (_asteroids.Any(x => x.Intersects(asteroid.Position, asteroid.Radius)));
 
-                _astroids.Add(astroid);
+                _asteroids.Add(asteroid);
             }
         }
 
@@ -58,8 +58,8 @@ namespace Astroids
 
         protected override void OnRender()
         {
-            foreach (var astroid in _astroids)
-                astroid.Draw();
+            foreach (var asteroid in _asteroids)
+                asteroid.Draw();
             
             _player.Draw();
         }

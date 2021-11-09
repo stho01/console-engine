@@ -1,7 +1,7 @@
 ﻿using ConsoleEngine;
 using Microsoft.Xna.Framework;
 
-namespace Astroids.GameObjects
+namespace Asteroids.GameObjects
 {
     public class Camera
     {
