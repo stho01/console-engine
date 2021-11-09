@@ -1,11 +1,12 @@
 ﻿using System;
 using System.Linq;
+using System.Numerics;
 using ConsoleEngine.Abstractions.Rendering;
 using Microsoft.Toolkit.HighPerformance;
 
 namespace ConsoleEngine.Infrastructure.Rendering
 {
-    public class Sprite
+    public class Sprite 
     { 
         public static Sprite FromCharArray(char[,] data, ConsoleColor fg = ConsoleColor.White, ConsoleColor bg = ConsoleColor.Black)
         {
@@ -57,6 +58,7 @@ namespace ConsoleEngine.Infrastructure.Rendering
             Data = data;
             Width = data.GetLength(0);
             Height = data.GetLength(1);
+            Origin = new Vector2(Width / 2, Height / 2);
         }
 
         public Pixel[,] Data { get; }
@@ -64,5 +66,6 @@ namespace ConsoleEngine.Infrastructure.Rendering
         
         public int Width { get; }
         public int Height { get; }
+        public Vector2 Origin { get; set; }
     }
 }

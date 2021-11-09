@@ -35,6 +35,7 @@
     <ItemGroup>
       <ProjectReference Include="..\ConsoleEngine.Abstractions\ConsoleEngine.Abstractions.csproj" />
       <ProjectReference Include="..\Libs\ConsoleEngine.Logger\ConsoleEngine.Logger.csproj" />
+      <ProjectReference Include="..\Libs\Microsoft.Xna.Framework\Microsoft.Xna.Framework.csproj" />
     </ItemGroup>
 
     <ItemGroup Condition=" '$(Configuration)' == 'Windows Release' OR '$(Configuration)'=='Windows Debug' ">

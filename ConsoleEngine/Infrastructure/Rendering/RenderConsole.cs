@@ -1,8 +1,7 @@
 ﻿using System;
-using System.Numerics;
 using Microsoft.Toolkit.HighPerformance;
-using ConsoleEngine.Abstractions;
 using ConsoleEngine.Abstractions.Rendering;
+using Microsoft.Xna.Framework;
 
 namespace ConsoleEngine.Infrastructure.Rendering
 {
@@ -62,17 +61,6 @@ namespace ConsoleEngine.Infrastructure.Rendering
         //** public methods:
         //**********************************************************
 
-        internal RenderConsole Initialize()
-        {
-            _consoleHandler.InitializeConsole();
-            if (!Resizeable)
-                _consoleHandler.Resizable(false);
-            
-            SetCursorVisible(!HideCursor);
-            
-            return this;
-        }
-
         public void Draw(int x, int y, Sprite sprite)
         {
             Draw(x, y, sprite.DataSpan);
@@ -125,7 +113,75 @@ namespace ConsoleEngine.Infrastructure.Rendering
                 _pixels[index].BackgroundColor = backgroundColor;
             }
         }
-   
+
+        public void DrawLine(int x1, int y1, int x2, int y2, char character, ConsoleColor foregroundColor = ConsoleColor.White, ConsoleColor backgroundColor = ConsoleColor.Black)
+            => DrawLine(new Point(x1, y1), new Point(x2, y2), character, foregroundColor, backgroundColor);
+        public void DrawLine(Point p1, Point p2, char character, ConsoleColor foregroundColor = ConsoleColor.White, ConsoleColor backgroundColor = ConsoleColor.Black)
+        {
+            // Creds goes to olc. https://github.com/OneLoneCoder
+            int x, y, dx1, dy1, px, py, xe, ye, i;
+            var d = p2 - p1;
+
+            dx1 = Math.Abs(d.X); 
+            dy1 = Math.Abs(d.Y);
+
+            px = 2 * dy1 - dx1;	
+            py = 2 * dx1 - dy1;
+
+            if (dy1 <= dx1)
+            {
+                if (d.X >= 0) { x = p1.X; y = p1.Y; xe = p2.X; }
+                else { x = p2.X; y = p2.Y; xe = p1.X;}
+                
+                Draw(x, y, character, foregroundColor, backgroundColor);
+
+                for (i = 0; x < xe; i++)
+                {
+                    x = x + 1;
+                    if (px < 0) 
+                    {
+                        px = px + 2 * dy1;
+                    } 
+                    else
+                    {
+                        if ((d.X < 0 && d.Y < 0) || (d.X > 0 && d.Y > 0)) 
+                            y = y + 1; 
+                        else 
+                            y = y - 1;
+                        
+                        px = px + 2 * (dy1 - dx1);
+                    }
+                    
+                    Draw(x, y, character, foregroundColor, backgroundColor);
+                }
+            }
+            else
+            {
+                if (d.Y >= 0) { x = p1.X; y = p1.Y; ye = p2.Y; }
+                else { x = p2.X; y = p2.Y; ye = p1.Y; }
+                
+                Draw(x, y, character, foregroundColor, backgroundColor);
+                
+                for (i = 0; y < ye; i++)
+                {
+                    y = y + 1;
+                    if (py <= 0)
+                        py = py + 2 * dx1;
+                    else
+                    {
+                        if ((d.X < 0 && d.Y < 0) || (d.X > 0 && d.Y > 0)) 
+                            x = x + 1; 
+                        else 
+                            x = x - 1;
+                        
+                        py = py + 2 * (dx1 - dy1);
+                    }
+                    
+                    Draw(x, y, character, foregroundColor, backgroundColor);
+                }
+            }
+        }
+
         public char? GetCharAt(int x, int y)
         {
             if (x < 0 || x >= Width || y < 0 || y >= Height)
@@ -134,7 +190,6 @@ namespace ConsoleEngine.Infrastructure.Rendering
             return _pixels[y * Width + x].Char;
         }
 
-        internal void Display() => _consoleHandler.Render(_pixels);
 
         public void Clear()
         {
@@ -149,5 +204,20 @@ namespace ConsoleEngine.Infrastructure.Rendering
         public void Close() {
             Environment.Exit(0);
         }
+        
+        //**********************************************************
+        //** internal methods:
+        //**********************************************************
+       
+        internal void Initialize()
+        {
+            _consoleHandler.InitializeConsole();
+            if (!Resizeable)
+                _consoleHandler.Resizable(false);
+            
+            SetCursorVisible(!HideCursor);
+        }
+        
+        internal void Display() => _consoleHandler.Render(_pixels);
     }
 }
