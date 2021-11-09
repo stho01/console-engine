@@ -19,11 +19,11 @@ namespace Astroids.GameObjects
             _game = game;
         }
         
-        public float ThrustStrength { get; set; } = 150f;
-        public float SteerStrength { get; set; } = 360f; // deg/sec
+        public float Thrust { get; set; } = 150f;
+        public float SteeringStrength { get; set; } = 360f; // deg/sec
 
-        public void SteerLeft() => Angle -= SteerStrength * (float)GameTime.Delta.TotalSeconds;
-        public void SteerRight() => Angle += SteerStrength * (float)GameTime.Delta.TotalSeconds;
+        public void SteerLeft() => Angle -= SteeringStrength * (float)GameTime.Delta.TotalSeconds;
+        public void SteerRight() => Angle += SteeringStrength * (float)GameTime.Delta.TotalSeconds;
 
         public void Move()
         {
@@ -32,7 +32,7 @@ namespace Astroids.GameObjects
                 (float)Math.Sin(MathHelper.ToRadians(Angle - 90))
             );
 
-            ApplyForce(heading * ThrustStrength);
+            ApplyForce(heading * Thrust);
         }
 
         public void ApplyForce(Vector2 force) => Acceleration += force * (float)GameTime.Delta.TotalSeconds;

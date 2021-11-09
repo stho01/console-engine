@@ -61,17 +61,6 @@ namespace ConsoleEngine.Infrastructure.Rendering
         //** public methods:
         //**********************************************************
 
-        internal RenderConsole Initialize()
-        {
-            _consoleHandler.InitializeConsole();
-            if (!Resizeable)
-                _consoleHandler.Resizable(false);
-            
-            SetCursorVisible(!HideCursor);
-            
-            return this;
-        }
-
         public void Draw(int x, int y, Sprite sprite)
         {
             Draw(x, y, sprite.DataSpan);
@@ -200,7 +189,6 @@ namespace ConsoleEngine.Infrastructure.Rendering
             return _pixels[y * Width + x].Char;
         }
 
-        internal void Display() => _consoleHandler.Render(_pixels);
 
         public void Clear()
         {
@@ -215,5 +203,20 @@ namespace ConsoleEngine.Infrastructure.Rendering
         public void Close() {
             Environment.Exit(0);
         }
+        
+        //**********************************************************
+        //** internal methods:
+        //**********************************************************
+       
+        internal void Initialize()
+        {
+            _consoleHandler.InitializeConsole();
+            if (!Resizeable)
+                _consoleHandler.Resizable(false);
+            
+            SetCursorVisible(!HideCursor);
+        }
+        
+        internal void Display() => _consoleHandler.Render(_pixels);
     }
 }

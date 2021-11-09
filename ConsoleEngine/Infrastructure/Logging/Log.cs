@@ -27,7 +27,7 @@ namespace ConsoleEngine.Infrastructure.Logging
             Socket = new Socket(ipAddress.AddressFamily, SocketType.Stream, ProtocolType.Tcp);
         }
         
-        public static void Debug(object message)
+        public static void WriteLine(object message)
         {
             var sb = new StringBuilder();
             sb.Append(message);
@@ -36,7 +36,8 @@ namespace ConsoleEngine.Infrastructure.Logging
 
         public static void ReportFps(int fps)
         {
-            var sb = new StringBuilder($"#<FPS>:{fps}");
+            var sb = new StringBuilder("#<FPS>:");
+            sb.Append(fps);
             EnqueueMessage(sb);
         }
 
@@ -58,9 +59,7 @@ namespace ConsoleEngine.Infrastructure.Logging
                 if (!loggerConnected)
                     _loggerConnection = Socket.Accept(); // wait for new connection
                 
-                while (loggerConnected
-                       && !Messages.IsEmpty 
-                       && Messages.TryDequeue(out var msg))
+                while (loggerConnected && Messages.TryDequeue(out var msg))
                 {
                     var bytes = Encoding.UTF8.GetBytes(msg);
                     _loggerConnection.Send(bytes);
