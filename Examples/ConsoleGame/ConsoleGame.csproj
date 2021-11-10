@@ -4,28 +4,9 @@
         <OutputType>Exe</OutputType>
         <TargetFramework>net5.0</TargetFramework>
         <DockerDefaultTargetOS>Linux</DockerDefaultTargetOS>
-        <Configurations>OSX Debug;Windows Debug;OSX Release;Windows Release</Configurations>
-        <Platforms>AnyCPU</Platforms>
+        <Platforms>OSX;Windows</Platforms>
+        <IsPackable>false</IsPackable>
     </PropertyGroup>
-
-    <PropertyGroup Condition=" '$(Configuration)' == 'OSX Debug' ">
-      <DebugSymbols Condition=" '$(DebugSymbols)' == '' ">true</DebugSymbols>
-      <Optimize Condition=" '$(Optimize)' == '' ">false</Optimize>
-    </PropertyGroup>
-
-    <PropertyGroup Condition=" '$(Configuration)' == 'Windows Debug' ">
-      <DebugSymbols Condition=" '$(DebugSymbols)' == '' ">true</DebugSymbols>
-      <Optimize Condition=" '$(Optimize)' == '' ">false</Optimize>
-    </PropertyGroup>
-
-    <PropertyGroup Condition=" '$(Configuration)' == 'OSX Release' ">
-      <Optimize Condition=" '$(Optimize)' == '' ">true</Optimize>
-    </PropertyGroup>
-
-    <PropertyGroup Condition=" '$(Configuration)' == 'Windows Release' ">
-      <Optimize Condition=" '$(Optimize)' == '' ">true</Optimize>
-    </PropertyGroup>
-
     <ItemGroup>
       <ProjectReference Include="..\..\ConsoleEngine\ConsoleEngine.csproj" />
     </ItemGroup>

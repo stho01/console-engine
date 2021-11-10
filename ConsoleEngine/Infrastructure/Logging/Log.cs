@@ -80,7 +80,7 @@ namespace ConsoleEngine.Infrastructure.Logging
             _loggerProcess = new Process();
             _loggerProcess.StartInfo.FileName = "ConsoleEngine.Logger.exe";
             _loggerProcess.StartInfo.UseShellExecute = true;
-            _loggerProcess.Start();
+            //_loggerProcess.Start();
         }
 
         internal static void Stop()

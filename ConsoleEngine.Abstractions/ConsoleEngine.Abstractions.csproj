@@ -1,7 +1,12 @@
 <Project Sdk="Microsoft.NET.Sdk">
-
     <PropertyGroup>
         <TargetFramework>net5.0</TargetFramework>
+        <PackageProjectUrl>https://github.com/stho01/console-engine</PackageProjectUrl>
+        <RepositoryUrl>https://github.com/stho01/console-engine</RepositoryUrl>
+        <PackageVersion>1.0.0</PackageVersion>
+        <Platforms>OSX;Windows</Platforms>
+        <GeneratePackageOnBuild>true</GeneratePackageOnBuild>
+        <AssemblyVersion>1.0.0</AssemblyVersion>
+        <FileVersion>1.0.0</FileVersion>
     </PropertyGroup>
-
 </Project>
