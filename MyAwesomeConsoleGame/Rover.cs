@@ -11,7 +11,7 @@ namespace MyAwesomeConsoleGame
         public Vector2 Velocity { get; set; }
         public Vector2 Acceleration { get; set; }
         public const float Thrust = 0.8f;
-        public const float Drag = 20f;
+        public const float Drag = 5f;
         public bool StandingOnPlantingSpot { get; private set; }
         public bool StandingOnBonusSpot { get; private set; }
         public const float MaxPower = 1000;

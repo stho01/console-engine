@@ -67,7 +67,8 @@ namespace MyAwesomeConsoleGame
 
         private void DrawGameOver()
         {
-            _game.Console.Draw(0, Top, GameOver.Sprite);
+            _game.Console.Draw(
+                (int)(_game.Console.ScreenCenter.X - (GameOver.Sprite.Width / 2)), Top, GameOver.Sprite);
         }
 
         private void DrawMoveSequence()
