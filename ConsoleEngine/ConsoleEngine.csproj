@@ -1,49 +1,20 @@
 <Project Sdk="Microsoft.NET.Sdk">
-
     <PropertyGroup>
         <TargetFramework>net5.0</TargetFramework>
         <DockerDefaultTargetOS>Linux</DockerDefaultTargetOS>
         <AllowUnsafeBlocks>true</AllowUnsafeBlocks>
-        <Configurations>OSX Debug;Windows Debug;OSX Release;Windows Release</Configurations>
+        <Configurations>Release;Debug</Configurations>
         <Platforms>AnyCPU</Platforms>
         <GeneratePackageOnBuild>true</GeneratePackageOnBuild>
         <PackageVersion>0.1.0</PackageVersion>
     </PropertyGroup>
-   
-    <PropertyGroup Condition=" '$(Configuration)' == 'OSX Debug' ">
-      <DebugSymbols Condition=" '$(DebugSymbols)' == '' ">true</DebugSymbols>
-      <Optimize Condition=" '$(Optimize)' == '' ">false</Optimize>
-    </PropertyGroup>
-
-    <PropertyGroup Condition=" '$(Configuration)' == 'Windows Debug' ">
-      <DebugSymbols Condition=" '$(DebugSymbols)' == '' ">true</DebugSymbols>
-      <Optimize Condition=" '$(Optimize)' == '' ">false</Optimize>
-    </PropertyGroup>
-
-    <PropertyGroup Condition=" '$(Configuration)' == 'OSX Release' ">
-      <Optimize Condition=" '$(Optimize)' == '' ">true</Optimize>
-    </PropertyGroup>
-
-    <PropertyGroup Condition=" '$(Configuration)' == 'Windows Release' ">
-      <Optimize Condition=" '$(Optimize)' == '' ">true</Optimize>
-    </PropertyGroup>
-
     <ItemGroup>
       <PackageReference Include="Microsoft.Toolkit.HighPerformance" Version="7.1.1" />
     </ItemGroup>
-
     <ItemGroup>
       <ProjectReference Include="..\ConsoleEngine.Abstractions\ConsoleEngine.Abstractions.csproj" />
       <ProjectReference Include="..\Libs\ConsoleEngine.Logger\ConsoleEngine.Logger.csproj" />
       <ProjectReference Include="..\Libs\Microsoft.Xna.Framework\Microsoft.Xna.Framework.csproj" />
+      <ProjectReference Include="..\Libs\ConsoleEngine.Windows\ConsoleEngine.Windows.csproj" />
     </ItemGroup>
-
-    <ItemGroup Condition=" '$(Configuration)' == 'Windows Release' OR '$(Configuration)'=='Windows Debug' ">
-        <ProjectReference Include="..\Libs\ConsoleEngine.Windows\ConsoleEngine.Windows.csproj" />
-    </ItemGroup>
-
-    <ItemGroup Condition=" '$(Configuration)' == 'OSX Release' OR '$(Configuration)'=='OSX Debug' ">
-
-    </ItemGroup>
-
 </Project>
