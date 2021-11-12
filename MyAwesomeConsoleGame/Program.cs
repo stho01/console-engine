@@ -1,12 +1,5 @@
-﻿using System;
+﻿using MyAwesomeConsoleGame;
 
-namespace MyAwesomeConsoleGame
-{
-    class Program
-    {
-        static void Main(string[] args)
-        {
-            Console.WriteLine("Hello World!");
-        }
-    }
-}
+var game = new MyAwesomeGame();
+game.Initialize();
+game.Start();
