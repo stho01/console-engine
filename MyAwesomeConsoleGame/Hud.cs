@@ -20,6 +20,7 @@ namespace MyAwesomeConsoleGame
         private readonly int _height;
 
 
+
         private List<Command> _commandSequence { get; set; }
         private bool _sequenceReadyToShip { get; set; }
 
@@ -96,7 +97,7 @@ namespace MyAwesomeConsoleGame
 
         private void DrawDamageTaken()
         {
-            DrawText($"DAMAGE TAKEN: {_game.Rover.DamageTaken}", DamageTakenHeight, 0,GetPowerColor());
+            DrawText($"DAMAGE TAKEN: {_game.Rover.DamageTaken}", DamageTakenHeight, 1,GetDamageTakenColor());
         }
         
         private void DrawWorldName()
@@ -106,9 +107,9 @@ namespace MyAwesomeConsoleGame
         
         private ConsoleColor GetPowerColor()
         {
-            if (_game.Rover.RemainingPower >= ((Rover.MaxPower / 4) * 3)) return ConsoleColor.Green;
-            if (_game.Rover.RemainingPower >= ((Rover.MaxPower / 4) * 2)) return ConsoleColor.Yellow;
-            if (_game.Rover.RemainingPower >= ((Rover.MaxPower / 4) * 1)) return ConsoleColor.Red;
+            if (_game.Rover.RemainingPower >= ((_game.Rover.MaxPower / 4) * 3)) return ConsoleColor.Green;
+            if (_game.Rover.RemainingPower >= ((_game.Rover.MaxPower / 4) * 2)) return ConsoleColor.Yellow;
+            if (_game.Rover.RemainingPower >= ((_game.Rover.MaxPower / 4) * 1)) return ConsoleColor.Red;
             return ConsoleColor.Red;
         }
         

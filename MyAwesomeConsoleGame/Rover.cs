@@ -14,7 +14,7 @@ namespace MyAwesomeConsoleGame
         public const float Drag = 5f;
         public bool StandingOnPlantingSpot { get; private set; }
         public bool StandingOnBonusSpot { get; private set; }
-        public const float MaxPower = 1000;
+        public float MaxPower;
         public double RemainingPower;
         public int DamageTaken = 0;
         
@@ -28,6 +28,7 @@ namespace MyAwesomeConsoleGame
 
         public Rover(MyAwesomeGame game) : base(game)
         {
+            MaxPower = game.World.MaxPower;
             RemainingPower = MaxPower;
         }
 
@@ -95,6 +96,9 @@ namespace MyAwesomeConsoleGame
                             break;
                         case BonusPoint:
                             StandingOnBonusSpot = true;
+                            break;
+                        case FinishPoint:
+                            Game.RotateMap();
                             break;
                     }
                 }

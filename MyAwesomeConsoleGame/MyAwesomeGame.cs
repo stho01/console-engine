@@ -20,6 +20,19 @@ namespace MyAwesomeConsoleGame
         public Queue<Command> _currentCommands = new Queue<Command>();
         public World World;
         public WorldLoader Loader;
+        public int Score;
+        public bool DrawStory = true;
+
+        public string[] Maps =
+        {
+            "maps/map0.txt",
+            "maps/map1.txt",
+            "maps/map2.txt",
+            "maps/map3.txt",
+            "maps/map4.txt"
+        };
+
+        public int CurrentMap = 0;
 
         public bool GameOver;
 
@@ -35,11 +48,7 @@ namespace MyAwesomeConsoleGame
         protected override void OnInitialize()
         {
             Camera = new Camera(this);
-            World = WorldLoader.LoadWorld(this, "maps/map3.txt");
-            Rover = new Rover(this) 
-            {
-                Position = World.StartingPoint.Position
-            };
+            StartNewGame();
 
             Hud = new Hud(this);
             Camera.Follow(Rover);
@@ -48,6 +57,16 @@ namespace MyAwesomeConsoleGame
             {
                 await Music.PlayIntroMusic();
             }).Start();
+        }
+
+        private void StartNewGame()
+        {
+            World = WorldLoader.LoadWorld(this, Maps[CurrentMap]);
+            Rover = new Rover(this)
+            {
+                Position = World.StartingPoint.Position
+            };
+            Camera.Follow(Rover);
         }
 
         protected override void OnUpdate()
@@ -67,7 +86,8 @@ namespace MyAwesomeConsoleGame
             if (Input.Instance.GetKey(Key.D).Held) Rover.MoveEast();
             if (Input.Instance.GetKey(Key.W).Held) Rover.MoveNorth();
             if (Input.Instance.GetKey(Key.S).Held) Rover.MoveSouth();
-            if (Input.Instance.GetKey(Key.H).Pressed) World.DrawStory = !World.DrawStory;
+            
+            if (Input.Instance.GetKey(Key.H).Pressed) DrawStory = !DrawStory;
 
             if (Input.Instance.GetKey(Key.SPACE).Pressed && !_currentCommands.Any())
             {
@@ -92,7 +112,7 @@ namespace MyAwesomeConsoleGame
         protected override void OnRender()
         {
             World.Draw();
-            if (!World.DrawStory)
+            if (!DrawStory)
             {
                 Rover.Draw();
                 Hud.Draw();
@@ -100,6 +120,18 @@ namespace MyAwesomeConsoleGame
             Console.Draw(0,0, $"Pos  : {Rover.Position}");
             Console.Draw(0,1, $"SPos : {Rover.GetScreenPos()}");
             Console.Draw(0,2, $"BB   : {Rover.BoundingBox}");
+        }
+
+        public void RotateMap()
+        {
+            CurrentMap++;
+            if (CurrentMap >= Maps.Length)
+            {
+                CurrentMap = 0;
+            }
+
+            StartNewGame();
+
         }
     }
 }

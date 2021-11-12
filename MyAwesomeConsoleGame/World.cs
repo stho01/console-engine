@@ -16,7 +16,7 @@ namespace MyAwesomeConsoleGame
         private readonly int _mapWidth;
         private readonly int _mapHeight;
         public const int TileSize = 5;
-        public bool DrawStory = true;
+        
         
         public World(MyAwesomeGame game, string name, MapTile[,] map) {
             _game = game;
@@ -27,6 +27,7 @@ namespace MyAwesomeConsoleGame
         }
 
         public string Name { get; set; }
+        public int MaxPower { get; set; }
         public int Sequences { get; set; }
         public StartingPoint StartingPoint { get; set; }
         
@@ -63,7 +64,7 @@ namespace MyAwesomeConsoleGame
         
         public void Draw()
         {
-            if (DrawStory)
+            if (_game.DrawStory)
             {
                 _game.Console.Draw(3,5,Story.Sprite);
                 return;

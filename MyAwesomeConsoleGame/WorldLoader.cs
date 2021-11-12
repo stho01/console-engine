@@ -19,6 +19,7 @@ namespace MyAwesomeConsoleGame
             int sequences = 0;
             int width = 0;
             int height = 0;
+            int maxPower = 0;
             MapTile[,] tiles = null;
             int y = 0;
             StartingPoint startingPoint = null;
@@ -38,6 +39,7 @@ namespace MyAwesomeConsoleGame
                         case "!sequences": sequences = int.Parse(value); break;
                         case "!width": width = int.Parse(value); break;
                         case "!height": height = int.Parse(value); break;
+                        case "!power": maxPower = int.Parse(value); break;
                     }
 
                     if (width != 0 && height != 0)
@@ -77,7 +79,8 @@ namespace MyAwesomeConsoleGame
             
             var world = new World(game, name, tiles) {
                 Sequences = sequences,
-                StartingPoint = startingPoint
+                StartingPoint = startingPoint,
+                MaxPower = maxPower
             };
             world.Init();
             return world;

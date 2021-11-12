@@ -1,4 +1,5 @@
 !name: Leviathan Wakes
+!power: 40000
 !sequences:30
 !width: 95
 !height: 17
