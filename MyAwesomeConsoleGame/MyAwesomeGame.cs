@@ -61,6 +61,7 @@ namespace MyAwesomeConsoleGame
 
         private void StartNewGame()
         {
+            Camera.Position = Vector2.Zero;
             World = WorldLoader.LoadWorld(this, Maps[CurrentMap]);
             Rover = new Rover(this)
             {
