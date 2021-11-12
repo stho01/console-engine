@@ -1,11 +1,9 @@
 ﻿using System;
 using System.Collections.Generic;
-using System.Data;
 using System.Linq;
 using ConsoleEngine.Abstractions.Inputs;
-using ConsoleEngine.Abstractions.Rendering;
 using ConsoleEngine.Infrastructure.Inputs;
-using ConsoleEngine.Infrastructure.Rendering;
+using MyAwesomeConsoleGame.Sprites;
 
 namespace MyAwesomeConsoleGame
 {
@@ -33,6 +31,7 @@ namespace MyAwesomeConsoleGame
 
         public void OnUpdate()
         {
+           
             if (Input.Instance.GetKey(Key.LEFT).Pressed) _commandSequence.Add(new Move(Direction.West));
             if (Input.Instance.GetKey(Key.RIGHT).Pressed) _commandSequence.Add(new Move(Direction.East));
             if (Input.Instance.GetKey(Key.UP).Pressed) _commandSequence.Add(new Move(Direction.North));
@@ -44,6 +43,11 @@ namespace MyAwesomeConsoleGame
         }
         public void Draw()
         {
+            if (_game.GameOver)
+            {
+                DrawGameOver();
+                return;
+            }
             
             for (var x = 0; x < _game.Console.Width; x++)
             for (var y = Top; y < _game.Console.Height; y++)
@@ -52,7 +56,14 @@ namespace MyAwesomeConsoleGame
             DrawWorldName();
             DrawPowerUsage();
             DrawMoveSequence();
+            
+            
             _game.Console.DrawLine(0, Top, _game.Console.Width, Top, '▓');
+        }
+
+        private void DrawGameOver()
+        {
+            _game.Console.Draw(0, Top, GameOver.Sprite);
         }
 
         private void DrawMoveSequence()
@@ -88,15 +99,15 @@ namespace MyAwesomeConsoleGame
 
         private void DrawWorldName()
         {
-           DrawText("NOW ENTERING:" + _game.World.Name, WorldNameHeight, 0, ConsoleColor.DarkGreen );
+           DrawText("NOW ENTERING: " + _game.World.Name, WorldNameHeight, 0, ConsoleColor.DarkGreen );
         }
 
         public void DrawText(string text, int posY, int startingPosX, ConsoleColor fgColor, ConsoleColor bgColor = HudBackgroundColor ,Direction direction = Direction.East)
         {
             var xpos = startingPosX;
-            foreach (var namecharacter in text)
+            foreach (var character in text)
             {
-                _game.Console.Draw(xpos, posY, namecharacter, fgColor, bgColor);
+                _game.Console.Draw(xpos, posY, character, fgColor, bgColor);
                 xpos++;
             }
         }

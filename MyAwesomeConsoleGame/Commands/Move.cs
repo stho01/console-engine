@@ -14,6 +14,7 @@ namespace MyAwesomeConsoleGame
 
         protected override void OnUpdate(Rover rover)
         {
+           
             switch (Direction)
             {
                 case Direction.East:
