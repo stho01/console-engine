@@ -2,58 +2,37 @@
 using System.Linq;
 using ConsoleEngine.Infrastructure.Rendering;
 using Microsoft.Xna.Framework;
+using MyAwesomeConsoleGame.Entities.Tiles;
 
 namespace MyAwesomeConsoleGame
 {
     public class World
     {
         private readonly MyAwesomeGame _game;
+        private readonly MapTile[,] _tiles;
         
         private static readonly Sprite BorderSprite = Sprite.FromStringArray(new []{
             "X▓▒",
             "▓▒▓",
             "▒▓▒",
         }, ConsoleColor.Magenta);
-        private static readonly Sprite StartSprite = Sprite.FromStringArray(new []{
-            "S▓▒",
-            "▓▒▓",
-            "▒▓▒",
-        }, ConsoleColor.Green);
-        private static readonly Sprite FinishSprite = Sprite.FromStringArray(new []{
-            "F▓▒",
-            "▓▒▓",
-            "▒▓▒",
-        }, ConsoleColor.DarkGreen);
         private static readonly Sprite RockSprite = Sprite.FromStringArray(new []{
             "H▓▒",
             "▓▒▓",
             "▒▓▒",
         }, ConsoleColor.DarkGray);
-        private static readonly Sprite CravesSprite = Sprite.FromStringArray(new []{
-            "C▓▒",
-            "▓▒▓",
-            "▒▓▒",
-        }, ConsoleColor.DarkYellow);
-        private static readonly Sprite PlantSpotSprite = Sprite.FromStringArray(new []{
-            "P▓▒",
-            "▓▒▓",
-            "▒▓▒",
-        }, ConsoleColor.Magenta);
-        private static readonly Sprite BonusSpotSprite = Sprite.FromStringArray(new []{
-            "B▓▒",
-            "▓▒▓",
-            "▒▓▒",
-        }, ConsoleColor.White);
+
+      
 
         private readonly int _mapWidth;
         private readonly int _mapHeight;
         public const int TileSize = 3;
         
-        public World(MyAwesomeGame game, string name, string[] map) {
+        public World(MyAwesomeGame game, string name, MapTile[,] map) {
             _game = game;
-            Map = map;
-            _mapWidth = map.Max(row => row.Length);
-            _mapHeight = map.Length;
+            _tiles = map;
+            _mapWidth = map.GetLength(0);
+            _mapHeight = map.GetLength(1);
         }
 
         public string Name { get; set; }
@@ -62,34 +41,26 @@ namespace MyAwesomeConsoleGame
         public int Width => _mapWidth;
         public int Height => _mapHeight;
         public string[] Map { get; }
-        
+
         public void Draw()
         {
             for (var x = 0; x < Width; x++)
             for (var y = 0; y < Height; y++)
             {
-                var pos = _game.Camera.WorldToScreenPos(
-                    new Vector2(x * TileSize, y * TileSize));
+                _tiles[x, y]?.Draw();
                 
-                var tile = Map[y][x];
-
-                var sprite = tile switch
-                {
-                    'S' => StartSprite,
-                    'F' => FinishSprite,
-                    'H' => RockSprite,
-                    'P' => PlantSpotSprite,
-                    'C' => CravesSprite,
-                    'B' => BonusSpotSprite,
-                    _ => null
-                };
-                
-                if (sprite != null)
-                {
-                    var posX = pos.X;
-                    var posY = pos.Y;
-                    _game.Console.Draw(posX, posY, sprite);
-                }
+                //
+                // var pos = _game.Camera.WorldToScreenPos(
+                //     new Vector2(x * TileSize, y * TileSize));
+                //
+              
+                //
+                // if (sprite != null)
+                // {
+                //     var posX = pos.X;
+                //     var posY = pos.Y;
+                //     _game.Console.Draw(posX, posY, sprite);
+                // }
             }
             
             for (var x = -1; x < Width + 1; x++)

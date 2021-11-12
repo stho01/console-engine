@@ -1,5 +1,8 @@
 ﻿using System.Collections.Generic;
 using System.IO;
+using System.Reflection.Metadata.Ecma335;
+using Microsoft.Xna.Framework;
+using MyAwesomeConsoleGame.Entities.Tiles;
 
 namespace MyAwesomeConsoleGame
 {
@@ -23,7 +26,10 @@ namespace MyAwesomeConsoleGame
         {
             string name = string.Empty;
             int sequences = 0;
-            var content = new List<string>();
+            int width = 0;
+            int height = 0;
+            MapTile[,] tiles = null;
+            int y = 0;
             
             foreach (var line in lines)
             {
@@ -36,19 +42,45 @@ namespace MyAwesomeConsoleGame
 
                     switch (key)
                     {
-                        case "!name": name = value;
-                            break;
-                        case "!sequences": sequences = int.Parse(value);
-                            break;
+                        case "!name": name = value; break;
+                        case "!sequences": sequences = int.Parse(value); break;
+                        case "!width": width = int.Parse(value); break;
+                        case "!height": height = int.Parse(value); break;
                     }
+
+                    if (width != 0 && height != 0)
+                        tiles = new MapTile[width, height];
                 }
                 else
                 {
-                    content.Add(line);
+                    
+                    for (var x = 0; x < line.Length; x++)
+                    {
+                    
+                        var type = line[x];
+                        MapTile tile = type switch
+                        {
+                            'S' => new StartingPoint(_game),
+                            'F' => new FinishPoint(_game),
+                            'H' => new Rock(_game),
+                            'P' => new PlantSpot(_game),
+                            'C' => new Craves(_game),
+                            'B' => new BonusPoint(_game),
+                            _ => null
+                        };
+
+                        if (tiles != null && tile != null)
+                        {
+                            tile.Position = new Vector2(x, y) * 3; 
+                            tiles[x, y] = tile;
+                        }
+                    }
+                    y++;
+                 
                 }
             }
 
-            return new World(_game, name, content.ToArray()) {
+            return new World(_game, name, tiles) {
                 Sequences = sequences
             };
         }

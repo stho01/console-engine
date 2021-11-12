@@ -5,6 +5,8 @@ using ConsoleEngine.Abstractions.Inputs;
 using ConsoleEngine.Infrastructure;
 using ConsoleEngine.Infrastructure.Inputs;
 using Microsoft.Xna.Framework;
+using MyAwesomeConsoleGame.Entities;
+using MyAwesomeConsoleGame.Entities.Tiles;
 
 namespace MyAwesomeConsoleGame
 {
@@ -13,7 +15,6 @@ namespace MyAwesomeConsoleGame
         public Rover Rover;
         public Hud Hud;
         public Camera Camera;
-        public List<Obstacle> _obstacles = new List<Obstacle>();
         public Queue<Command> _currentCommands = new Queue<Command>();
         public World World;
         public WorldLoader Loader;
@@ -38,12 +39,8 @@ namespace MyAwesomeConsoleGame
             Hud = new Hud(this);
             Camera = new Camera(this);
             Camera.Follow(Rover);
-            
-            _obstacles.Add(new Rock(this) {
-                Position = new Vector2(10, 10)
-            });
-
-            World = Loader.LoadWorld("maps/map2.txt");
+       
+            World = Loader.LoadWorld("maps/map3.txt");
         }
 
         protected override void OnUpdate()
@@ -78,10 +75,6 @@ namespace MyAwesomeConsoleGame
         protected override void OnRender()
         {
             World.Draw();
-            
-            foreach (var obstacle in _obstacles)
-                obstacle.Draw();
-            
             Rover.Draw();
             Hud.Draw();
         }

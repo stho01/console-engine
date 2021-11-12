@@ -1,14 +1,13 @@
-﻿using System.Runtime.Serialization;
-using ConsoleEngine.Infrastructure;
-using Microsoft.Xna.Framework;
+﻿using Microsoft.Xna.Framework;
 
 namespace MyAwesomeConsoleGame
 {
-    public class GameObject
+    public abstract class GameObject
     {
         public MyAwesomeGame Game { get; }
         public Vector2 Position { get; set; }
-
+        public Rectangle BoundingBox => new((int)Position.X, (int)Position.Y, 3, 3);
+        
         public GameObject(MyAwesomeGame game)
         {
             Game = game;
@@ -17,5 +16,7 @@ namespace MyAwesomeConsoleGame
         public Point GetScreenPos() {
             return Game.Camera.WorldToScreenPos(Position);
         }
+        
+        
     }
 }
