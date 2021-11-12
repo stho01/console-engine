@@ -16,6 +16,7 @@ namespace MyAwesomeConsoleGame
         public List<Obstacle> _obstacles = new List<Obstacle>();
         public Queue<Command> _currentCommands = new Queue<Command>();
         public World World;
+        public WorldLoader Loader;
 
 
         public MyAwesomeGame() : base(
@@ -28,6 +29,8 @@ namespace MyAwesomeConsoleGame
 
         protected override void OnInitialize()
         {
+            Loader = new WorldLoader(this);
+            
             Rover = new Rover(this) {
                 Position = new Vector2(10, 10)
             };
@@ -40,7 +43,7 @@ namespace MyAwesomeConsoleGame
                 Position = new Vector2(10, 10)
             });
 
-            World = new World(this);
+            World = Loader.LoadWorld("maps/map1.txt");
         }
 
         protected override void OnUpdate()
