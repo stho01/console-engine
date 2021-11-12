@@ -7,12 +7,7 @@
             
         }
 
-        public override void Update(Rover rover)
-        {
-            throw new System.NotImplementedException();
-        }
-
-        public override bool IsDone()
+        public override void OnUpdate(Rover rover)
         {
             throw new System.NotImplementedException();
         }
