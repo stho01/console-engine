@@ -9,9 +9,9 @@ namespace Platformer.GameObjects
     {
         private readonly PlatformerGame _game;
         private static readonly Sprite _playerSprite = Sprite.FromStringArray(new[]{
+            "▓O▓",
             "▓▓▓",
-            "▓▓▓",
-            "▓▓▓"
+            "▓O▓"
         }, ConsoleColor.Red);
    
         public Player(PlatformerGame game) {

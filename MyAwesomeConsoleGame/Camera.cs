@@ -1,7 +1,7 @@
 ﻿using ConsoleEngine;
 using Microsoft.Xna.Framework;
 
-namespace Platformer.GameObjects
+namespace MyAwesomeConsoleGame
 {
     public class Camera
     {
@@ -13,19 +13,19 @@ namespace Platformer.GameObjects
             _game = game;
         }
         
-        public Vector2 Position { get; set; }
+        public Point Position { get; set; }
         
         public void Follow(GameObject gameObject) 
         {
             _gameObject = gameObject;
         }
 
-        public Vector2 WorldToScreenPos(Vector2 worldPos) => (worldPos - Position);
-        public Vector2 ScreenToWorldPos(Vector2 worldPos) => (worldPos + Position);
+        public Point WorldToScreenPos(Point worldPos) => worldPos - Position;
+        public Point ScreenToWorldPos(Point worldPos) => (worldPos + Position);
         
         public void Update()
         {
-            Position = _gameObject.Position - _game.Console.ScreenCenter;
+            Position = _gameObject.Position - _game.Console.ScreenCenter.ToPoint();
         }
     }
 }
