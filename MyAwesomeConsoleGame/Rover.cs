@@ -36,9 +36,11 @@ namespace MyAwesomeConsoleGame
             Velocity += Acceleration * (float)GameTime.Delta.TotalSeconds;
             Position += Velocity;
 
+            Game.Console.Draw(0, 3, $"NPos : {Position}");
+            
             if (Game.World.Intersects(this, out var with))
             {
-                Position = prevPosition;
+                Position = prevPosition ;
                 Velocity = Vector2.Zero;
             }
             
@@ -48,9 +50,10 @@ namespace MyAwesomeConsoleGame
         public void Draw()
         {
             var screenPos = GetScreenPos();
+            
             Game.Console.Draw(
-                screenPos.X, 
-                screenPos.Y, 
+                (int)screenPos.X - 1, 
+                (int)screenPos.Y - 1, 
                 Sprite);
         }
 

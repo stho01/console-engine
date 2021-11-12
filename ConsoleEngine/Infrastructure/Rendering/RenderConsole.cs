@@ -39,7 +39,7 @@ namespace ConsoleEngine.Infrastructure.Rendering
 
         public int Width => _consoleHandler.Width;
         public int Height => _consoleHandler.Height;
-        public Vector2 ScreenCenter => new Vector2(Width / 2, Height / 2);
+        public Vector2 ScreenCenter => new((Width / 2f), (Height / 2f));
         
         /// <summary> The total Screen area. W * H </summary>
         public int Area { get; }

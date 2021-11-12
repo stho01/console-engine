@@ -20,12 +20,12 @@ namespace MyAwesomeConsoleGame
             _gameObject = gameObject;
         }
 
-        public Point WorldToScreenPos(Vector2 worldPos) => (worldPos - Position).ToPoint();
+        public Vector2 WorldToScreenPos(Vector2 worldPos) => worldPos - Position;
         public Vector2 ScreenToWorldPos(Point worldPos) => (worldPos + Position.ToPoint()).ToVector2();
         
         public void Update()
         {
-            Position = _gameObject.Position - _game.Console.ScreenCenter;
+            Position = (_gameObject.Position - _game.Console.ScreenCenter);
         }
     }
 }
