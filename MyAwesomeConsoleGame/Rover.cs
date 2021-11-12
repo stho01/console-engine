@@ -11,19 +11,21 @@ namespace MyAwesomeConsoleGame
         public Vector2 Acceleration { get; set; }
         public const float Thrust = 0.8f;
         public const float Drag = 20f;
-        public const float MaxPower = 10000;
-        public double RemainingPower = 10000;
+        public const float MaxPower = 1000;
+        public double RemainingPower;
+        public int DamageTaken = 0;
         
         
         public static readonly Sprite Sprite = Sprite.FromStringArray(new[]
         {
-            "###",
-            "###",
-            "###",
+            "|#|",
+            " # ",
+            "|#|",
         });
 
-        public Rover(MyAwesomeGame game) : base(game) {
-            
+        public Rover(MyAwesomeGame game) : base(game)
+        {
+            RemainingPower = MaxPower;
         }
 
         public void Update()
@@ -56,7 +58,8 @@ namespace MyAwesomeConsoleGame
         public void MoveSouth() => ApplyForce(new Vector2(0, 1f) * Thrust);
         public void MoveWest() => ApplyForce(new Vector2(-1f, 0) * Thrust);
         public void MoveEast() => ApplyForce(new Vector2(1f, 0) * Thrust);
-        
+
+
         public void ApplyForce(Vector2 force)
         {
             RemainingPower -= force.LengthSquared();

@@ -4,6 +4,7 @@ using System.Linq;
 using ConsoleEngine.Infrastructure.Rendering;
 using Microsoft.Xna.Framework;
 using MyAwesomeConsoleGame.Entities.Tiles;
+using MyAwesomeConsoleGame.Sprites;
 
 namespace MyAwesomeConsoleGame
 {
@@ -22,6 +23,7 @@ namespace MyAwesomeConsoleGame
         private readonly int _mapWidth;
         private readonly int _mapHeight;
         public const int TileSize = 3;
+        public bool DrawStory = false;
         
         public World(MyAwesomeGame game, string name, MapTile[,] map) {
             _game = game;
@@ -40,6 +42,11 @@ namespace MyAwesomeConsoleGame
 
         public void Draw()
         {
+            if (DrawStory)
+            {
+                _game.Console.Draw(0,0,Story.Sprite);
+                return;
+            }
             for (var x = 0; x < Width; x++)
             for (var y = 0; y < Height; y++)
             {

@@ -1,5 +1,7 @@
 ﻿using System.Collections.Generic;
 using System.Linq;
+using System.Threading;
+using System.Threading.Tasks;
 using ConsoleEngine;
 using ConsoleEngine.Abstractions.Inputs;
 using ConsoleEngine.Infrastructure;
@@ -18,6 +20,8 @@ namespace MyAwesomeConsoleGame
         public Queue<Command> _currentCommands = new Queue<Command>();
         public World World;
         public WorldLoader Loader;
+
+        public bool GameOver;
 
 
         public MyAwesomeGame() : base(
@@ -41,21 +45,36 @@ namespace MyAwesomeConsoleGame
             Camera.Follow(Rover);
        
             World = Loader.LoadWorld("maps/map3.txt");
+            new Task(async () =>
+            {
+                await Music.PlayIntroMusic();
+            }).Start();
         }
 
         protected override void OnUpdate()
         {
+            if (Rover.RemainingPower <= 0)
+            {
+                GameOver = true;
+                new Task(async () =>
+                {
+                    await Music.PlayGameOverMusic();
+                }).Start();
+                
+            }
+            
             Hud.OnUpdate();
             if (Input.Instance.GetKey(Key.A).Held) Rover.MoveWest();
             if (Input.Instance.GetKey(Key.D).Held) Rover.MoveEast();
             if (Input.Instance.GetKey(Key.W).Held) Rover.MoveNorth();
             if (Input.Instance.GetKey(Key.S).Held) Rover.MoveSouth();
+            if (Input.Instance.GetKey(Key.H).Pressed) World.DrawStory = !World.DrawStory;
 
             if (Input.Instance.GetKey(Key.SPACE).Pressed && !_currentCommands.Any())
             {
                 var commands = Hud.GetCommands();
                 foreach (var command in commands)
-                    _currentCommands.Enqueue(command);    
+                    _currentCommands.Enqueue(command);
             }
 
             if (_currentCommands.Any())
@@ -68,9 +87,6 @@ namespace MyAwesomeConsoleGame
                 }
                     
             }
-           
-            // Rover.DoCommands(commands);
-            
             Rover.Update();
             Camera.Update();
         }

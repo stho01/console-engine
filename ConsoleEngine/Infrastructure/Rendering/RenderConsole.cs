@@ -66,6 +66,8 @@ namespace ConsoleEngine.Infrastructure.Rendering
             Draw(x, y, sprite.DataSpan);
         }
         
+        
+        
         public void Draw(int x, int y, Span2D<Pixel> pixels)
         {
             for (var dataX = 0; dataX < pixels.Height; dataX++)
