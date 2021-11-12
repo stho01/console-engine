@@ -55,15 +55,16 @@ namespace MyAwesomeConsoleGame
 
             if (Input.Instance.GetKey(Key.SPACE).Pressed && !_currentCommands.Any())
             {
-                var commands = Hud.GetCommands();
-                foreach (var command in commands)
-                    _currentCommands.Enqueue(command);    
+                // var commands = Hud.GetCommands();
+                // foreach (var command in commands)
+                //     _currentCommands.Enqueue(command);    
+                _currentCommands.Enqueue(new Move(Direction.North, 500));
             }
 
             if (_currentCommands.Any())
             {
                 var currentCommand = _currentCommands.Peek();
-                currentCommand.Update(Rover);
+                currentCommand.OnUpdate(Rover);
                 if (currentCommand.IsDone())
                     _currentCommands.Dequeue();
             }
