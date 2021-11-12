@@ -1,4 +1,5 @@
-﻿using ConsoleEngine.Infrastructure.Rendering;
+﻿using System;
+using ConsoleEngine.Infrastructure.Rendering;
 
 namespace MyAwesomeConsoleGame.Entities.Tiles
 {
@@ -11,7 +12,10 @@ namespace MyAwesomeConsoleGame.Entities.Tiles
         public void Draw()
         {
             var screenPos = GetScreenPos();
-            Game.Console.Draw(screenPos.X, screenPos.Y, GetSprite());            
+            Game.Console.Draw((int)screenPos.X, (int)screenPos.Y, GetSprite());
+            
+            Game.Console.Draw((int)screenPos.X, (int)screenPos.Y, Position.X.ToString(), ConsoleColor.Black, ConsoleColor.White);
+            Game.Console.Draw((int)screenPos.X, (int)screenPos.Y+1, Position.Y.ToString(), ConsoleColor.Black, ConsoleColor.White);
         }
     }
 }

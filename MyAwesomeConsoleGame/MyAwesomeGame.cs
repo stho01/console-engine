@@ -21,7 +21,7 @@ namespace MyAwesomeConsoleGame
 
 
         public MyAwesomeGame() : base(
-            width: 70,
+            width: 72,
             height: 50,
             fontWidth: 10,
             fontHeight: 10) {
@@ -66,7 +66,6 @@ namespace MyAwesomeConsoleGame
                 {
                     _currentCommands.Dequeue();
                 }
-                    
             }
            
             // Rover.DoCommands(commands);
@@ -80,6 +79,10 @@ namespace MyAwesomeConsoleGame
             World.Draw();
             Rover.Draw();
             Hud.Draw();
+            
+            Console.Draw(0,0, $"Pos  : {Rover.Position}");
+            Console.Draw(0,1, $"SPos : {Rover.GetScreenPos()}");
+            Console.Draw(0,2, $"BB   : {Rover.BoundingBox}");
         }
     }
 }

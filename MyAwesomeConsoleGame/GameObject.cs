@@ -13,10 +13,9 @@ namespace MyAwesomeConsoleGame
             Game = game;
         }
 
-        public Point GetScreenPos() {
+        public Vector2 GetScreenPos() 
+        {
             return Game.Camera.WorldToScreenPos(Position);
         }
-        
-        
     }
 }

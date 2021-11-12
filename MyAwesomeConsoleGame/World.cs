@@ -51,8 +51,8 @@ namespace MyAwesomeConsoleGame
                 var topPos = _game.Camera.WorldToScreenPos(new Vector2(x * TileSize,-1*TileSize));
                 var bottomPos = _game.Camera.WorldToScreenPos(new Vector2(x * TileSize, Height*TileSize));
                 
-                _game.Console.Draw(topPos.X, topPos.Y, BorderSprite);
-                _game.Console.Draw(bottomPos.X, bottomPos.Y, BorderSprite);
+                _game.Console.Draw((int)topPos.X, (int)topPos.Y, BorderSprite);
+                _game.Console.Draw((int)bottomPos.X, (int)bottomPos.Y, BorderSprite);
             }
             
             for (var y = -1; y < Height + 1; y++)
@@ -60,8 +60,8 @@ namespace MyAwesomeConsoleGame
                 var leftPos = _game.Camera.WorldToScreenPos(new Vector2(-1*TileSize, y * TileSize));
                 var rightPos = _game.Camera.WorldToScreenPos(new Vector2(Width*TileSize, y * TileSize));
                 
-                _game.Console.Draw(leftPos.X, leftPos.Y, BorderSprite);
-                _game.Console.Draw(rightPos.X, rightPos.Y, BorderSprite);
+                _game.Console.Draw((int)leftPos.X, (int)leftPos.Y, BorderSprite);
+                _game.Console.Draw((int)rightPos.X, (int)rightPos.Y, BorderSprite);
             }
         }
 
