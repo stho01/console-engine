@@ -31,8 +31,23 @@ namespace MyAwesomeConsoleGame
                 default:
                     throw new Exception("no go");
             }
+        }
 
-            
+        public override char GetVisualRepresentation()
+        {
+            switch (Direction)
+            {
+                case Direction.East:
+                    return '→';
+                case Direction.West:
+                    return '←';
+                case Direction.North:
+                    return '↑';
+                case Direction.South:
+                    return '↓';
+                default:
+                    throw new Exception("no go");
+            }
         }
     }
 }

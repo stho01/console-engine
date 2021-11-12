@@ -16,7 +16,10 @@ namespace MyAwesomeConsoleGame
         private const int Top = 35;
         private const int WorldNameHeight = 36;
         private const int PowerUsageHeight = 37;
+        private const int CommandSequenceHeight = 39;
+        private const ConsoleColor HudBackgroundColor = ConsoleColor.Gray;
         private readonly int _height;
+
 
         private List<Command> _commandSequence { get; set; }
         private bool _sequenceReadyToShip { get; set; }
@@ -44,11 +47,23 @@ namespace MyAwesomeConsoleGame
             
             for (var x = 0; x < _game.Console.Width; x++)
             for (var y = Top; y < _game.Console.Height; y++)
-                _game.Console.Draw(x, y, ' ');
+                _game.Console.Draw(x, y, ' ', backgroundColor: HudBackgroundColor);
 
             DrawWorldName();
             DrawPowerUsage();
+            DrawMoveSequence();
             _game.Console.DrawLine(0, Top, _game.Console.Width, Top, '▓');
+        }
+
+        private void DrawMoveSequence()
+        {
+            if (_commandSequence.Any())
+            {
+                var visualCommandSequenceRepresentation =
+                    "QUEUED COMMANDS: " + 
+                    String.Join(' ', _commandSequence.Select(c => c.GetVisualRepresentation()));
+                DrawText(visualCommandSequenceRepresentation, CommandSequenceHeight, 0, ConsoleColor.Magenta );
+            }
         }
 
         private void DrawPowerUsage()
@@ -59,28 +74,24 @@ namespace MyAwesomeConsoleGame
             }
             else
             {
-                DrawText("POWER: " + _game.Rover.RemainingPower + "kWh", PowerUsageHeight, 1, fgColor: GetPowerColor(), bgColor: ConsoleColor.White);
+                DrawText("POWER: " + _game.Rover.RemainingPower.ToString("N") + "kWh", PowerUsageHeight, 1, fgColor: GetPowerColor());
             }
         }
 
         private ConsoleColor GetPowerColor()
         {
-            if (_game.Rover.RemainingPower == 0)
-            {
-                return ConsoleColor.Blue;
-            }
-            if (_game.Rover.RemainingPower / Rover.MaxPower >= 0.75) return ConsoleColor.Green;
-            if (_game.Rover.RemainingPower >= 0.35) return ConsoleColor.Yellow;
+            if (_game.Rover.RemainingPower >= ((Rover.MaxPower / 4) * 3)) return ConsoleColor.Green;
+            if (_game.Rover.RemainingPower >= ((Rover.MaxPower / 4) * 2)) return ConsoleColor.Yellow;
+            if (_game.Rover.RemainingPower >= ((Rover.MaxPower / 4) * 1)) return ConsoleColor.Red;
             return ConsoleColor.Red;
         }
 
         private void DrawWorldName()
         {
-           DrawText("Now entering:" + _game.World.Name, WorldNameHeight, 0);
-            
+           DrawText("NOW ENTERING:" + _game.World.Name, WorldNameHeight, 0, ConsoleColor.DarkGreen );
         }
 
-        public void DrawText(string text, int posY, int startingPosX, Direction direction = Direction.East, ConsoleColor fgColor = ConsoleColor.White, ConsoleColor bgColor = ConsoleColor.Black)
+        public void DrawText(string text, int posY, int startingPosX, ConsoleColor fgColor, ConsoleColor bgColor = HudBackgroundColor ,Direction direction = Direction.East)
         {
             var xpos = startingPosX;
             foreach (var namecharacter in text)

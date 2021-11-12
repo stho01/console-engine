@@ -12,5 +12,10 @@ namespace MyAwesomeConsoleGame
         {
             // Just wait
         }
+
+        public override char GetVisualRepresentation()
+        {
+            return 'W';
+        }
     }
 }

@@ -57,6 +57,10 @@ namespace MyAwesomeConsoleGame
         public void MoveWest() => ApplyForce(new Vector2(-1f, 0) * Thrust);
         public void MoveEast() => ApplyForce(new Vector2(1f, 0) * Thrust);
         
-        public void ApplyForce(Vector2 force) => Acceleration += force;
+        public void ApplyForce(Vector2 force)
+        {
+            RemainingPower -= force.LengthSquared();
+            Acceleration += force;
+        }
     }
 }

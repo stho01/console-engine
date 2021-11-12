@@ -4,6 +4,7 @@ namespace MyAwesomeConsoleGame
 {
     public abstract class Command
     {
+        
         protected double _elapsed = 0.0f;
         public readonly float DurationInMilliseconds;
 
@@ -21,5 +22,7 @@ namespace MyAwesomeConsoleGame
         }
 
         public bool IsDone() => _elapsed > DurationInMilliseconds;
+        
+        public abstract char GetVisualRepresentation();
     }
 }
