@@ -26,9 +26,18 @@ namespace MyAwesomeConsoleGame
 
         public void Update()
         {
+            var prevPosition = Position;
+            
             Velocity += -Drag * Velocity * (float)GameTime.Delta.TotalSeconds;
             Velocity += Acceleration * (float)GameTime.Delta.TotalSeconds;
             Position += Velocity;
+
+            if (Game.World.Intersects(this, out var with))
+            {
+                Position = prevPosition;
+                Velocity = Vector2.Zero;
+            }
+            
             Acceleration = Vector2.Zero;
         }
         

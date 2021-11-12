@@ -1,4 +1,5 @@
 ﻿using System;
+using System.Collections.Generic;
 using System.Linq;
 using ConsoleEngine.Infrastructure.Rendering;
 using Microsoft.Xna.Framework;
@@ -21,8 +22,6 @@ namespace MyAwesomeConsoleGame
             "▓▒▓",
             "▒▓▒",
         }, ConsoleColor.DarkGray);
-
-      
 
         private readonly int _mapWidth;
         private readonly int _mapHeight;
@@ -48,19 +47,6 @@ namespace MyAwesomeConsoleGame
             for (var y = 0; y < Height; y++)
             {
                 _tiles[x, y]?.Draw();
-                
-                //
-                // var pos = _game.Camera.WorldToScreenPos(
-                //     new Vector2(x * TileSize, y * TileSize));
-                //
-              
-                //
-                // if (sprite != null)
-                // {
-                //     var posX = pos.X;
-                //     var posY = pos.Y;
-                //     _game.Console.Draw(posX, posY, sprite);
-                // }
             }
             
             for (var x = -1; x < Width + 1; x++)
@@ -82,18 +68,22 @@ namespace MyAwesomeConsoleGame
             }
         }
 
-        public char GetTile(float x, float y) => GetTileFromMapCoords((int)(x/TileSize), (int)(y/TileSize));
-        public char GetTile(int x, int y) => GetTileFromMapCoords(x/TileSize, y/TileSize);
-
-        private char GetTileFromMapCoords(int mapX, int mapY)
+        public bool Intersects(GameObject gameObject, out List<GameObject> with)
         {
-            if (mapX >= 0 && mapX < Width 
-             && mapY >= 0 && mapY < Height)
+            var intersects = false;
+            with = null;
+            
+            foreach (var tile in _tiles)
             {
-                return Map[mapY][mapX];
+                if (tile?.BoundingBox.Intersects(gameObject.BoundingBox) == true)
+                {
+                    with ??= new List<GameObject>();
+                    with.Add(tile);
+                    intersects = true;
+                }
             }
 
-            return ' ';
+            return intersects;
         }
     }
 }
