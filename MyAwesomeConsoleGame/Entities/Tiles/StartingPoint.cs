@@ -6,9 +6,11 @@ namespace MyAwesomeConsoleGame.Entities.Tiles
     public class StartingPoint : MapTile
     {
         private static readonly Sprite StartSprite = Sprite.FromStringArray(new []{
-            "S▓▒",
-            "▓▒▓",
-            "▒▓▒",
+            "▒▓▒▓▒",
+            "▓▒▓▒▓",
+            "▒▓▒▓▒",
+            "▓▒▓▒▓",
+            "▒▓▒▓▒",
         }, ConsoleColor.Green);
         
         public StartingPoint(MyAwesomeGame game) : base(game) { }

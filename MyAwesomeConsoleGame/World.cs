@@ -15,7 +15,7 @@ namespace MyAwesomeConsoleGame
         private readonly List<MapTile> _border = new();
         private readonly int _mapWidth;
         private readonly int _mapHeight;
-        public const int TileSize = 3;
+        public const int TileSize = 5;
         public bool DrawStory = false;
         
         public World(MyAwesomeGame game, string name, MapTile[,] map) {

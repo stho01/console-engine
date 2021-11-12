@@ -6,9 +6,11 @@ namespace MyAwesomeConsoleGame.Entities.Tiles
     public class PlantSpot : MapTile
     {
         private static readonly Sprite PlantSpotSprite = Sprite.FromStringArray(new []{
-            "P▓▒",
-            "▓▒▓",
-            "▒▓▒",
+            "▒▓▒▓▒",
+            "▓▒▓▒▓",
+            "▒▓▒▓▒",
+            "▓▒▓▒▓",
+            "▒▓▒▓▒",
         }, ConsoleColor.Magenta);
         
         public PlantSpot(MyAwesomeGame game) : base(game) { }

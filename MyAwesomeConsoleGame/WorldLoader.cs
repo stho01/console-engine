@@ -65,7 +65,7 @@ namespace MyAwesomeConsoleGame
 
                         if (tiles != null && tile != null)
                         {
-                            tile.Position = new Vector2(x, y) * 3; 
+                            tile.Position = new Vector2(x, y) * World.TileSize; 
                             tiles[x, y] = tile;
                         }
                     }
