@@ -43,7 +43,7 @@ namespace MyAwesomeConsoleGame
                 Position = new Vector2(10, 10)
             });
 
-            World = Loader.LoadWorld("maps/map1.txt");
+            World = Loader.LoadWorld("maps/map2.txt");
         }
 
         protected override void OnUpdate()

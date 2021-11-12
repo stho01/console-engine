@@ -9,7 +9,11 @@ namespace MyAwesomeConsoleGame
     {
         private readonly MyAwesomeGame _game;
         
-        
+        private static readonly Sprite BorderSprite = Sprite.FromStringArray(new []{
+            "X▓▒",
+            "▓▒▓",
+            "▒▓▒",
+        }, ConsoleColor.Magenta);
         private static readonly Sprite StartSprite = Sprite.FromStringArray(new []{
             "S▓▒",
             "▓▒▓",
@@ -88,18 +92,23 @@ namespace MyAwesomeConsoleGame
                 }
             }
             
-            // Draw boarders
+            for (var x = -1; x < Width + 1; x++)
+            {
+                var topPos = _game.Camera.WorldToScreenPos(new Vector2(x * TileSize,-1*TileSize));
+                var bottomPos = _game.Camera.WorldToScreenPos(new Vector2(x * TileSize, Height*TileSize));
+                
+                _game.Console.Draw(topPos.X, topPos.Y, BorderSprite);
+                _game.Console.Draw(bottomPos.X, bottomPos.Y, BorderSprite);
+            }
             
-            // top and bottom
-            // for (var x = -1; x < Height + 1; x++)
-            // {
-            //     var topPos = _game.Camera.WorldToScreenPos(new Vector2(x * TileSize,-1*TileSize));
-            //     var bottomPos = _game.Camera.WorldToScreenPos(new Vector2(x * TileSize, Height+1*TileSize));
-            //     
-            //     _game.Console.Draw(topPos.X, topPos.Y, RockSprite);
-            //     _game.Console.Draw(bottomPos.X, bottomPos.Y, RockSprite);
-            // }
-            
+            for (var y = -1; y < Height + 1; y++)
+            {
+                var leftPos = _game.Camera.WorldToScreenPos(new Vector2(-1*TileSize, y * TileSize));
+                var rightPos = _game.Camera.WorldToScreenPos(new Vector2(Width*TileSize, y * TileSize));
+                
+                _game.Console.Draw(leftPos.X, leftPos.Y, BorderSprite);
+                _game.Console.Draw(rightPos.X, rightPos.Y, BorderSprite);
+            }
         }
 
         public char GetTile(float x, float y) => GetTileFromMapCoords((int)(x/TileSize), (int)(y/TileSize));
