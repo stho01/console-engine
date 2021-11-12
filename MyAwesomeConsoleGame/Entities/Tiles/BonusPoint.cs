@@ -6,15 +6,14 @@ namespace MyAwesomeConsoleGame.Entities.Tiles
     public class BonusPoint : MapTile
     {
         private static readonly Sprite BonusSpotSprite = Sprite.FromStringArray(new []{
-            "B▓▒",
-            "▓▒▓",
-            "▒▓▒",
+            "▒▓▒▓▒",
+            "▓▒▓▒▓",
+            "▒▓▒▓▒",
+            "▓▒▓▒▓",
+            "▒▓▒▓▒",
         }, ConsoleColor.White);
         
-        public BonusPoint(MyAwesomeGame game) : base(game)
-        {
-            
-        }
+        public BonusPoint(MyAwesomeGame game) : base(game) { }
 
         public override Sprite GetSprite() => BonusSpotSprite;
     }

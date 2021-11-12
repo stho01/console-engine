@@ -6,7 +6,7 @@ namespace MyAwesomeConsoleGame
     {
         public MyAwesomeGame Game { get; }
         public Vector2 Position { get; set; }
-        public Rectangle BoundingBox => new((int)Position.X, (int)Position.Y, 3, 3);
+        public Rectangle BoundingBox => new((int)Position.X, (int)Position.Y, World.TileSize, World.TileSize);
         
         public GameObject(MyAwesomeGame game)
         {

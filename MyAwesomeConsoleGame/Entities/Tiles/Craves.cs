@@ -6,9 +6,11 @@ namespace MyAwesomeConsoleGame.Entities.Tiles
     public class Craves : MapTile
     {
         private static readonly Sprite CravesSprite = Sprite.FromStringArray(new []{
-            "C▓▒",
-            "▓▒▓",
-            "▒▓▒",
+            "▒▓▒▓▒",
+            "▓▒▓▒▓",
+            "▒▓▒▓▒",
+            "▓▒▓▒▓",
+            "▒▓▒▓▒",
         }, ConsoleColor.DarkYellow);
 
         
