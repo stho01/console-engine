@@ -1,4 +1,5 @@
 ﻿using System.Collections.Generic;
+using System.Linq;
 using ConsoleEngine;
 using ConsoleEngine.Abstractions.Inputs;
 using ConsoleEngine.Infrastructure;
@@ -12,8 +13,10 @@ namespace MyAwesomeConsoleGame
         public Rover Rover;
         public Hud Hud;
         public Camera Camera;
-        public List<Obstacle> _obstacles = new List<Obstacle>(); 
-            
+        public List<Obstacle> _obstacles = new List<Obstacle>();
+        public Queue<Command> _currentCommands = new Queue<Command>();
+
+
         public MyAwesomeGame() : base(
             width: 70,
             height: 50,
@@ -43,8 +46,22 @@ namespace MyAwesomeConsoleGame
             if (Input.Instance.GetKey(Key.D).Held) Rover.MoveEast();
             if (Input.Instance.GetKey(Key.W).Held) Rover.MoveNorth();
             if (Input.Instance.GetKey(Key.S).Held) Rover.MoveSouth();
-            
-            // var commands = Hud.GetCommands();
+
+            if (Input.Instance.GetKey(Key.SPACE).Pressed && !_currentCommands.Any())
+            {
+                var commands = Hud.GetCommands();
+                foreach (var command in commands)
+                    _currentCommands.Enqueue(command);    
+            }
+
+            if (_currentCommands.Any())
+            {
+                var currentCommand = _currentCommands.Peek();
+                currentCommand.Update(Rover);
+                if (currentCommand.IsDone())
+                    _currentCommands.Dequeue();
+            }
+           
             // Rover.DoCommands(commands);
             
             Rover.Update();
