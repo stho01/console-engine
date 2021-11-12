@@ -6,21 +6,14 @@ namespace MyAwesomeConsoleGame
 {
     public class WorldLoader
     {
-        private readonly MyAwesomeGame _game;
-
-        public WorldLoader(MyAwesomeGame game)
-        {
-            _game = game;
-        }
-        
-        public World LoadWorld(string path)
+        public static World LoadWorld(MyAwesomeGame game, string path)
         {
             var content = File.ReadAllLines(path);
             
-            return Parse(content);
+            return Parse(game, content);
         }
 
-        private World Parse(string[] lines)
+        private static World Parse(MyAwesomeGame game, string[] lines)
         {
             string name = string.Empty;
             int sequences = 0;
@@ -28,6 +21,7 @@ namespace MyAwesomeConsoleGame
             int height = 0;
             MapTile[,] tiles = null;
             int y = 0;
+            StartingPoint startingPoint = null;
             
             foreach (var line in lines)
             {
@@ -54,18 +48,20 @@ namespace MyAwesomeConsoleGame
                     
                     for (var x = 0; x < line.Length; x++)
                     {
-                    
                         var type = line[x];
                         MapTile tile = type switch
                         {
-                            'S' => new StartingPoint(_game),
-                            'F' => new FinishPoint(_game),
-                            'H' => new Rock(_game),
-                            'P' => new PlantSpot(_game),
-                            'C' => new Craves(_game),
-                            'B' => new BonusPoint(_game),
+                            'S' => new StartingPoint(game),
+                            'F' => new FinishPoint(game),
+                            'H' => new Rock(game),
+                            'P' => new PlantSpot(game),
+                            'C' => new Craves(game),
+                            'B' => new BonusPoint(game),
                             _ => null
                         };
+
+                        if (tile is StartingPoint sp)
+                            startingPoint = sp;
 
                         if (tiles != null && tile != null)
                         {
@@ -78,9 +74,13 @@ namespace MyAwesomeConsoleGame
                 }
             }
 
-            return new World(_game, name, tiles) {
-                Sequences = sequences
+            
+            var world = new World(game, name, tiles) {
+                Sequences = sequences,
+                StartingPoint = startingPoint
             };
+            world.Init();
+            return world;
         }
     }
 

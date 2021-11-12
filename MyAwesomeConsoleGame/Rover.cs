@@ -2,6 +2,7 @@
 using ConsoleEngine.Infrastructure;
 using ConsoleEngine.Infrastructure.Rendering;
 using Microsoft.Xna.Framework;
+using MyAwesomeConsoleGame.Entities.Tiles;
 
 namespace MyAwesomeConsoleGame
 {
@@ -13,6 +14,8 @@ namespace MyAwesomeConsoleGame
         public const float Drag = 20f;
         public const float MaxPower = 10000;
         public double RemainingPower = 10000;
+        public bool StandingOnPlantingSpot { get; private set; }
+        public bool StandingOnBonusSpot { get; private set; }
         
         
         public static readonly Sprite Sprite = Sprite.FromStringArray(new[]
@@ -28,27 +31,27 @@ namespace MyAwesomeConsoleGame
 
         public void Update()
         {
+            StandingOnBonusSpot = false;
+            StandingOnPlantingSpot = false;
+            
             var prevPosition = Position;
             
             Velocity += -Drag * Velocity * (float)GameTime.Delta.TotalSeconds;
             Velocity += Acceleration * (float)GameTime.Delta.TotalSeconds;
             Position += Velocity;
 
-            Game.Console.Draw(0, 3, $"NPos : {Position}");
-            
-            if (Game.World.Intersects(this, out var with))
-            {
-                Position = prevPosition ;
-                Velocity = Vector2.Zero;
-            }
-            
+            HandleCollision(prevPosition);
+           
             Acceleration = Vector2.Zero;
+            
+            Game.Console.Draw(0, 3, $"NPos : {Position}");
+            Game.Console.Draw(0, 4, $"Bonus: {StandingOnBonusSpot}");
+            Game.Console.Draw(0, 5, $"Plant: {StandingOnPlantingSpot}");
         }
         
         public void Draw()
         {
             var screenPos = GetScreenPos();
-            
             Game.Console.Draw(
                 (int)screenPos.X - 1, 
                 (int)screenPos.Y - 1, 
@@ -64,6 +67,37 @@ namespace MyAwesomeConsoleGame
         {
             RemainingPower -= force.LengthSquared();
             Acceleration += force;
+        }
+
+        private void HandleCollision(Vector2 prevPosition)
+        {
+            var shouldStopMotions = false;
+            
+            if (Game.World.Intersects(this, out var with))
+            {
+                foreach (var tile in with)
+                {
+                    switch (tile)
+                    {
+                        case Rock:
+                        case Craves:
+                            shouldStopMotions = true;
+                            break;
+                        case PlantSpot:
+                            StandingOnPlantingSpot = true;
+                            break;
+                        case BonusPoint:
+                            StandingOnBonusSpot = true;
+                            break;
+                    }
+                }
+            }
+
+            if (shouldStopMotions)
+            {
+                Position = prevPosition ;
+                Velocity = Vector2.Zero;    
+            }
         }
     }
 }

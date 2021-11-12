@@ -30,17 +30,17 @@ namespace MyAwesomeConsoleGame
 
         protected override void OnInitialize()
         {
-            Loader = new WorldLoader(this);
-            
-            Rover = new Rover(this) {
-                Position = new Vector2(10, 10)
+            Camera = new Camera(this);
+            World = WorldLoader.LoadWorld(this, "maps/map3.txt");
+            Rover = new Rover(this) 
+            {
+                Position = World.StartingPoint.Position
             };
 
             Hud = new Hud(this);
-            Camera = new Camera(this);
             Camera.Follow(Rover);
        
-            World = Loader.LoadWorld("maps/map3.txt");
+            
         }
 
         protected override void OnUpdate()
