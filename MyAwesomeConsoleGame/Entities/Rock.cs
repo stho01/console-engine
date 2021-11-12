@@ -2,15 +2,6 @@
 
 namespace MyAwesomeConsoleGame
 {
-    public abstract class Obstacle : GameObject
-    {
-        public Obstacle(MyAwesomeGame game) : base(game)
-        {
-        }
-
-        public abstract void Draw();
-    }
-
     public class Rock : Obstacle
     {
         private static readonly Sprite Sprite = Sprite.FromStringArray(new[]
