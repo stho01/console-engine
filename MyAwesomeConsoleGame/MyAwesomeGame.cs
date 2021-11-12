@@ -15,6 +15,7 @@ namespace MyAwesomeConsoleGame
         public Camera Camera;
         public List<Obstacle> _obstacles = new List<Obstacle>();
         public Queue<Command> _currentCommands = new Queue<Command>();
+        public World World;
 
 
         public MyAwesomeGame() : base(
@@ -38,6 +39,8 @@ namespace MyAwesomeConsoleGame
             _obstacles.Add(new Rock(this) {
                 Position = new Vector2(10, 10)
             });
+
+            World = new World(this);
         }
 
         protected override void OnUpdate()
@@ -70,8 +73,11 @@ namespace MyAwesomeConsoleGame
         
         protected override void OnRender()
         {
+            World.Draw();
+            
             foreach (var obstacle in _obstacles)
                 obstacle.Draw();
+            
             Rover.Draw();
             Hud.Draw();
         }
