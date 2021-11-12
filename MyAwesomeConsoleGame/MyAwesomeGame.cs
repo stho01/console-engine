@@ -9,10 +9,10 @@ namespace MyAwesomeConsoleGame
         private Vector2 _objectPosition;
         
         public MyAwesomeGame() : base(
-            width: 40,
-            height: 40,
-            fontWidth: 14,
-            fontHeight: 14)
+            width: 140,
+            height: 100,
+            fontWidth: 10,
+            fontHeight: 10)
         {
             
         }
@@ -32,7 +32,8 @@ namespace MyAwesomeConsoleGame
         
         protected override void OnRender()
         {
-            
+            var offset = 30;
+            Console.DrawLine(0, Console.Height - offset, Console.Width, Console.Height - offset, '#');
         }
     }
 }
