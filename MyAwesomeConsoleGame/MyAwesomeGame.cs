@@ -92,9 +92,11 @@ namespace MyAwesomeConsoleGame
         protected override void OnRender()
         {
             World.Draw();
-            Rover.Draw();
-            Hud.Draw();
-            
+            if (!World.DrawStory)
+            {
+                Rover.Draw();
+                Hud.Draw();
+            }
             Console.Draw(0,0, $"Pos  : {Rover.Position}");
             Console.Draw(0,1, $"SPos : {Rover.GetScreenPos()}");
             Console.Draw(0,2, $"BB   : {Rover.BoundingBox}");

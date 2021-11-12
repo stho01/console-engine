@@ -17,9 +17,11 @@ namespace MyAwesomeConsoleGame
         public static async Task PlayGameOverMusic()
         {
             return;
-           System.Console.Beep(12000, 500);
-           System.Console.Beep(15000, 500);
-           System.Console.Beep(12000, 500);
+           System.Console.Beep(2000, 250);
+           System.Console.Beep(2500, 250);
+           System.Console.Beep(2000, 100);
+           System.Console.Beep(2000, 100);
+           System.Console.Beep(2000, 100);
         }        
     }
 }

@@ -14,7 +14,8 @@ namespace MyAwesomeConsoleGame
         private const int Top = 35;
         private const int WorldNameHeight = 36;
         private const int PowerUsageHeight = 37;
-        private const int CommandSequenceHeight = 39;
+        private const int DamageTakenHeight = 39;
+        private const int CommandSequenceHeight = 41;
         private const ConsoleColor HudBackgroundColor = ConsoleColor.Gray;
         private readonly int _height;
 
@@ -55,11 +56,14 @@ namespace MyAwesomeConsoleGame
 
             DrawWorldName();
             DrawPowerUsage();
+            DrawDamageTaken();
             DrawMoveSequence();
             
             
             _game.Console.DrawLine(0, Top, _game.Console.Width, Top, '▓');
         }
+
+     
 
         private void DrawGameOver()
         {
@@ -89,6 +93,16 @@ namespace MyAwesomeConsoleGame
             }
         }
 
+        private void DrawDamageTaken()
+        {
+            DrawText($"DAMAGE TAKEN: {_game.Rover.DamageTaken}", DamageTakenHeight, 0,GetPowerColor());
+        }
+        
+        private void DrawWorldName()
+        {
+           DrawText("NOW ENTERING: " + _game.World.Name, WorldNameHeight, 0, ConsoleColor.DarkGreen );
+        }
+        
         private ConsoleColor GetPowerColor()
         {
             if (_game.Rover.RemainingPower >= ((Rover.MaxPower / 4) * 3)) return ConsoleColor.Green;
@@ -96,10 +110,13 @@ namespace MyAwesomeConsoleGame
             if (_game.Rover.RemainingPower >= ((Rover.MaxPower / 4) * 1)) return ConsoleColor.Red;
             return ConsoleColor.Red;
         }
-
-        private void DrawWorldName()
+        
+        private ConsoleColor GetDamageTakenColor()
         {
-           DrawText("NOW ENTERING: " + _game.World.Name, WorldNameHeight, 0, ConsoleColor.DarkGreen );
+            if (_game.Rover.DamageTaken > 75) return ConsoleColor.Red;
+            if (_game.Rover.DamageTaken > 50) return ConsoleColor.Yellow;
+            if (_game.Rover.DamageTaken > 25) return ConsoleColor.DarkGreen;
+            return ConsoleColor.Green;
         }
 
         public void DrawText(string text, int posY, int startingPosX, ConsoleColor fgColor, ConsoleColor bgColor = HudBackgroundColor ,Direction direction = Direction.East)

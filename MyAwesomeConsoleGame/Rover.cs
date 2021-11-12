@@ -69,6 +69,10 @@ namespace MyAwesomeConsoleGame
         public void ApplyForce(Vector2 force)
         {
             RemainingPower -= force.LengthSquared();
+            if (RemainingPower <= 0)
+            {
+                return;
+            }
             Acceleration += force;
         }
 
