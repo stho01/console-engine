@@ -7,12 +7,12 @@ namespace MyAwesomeConsoleGame
     {
         public readonly Direction Direction;
 
-        public Move(Direction direction, float duration ) : base(duration)
+        public Move(Direction direction, float duration = 100 ) : base(duration)
         {
             Direction = direction;
         }
 
-        public override void OnUpdate(Rover rover)
+        protected override void OnUpdate(Rover rover)
         {
             switch (Direction)
             {
@@ -31,6 +31,8 @@ namespace MyAwesomeConsoleGame
                 default:
                     throw new Exception("no go");
             }
+
+            
         }
     }
 }

@@ -11,6 +11,8 @@ namespace MyAwesomeConsoleGame
         public Vector2 Acceleration { get; set; }
         public const float Thrust = 0.8f;
         public const float Drag = 20f;
+        public const float MaxPower = 10000;
+        public double RemainingPower = 10000;
         
         
         public static readonly Sprite Sprite = Sprite.FromStringArray(new[]

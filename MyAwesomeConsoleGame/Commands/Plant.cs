@@ -7,7 +7,7 @@
             
         }
 
-        public override void OnUpdate(Rover rover)
+        protected override void OnUpdate(Rover rover)
         {
             throw new System.NotImplementedException();
         }

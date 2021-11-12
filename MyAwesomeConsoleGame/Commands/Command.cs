@@ -12,7 +12,7 @@ namespace MyAwesomeConsoleGame
             DurationInMilliseconds = durationInMilliseconds;
         }
 
-        public abstract void OnUpdate(Rover rover);
+        protected abstract void OnUpdate(Rover rover);
 
         public void Update(Rover rover)
         {

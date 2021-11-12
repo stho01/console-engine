@@ -17,11 +17,7 @@ namespace MyAwesomeConsoleGame
             "▓▒▓",
             "▒▓▒",
         }, ConsoleColor.Magenta);
-        private static readonly Sprite RockSprite = Sprite.FromStringArray(new []{
-            "H▓▒",
-            "▓▒▓",
-            "▒▓▒",
-        }, ConsoleColor.DarkGray);
+      
 
         private readonly int _mapWidth;
         private readonly int _mapHeight;
@@ -30,6 +26,7 @@ namespace MyAwesomeConsoleGame
         public World(MyAwesomeGame game, string name, MapTile[,] map) {
             _game = game;
             _tiles = map;
+            Name = name;
             _mapWidth = map.GetLength(0);
             _mapHeight = map.GetLength(1);
         }

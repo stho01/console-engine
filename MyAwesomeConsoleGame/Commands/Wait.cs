@@ -8,7 +8,7 @@ namespace MyAwesomeConsoleGame
         {
         }
 
-        public override void OnUpdate(Rover rover)
+        protected override void OnUpdate(Rover rover)
         {
             // Just wait
         }

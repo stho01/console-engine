@@ -45,6 +45,7 @@ namespace MyAwesomeConsoleGame
 
         protected override void OnUpdate()
         {
+            Hud.OnUpdate();
             if (Input.Instance.GetKey(Key.A).Held) Rover.MoveWest();
             if (Input.Instance.GetKey(Key.D).Held) Rover.MoveEast();
             if (Input.Instance.GetKey(Key.W).Held) Rover.MoveNorth();
@@ -52,18 +53,20 @@ namespace MyAwesomeConsoleGame
 
             if (Input.Instance.GetKey(Key.SPACE).Pressed && !_currentCommands.Any())
             {
-                // var commands = Hud.GetCommands();
-                // foreach (var command in commands)
-                //     _currentCommands.Enqueue(command);    
-                _currentCommands.Enqueue(new Move(Direction.North, 500));
+                var commands = Hud.GetCommands();
+                foreach (var command in commands)
+                    _currentCommands.Enqueue(command);    
             }
 
             if (_currentCommands.Any())
             {
                 var currentCommand = _currentCommands.Peek();
-                currentCommand.OnUpdate(Rover);
+                currentCommand.Update(Rover);
                 if (currentCommand.IsDone())
+                {
                     _currentCommands.Dequeue();
+                }
+                    
             }
            
             // Rover.DoCommands(commands);
