@@ -25,7 +25,7 @@ namespace MyAwesomeConsoleGame
         protected override void OnInitialize()
         {
             Rover = new Rover(this) {
-                Position = new Point(10, 10)
+                Position = new Vector2(10, 10)
             };
 
             Hud = new Hud(this);
@@ -33,21 +33,22 @@ namespace MyAwesomeConsoleGame
             Camera.Follow(Rover);
             
             _obstacles.Add(new Rock(this) {
-                Position = new Point(10, 10)
+                Position = new Vector2(10, 10)
             });
         }
 
         protected override void OnUpdate()
         {
+            if (Input.Instance.GetKey(Key.A).Held) Rover.MoveWest();
+            if (Input.Instance.GetKey(Key.D).Held) Rover.MoveEast();
+            if (Input.Instance.GetKey(Key.W).Held) Rover.MoveNorth();
+            if (Input.Instance.GetKey(Key.S).Held) Rover.MoveSouth();
+            
+            // var commands = Hud.GetCommands();
+            // Rover.DoCommands(commands);
+            
+            Rover.Update();
             Camera.Update();
-            
-            if (Input.Instance.GetKey(Key.A).Pressed) Rover.Position += new Point(-2, 0);
-            if (Input.Instance.GetKey(Key.D).Pressed) Rover.Position += new Point(2, 0);
-            if (Input.Instance.GetKey(Key.W).Pressed) Rover.Position += new Point(0, -2);
-            if (Input.Instance.GetKey(Key.S).Pressed) Rover.Position += new Point(0, 2);
-            
-            var commands = Hud.GetCommands();
-            Rover.DoCommands(commands);
         }
         
         protected override void OnRender()

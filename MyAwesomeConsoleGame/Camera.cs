@@ -13,19 +13,19 @@ namespace MyAwesomeConsoleGame
             _game = game;
         }
         
-        public Point Position { get; set; }
+        public Vector2 Position { get; set; }
         
         public void Follow(GameObject gameObject) 
         {
             _gameObject = gameObject;
         }
 
-        public Point WorldToScreenPos(Point worldPos) => worldPos - Position;
-        public Point ScreenToWorldPos(Point worldPos) => (worldPos + Position);
+        public Point WorldToScreenPos(Vector2 worldPos) => (worldPos - Position).ToPoint();
+        public Vector2 ScreenToWorldPos(Point worldPos) => (worldPos + Position.ToPoint()).ToVector2();
         
         public void Update()
         {
-            Position = _gameObject.Position - _game.Console.ScreenCenter.ToPoint();
+            Position = _gameObject.Position - _game.Console.ScreenCenter;
         }
     }
 }
