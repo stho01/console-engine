@@ -1,5 +1,4 @@
-﻿using System.Collections.Generic;
-using ConsoleEngine.Infrastructure;
+﻿using ConsoleEngine.Infrastructure;
 using ConsoleEngine.Infrastructure.Rendering;
 using Microsoft.Xna.Framework;
 using MyAwesomeConsoleGame.Entities.Tiles;
@@ -17,13 +16,43 @@ namespace MyAwesomeConsoleGame
         public float MaxPower;
         public double RemainingPower;
         public int DamageTaken = 0;
-        
-        
-        public static readonly Sprite Sprite = Sprite.FromStringArray(new[]
+
+        public Direction Direction { get; private set; }
+
+        public static readonly Sprite RoverSpriteSouth = Sprite.FromStringArray(new[]
         {
-            "|#|",
-            " # ",
-            "|#|",
+            "┌───┐",
+            "║###║",
+            "│###│",
+            "║###║",
+           "\\___/"
+        });
+
+        public static readonly Sprite RoverSpriteNorth = Sprite.FromStringArray(new[]
+        {
+            "/¯¯¯\\",
+            "║###║",
+            "│###│",
+            "║###║",
+            "└───┘"
+        });
+
+        public static readonly Sprite RoverSpriteEast = Sprite.FromStringArray(new[]
+        {
+            "┌═─═\\",
+            "│###│",
+            "│###│",
+            "│###│",
+            "└═─═/"
+        });
+
+        public static readonly Sprite RoverSpriteWest = Sprite.FromStringArray(new[]
+        {
+            "/═─═┐",
+            "│###│",
+            "├###│",
+            "│###│",
+           "\\═─═┘"
         });
 
         public Rover(MyAwesomeGame game) : base(game)
@@ -36,35 +65,54 @@ namespace MyAwesomeConsoleGame
         {
             StandingOnBonusSpot = false;
             StandingOnPlantingSpot = false;
-            
+
             var prevPosition = Position;
-            
+
             Velocity += -Drag * Velocity * (float)GameTime.Delta.TotalSeconds;
             Velocity += Acceleration * (float)GameTime.Delta.TotalSeconds;
             Position += Velocity;
 
             HandleCollision(prevPosition);
-           
+
             Acceleration = Vector2.Zero;
-            
+
             Game.Console.Draw(0, 3, $"NPos : {Position}");
             Game.Console.Draw(0, 4, $"Bonus: {StandingOnBonusSpot}");
             Game.Console.Draw(0, 5, $"Plant: {StandingOnPlantingSpot}");
         }
-        
+
         public void Draw()
         {
             var screenPos = GetScreenPos();
             Game.Console.Draw(
-                (int)screenPos.X - 1, 
-                (int)screenPos.Y - 1, 
-                Sprite);
+                (int)screenPos.X - 1,
+                (int)screenPos.Y - 1,
+                GetRoverSprite());
         }
 
-        public void MoveNorth() => ApplyForce(new Vector2(0, -1f) * Thrust);
-        public void MoveSouth() => ApplyForce(new Vector2(0, 1f) * Thrust);
-        public void MoveWest() => ApplyForce(new Vector2(-1f, 0) * Thrust);
-        public void MoveEast() => ApplyForce(new Vector2(1f, 0) * Thrust);
+        public void MoveNorth()
+        {
+            ApplyForce(new Vector2(0, -1f) * Thrust);
+            Direction = Direction.North;
+        }
+
+        public void MoveSouth()
+        {
+            ApplyForce(new Vector2(0, 1f) * Thrust);
+            Direction = Direction.South;
+        }
+
+        public void MoveWest()
+        {
+            ApplyForce(new Vector2(-1f, 0) * Thrust);
+            Direction = Direction.West;
+        }
+
+        public void MoveEast()
+        {
+            ApplyForce(new Vector2(1f, 0) * Thrust);
+            Direction = Direction.East;
+        }
 
 
         public void ApplyForce(Vector2 force)
@@ -80,7 +128,7 @@ namespace MyAwesomeConsoleGame
         private void HandleCollision(Vector2 prevPosition)
         {
             var shouldStopMotions = false;
-            
+
             if (Game.World.Intersects(this, out var with))
             {
                 foreach (var tile in with)
@@ -106,8 +154,24 @@ namespace MyAwesomeConsoleGame
 
             if (shouldStopMotions)
             {
-                Position = prevPosition ;
-                Velocity = Vector2.Zero;    
+                Position = prevPosition;
+                Velocity = Vector2.Zero;
+            }
+        }
+
+        private Sprite GetRoverSprite()
+        {
+            switch ((Direction)
+)
+            {
+                case Direction.North:
+                    return RoverSpriteNorth;
+                case Direction.South:
+                    return RoverSpriteSouth;
+                case Direction.East:
+                    return RoverSpriteEast;
+                default:
+                    return RoverSpriteWest;
             }
         }
     }
