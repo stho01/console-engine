@@ -1,4 +1,5 @@
-﻿using ConsoleEngine.Infrastructure;
+﻿using System;
+using ConsoleEngine.Infrastructure;
 using ConsoleEngine.Infrastructure.Rendering;
 using Microsoft.Xna.Framework;
 using MyAwesomeConsoleGame.Entities.Tiles;
@@ -16,43 +17,51 @@ namespace MyAwesomeConsoleGame
         public float MaxPower;
         public double RemainingPower;
         public int DamageTaken = 0;
+        public int AcceleratorsPlanted = 0;
+
+        public override Rectangle BoundingBox
+        {
+            get
+            {
+                var sprite = GetRoverSprite();
+                return new Rectangle(Position.ToPoint(), sprite.Size);
+            }
+        }
 
         public Direction Direction { get; private set; }
-
+  
         public static readonly Sprite RoverSpriteSouth = Sprite.FromStringArray(new[]
         {
-            "┌───┐",
-            "║###║",
-            "│###│",
-            "║###║",
-           "\\___/"
+            @"┌──┐",
+            @"║##║",
+            @" >< ",
+            @"║##║",
+            @"\__/"
         });
 
         public static readonly Sprite RoverSpriteNorth = Sprite.FromStringArray(new[]
         {
-            "/¯¯¯\\",
-            "║###║",
-            "│###│",
-            "║###║",
-            "└───┘"
+            @"/¯¯\",
+            @"║##║",
+            @" >< ",
+            @"║##║",
+            @"└──┘"
         });
 
         public static readonly Sprite RoverSpriteEast = Sprite.FromStringArray(new[]
         {
-            "┌═─═\\",
-            "│###│",
-            "│###│",
-            "│###│",
-            "└═─═/"
+            @"┌═ ═\",
+            @"│#v#│",
+            @"│#∧#│",
+            @"└═ ═/"
         });
 
         public static readonly Sprite RoverSpriteWest = Sprite.FromStringArray(new[]
         {
-            "/═─═┐",
-            "│###│",
-            "├###│",
-            "│###│",
-           "\\═─═┘"
+            @"/═ ═┐",
+            @"│#v#│",
+            @"│#∧#│",
+            @"\═ ═┘"
         });
 
         public Rover(MyAwesomeGame game) : base(game)
@@ -176,6 +185,27 @@ namespace MyAwesomeConsoleGame
                     return RoverSpriteEast;
                 default:
                     return RoverSpriteWest;
+            }
+        }
+
+        public void Plant()
+        {
+            if (StandingOnPlantingSpot)
+            {
+                if (Game.World.Intersects(this, out var with))
+                {
+                    foreach (var tile in with)
+                    {
+                        if (tile is PlantSpot plantSpot && plantSpot.HasBeenPlanted == false)
+                        {
+                            Game.Score += 1000;
+                            AcceleratorsPlanted++;
+                            plantSpot.HasBeenPlanted = true;
+                        }
+                    }
+                }
+                
+               
             }
         }
     }
