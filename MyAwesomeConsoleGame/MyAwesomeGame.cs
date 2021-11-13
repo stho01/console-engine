@@ -80,7 +80,7 @@ namespace MyAwesomeConsoleGame
 
             if (Input.Instance.GetKey(Key.F1).Pressed) IsDebugMode = !IsDebugMode;
             
-            if (Rover.RemainingPower <= 0 || Rover.RemainingSequences < 1)
+            if (Rover.RemainingPower <= 0 || Rover.RemainingSequences < 0)
             {
                 GameOver = true;
                 new Task(async () =>
