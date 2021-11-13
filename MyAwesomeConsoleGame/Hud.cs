@@ -57,7 +57,6 @@ namespace MyAwesomeConsoleGame
             for (var y = Top; y < _game.Console.Height; y++)
                 _game.Console.Draw(x, y, ' ', backgroundColor: HudBackgroundColor);
 
-            // DrawText("SCORE:" + _game.Score.ToString(),Top+10,4, ConsoleColor.Magenta);
             DrawWorldName();
             DrawPowerUsage();
             DrawDamageTaken();
