@@ -20,6 +20,7 @@ namespace MyAwesomeConsoleGame
         public double RemainingPower;
         public int DamageTaken = 0;
         public int AcceleratorsPlanted = 0;
+        public int RemainingSequences = 0;
 
         public override Rectangle BoundingBox
         {
@@ -70,6 +71,7 @@ namespace MyAwesomeConsoleGame
         {
             MaxPower = game.World.MaxPower;
             RemainingPower = MaxPower;
+            RemainingSequences = game.World.Sequences;
         }
 
         public void Update()
@@ -160,6 +162,7 @@ namespace MyAwesomeConsoleGame
                             break;
                         case Craves:
                             shouldStopMotions = true;
+                            this.RemainingPower = 0;
                             break;
                         case PlantSpot:
                             StandingOnPlantingSpot = true;
