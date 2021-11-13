@@ -58,8 +58,6 @@ namespace MyAwesomeConsoleGame
 
         protected override void OnInitialize()
         {
-            ///System.Console.Write("What's your name?");
-            //Playername = System.Console.ReadLine();
             GameState = GameStates.InputName;
             Camera = new Camera(this);
             StartNewGame();
@@ -93,8 +91,7 @@ namespace MyAwesomeConsoleGame
             switch (GameState)
             {
                 case GameStates.InputName:
-                    if (Input.Instance.GetKey(Key.ENTER).Pressed) GameState = GameStates.Menu;
-                    Playername = "Bob Kåre ??? Junior";
+                    HandleNameInput();
                     break;
                 case GameStates.Menu:
                     if (Input.Instance.GetKey(Key.H).Pressed) GameState = GameStates.Playing;
@@ -157,6 +154,16 @@ namespace MyAwesomeConsoleGame
 
             Camera.Update();
             
+        }
+
+        private void HandleNameInput()
+        {
+            if (Input.Instance.GetKey(Key.ENTER).Pressed) GameState = GameStates.Menu;
+            var pressedSpace09AZkeys = Input.Instance.GetPressedKeyCodesSpace09AZ().Select(kc => (char)kc);
+            if (pressedSpace09AZkeys?.Any() == true)
+                Playername += string.Concat(pressedSpace09AZkeys);
+            if (Input.Instance.GetKey(Key.BACKSPACE).Pressed && !string.IsNullOrEmpty(Playername))
+                Playername = Playername.Substring(Playername.Length - 1);
         }
 
         protected override void OnRender()
