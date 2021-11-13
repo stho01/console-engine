@@ -1,5 +1,6 @@
 ﻿using System;
 using System.Data;
+using System.Linq;
 using ConsoleEngine.Infrastructure;
 using ConsoleEngine.Infrastructure.Rendering;
 using Microsoft.Xna.Framework;
@@ -110,7 +111,8 @@ namespace MyAwesomeConsoleGame
 
             if (Game.World.Intersects(this, out var with))
             {
-                Position -= new Vector2(0, 1);
+                if (with.Any(x => x is Rock || x is Craves))
+                    Position -= new Vector2(0, 1);
             }
         }
 
