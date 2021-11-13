@@ -17,9 +17,10 @@ namespace MyAwesomeConsoleGame
         private const int PowerUsageHeight = 37;
         private const int DamageTakenHeight = 39;
         private const int AcceleratorsPlantedHeight = 42;
-        private const int CommandSequenceHeight = 44;
         private const int ScoreHeight = 0;
-        private const ConsoleColor HudBackgroundColor = ConsoleColor.Gray;
+        private const int RemainingSequencesHeight = 44;
+        private const int CommandSequenceHeight = 46;
+        private const ConsoleColor HudBackgroundColor = ConsoleColor.Black;
         private readonly int _height;
 
 
@@ -63,10 +64,16 @@ namespace MyAwesomeConsoleGame
             DrawAcceleratorsPlanted();
             DrawPowerUsage();
             DrawDamageTaken();
+            DrawRemainingSequences();
             DrawMoveSequence();
             DrawGameScore();
             
-            _game.Console.DrawLine(0, Top, _game.Console.Width, Top, '▓');
+            _game.Console.DrawLine(0, Top, _game.Console.Width, Top, '╍');
+        }
+
+        private void DrawRemainingSequences()
+        {
+            DrawText($"REMAINING COMMAND SEQUENCES: {_game.Rover.RemainingSequences}", RemainingSequencesHeight, 1,ConsoleColor.Blue);
         }
 
         private void DrawAcceleratorsPlanted()
@@ -78,7 +85,7 @@ namespace MyAwesomeConsoleGame
         private void DrawGameOver()
         {
             _game.Console.Draw(
-                (int)(_game.Console.ScreenCenter.X - (Sprites.Sprites.Sprite.Width / 2)), Top, Sprites.Sprites.Sprite);
+                (int)(_game.Console.ScreenCenter.X - (Sprites.Sprites.Sprite.Width / 2)), (int)_game.Console.ScreenCenter.Y - Sprites.Sprites.Sprite.Height / 2, Sprites.Sprites.Sprite);
         }
 
         private void DrawMoveSequence()

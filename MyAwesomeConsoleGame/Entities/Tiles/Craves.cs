@@ -7,12 +7,22 @@ namespace MyAwesomeConsoleGame.Entities.Tiles
     {
         
          // 
+        // private static readonly Sprite Sprite = Sprite.FromStringArray(new []{
+        //     " ▓▓░░", 
+        //     "▓▓░▓░", 
+        //     "▓█▓▒▓", 
+        //     "███▒▓", 
+        //     " █▓▓ " 
+        // }, ConsoleColor.DarkGray);
+        
+        
+        // ░ ▒ ▓ █
         private static readonly Sprite Sprite = Sprite.FromStringArray(new []{
-            " ▓▓░░", 
-            "▓▓░▓░", 
-            "▓█▓▒▓", 
-            "███▒▓", 
-            " █▓▓ " 
+            " ░▓▓░", 
+            "▓░░░▒", 
+            "░░ ░░", 
+            "▓░░░▓", 
+            " ▒▓▒ " 
         }, ConsoleColor.DarkGray);
         
         public Craves(MyAwesomeGame game) : base(game) {}

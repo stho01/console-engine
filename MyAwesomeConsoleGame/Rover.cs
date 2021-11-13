@@ -1,4 +1,6 @@
 ﻿using System;
+using System.Data;
+using System.Linq;
 using ConsoleEngine.Infrastructure;
 using ConsoleEngine.Infrastructure.Rendering;
 using Microsoft.Xna.Framework;
@@ -18,6 +20,7 @@ namespace MyAwesomeConsoleGame
         public double RemainingPower;
         public int DamageTaken = 0;
         public int AcceleratorsPlanted = 0;
+        public int RemainingSequences = 0;
 
         public override Rectangle BoundingBox
         {
@@ -68,6 +71,7 @@ namespace MyAwesomeConsoleGame
         {
             MaxPower = game.World.MaxPower;
             RemainingPower = MaxPower;
+            RemainingSequences = game.World.Sequences;
         }
 
         public void Update()
@@ -85,9 +89,12 @@ namespace MyAwesomeConsoleGame
 
             Acceleration = Vector2.Zero;
 
-            Game.Console.Draw(0, 3, $"NPos : {Position}");
-            Game.Console.Draw(0, 4, $"Bonus: {StandingOnBonusSpot}");
-            Game.Console.Draw(0, 5, $"Plant: {StandingOnPlantingSpot}");
+            if (Game.IsDebugMode)
+            {
+                Game.Console.Draw(0, 3, $"NPos : {Position}");
+                Game.Console.Draw(0, 4, $"Bonus: {StandingOnBonusSpot}");
+                Game.Console.Draw(0, 5, $"Plant: {StandingOnPlantingSpot}");    
+            }
         }
 
         public void Draw()
@@ -103,6 +110,12 @@ namespace MyAwesomeConsoleGame
         {
             ApplyForce(new Vector2(0, -1f) * Thrust);
             Direction = Direction.North;
+
+            if (Game.World.Intersects(this, out var with))
+            {
+                if (with.Any(x => x is Rock || x is Craves))
+                    Position -= new Vector2(0, 1);
+            }
         }
 
         public void MoveSouth()
@@ -122,7 +135,6 @@ namespace MyAwesomeConsoleGame
             ApplyForce(new Vector2(1f, 0) * Thrust);
             Direction = Direction.East;
         }
-
 
         public void ApplyForce(Vector2 force)
         {
@@ -150,6 +162,7 @@ namespace MyAwesomeConsoleGame
                             break;
                         case Craves:
                             shouldStopMotions = true;
+                            this.RemainingPower = 0;
                             break;
                         case PlantSpot:
                             StandingOnPlantingSpot = true;

@@ -1,18 +1,18 @@
-﻿using System;
-using System.Collections.Generic;
-using System.Linq;
-using System.Threading.Tasks;
-using ConsoleEngine;
+﻿using ConsoleEngine;
 using ConsoleEngine.Abstractions.Inputs;
 using ConsoleEngine.Infrastructure.Inputs;
 using Microsoft.Xna.Framework;
+using System;
+using System.Collections.Generic;
+using System.Linq;
+using System.Threading.Tasks;
 
 namespace MyAwesomeConsoleGame
 {
     public enum GameStates
     {
         InputName,
-        Menu, 
+        Menu,
         Playing,
         GameOver
     }
@@ -40,6 +40,7 @@ namespace MyAwesomeConsoleGame
         public int CurrentMap = 0;
 
         public bool GameOver;
+        public bool IsDebugMode { get; set; }
 
 
         public MyAwesomeGame() : base(
@@ -60,7 +61,7 @@ namespace MyAwesomeConsoleGame
 
             Hud = new Hud(this);
             Camera.Follow(Rover);
-       
+
             new Task(async () =>
             {
                 await Music.PlayIntroMusic();
@@ -91,7 +92,9 @@ namespace MyAwesomeConsoleGame
                     if (Input.Instance.GetKey(Key.H).Pressed) GameState = GameStates.Playing;
                     break;
                 case GameStates.Playing:
-                    if (Rover.RemainingPower <= 0)
+                    if (Input.Instance.GetKey(Key.F1).Pressed) IsDebugMode = !IsDebugMode;
+
+                    if (Rover.RemainingPower <= 0 || Rover.RemainingSequences < 0)
                     {
                         GameOver = true;
                         new Task(async () =>
@@ -103,7 +106,7 @@ namespace MyAwesomeConsoleGame
                     Hud.OnUpdate();
 
                     if (Input.Instance.GetKey(Key.ESCAPE).Held) GameState = GameStates.Menu;
-                    
+
                     if (Input.Instance.GetKey(Key.A).Held) Rover.MoveWest();
                     if (Input.Instance.GetKey(Key.D).Held) Rover.MoveEast();
                     if (Input.Instance.GetKey(Key.W).Held) Rover.MoveNorth();
@@ -113,6 +116,10 @@ namespace MyAwesomeConsoleGame
                     if (Input.Instance.GetKey(Key.SPACE).Pressed && !_currentCommands.Any())
                     {
                         var commands = Hud.GetCommands();
+                        if (commands.Any())
+                        {
+                            Rover.RemainingSequences--;
+                        }
                         foreach (var command in commands)
                             _currentCommands.Enqueue(command);
                     }
@@ -128,16 +135,16 @@ namespace MyAwesomeConsoleGame
                     }
                     Rover.Update();
 
-                    break;  
+                    break;
                 case GameStates.GameOver:
                     break;
                 default:
                     break;
             }
-                        
+
             Camera.Update();
         }
-        
+
         protected override void OnRender()
         {
             World.Draw();
@@ -146,9 +153,13 @@ namespace MyAwesomeConsoleGame
                 Rover.Draw();
                 Hud.Draw();
             }
-            Console.Draw(0,0, $"Pos  : {Rover.Position}");
-            Console.Draw(0,1, $"SPos : {Rover.GetScreenPos()}");
-            Console.Draw(0,2, $"BB   : {Rover.BoundingBox}");
+
+            if (IsDebugMode)
+            {
+                Console.Draw(0, 0, $"Pos  : {Rover.Position}");
+                Console.Draw(0, 1, $"SPos : {Rover.GetScreenPos()}");
+                Console.Draw(0, 2, $"BB   : {Rover.BoundingBox}");
+            }
         }
 
         public void RotateMap()
