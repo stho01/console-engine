@@ -6,6 +6,7 @@ using ConsoleEngine;
 using ConsoleEngine.Abstractions.Inputs;
 using ConsoleEngine.Infrastructure.Inputs;
 using Microsoft.Xna.Framework;
+using MyAwesomeConsoleGame.Entities;
 using MyAwesomeConsoleGame.Entities.Tiles;
 
 namespace MyAwesomeConsoleGame
@@ -20,6 +21,7 @@ namespace MyAwesomeConsoleGame
         public string Playername;
         public int Score;
         public bool DrawStory = true;
+        public readonly List<PlantEmitter> PlantEmitters = new();
 
         public string[] Maps =
         {
@@ -120,11 +122,14 @@ namespace MyAwesomeConsoleGame
             }
             Rover.Update();
             Camera.Update();
+            PlantEmitters.ForEach(e => e.Update());
         }
         
         protected override void OnRender()
         {
+            PlantEmitters.ForEach(e => e.Draw());
             World.Draw();
+            
             if (!DrawStory)
             {
                 Rover.Draw();
