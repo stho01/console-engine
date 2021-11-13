@@ -34,11 +34,11 @@ namespace MyAwesomeConsoleGame
 
         public string[] Maps =
         {
-            // "maps/map0.txt",
-            "maps/map1.txt",
-            "maps/map2.txt",
-            "maps/map3.txt",
-            "maps/map4.txt"
+            // "Assets/Maps/map0.txt",
+            "Assets/Maps/map1.txt",
+            "Assets/Maps/map2.txt",
+            "Assets/Maps/map3.txt",
+            "Assets/Maps/map4.txt"
         };
 
         public int CurrentMap = 0;
@@ -94,7 +94,7 @@ namespace MyAwesomeConsoleGame
             {
                 case GameStates.InputName:
                     if (Input.Instance.GetKey(Key.ENTER).Pressed) GameState = GameStates.Menu;
-                    Playername = "JONAS GA STORE";
+                    Playername = "Bob Kåre ??? Junior";
                     break;
                 case GameStates.Menu:
                     if (Input.Instance.GetKey(Key.H).Pressed) GameState = GameStates.Playing;

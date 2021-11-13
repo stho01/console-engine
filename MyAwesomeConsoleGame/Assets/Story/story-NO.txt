@@ -1,14 +1,10 @@
 Menneskene har brukt de siste 15000 årene på å skape en atmosfære på Mars slik at de en gang kan skape et nytt samfunn der.
 De har ikke lyktes, da dette egentlig vil ta noe sånt som 2-4 milliarder år. 
 
-
-Bob Kåre er en av 6 millioner rover-piloter utdannet det siste tiåret. 
-
-Men Bob Kåre 危険 注意 Junior, 483.generasjons rover-pilot ansatt på 37. året hos GASA (Global Aeronautics and Space Administration)
-, gir ikke opp. 
+Bob Kåre 危険 注意 Junior, 483.generasjons rover-pilot ansatt på 37. året hos GASA (Global Aeronautics and Space Administration)
+, er en av 6 millioner aktive rover-piloter.
 Han kontrollerer Mars-roveren Juniper Creek som planter atmosfæriske generator-spoler 
 - disse konverterer marsstøv til nitrogen og oksygen.
-
 
 Han sitter på jorda og sender kommando-kjeder til roveren sin. 
 Dette skaper utfordringer på grunn av avstanden mellom jorda og Mars.
@@ -16,4 +12,3 @@ Han kan kun sende et begrenset antall kommando-kjeder til roveren imellom hver k
 
 Det er opp til Bob Kåre å fortsette det gode arbeidet med å skape mer Mars-atmosfære, 
 og samtidig ivareta Mars-roveren slik at den ikke blir ødelagt eller stående uten strøm i et av Mars' mange uhyggelige, dype kratere.
-

@@ -10,19 +10,19 @@
   </ItemGroup>
 
   <ItemGroup>
-    <None Update="maps\map0.txt">
+    <None Update="Assets\Maps\map0.txt">
       <CopyToOutputDirectory>Always</CopyToOutputDirectory>
     </None>
-    <None Update="maps\map1.txt">
+    <None Update="Assets\Maps\map1.txt">
       <CopyToOutputDirectory>Always</CopyToOutputDirectory>
     </None>
-    <None Update="maps\map2.txt">
+    <None Update="Assets\Maps\map2.txt">
       <CopyToOutputDirectory>Always</CopyToOutputDirectory>
     </None>
-    <None Update="maps\map3.txt">
+    <None Update="Assets\Maps\map3.txt">
       <CopyToOutputDirectory>Always</CopyToOutputDirectory>
     </None>
-    <None Update="maps\map4.txt">
+    <None Update="Assets\Maps\map4.txt">
       <CopyToOutputDirectory>Always</CopyToOutputDirectory>
     </None>
   </ItemGroup>

@@ -12,9 +12,20 @@ namespace MyAwesomeConsoleGame.Entities.Tiles
             " ▒▓▒ ",
             "  ▒  ",
         }, ConsoleColor.Blue);
+
+        private static readonly Sprite BonusSpotConsumedSprite = Sprite.FromStringArray(new[]
+        {
+            "     ",
+            " ▒ ▒ ",
+            "▒▓▼▓▒",
+            " ▒ ▒ ",
+            "     ",
+        }, ConsoleColor.Green);
         
         public BonusPoint(MyAwesomeGame game) : base(game) { }
 
-        public override Sprite GetSprite() => BonusSpotSprite;
+        public override Sprite GetSprite() => HasBeenConsumed ? BonusSpotConsumedSprite : BonusSpotSprite;
+
+        public bool HasBeenConsumed;
     }
 }

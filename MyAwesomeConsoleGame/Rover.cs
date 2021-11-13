@@ -148,6 +148,25 @@ namespace MyAwesomeConsoleGame
             }
             Acceleration += force;
         }
+        
+        public void Plant()
+        {
+            if (StandingOnPlantingSpot && Game.World.Intersects(this, out var with))
+            {
+                foreach (var tile in with)
+                {
+                    if (tile is PlantSpot plantSpot && plantSpot.HasBeenPlanted == false)
+                    {
+                        AcceleratorsPlanted++;
+                        Game.Score += 10000;
+                        plantSpot.HasBeenPlanted = true;
+                        Game.PlantEmitters.Add(new PlantEmitter(Game) {
+                            Position = Position
+                        });
+                    }
+                }
+            }
+        }
 
         private void HandleCollision(Vector2 prevPosition)
         {
@@ -170,13 +189,11 @@ namespace MyAwesomeConsoleGame
                         case PlantSpot:
                             StandingOnPlantingSpot = true;
                             break;
-                        case BonusPoint:
-                            StandingOnBonusSpot = true;
+                        case BonusPoint bp:
+                            HandleBonusPointCollision(bp);
                             break;
                         case FinishPoint:
-                            Game.Score += (int)RemainingPower - (DamageTaken);
-                            Game.Score += (AcceleratorsPlanted * 10000);
-                            Game.RotateMap();
+                            HandleFinishPointCollision();
                             break;
                     }
                 }
@@ -189,10 +206,27 @@ namespace MyAwesomeConsoleGame
             }
         }
 
+        private void HandleFinishPointCollision()
+        {
+            Game.Score += (int)RemainingPower - (DamageTaken);
+            Game.Score += (AcceleratorsPlanted * 10000);
+            Game.RotateMap();
+        }
+
+        private void HandleBonusPointCollision(BonusPoint bp)
+        {
+            StandingOnBonusSpot = true;
+            if (!bp.HasBeenConsumed)
+            {
+                bp.HasBeenConsumed = true;
+                RemainingPower += 1000;
+                Game.Score += 10000;
+            }
+        }
+
         private Sprite GetRoverSprite()
         {
-            switch ((Direction)
-)
+            switch (Direction)
             {
                 case Direction.North:
                     return RoverSpriteNorth;
@@ -202,30 +236,6 @@ namespace MyAwesomeConsoleGame
                     return RoverSpriteEast;
                 default:
                     return RoverSpriteWest;
-            }
-        }
-
-        public void Plant()
-        {
-            if (StandingOnPlantingSpot)
-            {
-                if (Game.World.Intersects(this, out var with))
-                {
-                    foreach (var tile in with)
-                    {
-                        if (tile is PlantSpot plantSpot && plantSpot.HasBeenPlanted == false)
-                        {
-                            AcceleratorsPlanted++;
-                            Game.Score += 10000;
-                            plantSpot.HasBeenPlanted = true;
-                            Game.PlantEmitters.Add(new PlantEmitter(Game) {
-                                Position = Position
-                            });
-                        }
-                    }
-                }
-                
-               
             }
         }
     }
