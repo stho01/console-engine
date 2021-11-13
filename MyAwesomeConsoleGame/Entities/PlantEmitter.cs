@@ -66,8 +66,10 @@ namespace MyAwesomeConsoleGame.Entities
         {
             foreach (var pos in _pixels)
             {
-                var screenPos = Game.Camera.WorldToScreenPos(pos);
-                Game.Console.Draw((int)screenPos.X, (int)screenPos.Y, Grass);
+                var screenPos = Game.Camera.WorldToScreenPos(pos).ToPoint();
+
+                if (Game.Console.GetCharAt(screenPos.X, screenPos.Y) == ' ');
+                    Game.Console.Draw(screenPos.X, screenPos.Y, Grass);
             }
         }
     }
