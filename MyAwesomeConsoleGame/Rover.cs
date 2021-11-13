@@ -17,6 +17,7 @@ namespace MyAwesomeConsoleGame
         public float MaxPower;
         public double RemainingPower;
         public int DamageTaken = 0;
+        public int AcceleratorsPlanted = 0;
 
         public override Rectangle BoundingBox
         {
@@ -184,6 +185,27 @@ namespace MyAwesomeConsoleGame
                     return RoverSpriteEast;
                 default:
                     return RoverSpriteWest;
+            }
+        }
+
+        public void Plant()
+        {
+            if (StandingOnPlantingSpot)
+            {
+                if (Game.World.Intersects(this, out var with))
+                {
+                    foreach (var tile in with)
+                    {
+                        if (tile is PlantSpot plantSpot && plantSpot.HasBeenPlanted == false)
+                        {
+                            Game.Score += 1000;
+                            AcceleratorsPlanted++;
+                            plantSpot.HasBeenPlanted = true;
+                        }
+                    }
+                }
+                
+               
             }
         }
     }

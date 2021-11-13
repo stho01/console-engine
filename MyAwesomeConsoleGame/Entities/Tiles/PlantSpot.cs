@@ -24,5 +24,7 @@ namespace MyAwesomeConsoleGame.Entities.Tiles
         public PlantSpot(MyAwesomeGame game) : base(game) { }
 
         public override Sprite GetSprite() => PlantSpotSprite;
+
+        public bool HasBeenPlanted { get; set; }
     }
 }

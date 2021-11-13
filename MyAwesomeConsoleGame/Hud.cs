@@ -16,7 +16,8 @@ namespace MyAwesomeConsoleGame
         private const int WorldNameHeight = 36;
         private const int PowerUsageHeight = 37;
         private const int DamageTakenHeight = 39;
-        private const int CommandSequenceHeight = 41;
+        private const int AcceleratorsPlantedHeight = 42;
+        private const int CommandSequenceHeight = 44;
         private const ConsoleColor HudBackgroundColor = ConsoleColor.Gray;
         private readonly int _height;
 
@@ -39,6 +40,7 @@ namespace MyAwesomeConsoleGame
             if (Input.Instance.GetKey(Key.RIGHT).Pressed) _commandSequence.Add(new Move(Direction.East));
             if (Input.Instance.GetKey(Key.UP).Pressed) _commandSequence.Add(new Move(Direction.North));
             if (Input.Instance.GetKey(Key.DOWN).Pressed) _commandSequence.Add(new Move(Direction.South));
+            if(Input.Instance.GetKey(Key.P).Pressed) _commandSequence.Add(new Plant());
             if (_commandSequence.Count > 0)
             {
                 _sequenceReadyToShip = true;
@@ -56,17 +58,20 @@ namespace MyAwesomeConsoleGame
             for (var y = Top; y < _game.Console.Height; y++)
                 _game.Console.Draw(x, y, ' ', backgroundColor: HudBackgroundColor);
 
-            // DrawText("SCORE:" + _game.Score.ToString(),Top+10,4, ConsoleColor.Magenta);
             DrawWorldName();
+            DrawAcceleratorsPlanted();
             DrawPowerUsage();
             DrawDamageTaken();
             DrawMoveSequence();
             
-            
             _game.Console.DrawLine(0, Top, _game.Console.Width, Top, '▓');
         }
 
-     
+        private void DrawAcceleratorsPlanted()
+        {
+            DrawText($"ACCELERATORS PLANTED: {_game.Rover.AcceleratorsPlanted}", AcceleratorsPlantedHeight, 1,ConsoleColor.Blue);
+        }
+
 
         private void DrawGameOver()
         {
@@ -123,13 +128,15 @@ namespace MyAwesomeConsoleGame
             return ConsoleColor.Green;
         }
 
-        public void DrawText(string text, int posY, int startingPosX, ConsoleColor fgColor, ConsoleColor bgColor = HudBackgroundColor ,Direction direction = Direction.East)
+        public void DrawText(string text, int startPosY, int startPosX, ConsoleColor fgColor, ConsoleColor bgColor = HudBackgroundColor ,Direction direction = Direction.East)
         {
-            var xpos = startingPosX;
             foreach (var character in text)
             {
-                _game.Console.Draw(xpos, posY, character, fgColor, bgColor);
-                xpos++;
+                _game.Console.Draw(startPosX, startPosY, character, fgColor, bgColor);
+                if (direction == Direction.East) startPosX++;
+                if (direction == Direction.West) startPosX--;
+                if (direction == Direction.South) startPosY++;
+                if (direction == Direction.North) startPosY--;
             }
         }
 

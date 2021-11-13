@@ -2,14 +2,14 @@
 {
     public class Plant : Command
     {
-        public Plant(float duration) : base(duration)
+        public Plant() : base(1.0f)
         {
             
         }
 
         protected override void OnUpdate(Rover rover)
         {
-            throw new System.NotImplementedException();
+            rover.Plant();
         }
 
         public override char GetVisualRepresentation()
