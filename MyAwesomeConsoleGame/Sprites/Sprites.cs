@@ -41,19 +41,28 @@ namespace MyAwesomeConsoleGame.Sprites
                 @"| HUMANS HAVE SPENT 15.000 YEARS CREATING AN ATMOSPHERE ON MARS |",
                 @"| BUT TO NO AVAIL                                               |",
                 @"|                                                               |",
-                $@"| IT SEEMS IMPOSSIBLE; BUT YOU, {playername},              |",
-                @"| PILOT AT GASA FOR 37 YEARS,                                   |",
+                InsertPlayerNameSentence(playername),
+                @"| ROVER PILOT AT GASA FOR 37 YEARS,                             |",
                 @"| HAVE TAKEN MATTERS INTO YOUR OWN HANDS                        |",
-                @"| YOU CONTROL THE MARS ROVER juniper creek,                     |",
+                @"| YOU REMOTE CONTROL THE MARS ROVER juniper creek FROM EARTH    |",
                 @"| PLANTING ATHOMSPHERIC GENERATOR COILS ALL AROUND MARS         |",
                 @"|                                                               |",
                 @"|                                                               |",
-                @"| BUT BE WARE - GET TO THE NEXT POWER PLANT                     |",
-                @"| BEFORE YOU RUN OUT OF JUICE                                    ",
+                @"| BUT BE WARE - YOU MUST GET TO THE NEXT POWER PLANT            |",
+                @"| BEFORE YOU RUN OUT OF JUICE                                   |",
                 @"|                                                               |",
                 @"|  press H to continue                                          |",
                 @"|_______________________________________________________________|"
             });
+        }
+
+        private static string InsertPlayerNameSentence(string playername)
+        {
+           // INSERT PLAYER NAME FILL OUT TO 64 CHARS INC | 
+           var str = $@"| IT SEEMS IMPOSSIBLE; BUT YOU,{playername}";
+           str = str.PadRight(64, ' ');
+           str += "|";
+           return str;
         }
     }
 }

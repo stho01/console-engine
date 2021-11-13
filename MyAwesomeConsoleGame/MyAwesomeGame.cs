@@ -1,16 +1,24 @@
-﻿using System;
-using System.Collections.Generic;
-using System.Linq;
-using System.Threading.Tasks;
-using ConsoleEngine;
+﻿using ConsoleEngine;
 using ConsoleEngine.Abstractions.Inputs;
 using ConsoleEngine.Infrastructure.Inputs;
 using Microsoft.Xna.Framework;
 using MyAwesomeConsoleGame.Entities;
 using MyAwesomeConsoleGame.Entities.Tiles;
+using System;
+using System.Collections.Generic;
+using System.Linq;
+using System.Threading.Tasks;
 
 namespace MyAwesomeConsoleGame
 {
+    public enum GameStates
+    {
+        InputName,
+        Menu,
+        Playing,
+        GameOver
+    }
+
     public class MyAwesomeGame : GameBase
     {
         public Rover Rover;
@@ -20,6 +28,7 @@ namespace MyAwesomeConsoleGame
         public World World;
         public string Playername;
         public int Score;
+        public GameStates GameState = GameStates.Menu;
         public bool DrawStory = true;
         public readonly List<PlantEmitter> PlantEmitters = new();
 
@@ -56,7 +65,7 @@ namespace MyAwesomeConsoleGame
 
             Hud = new Hud(this);
             Camera.Follow(Rover);
-       
+
             new Task(async () =>
             {
                 await Music.PlayIntroMusic();
@@ -79,58 +88,74 @@ namespace MyAwesomeConsoleGame
 
         protected override void OnUpdate()
         {
+            switch (GameState)
+            {
+                case GameStates.InputName:
+                    break;
+                case GameStates.Menu:
+                    if (Input.Instance.GetKey(Key.H).Pressed) GameState = GameStates.Playing;
+                    break;
+                case GameStates.Playing:
+                    if (Input.Instance.GetKey(Key.F1).Pressed) IsDebugMode = !IsDebugMode;
 
-            if (Input.Instance.GetKey(Key.F1).Pressed) IsDebugMode = !IsDebugMode;
-            
-            if (Rover.RemainingPower <= 0 || Rover.RemainingSequences < 1)
-            {
-                GameOver = true;
-                new Task(async () =>
-                {
-                    await Music.PlayGameOverMusic();
-                }).Start();
-                
-            }
-            
-            Hud.OnUpdate();
-            if (Input.Instance.GetKey(Key.A).Held) Rover.MoveWest();
-            if (Input.Instance.GetKey(Key.D).Held) Rover.MoveEast();
-            if (Input.Instance.GetKey(Key.W).Held) Rover.MoveNorth();
-            if (Input.Instance.GetKey(Key.S).Held) Rover.MoveSouth();
-            
-            if (Input.Instance.GetKey(Key.R).Pressed) StartNewGame();
-            if (Input.Instance.GetKey(Key.H).Pressed) DrawStory = !DrawStory;
-            if (Input.Instance.GetKey(Key.SPACE).Pressed && !_currentCommands.Any())
-            {
-                var commands = Hud.GetCommands();
-                if (commands.Any())
-                {
-                    Rover.RemainingSequences--;
-                }
-                foreach (var command in commands)
-                    _currentCommands.Enqueue(command);
+                    if (Rover.RemainingPower <= 0 || Rover.RemainingSequences < 0)
+                    {
+                        GameOver = true;
+                        new Task(async () =>
+                        {
+                            await Music.PlayGameOverMusic();
+                        }).Start();
+                    }
+
+                    Hud.OnUpdate();
+
+                    if (Input.Instance.GetKey(Key.ESCAPE).Held) GameState = GameStates.Menu;
+
+                    if (Input.Instance.GetKey(Key.A).Held) Rover.MoveWest();
+                    if (Input.Instance.GetKey(Key.D).Held) Rover.MoveEast();
+                    if (Input.Instance.GetKey(Key.W).Held) Rover.MoveNorth();
+                    if (Input.Instance.GetKey(Key.S).Held) Rover.MoveSouth();
+                    if (Input.Instance.GetKey(Key.R).Pressed) StartNewGame();
+
+                    if (Input.Instance.GetKey(Key.SPACE).Pressed && !_currentCommands.Any())
+                    {
+                        var commands = Hud.GetCommands();
+                        if (commands.Any())
+                        {
+                            Rover.RemainingSequences--;
+                        }
+                        foreach (var command in commands)
+                            _currentCommands.Enqueue(command);
+                    }
+
+                    if (_currentCommands.Any())
+                    {
+                        var currentCommand = _currentCommands.Peek();
+                        currentCommand.Update(Rover);
+                        if (currentCommand.IsDone())
+                        {
+                            _currentCommands.Dequeue();
+                        }
+                    }
+                    Rover.Update();
+                    PlantEmitters.ForEach(e => e.Update());
+
+                    break;
+                case GameStates.GameOver:
+                    break;
+                default:
+                    break;
             }
 
-            if (_currentCommands.Any())
-            {
-                var currentCommand = _currentCommands.Peek();
-                currentCommand.Update(Rover);
-                if (currentCommand.IsDone())
-                {
-                    _currentCommands.Dequeue();
-                }
-            }
-            Rover.Update();
             Camera.Update();
-            PlantEmitters.ForEach(e => e.Update());
+            
         }
-        
+
         protected override void OnRender()
         {
             PlantEmitters.ForEach(e => e.Draw());
             World.Draw();
-            
-            if (!DrawStory)
+            if (GameState != GameStates.Menu)
             {
                 Rover.Draw();
                 Hud.Draw();
@@ -138,9 +163,9 @@ namespace MyAwesomeConsoleGame
 
             if (IsDebugMode)
             {
-                Console.Draw(0,0, $"Pos  : {Rover.Position}");
-                Console.Draw(0,1, $"SPos : {Rover.GetScreenPos()}");
-                Console.Draw(0,2, $"BB   : {Rover.BoundingBox}");    
+                Console.Draw(0, 0, $"Pos  : {Rover.Position}");
+                Console.Draw(0, 1, $"SPos : {Rover.GetScreenPos()}");
+                Console.Draw(0, 2, $"BB   : {Rover.BoundingBox}");
             }
         }
 
