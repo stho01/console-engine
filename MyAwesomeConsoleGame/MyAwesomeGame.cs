@@ -58,9 +58,9 @@ namespace MyAwesomeConsoleGame
 
         protected override void OnInitialize()
         {
-            //System.Console.Write("What's your name?");
+            ///System.Console.Write("What's your name?");
             //Playername = System.Console.ReadLine();
-            GameState = GameStates.Menu;
+            GameState = GameStates.InputName;
             Camera = new Camera(this);
             StartNewGame();
 
@@ -92,7 +92,8 @@ namespace MyAwesomeConsoleGame
             switch (GameState)
             {
                 case GameStates.InputName:
-                    if (Input.Instance.GetKey(Key.EXECUTE).Pressed) GameState = GameStates.Menu;
+                    if (Input.Instance.GetKey(Key.ENTER).Pressed) GameState = GameStates.Menu;
+                    Playername = "JONAS GA STORE";
                     break;
                 case GameStates.Menu:
                     if (Input.Instance.GetKey(Key.H).Pressed) GameState = GameStates.Playing;

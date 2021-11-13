@@ -33,6 +33,7 @@ namespace ConsoleEngine.Abstractions.Inputs
         SELECT = 0x29,
         PRINT = 0x2A,
         EXECUTE = 0x2B,
+        ENTER = 0x0D,
         SNAPSHOT = 0x2C,
         INSERT = 0x2D,
         DELETE = 0x2E,
