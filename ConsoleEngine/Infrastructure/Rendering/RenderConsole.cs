@@ -82,6 +82,11 @@ namespace ConsoleEngine.Infrastructure.Rendering
             }  
         }
 
+        public void Draw(int x, int y, Pixel pixel)
+        {
+            Draw(x, y, pixel.Char, pixel.ForegroundColor, pixel.BackgroundColor);
+        }
+
         public void Draw(int x, int y, Span2D<char> data, ConsoleColor foregroundColor = ConsoleColor.White, ConsoleColor backgroundColor = ConsoleColor.Black)
         {
             for (var dataX = 0; dataX < data.Height; dataX++)

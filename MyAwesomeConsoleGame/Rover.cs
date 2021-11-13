@@ -4,6 +4,7 @@ using System.Linq;
 using ConsoleEngine.Infrastructure;
 using ConsoleEngine.Infrastructure.Rendering;
 using Microsoft.Xna.Framework;
+using MyAwesomeConsoleGame.Entities;
 using MyAwesomeConsoleGame.Entities.Tiles;
 
 namespace MyAwesomeConsoleGame
@@ -214,6 +215,9 @@ namespace MyAwesomeConsoleGame
                             Game.Score += 1000;
                             AcceleratorsPlanted++;
                             plantSpot.HasBeenPlanted = true;
+                            Game.PlantEmitters.Add(new PlantEmitter(Game) {
+                                Position = Position
+                            });
                         }
                     }
                 }
