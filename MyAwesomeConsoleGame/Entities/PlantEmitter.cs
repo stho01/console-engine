@@ -16,9 +16,8 @@ namespace MyAwesomeConsoleGame.Entities
         private int _iteration = 0;
         private static readonly Random _random = new();
 
-        private readonly Pixel Grass = new Pixel
-        {
-            Char = 'v',
+        private readonly Pixel Grass = new Pixel {
+            Char = '√',
             ForegroundColor = ConsoleColor.DarkGreen
         };
         
