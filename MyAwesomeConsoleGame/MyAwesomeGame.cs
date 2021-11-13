@@ -50,8 +50,8 @@ namespace MyAwesomeConsoleGame
         public MyAwesomeGame() : base(
             width: 72,
             height: 50,
-            fontWidth: 10,
-            fontHeight: 10)
+            fontWidth: 15,
+            fontHeight: 15)
         {
             Console.ClearColor = ConsoleColor.Black;
         }

@@ -25,7 +25,7 @@ namespace MyAwesomeConsoleGame
         
         public void Update()
         {
-            Position = (_gameObject.Position - _game.Console.ScreenCenter);
+            Position = (_gameObject.Position - new Vector2(_game.Console.ScreenCenter.X, 35/2f));
         }
     }
 }
