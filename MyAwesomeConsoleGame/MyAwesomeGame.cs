@@ -16,6 +16,7 @@ namespace MyAwesomeConsoleGame
         public Queue<Command> _currentCommands = new Queue<Command>();
         public World World;
         public WorldLoader Loader;
+        public string Playername;
         public int Score;
         public bool DrawStory = true;
 
@@ -43,6 +44,8 @@ namespace MyAwesomeConsoleGame
 
         protected override void OnInitialize()
         {
+            System.Console.Write("What's your name?");
+            Playername = System.Console.ReadLine();
             Camera = new Camera(this);
             StartNewGame();
 
@@ -85,8 +88,8 @@ namespace MyAwesomeConsoleGame
             if (Input.Instance.GetKey(Key.W).Held) Rover.MoveNorth();
             if (Input.Instance.GetKey(Key.S).Held) Rover.MoveSouth();
             
+            if (Input.Instance.GetKey(Key.R).Pressed) StartNewGame();
             if (Input.Instance.GetKey(Key.H).Pressed) DrawStory = !DrawStory;
-
             if (Input.Instance.GetKey(Key.SPACE).Pressed && !_currentCommands.Any())
             {
                 var commands = Hud.GetCommands();

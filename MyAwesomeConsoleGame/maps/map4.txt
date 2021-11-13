@@ -1,6 +1,6 @@
 !name: Leviathan Falls
 !sequences: 130
-!power: 40000
+!power: 4000
 !width: 95
 !height: 17
 .....S..C...F......HHHHH.................................HH...................................

@@ -66,7 +66,7 @@ namespace MyAwesomeConsoleGame
         {
             if (_game.DrawStory)
             {
-                _game.Console.Draw(3,5, Sprites.Sprites.Story);
+                _game.Console.Draw(3,5, Sprites.Sprites.Story(_game.Playername));
                 return;
             }
             for (var x = 0; x < Width; x++)

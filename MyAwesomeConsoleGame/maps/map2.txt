@@ -1,5 +1,5 @@
 !name: Persepolis Rising
-!power: 40000
+!power: 10000
 !sequences: 130
 !width: 95
 !height: 17
