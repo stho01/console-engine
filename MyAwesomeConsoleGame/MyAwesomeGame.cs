@@ -75,7 +75,7 @@ namespace MyAwesomeConsoleGame
 
         protected override void OnUpdate()
         {
-            if (Rover.RemainingPower <= 0)
+            if (Rover.RemainingPower <= 0 || Rover.RemainingSequences < 1)
             {
                 GameOver = true;
                 new Task(async () =>
@@ -96,6 +96,10 @@ namespace MyAwesomeConsoleGame
             if (Input.Instance.GetKey(Key.SPACE).Pressed && !_currentCommands.Any())
             {
                 var commands = Hud.GetCommands();
+                if (commands.Any())
+                {
+                    Rover.RemainingSequences--;
+                }
                 foreach (var command in commands)
                     _currentCommands.Enqueue(command);
             }
