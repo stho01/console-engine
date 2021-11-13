@@ -58,8 +58,9 @@ namespace MyAwesomeConsoleGame
 
         protected override void OnInitialize()
         {
-            System.Console.Write("What's your name?");
-            Playername = System.Console.ReadLine();
+            ///System.Console.Write("What's your name?");
+            //Playername = System.Console.ReadLine();
+            GameState = GameStates.InputName;
             Camera = new Camera(this);
             StartNewGame();
 
@@ -91,6 +92,8 @@ namespace MyAwesomeConsoleGame
             switch (GameState)
             {
                 case GameStates.InputName:
+                    if (Input.Instance.GetKey(Key.ENTER).Pressed) GameState = GameStates.Menu;
+                    Playername = "JONAS GA STORE";
                     break;
                 case GameStates.Menu:
                     if (Input.Instance.GetKey(Key.H).Pressed) GameState = GameStates.Playing;
@@ -157,20 +160,19 @@ namespace MyAwesomeConsoleGame
 
         protected override void OnRender()
         {
-            PlantEmitters.ForEach(e => e.Draw());
             World.Draw();
-            if (GameState != GameStates.Menu)
+            if (GameState == GameStates.Playing)
             {
+                PlantEmitters.ForEach(e => e.Draw());
                 Rover.Draw();
                 Hud.Draw();
-            }
-
-            if (IsDebugMode)
-            {
-                Console.Draw(0, 0, $"Pos  : {Rover.Position}");
-                Console.Draw(0, 1, $"SPos : {Rover.GetScreenPos()}");
-                Console.Draw(0, 2, $"BB   : {Rover.BoundingBox}");
-            }
+                if (IsDebugMode)
+                {
+                    Console.Draw(0, 0, $"Pos  : {Rover.Position}");
+                    Console.Draw(0, 1, $"SPos : {Rover.GetScreenPos()}");
+                    Console.Draw(0, 2, $"BB   : {Rover.BoundingBox}");
+                }
+            }            
         }
 
         public void RotateMap()

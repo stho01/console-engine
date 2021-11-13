@@ -8,7 +8,7 @@ namespace MyAwesomeConsoleGame.Entities
 {
     public class PlantEmitter : GameObject
     {
-        public const float LifeTime = 1000;
+        public const float LifeTime = 3000;
         private float _ellapsed = 0f;
         private const float EmitFreq = 150;
         private float _emitTimer = 0f;
@@ -16,9 +16,8 @@ namespace MyAwesomeConsoleGame.Entities
         private int _iteration = 0;
         private static readonly Random _random = new();
 
-        private readonly Pixel Grass = new Pixel
-        {
-            Char = 'v',
+        private readonly Pixel Grass = new Pixel {
+            Char = '√',
             ForegroundColor = ConsoleColor.DarkGreen
         };
         
@@ -46,12 +45,15 @@ namespace MyAwesomeConsoleGame.Entities
         private void SpawnPixels()
         {
             _iteration++;
+
             
             for (var i = 0; i < 30; i++)
             {
-                var x = MathF.Sin((MathF.PI / _random.Next(1, 5))*i);
-                var y = MathF.Cos((MathF.PI / _random.Next(1, 5))*i);
-                var pos = new Vector2(x, y) * (_iteration + 4);
+                var angle = (MathF.Tau / 30) * (float)(_random.NextDouble() - .25);
+                var x = MathF.Sin(angle * i);
+                var y = MathF.Cos(angle * i);
+                
+                var pos = new Vector2(x, y) * (_iteration + 1);
 
                 pos += Position;
                 
@@ -63,8 +65,10 @@ namespace MyAwesomeConsoleGame.Entities
         {
             foreach (var pos in _pixels)
             {
-                var screenPos = Game.Camera.WorldToScreenPos(pos);
-                Game.Console.Draw((int)screenPos.X, (int)screenPos.Y, Grass);
+                var screenPos = Game.Camera.WorldToScreenPos(pos).ToPoint();
+
+                if (Game.Console.GetCharAt(screenPos.X, screenPos.Y) == ' ');
+                    Game.Console.Draw(screenPos.X, screenPos.Y, Grass);
             }
         }
     }

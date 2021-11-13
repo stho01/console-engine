@@ -64,11 +64,17 @@ namespace MyAwesomeConsoleGame
         
         public void Draw()
         {
-            if (_game.GameState == GameStates.Menu)
+            if (_game.GameState == GameStates.InputName)
+            {
+                var sprite = Sprites.Sprites.InputName;
+                _game.Console.Draw(3, 5, sprite); 
+                return;
+            }
+            else if (_game.GameState == GameStates.Menu)
             {
                 var sprite = Sprites.Sprites.Story;
-                sprite.Draw(32,14,_game.Playername, ConsoleColor.Red, ConsoleColor.Black);
-                _game.Console.Draw(3,5, sprite);
+                sprite.Draw(32, 14, _game.Playername, ConsoleColor.Red, ConsoleColor.Black);
+                _game.Console.Draw(3, 5, sprite);
                 return;
             }
             for (var x = 0; x < Width; x++)
