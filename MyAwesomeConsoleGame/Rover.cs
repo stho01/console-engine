@@ -1,4 +1,5 @@
 ﻿using System;
+using System.Data;
 using ConsoleEngine.Infrastructure;
 using ConsoleEngine.Infrastructure.Rendering;
 using Microsoft.Xna.Framework;
@@ -87,9 +88,12 @@ namespace MyAwesomeConsoleGame
 
             Acceleration = Vector2.Zero;
 
-            Game.Console.Draw(0, 3, $"NPos : {Position}");
-            Game.Console.Draw(0, 4, $"Bonus: {StandingOnBonusSpot}");
-            Game.Console.Draw(0, 5, $"Plant: {StandingOnPlantingSpot}");
+            if (Game.IsDebugMode)
+            {
+                Game.Console.Draw(0, 3, $"NPos : {Position}");
+                Game.Console.Draw(0, 4, $"Bonus: {StandingOnBonusSpot}");
+                Game.Console.Draw(0, 5, $"Plant: {StandingOnPlantingSpot}");    
+            }
         }
 
         public void Draw()

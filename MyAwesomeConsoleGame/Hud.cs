@@ -17,6 +17,7 @@ namespace MyAwesomeConsoleGame
         private const int PowerUsageHeight = 37;
         private const int DamageTakenHeight = 39;
         private const int AcceleratorsPlantedHeight = 42;
+        private const int ScoreHeight = 0;
         private const int RemainingSequencesHeight = 44;
         private const int CommandSequenceHeight = 46;
         private const ConsoleColor HudBackgroundColor = ConsoleColor.Black;
@@ -65,6 +66,7 @@ namespace MyAwesomeConsoleGame
             DrawDamageTaken();
             DrawRemainingSequences();
             DrawMoveSequence();
+            DrawGameScore();
             
             _game.Console.DrawLine(0, Top, _game.Console.Width, Top, '╍');
         }
@@ -118,7 +120,15 @@ namespace MyAwesomeConsoleGame
         {
            DrawText("NOW ENTERING: " + _game.World.Name, WorldNameHeight, 0, ConsoleColor.DarkGreen );
         }
-        
+
+        private void DrawGameScore()
+        {
+            var scoreText = "SCORE:";
+            var scoreValueText = _game.Score.ToString();
+            DrawText(scoreText, ScoreHeight, _game.Console.Width - (scoreText.Length + scoreValueText.Length), ConsoleColor.DarkGray);
+            DrawText(scoreValueText, ScoreHeight, _game.Console.Width - scoreValueText.Length, ConsoleColor.DarkGreen);
+        }
+
         private ConsoleColor GetPowerColor()
         {
             if (_game.Rover.RemainingPower >= ((_game.Rover.MaxPower / 4) * 3)) return ConsoleColor.Green;

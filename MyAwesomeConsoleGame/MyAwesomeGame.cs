@@ -6,6 +6,7 @@ using ConsoleEngine;
 using ConsoleEngine.Abstractions.Inputs;
 using ConsoleEngine.Infrastructure.Inputs;
 using Microsoft.Xna.Framework;
+using MyAwesomeConsoleGame.Entities.Tiles;
 
 namespace MyAwesomeConsoleGame
 {
@@ -32,6 +33,7 @@ namespace MyAwesomeConsoleGame
         public int CurrentMap = 0;
 
         public bool GameOver;
+        public bool IsDebugMode { get; set; }
 
 
         public MyAwesomeGame() : base(
@@ -75,6 +77,9 @@ namespace MyAwesomeConsoleGame
 
         protected override void OnUpdate()
         {
+
+            if (Input.Instance.GetKey(Key.F1).Pressed) IsDebugMode = !IsDebugMode;
+            
             if (Rover.RemainingPower <= 0 || Rover.RemainingSequences < 1)
             {
                 GameOver = true;
@@ -125,9 +130,13 @@ namespace MyAwesomeConsoleGame
                 Rover.Draw();
                 Hud.Draw();
             }
-            Console.Draw(0,0, $"Pos  : {Rover.Position}");
-            Console.Draw(0,1, $"SPos : {Rover.GetScreenPos()}");
-            Console.Draw(0,2, $"BB   : {Rover.BoundingBox}");
+
+            if (IsDebugMode)
+            {
+                Console.Draw(0,0, $"Pos  : {Rover.Position}");
+                Console.Draw(0,1, $"SPos : {Rover.GetScreenPos()}");
+                Console.Draw(0,2, $"BB   : {Rover.BoundingBox}");    
+            }
         }
 
         public void RotateMap()
