@@ -66,7 +66,7 @@ namespace MyAwesomeConsoleGame
         {
             if (_game.GameState == GameStates.Menu)
             {
-                var sprite = Sprites.Sprites.Story();
+                var sprite = Sprites.Sprites.Story;
                 sprite.Draw(32,14,_game.Playername, ConsoleColor.Red, ConsoleColor.Black);
                 _game.Console.Draw(3,5, sprite);
                 return;
