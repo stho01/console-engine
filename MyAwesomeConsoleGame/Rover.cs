@@ -109,6 +109,11 @@ namespace MyAwesomeConsoleGame
         {
             ApplyForce(new Vector2(0, -1f) * Thrust);
             Direction = Direction.North;
+
+            if (Game.World.Intersects(this, out var with))
+            {
+                Position -= new Vector2(0, 1);
+            }
         }
 
         public void MoveSouth()
@@ -128,7 +133,6 @@ namespace MyAwesomeConsoleGame
             ApplyForce(new Vector2(1f, 0) * Thrust);
             Direction = Direction.East;
         }
-
 
         public void ApplyForce(Vector2 force)
         {
