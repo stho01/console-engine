@@ -38,7 +38,8 @@ namespace MyAwesomeConsoleGame
         {
             @"┌──┐",
             @"║##║",
-            @" >< ",
+            @" ║║ ",
+            @" ║║ ",
             @"║##║",
             @"\__/"
         });
@@ -47,25 +48,26 @@ namespace MyAwesomeConsoleGame
         {
             @"/¯¯\",
             @"║##║",
-            @" >< ",
+            @" ║║ ",
+            @" ║║ ",
             @"║##║",
             @"└──┘"
         });
 
         public static readonly Sprite RoverSpriteEast = Sprite.FromStringArray(new[]
         {
-            @"┌═ ═\",
-            @"│#v#│",
-            @"│#∧#│",
-            @"└═ ═/"
+            @"┌═  ═\",
+            @"│#══#│",
+            @"│#══#│",
+            @"└═  ═/"
         });
 
         public static readonly Sprite RoverSpriteWest = Sprite.FromStringArray(new[]
         {
-            @"/═ ═┐",
-            @"│#v#│",
-            @"│#∧#│",
-            @"\═ ═┘"
+            @"/═  ═┐",
+            @"│#══#│",
+            @"│#══#│",
+            @"\═  ═┘"
         });
 
         public Rover(MyAwesomeGame game) : base(game)

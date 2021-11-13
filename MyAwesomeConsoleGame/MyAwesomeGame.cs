@@ -85,6 +85,7 @@ namespace MyAwesomeConsoleGame
                 Velocity = Vector2.Zero
             };
             Camera.Follow(Rover);
+            PlantEmitters.Clear();
         }
 
         protected override void OnUpdate()
