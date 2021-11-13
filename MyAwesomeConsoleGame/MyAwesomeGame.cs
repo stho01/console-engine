@@ -9,6 +9,14 @@ using Microsoft.Xna.Framework;
 
 namespace MyAwesomeConsoleGame
 {
+    public enum GameStates
+    {
+        InputName,
+        Menu, 
+        Playing,
+        GameOver
+    }
+
     public class MyAwesomeGame : GameBase
     {
         public Rover Rover;
@@ -18,7 +26,7 @@ namespace MyAwesomeConsoleGame
         public World World;
         public string Playername;
         public int Score;
-        public bool DrawStory = true;
+        public GameStates GameState = GameStates.Menu;
 
         public string[] Maps =
         {
@@ -75,48 +83,65 @@ namespace MyAwesomeConsoleGame
 
         protected override void OnUpdate()
         {
-            if (Rover.RemainingPower <= 0)
+            switch (GameState)
             {
-                GameOver = true;
-                new Task(async () =>
-                {
-                    await Music.PlayGameOverMusic();
-                }).Start();
-                
-            }
-            
-            Hud.OnUpdate();
-            if (Input.Instance.GetKey(Key.A).Held) Rover.MoveWest();
-            if (Input.Instance.GetKey(Key.D).Held) Rover.MoveEast();
-            if (Input.Instance.GetKey(Key.W).Held) Rover.MoveNorth();
-            if (Input.Instance.GetKey(Key.S).Held) Rover.MoveSouth();
-            
-            if (Input.Instance.GetKey(Key.R).Pressed) StartNewGame();
-            if (Input.Instance.GetKey(Key.H).Pressed) DrawStory = !DrawStory;
-            if (Input.Instance.GetKey(Key.SPACE).Pressed && !_currentCommands.Any())
-            {
-                var commands = Hud.GetCommands();
-                foreach (var command in commands)
-                    _currentCommands.Enqueue(command);
-            }
+                case GameStates.InputName:
+                    break;
+                case GameStates.Menu:
+                    if (Input.Instance.GetKey(Key.H).Pressed) GameState = GameStates.Playing;
+                    break;
+                case GameStates.Playing:
+                    if (Rover.RemainingPower <= 0)
+                    {
+                        GameOver = true;
+                        new Task(async () =>
+                        {
+                            await Music.PlayGameOverMusic();
+                        }).Start();
+                    }
 
-            if (_currentCommands.Any())
-            {
-                var currentCommand = _currentCommands.Peek();
-                currentCommand.Update(Rover);
-                if (currentCommand.IsDone())
-                {
-                    _currentCommands.Dequeue();
-                }
+                    Hud.OnUpdate();
+
+                    if (Input.Instance.GetKey(Key.ESCAPE).Held) GameState = GameStates.Menu;
+                    
+                    if (Input.Instance.GetKey(Key.A).Held) Rover.MoveWest();
+                    if (Input.Instance.GetKey(Key.D).Held) Rover.MoveEast();
+                    if (Input.Instance.GetKey(Key.W).Held) Rover.MoveNorth();
+                    if (Input.Instance.GetKey(Key.S).Held) Rover.MoveSouth();
+                    if (Input.Instance.GetKey(Key.R).Pressed) StartNewGame();
+
+                    if (Input.Instance.GetKey(Key.SPACE).Pressed && !_currentCommands.Any())
+                    {
+                        var commands = Hud.GetCommands();
+                        foreach (var command in commands)
+                            _currentCommands.Enqueue(command);
+                    }
+
+                    if (_currentCommands.Any())
+                    {
+                        var currentCommand = _currentCommands.Peek();
+                        currentCommand.Update(Rover);
+                        if (currentCommand.IsDone())
+                        {
+                            _currentCommands.Dequeue();
+                        }
+                    }
+                    Rover.Update();
+
+                    break;  
+                case GameStates.GameOver:
+                    break;
+                default:
+                    break;
             }
-            Rover.Update();
+                        
             Camera.Update();
         }
         
         protected override void OnRender()
         {
             World.Draw();
-            if (!DrawStory)
+            if (GameState != GameStates.Menu)
             {
                 Rover.Draw();
                 Hud.Draw();

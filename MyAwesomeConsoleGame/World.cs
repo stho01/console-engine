@@ -64,7 +64,7 @@ namespace MyAwesomeConsoleGame
         
         public void Draw()
         {
-            if (_game.DrawStory)
+            if (_game.GameState == GameStates.Menu)
             {
                 _game.Console.Draw(3,5, Sprites.Sprites.Story(_game.Playername));
                 return;
