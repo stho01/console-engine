@@ -173,6 +173,7 @@ namespace MyAwesomeConsoleGame
                             break;
                         case FinishPoint:
                             Game.Score += (int)RemainingPower - (DamageTaken);
+                            Game.Score += (AcceleratorsPlanted * 10000);
                             Game.RotateMap();
                             break;
                     }
@@ -212,8 +213,8 @@ namespace MyAwesomeConsoleGame
                     {
                         if (tile is PlantSpot plantSpot && plantSpot.HasBeenPlanted == false)
                         {
-                            Game.Score += 1000;
                             AcceleratorsPlanted++;
+                            Game.Score += 10000;
                             plantSpot.HasBeenPlanted = true;
                             Game.PlantEmitters.Add(new PlantEmitter(Game) {
                                 Position = Position

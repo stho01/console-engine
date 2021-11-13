@@ -125,8 +125,12 @@ namespace MyAwesomeConsoleGame
         {
             var scoreText = "SCORE:";
             var scoreValueText = _game.Score.ToString();
-            DrawText(scoreText, ScoreHeight, _game.Console.Width - (scoreText.Length + scoreValueText.Length), ConsoleColor.DarkGray);
-            DrawText(scoreValueText, ScoreHeight, _game.Console.Width - scoreValueText.Length, ConsoleColor.DarkGreen);
+            DrawText("____________________", ScoreHeight, _game.Console.Width - (scoreText.Length + scoreValueText.Length), ConsoleColor.DarkGray);
+            DrawText(scoreText, ScoreHeight+1, _game.Console.Width - (scoreText.Length + scoreValueText.Length), ConsoleColor.DarkGray);
+            DrawText(scoreValueText, ScoreHeight+1, _game.Console.Width - scoreValueText.Length, ConsoleColor.DarkGreen);
+            DrawText("____________________", ScoreHeight+2, _game.Console.Width - (scoreText.Length + scoreValueText.Length), ConsoleColor.DarkGray);
+            DrawText("                    ", ScoreHeight+3, _game.Console.Width - (scoreText.Length + scoreValueText.Length), ConsoleColor.DarkGray);
+            
         }
 
         private ConsoleColor GetPowerColor()

@@ -111,10 +111,14 @@ namespace MyAwesomeConsoleGame
 
                     if (Input.Instance.GetKey(Key.ESCAPE).Held) GameState = GameStates.Menu;
 
-                    if (Input.Instance.GetKey(Key.A).Held) Rover.MoveWest();
-                    if (Input.Instance.GetKey(Key.D).Held) Rover.MoveEast();
-                    if (Input.Instance.GetKey(Key.W).Held) Rover.MoveNorth();
-                    if (Input.Instance.GetKey(Key.S).Held) Rover.MoveSouth();
+                    if (IsDebugMode)
+                    {
+                        if (Input.Instance.GetKey(Key.A).Held) Rover.MoveWest();
+                        if (Input.Instance.GetKey(Key.D).Held) Rover.MoveEast();
+                        if (Input.Instance.GetKey(Key.W).Held) Rover.MoveNorth();
+                        if (Input.Instance.GetKey(Key.S).Held) Rover.MoveSouth();
+                    }
+                   
                     if (Input.Instance.GetKey(Key.R).Pressed) StartNewGame();
 
                     if (Input.Instance.GetKey(Key.SPACE).Pressed && !_currentCommands.Any())
