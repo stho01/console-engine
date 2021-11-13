@@ -23,9 +23,7 @@ namespace MyAwesomeConsoleGame.Sprites
         });
 
 
-        public static Sprite Story(string playername)
-        {
-            return Sprite.FromStringArray(new[]
+        public static Sprite Story = Sprite.FromStringArray(new[]
             {
                 @"          _______                  ______         __  __         ",
                 @"         |__   __|                |  ____|       |  \/  |        ",
@@ -41,7 +39,7 @@ namespace MyAwesomeConsoleGame.Sprites
                 @"| HUMANS HAVE SPENT 15.000 YEARS CREATING AN ATMOSPHERE ON MARS |",
                 @"| BUT TO NO AVAIL                                               |",
                 @"|                                                               |",
-                InsertPlayerNameSentence(playername),
+                @"| IT SEEMS IMPOSSIBLE; BUT YOU, ###                             |",
                 @"| ROVER PILOT AT GASA FOR 37 YEARS,                             |",
                 @"| HAVE TAKEN MATTERS INTO YOUR OWN HANDS                        |",
                 @"| YOU REMOTE CONTROL THE MARS ROVER juniper creek FROM EARTH    |",
@@ -53,16 +51,7 @@ namespace MyAwesomeConsoleGame.Sprites
                 @"|                                                               |",
                 @"|  press H to continue                                          |",
                 @"|_______________________________________________________________|"
-            });
-        }
-
-        private static string InsertPlayerNameSentence(string playername)
-        {
-           // INSERT PLAYER NAME FILL OUT TO 64 CHARS INC | 
-           var str = $@"| IT SEEMS IMPOSSIBLE; BUT YOU,{playername}";
-           str = str.PadRight(64, ' ');
-           str += "|";
-           return str;
-        }
+            }
+        );
     }
 }
