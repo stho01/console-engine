@@ -144,6 +144,9 @@ namespace MyAwesomeConsoleGame
                     switch (tile)
                     {
                         case Rock:
+                            shouldStopMotions = true;
+                            DamageTaken += 10;
+                            break;
                         case Craves:
                             shouldStopMotions = true;
                             break;
@@ -154,6 +157,7 @@ namespace MyAwesomeConsoleGame
                             StandingOnBonusSpot = true;
                             break;
                         case FinishPoint:
+                            Game.Score += (int)RemainingPower - (DamageTaken);
                             Game.RotateMap();
                             break;
                     }

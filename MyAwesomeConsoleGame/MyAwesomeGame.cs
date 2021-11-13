@@ -22,7 +22,7 @@ namespace MyAwesomeConsoleGame
 
         public string[] Maps =
         {
-            "maps/map0.txt",
+            // "maps/map0.txt",
             "maps/map1.txt",
             "maps/map2.txt",
             "maps/map3.txt",
@@ -61,6 +61,8 @@ namespace MyAwesomeConsoleGame
 
         private void StartNewGame()
         {
+            GameOver = false;
+            Score = 0;
             Camera.Position = Vector2.Zero;
             World = WorldLoader.LoadWorld(this, Maps[CurrentMap]);
             Rover = new Rover(this)

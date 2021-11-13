@@ -1,5 +1,5 @@
 !name: Map Name
-!power: 3000
+!power: 3500
 !sequences: 30
 !width: 95
 !height: 17
