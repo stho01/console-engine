@@ -17,13 +17,16 @@ namespace MyAwesomeConsoleGame
         public float MaxPower;
         public double RemainingPower;
         public int DamageTaken = 0;
-        
+        public virtual Rectangle BoundingBox => new((int)Position.X, (int)Position.Y, Sprite.Width, Sprite.Height);
+
         
         public static readonly Sprite Sprite = Sprite.FromStringArray(new[]
         {
-            "|#|",
-            " # ",
-            "|#|",
+            "████",
+            "▒██▒",
+            "████",
+            "▒██▒",
+            "████",
         });
 
         public Rover(MyAwesomeGame game) : base(game)

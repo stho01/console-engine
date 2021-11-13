@@ -1,14 +1,10 @@
 ﻿using System.Collections.Generic;
 using System.Linq;
-using System.Threading;
 using System.Threading.Tasks;
 using ConsoleEngine;
 using ConsoleEngine.Abstractions.Inputs;
-using ConsoleEngine.Infrastructure;
 using ConsoleEngine.Infrastructure.Inputs;
 using Microsoft.Xna.Framework;
-using MyAwesomeConsoleGame.Entities;
-using MyAwesomeConsoleGame.Entities.Tiles;
 
 namespace MyAwesomeConsoleGame
 {
@@ -65,7 +61,8 @@ namespace MyAwesomeConsoleGame
             World = WorldLoader.LoadWorld(this, Maps[CurrentMap]);
             Rover = new Rover(this)
             {
-                Position = World.StartingPoint.Position
+                Position = World.StartingPoint.Position,
+                Velocity = Vector2.Zero
             };
             Camera.Follow(Rover);
         }
