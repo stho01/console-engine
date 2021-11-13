@@ -1,4 +1,5 @@
-﻿using ConsoleEngine.Infrastructure;
+﻿using System;
+using ConsoleEngine.Infrastructure;
 using ConsoleEngine.Infrastructure.Rendering;
 using Microsoft.Xna.Framework;
 using MyAwesomeConsoleGame.Entities.Tiles;
@@ -17,42 +18,49 @@ namespace MyAwesomeConsoleGame
         public double RemainingPower;
         public int DamageTaken = 0;
 
-        public Direction Direction { get; private set; }
+        public override Rectangle BoundingBox
+        {
+            get
+            {
+                var sprite = GetRoverSprite();
+                return new Rectangle(Position.ToPoint(), sprite.Size);
+            }
+        }
 
+        public Direction Direction { get; private set; }
+  
         public static readonly Sprite RoverSpriteSouth = Sprite.FromStringArray(new[]
         {
-            "┌───┐",
-            "║###║",
-            "│###│",
-            "║###║",
-           "\\___/"
+            @"┌──┐",
+            @"║##║",
+            @" >< ",
+            @"║##║",
+            @"\__/"
         });
 
         public static readonly Sprite RoverSpriteNorth = Sprite.FromStringArray(new[]
         {
-            "/¯¯¯\\",
-            "║###║",
-            "│###│",
-            "║###║",
-            "└───┘"
+            @"/¯¯\",
+            @"║##║",
+            @" >< ",
+            @"║##║",
+            @"└──┘"
         });
 
         public static readonly Sprite RoverSpriteEast = Sprite.FromStringArray(new[]
         {
-            "┌═─═\\",
-            "│###│",
-            "│###│",
-            "│###│",
-            "└═─═/"
+            @"┌═ ═\",
+            @"│#v#│",
+            @"│#∧#│",
+            @"└═ ═/"
         });
 
         public static readonly Sprite RoverSpriteWest = Sprite.FromStringArray(new[]
         {
-            "/═─═┐",
-            "│###│",
-            "├###│",
-            "│###│",
-           "\\═─═┘"
+            @"/═ ═┐",
+            @"│#v#│",
+            @"│#∧#│",
+            @"\═ ═┘"
         });
 
         public Rover(MyAwesomeGame game) : base(game)

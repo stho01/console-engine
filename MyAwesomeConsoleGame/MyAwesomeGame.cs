@@ -1,4 +1,5 @@
-﻿using System.Collections.Generic;
+﻿using System;
+using System.Collections.Generic;
 using System.Linq;
 using System.Threading.Tasks;
 using ConsoleEngine;
@@ -13,9 +14,8 @@ namespace MyAwesomeConsoleGame
         public Rover Rover;
         public Hud Hud;
         public Camera Camera;
-        public Queue<Command> _currentCommands = new Queue<Command>();
+        public Queue<Command> _currentCommands = new();
         public World World;
-        public WorldLoader Loader;
         public string Playername;
         public int Score;
         public bool DrawStory = true;
@@ -38,8 +38,9 @@ namespace MyAwesomeConsoleGame
             width: 72,
             height: 50,
             fontWidth: 10,
-            fontHeight: 10) {
-            
+            fontHeight: 10)
+        {
+            Console.ClearColor = ConsoleColor.Black;
         }
 
         protected override void OnInitialize()

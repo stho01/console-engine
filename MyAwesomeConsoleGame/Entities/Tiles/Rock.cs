@@ -5,13 +5,14 @@ namespace MyAwesomeConsoleGame.Entities.Tiles
 {
     public class Rock : MapTile
     {
+        // ░ ▒ ▓ █
         private static readonly Sprite Sprite = Sprite.FromStringArray(new []{
-            "▒▓▒▓▒",
-            "▓▒▓▒▓",
-            "▒▓▒▓▒",
-            "▓▒▓▒▓",
-            "▒▓▒▓▒",
-        }, ConsoleColor.DarkGray);
+            " █▓▓ ",
+            "███▒▓",
+            "▓█▓▒▓",
+            "▓▓░▓░",
+            " ▓▓░░", 
+        }, ConsoleColor.Gray);
 
         public Rock(MyAwesomeGame game) : base(game) {}
 
