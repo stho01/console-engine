@@ -156,10 +156,10 @@ namespace MyAwesomeConsoleGame
 
         protected override void OnRender()
         {
-            PlantEmitters.ForEach(e => e.Draw());
             World.Draw();
             if (GameState == GameStates.Playing)
             {
+                PlantEmitters.ForEach(e => e.Draw());
                 Rover.Draw();
                 Hud.Draw();
                 if (IsDebugMode)
