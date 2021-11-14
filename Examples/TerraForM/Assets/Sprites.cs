@@ -4,7 +4,7 @@ namespace TerraForM.Assets
 {
     public static class Sprites
     {
-        public static readonly Sprite Sprite = Sprite.FromStringArray(new[]
+        public static readonly Sprite GameOver = Sprite.FromStringArray(new[]
         {
             "┼┼┼┼┼┼┼┼┼┼┼┼┼┼┼┼┼┼┼┼┼┼┼┼┼┼┼┼┼┼┼┼┼┼┼┼",
             "███▀▀▀██┼███▀▀▀███┼███▀█▄█▀███┼██▀▀▀",

@@ -119,9 +119,9 @@ namespace TerraForM
             => DrawText($"{HudTexts.AtmosphereGeneratorsPlanted}: {_game.Rover.AthmosphereGeneratorsPlanted}", AcceleratorsPlantedHeight, 1,ConsoleColor.Blue);
         private void DrawGameOver()
             => _game.Console.Draw(
-                x: (int)_game.Console.ScreenCenter.X - (Sprites.Sprite.Width / 2),
-                y: (int)_game.Console.ScreenCenter.Y - Sprites.Sprite.Height / 2,
-                sprite: Sprites.Sprite
+                x: (int)_game.Console.ScreenCenter.X - (Sprites.GameOver.Width / 2),
+                y: (int)_game.Console.ScreenCenter.Y - Sprites.GameOver.Height / 2,
+                sprite: Sprites.GameOver
             );
 
         private void DrawMoveSequence()
