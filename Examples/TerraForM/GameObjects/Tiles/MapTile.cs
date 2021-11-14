@@ -1,13 +1,12 @@
-﻿using System;
-using ConsoleEngine.Infrastructure.Rendering;
+﻿using ConsoleEngine.Infrastructure.Rendering;
 
-namespace MyAwesomeConsoleGame.Entities.Tiles
+namespace TerraForM.GameObjects.Tiles
 {
     public abstract class MapTile : GameObject
     {
         public abstract Sprite GetSprite();
         
-        protected MapTile(MyAwesomeGame game) : base(game) { }
+        protected MapTile(TerraformGame game) : base(game) { }
         
         public void Draw()
         {

@@ -1,6 +1,7 @@
 ﻿using ConsoleEngine.Infrastructure;
+using TerraForM.GameObjects;
 
-namespace MyAwesomeConsoleGame
+namespace TerraForM.Commands
 {
     public abstract class Command
     {

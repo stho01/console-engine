@@ -1,4 +1,4 @@
-﻿namespace MyAwesomeConsoleGame
+﻿namespace TerraForM.Commands
 {
     public enum Direction
     {

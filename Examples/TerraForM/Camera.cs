@@ -1,7 +1,8 @@
 ﻿using ConsoleEngine;
 using Microsoft.Xna.Framework;
+using TerraForM.GameObjects;
 
-namespace MyAwesomeConsoleGame
+namespace TerraForM
 {
     public class Camera
     {

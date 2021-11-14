@@ -1,6 +1,6 @@
-﻿using ConsoleEngine.Infrastructure;
+﻿using TerraForM.GameObjects;
 
-namespace MyAwesomeConsoleGame
+namespace TerraForM.Commands
 {
     public class Wait : Command
     {

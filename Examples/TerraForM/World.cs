@@ -1,16 +1,16 @@
 ﻿using System;
 using System.Collections.Generic;
 using System.Linq;
-using ConsoleEngine.Infrastructure.Rendering;
 using Microsoft.Xna.Framework;
-using MyAwesomeConsoleGame.Entities.Tiles;
-using MyAwesomeConsoleGame.Sprites;
+using TerraForM.Assets;
+using TerraForM.GameObjects;
+using TerraForM.GameObjects.Tiles;
 
-namespace MyAwesomeConsoleGame
+namespace TerraForM
 {
     public class World
     {
-        private readonly MyAwesomeGame _game;
+        private readonly TerraformGame _game;
         private readonly MapTile[,] _tiles;
         private readonly List<MapTile> _border = new();
         private readonly int _mapWidth;
@@ -18,7 +18,7 @@ namespace MyAwesomeConsoleGame
         public const int TileSize = 5;
         
         
-        public World(MyAwesomeGame game, string name, MapTile[,] map) {
+        public World(TerraformGame game, string name, MapTile[,] map) {
             _game = game;
             _tiles = map;
             Name = name;
@@ -66,7 +66,7 @@ namespace MyAwesomeConsoleGame
         {
             if (_game.GameState == GameStates.InputName)
             {
-                var sprite = Sprites.Sprites.InputName;
+                var sprite = Sprites.InputName;
                 if (!string.IsNullOrEmpty(_game.Playername))
                 {
                     sprite.Draw(sprite.Width / 2 - (_game.Playername.Length/2), 27,  _game.Playername, ConsoleColor.Red, ConsoleColor.Black);
@@ -78,7 +78,7 @@ namespace MyAwesomeConsoleGame
             {
                 if (!string.IsNullOrEmpty(_game.Playername))
                 {
-                    var sprite = Sprites.Sprites.Story;
+                    var sprite = Sprites.Story;
                     sprite.Draw(32, 22, string.Concat(_game.Playername.Take(30)), ConsoleColor.Red, ConsoleColor.Black);
                     _game.Console.Draw(3, 5, sprite);    
                 }

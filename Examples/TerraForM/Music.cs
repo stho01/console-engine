@@ -1,7 +1,7 @@
 ﻿using System.Threading;
 using System.Threading.Tasks;
 
-namespace MyAwesomeConsoleGame
+namespace TerraForM
 {
     public static class Music
     {

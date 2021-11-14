@@ -1,7 +1,7 @@
 ﻿using System;
 using ConsoleEngine.Infrastructure.Rendering;
 
-namespace MyAwesomeConsoleGame.Entities.Tiles
+namespace TerraForM.GameObjects.Tiles
 {
     public class FinishPoint : MapTile
     {
@@ -13,7 +13,7 @@ namespace MyAwesomeConsoleGame.Entities.Tiles
             "█ █ █",
         }, ConsoleColor.Green);
         
-        public FinishPoint(MyAwesomeGame game) : base(game) {}
+        public FinishPoint(TerraformGame game) : base(game) {}
 
         public override Sprite GetSprite() => FinishSprite;
     }

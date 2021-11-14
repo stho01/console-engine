@@ -1,4 +1,6 @@
-﻿namespace MyAwesomeConsoleGame
+﻿using TerraForM.GameObjects;
+
+namespace TerraForM.Commands
 {
     public class Plant : Command
     {

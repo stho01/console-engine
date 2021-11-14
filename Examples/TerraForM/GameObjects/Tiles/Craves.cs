@@ -1,7 +1,7 @@
 ﻿using System;
 using ConsoleEngine.Infrastructure.Rendering;
 
-namespace MyAwesomeConsoleGame.Entities.Tiles
+namespace TerraForM.GameObjects.Tiles
 {
     public class Craves : MapTile
     {
@@ -25,7 +25,7 @@ namespace MyAwesomeConsoleGame.Entities.Tiles
             " ▒▓▒ " 
         }, ConsoleColor.DarkGray);
         
-        public Craves(MyAwesomeGame game) : base(game) {}
+        public Craves(TerraformGame game) : base(game) {}
 
         public override Sprite GetSprite() => Sprite;
     }

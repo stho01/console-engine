@@ -2,7 +2,7 @@
 using ConsoleEngine.Infrastructure.Rendering;
 using Microsoft.Xna.Framework;
 
-namespace MyAwesomeConsoleGame.Entities.Tiles
+namespace TerraForM.GameObjects.Tiles
 {
     public class PlantSpot : MapTile
     {
@@ -21,7 +21,7 @@ namespace MyAwesomeConsoleGame.Entities.Tiles
 
         public override Rectangle BoundingBox => new Rectangle(Position.ToPoint(), PlantSpotSprite.Size);
 
-        public PlantSpot(MyAwesomeGame game) : base(game) { }
+        public PlantSpot(TerraformGame game) : base(game) { }
 
         public override Sprite GetSprite() => PlantSpotSprite;
 

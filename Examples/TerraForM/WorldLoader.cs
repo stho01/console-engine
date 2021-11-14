@@ -1,19 +1,19 @@
 ﻿using System.IO;
 using Microsoft.Xna.Framework;
-using MyAwesomeConsoleGame.Entities.Tiles;
+using TerraForM.GameObjects.Tiles;
 
-namespace MyAwesomeConsoleGame
+namespace TerraForM
 {
     public class WorldLoader
     {
-        public static World LoadWorld(MyAwesomeGame game, string path)
+        public static World LoadWorld(TerraformGame game, string path)
         {
             var content = File.ReadAllLines(path);
             
             return Parse(game, content);
         }
 
-        private static World Parse(MyAwesomeGame game, string[] lines)
+        private static World Parse(TerraformGame game, string[] lines)
         {
             string name = string.Empty;
             int sequences = 0;

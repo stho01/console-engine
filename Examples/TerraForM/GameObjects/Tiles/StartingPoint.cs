@@ -1,7 +1,7 @@
 ﻿using System;
 using ConsoleEngine.Infrastructure.Rendering;
 
-namespace MyAwesomeConsoleGame.Entities.Tiles
+namespace TerraForM.GameObjects.Tiles
 {
     public class StartingPoint : MapTile
     {
@@ -13,7 +13,7 @@ namespace MyAwesomeConsoleGame.Entities.Tiles
             "  ▒  ",
         }, ConsoleColor.Gray);
                 
-        public StartingPoint(MyAwesomeGame game) : base(game) { }
+        public StartingPoint(TerraformGame game) : base(game) { }
 
         public override Sprite GetSprite() => StartSprite;
     }

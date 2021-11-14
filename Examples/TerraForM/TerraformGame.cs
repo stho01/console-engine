@@ -1,15 +1,15 @@
-﻿using ConsoleEngine;
-using ConsoleEngine.Abstractions.Inputs;
-using ConsoleEngine.Infrastructure.Inputs;
-using Microsoft.Xna.Framework;
-using MyAwesomeConsoleGame.Entities;
-using MyAwesomeConsoleGame.Entities.Tiles;
-using System;
+﻿using System;
 using System.Collections.Generic;
 using System.Linq;
 using System.Threading.Tasks;
+using ConsoleEngine;
+using ConsoleEngine.Abstractions.Inputs;
+using ConsoleEngine.Infrastructure.Inputs;
+using Microsoft.Xna.Framework;
+using TerraForM.Commands;
+using TerraForM.GameObjects;
 
-namespace MyAwesomeConsoleGame
+namespace TerraForM
 {
     public enum GameStates
     {
@@ -19,7 +19,7 @@ namespace MyAwesomeConsoleGame
         GameOver
     }
 
-    public class MyAwesomeGame : GameBase
+    public class TerraformGame : GameBase
     {
         public Rover Rover;
         public Hud Hud;
@@ -29,7 +29,6 @@ namespace MyAwesomeConsoleGame
         public string Playername;
         public int Score;
         public GameStates GameState = GameStates.Menu;
-        public bool DrawStory = true;
         public readonly List<PlantEmitter> PlantEmitters = new();
 
         public string[] Maps =
@@ -42,12 +41,11 @@ namespace MyAwesomeConsoleGame
         };
 
         public int CurrentMap = 0;
-
         public bool GameOver;
-        public bool IsDebugMode { get; set; }
+        public bool IsDebugMode;
 
 
-        public MyAwesomeGame() : base(
+        public TerraformGame() : base(
             width: 72,
             height: 50,
             fontWidth: 15,
@@ -99,7 +97,7 @@ namespace MyAwesomeConsoleGame
                 case GameStates.Playing:
                     if (Input.Instance.GetKey(Key.F1).Pressed) IsDebugMode = !IsDebugMode;
 
-                    if (Rover.RemainingPower <= 0 || Rover.RemainingSequences < 0)
+                    if (Rover.PowerDepleted() || Rover.RemainingSequences < 0)
                     {
                         GameOver = true;
                         new Task(async () =>

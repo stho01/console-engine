@@ -4,7 +4,7 @@ using ConsoleEngine.Abstractions.Rendering;
 using ConsoleEngine.Infrastructure;
 using Microsoft.Xna.Framework;
 
-namespace MyAwesomeConsoleGame.Entities
+namespace TerraForM.GameObjects
 {
     public class PlantEmitter : GameObject
     {
@@ -21,7 +21,7 @@ namespace MyAwesomeConsoleGame.Entities
             ForegroundColor = ConsoleColor.DarkGreen
         };
         
-        public PlantEmitter(MyAwesomeGame game) : base(game)
+        public PlantEmitter(TerraformGame game) : base(game)
         {
             
         }

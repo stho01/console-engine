@@ -1,13 +1,11 @@
-﻿using System;
-using System.Data;
-using System.Linq;
+﻿using System.Linq;
 using ConsoleEngine.Infrastructure;
 using ConsoleEngine.Infrastructure.Rendering;
 using Microsoft.Xna.Framework;
-using MyAwesomeConsoleGame.Entities;
-using MyAwesomeConsoleGame.Entities.Tiles;
+using TerraForM.Commands;
+using TerraForM.GameObjects.Tiles;
 
-namespace MyAwesomeConsoleGame
+namespace TerraForM.GameObjects
 {
     public class Rover : GameObject
     {
@@ -20,7 +18,7 @@ namespace MyAwesomeConsoleGame
         public float MaxPower;
         public double RemainingPower;
         public int DamageTaken = 0;
-        public int AcceleratorsPlanted = 0;
+        public int AthmosphereGeneratorsPlanted = 0;
         public int RemainingSequences = 0;
 
         public override Rectangle BoundingBox
@@ -70,7 +68,7 @@ namespace MyAwesomeConsoleGame
             @"\═  ═┘"
         });
 
-        public Rover(MyAwesomeGame game) : base(game)
+        public Rover(TerraformGame game) : base(game)
         {
             MaxPower = game.World.MaxPower;
             RemainingPower = MaxPower;
@@ -109,6 +107,9 @@ namespace MyAwesomeConsoleGame
                 GetRoverSprite());
         }
 
+        public bool PowerDepleted()
+            => RemainingPower <= 0;
+
         public void MoveNorth()
         {
             ApplyForce(new Vector2(0, -1f) * Thrust);
@@ -142,7 +143,7 @@ namespace MyAwesomeConsoleGame
         public void ApplyForce(Vector2 force)
         {
             RemainingPower -= force.LengthSquared();
-            if (RemainingPower <= 0)
+            if (PowerDepleted())
             {
                 return;
             }
@@ -157,7 +158,7 @@ namespace MyAwesomeConsoleGame
                 {
                     if (tile is PlantSpot plantSpot && plantSpot.HasBeenPlanted == false)
                     {
-                        AcceleratorsPlanted++;
+                        AthmosphereGeneratorsPlanted++;
                         Game.Score += 10000;
                         plantSpot.HasBeenPlanted = true;
                         Game.PlantEmitters.Add(new PlantEmitter(Game) {
@@ -209,7 +210,7 @@ namespace MyAwesomeConsoleGame
         private void HandleFinishPointCollision()
         {
             Game.Score += (int)RemainingPower - (DamageTaken);
-            Game.Score += (AcceleratorsPlanted * 10000);
+            Game.Score += (AthmosphereGeneratorsPlanted * 10000);
             Game.RotateMap();
         }
 

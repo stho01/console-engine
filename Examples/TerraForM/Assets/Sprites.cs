@@ -1,6 +1,6 @@
 ﻿using ConsoleEngine.Infrastructure.Rendering;
 
-namespace MyAwesomeConsoleGame.Sprites
+namespace TerraForM.Assets
 {
     public static class Sprites
     {
