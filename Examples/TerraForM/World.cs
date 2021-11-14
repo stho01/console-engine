@@ -16,8 +16,9 @@ namespace TerraForM
         private readonly int _mapWidth;
         private readonly int _mapHeight;
         public const int TileSize = 5;
-        
-        
+
+
+        public World(){}
         public World(TerraformGame game, string name, MapTile[,] map) {
             _game = game;
             _tiles = map;

@@ -67,7 +67,7 @@ namespace TerraForM.GameObjects
             {
                 var screenPos = Game.Camera.WorldToScreenPos(pos).ToPoint();
 
-                if (Game.Console.GetCharAt(screenPos.X, screenPos.Y) == ' ');
+                if (Game.Console.GetCharAt(screenPos.X, screenPos.Y) == ' ')
                     Game.Console.Draw(screenPos.X, screenPos.Y, Grass);
             }
         }

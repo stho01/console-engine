@@ -62,11 +62,6 @@ namespace TerraForM
 
             Hud = new Hud(this);
             Camera.Follow(Rover);
-
-            new Task(async () =>
-            {
-                await Music.PlayIntroMusic();
-            }).Start();
         }
 
         private void StartNewGame()
@@ -100,10 +95,6 @@ namespace TerraForM
                     if (Rover.PowerDepleted() || Rover.RemainingSequences < 0)
                     {
                         GameOver = true;
-                        new Task(async () =>
-                        {
-                            await Music.PlayGameOverMusic();
-                        }).Start();
                     }
 
                     Hud.OnUpdate();
