@@ -21,6 +21,11 @@ namespace TerraForM
 
     public class TerraformGame : GameBase
     {
+
+        //**********************************************************
+        //** props: 
+        //**********************************************************
+
         public Rover Rover;
         public Hud Hud;
         public Camera Camera;
@@ -30,20 +35,21 @@ namespace TerraForM
         public int Score;
         public GameStates GameState = GameStates.Menu;
         public readonly List<PlantEmitter> PlantEmitters = new();
+        public int CurrentMap = 0;
+        public bool GameOver;
+        public bool IsDebugMode;
 
         public string[] Maps =
         {
-            // "Assets/Maps/map0.txt",
             "Assets/Maps/map1.txt",
             "Assets/Maps/map2.txt",
             "Assets/Maps/map3.txt",
             "Assets/Maps/map4.txt"
         };
 
-        public int CurrentMap = 0;
-        public bool GameOver;
-        public bool IsDebugMode;
-
+        //**********************************************************
+        //** ctor:
+        //**********************************************************
 
         public TerraformGame() : base(
             width: 72,
@@ -54,6 +60,22 @@ namespace TerraForM
             Console.ClearColor = ConsoleColor.Black;
         }
 
+        //**********************************************************
+        //** public methods:
+        //**********************************************************
+
+        public void RotateMap()
+        {
+            CurrentMap++;
+            if (CurrentMap >= Maps.Length)
+            {
+                CurrentMap = 0;
+            }
+
+            StartNewGame();
+
+        }
+        
         protected override void OnInitialize()
         {
             GameState = GameStates.InputName;
@@ -64,20 +86,9 @@ namespace TerraForM
             Camera.Follow(Rover);
         }
 
-        private void StartNewGame()
-        {
-            GameOver = false;
-            Score = 0;
-            Camera.Position = Vector2.Zero;
-            World = WorldLoader.LoadWorld(this, Maps[CurrentMap]);
-            Rover = new Rover(this)
-            {
-                Position = World.StartingPoint.Position,
-                Velocity = Vector2.Zero
-            };
-            Camera.Follow(Rover);
-            PlantEmitters.Clear();
-        }
+        //**********************************************************
+        //** overrides:
+        //**********************************************************
 
         protected override void OnUpdate()
         {
@@ -110,27 +121,9 @@ namespace TerraForM
                     }
                    
                     if (Input.Instance.GetKey(Key.R).Pressed) StartNewGame();
-
-                    if (Input.Instance.GetKey(Key.SPACE).Pressed && !_currentCommands.Any())
-                    {
-                        var commands = Hud.GetCommands();
-                        if (commands.Any())
-                        {
-                            Rover.RemainingSequences--;
-                        }
-                        foreach (var command in commands)
-                            _currentCommands.Enqueue(command);
-                    }
-
-                    if (_currentCommands.Any())
-                    {
-                        var currentCommand = _currentCommands.Peek();
-                        currentCommand.Update(Rover);
-                        if (currentCommand.IsDone())
-                        {
-                            _currentCommands.Dequeue();
-                        }
-                    }
+                    
+                    HandleQueuedCommands();
+                    
                     Rover.Update();
                     PlantEmitters.ForEach(e => e.Update());
 
@@ -143,16 +136,6 @@ namespace TerraForM
 
             Camera.Update();
             
-        }
-
-        private void HandleNameInput()
-        {
-            if (Input.Instance.GetKey(Key.ENTER).Pressed) GameState = GameStates.Menu;
-            var pressedSpace09AZkeys = Input.Instance.GetPressedKeyCodesSpace09AZ().Select(kc => (char)kc);
-            if (pressedSpace09AZkeys?.Any() == true)
-                Playername += string.Concat(pressedSpace09AZkeys);
-            if (Input.Instance.GetKey(Key.BACKSPACE).Pressed && !string.IsNullOrEmpty(Playername))
-                Playername = Playername.Substring(Playername.Length - 1);
         }
 
         protected override void OnRender()
@@ -172,16 +155,58 @@ namespace TerraForM
             }            
         }
 
-        public void RotateMap()
+        //**********************************************************
+        //** private methods:
+        //**********************************************************
+
+        private void StartNewGame()
         {
-            CurrentMap++;
-            if (CurrentMap >= Maps.Length)
+            GameOver = false;
+            Score = 0;
+            Camera.Position = Vector2.Zero;
+            World = WorldLoader.LoadWorld(this, Maps[CurrentMap]);
+            Rover = new Rover(this)
             {
-                CurrentMap = 0;
+                Position = World.StartingPoint.Position,
+                Velocity = Vector2.Zero
+            };
+            Camera.Follow(Rover);
+            PlantEmitters.Clear();
+        }
+        
+        private void HandleQueuedCommands()
+        {
+            if (Input.Instance.GetKey(Key.SPACE).Pressed && !_currentCommands.Any())
+            {
+                var commands = Hud.GetCommands();
+                if (commands.Any())
+                {
+                    Rover.RemainingSequences--;
+                }
+
+                foreach (var command in commands)
+                    _currentCommands.Enqueue(command);
             }
 
-            StartNewGame();
+            if (_currentCommands.Any())
+            {
+                var currentCommand = _currentCommands.Peek();
+                currentCommand.Update(Rover);
+                if (currentCommand.IsDone())
+                {
+                    _currentCommands.Dequeue();
+                }
+            }
+        }
 
+        private void HandleNameInput()
+        {
+            if (Input.Instance.GetKey(Key.ENTER).Pressed) GameState = GameStates.Menu;
+            var pressedSpace09AZkeys = Input.Instance.GetPressedKeyCodesSpace09AZ().Select(kc => (char)kc);
+            if (pressedSpace09AZkeys?.Any() == true)
+                Playername += string.Concat(pressedSpace09AZkeys);
+            if (Input.Instance.GetKey(Key.BACKSPACE).Pressed && !string.IsNullOrEmpty(Playername))
+                Playername = Playername.Substring(Playername.Length - 1);
         }
     }
 }

@@ -80,6 +80,7 @@ namespace TerraForM
             DrawMoveSequence();
             DrawGameScore();
             
+            
             _game.Console.DrawLine(0, Top, _game.Console.Width, Top, '╍');
         }
         
