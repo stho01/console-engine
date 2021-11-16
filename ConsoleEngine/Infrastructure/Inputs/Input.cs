@@ -39,11 +39,5 @@ namespace ConsoleEngine.Infrastructure.Inputs
         {
             _handler?.Update();
         }
-
-        public string GetKey()
-        {
-            return "";
-            //return _handler?.GetKey();
-        }
     }
 }

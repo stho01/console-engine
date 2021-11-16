@@ -1,26 +1,84 @@
-﻿using System.Linq;
+﻿using System;
+using System.Linq;
 using ConsoleEngine.Infrastructure;
 using ConsoleEngine.Infrastructure.Rendering;
 using Microsoft.Xna.Framework;
 using TerraForM.Commands;
 using TerraForM.GameObjects.Tiles;
+using TerraForM.Scenes;
 
 namespace TerraForM.GameObjects
 {
     public class Rover : GameObject
     {
-        public Vector2 Velocity { get; set; }
-        public Vector2 Acceleration { get; set; }
-        public const float Thrust = 0.8f;
-        public const float Drag = 5f;
-        public bool StandingOnPlantingSpot { get; private set; }
-        public bool StandingOnBonusSpot { get; private set; }
-        public float MaxPower;
+        //**********************************************************
+        //** events:
+        //**********************************************************
+
+        public event EventHandler OnFinishReached;
+        public event EventHandler OnAthmosphereGeneratorsPlanted;
+        
+        //**********************************************************
+        //** fields:
+        //**********************************************************
+
+        private const float Thrust = 0.8f;
+        private const float Drag = 5f;
+        public readonly float MaxPower;
         public double RemainingPower;
         public int DamageTaken = 0;
         public int AthmosphereGeneratorsPlanted = 0;
         public int RemainingSequences = 0;
+        private readonly GameScene _scene;
+        private static readonly Sprite RoverSpriteSouth = Sprite.FromStringArray(new[] {
+            @"┌──┐",
+            @"║##║",
+            @" ║║ ",
+            @" ║║ ",
+            @"║##║",
+            @"\__/"
+        });
+        private static readonly Sprite RoverSpriteNorth = Sprite.FromStringArray(new[] {
+            @"/¯¯\",
+            @"║##║",
+            @" ║║ ",
+            @" ║║ ",
+            @"║##║",
+            @"└──┘"
+        });
+        private static readonly Sprite RoverSpriteEast = Sprite.FromStringArray(new[] {
+            @"┌═  ═\",
+            @"│#══#│",
+            @"│#══#│",
+            @"└═  ═/"
+        });
+        private static readonly Sprite RoverSpriteWest = Sprite.FromStringArray(new[] {
+            @"/═  ═┐",
+            @"│#══#│",
+            @"│#══#│",
+            @"\═  ═┘"
+        });
+              
+        //**********************************************************
+        //** ctor:
+        //**********************************************************
 
+        public Rover(GameScene scene) : base(scene.Game)
+        {
+            _scene = scene;
+            MaxPower = scene.World.MaxPower;
+            RemainingPower = MaxPower;
+            RemainingSequences = scene.World.Sequences;
+        }
+              
+        //**********************************************************
+        //** props:
+        //**********************************************************
+
+        public Vector2 Velocity { get; set; }
+        public Vector2 Acceleration { get; set; }
+        public bool StandingOnPlantingSpot { get; private set; }
+        public bool StandingOnBonusSpot { get; private set; }
         public override Rectangle BoundingBox
         {
             get
@@ -29,51 +87,11 @@ namespace TerraForM.GameObjects
                 return new Rectangle(Position.ToPoint(), sprite.Size);
             }
         }
-
         public Direction Direction { get; private set; }
-  
-        public static readonly Sprite RoverSpriteSouth = Sprite.FromStringArray(new[]
-        {
-            @"┌──┐",
-            @"║##║",
-            @" ║║ ",
-            @" ║║ ",
-            @"║##║",
-            @"\__/"
-        });
-
-        public static readonly Sprite RoverSpriteNorth = Sprite.FromStringArray(new[]
-        {
-            @"/¯¯\",
-            @"║##║",
-            @" ║║ ",
-            @" ║║ ",
-            @"║##║",
-            @"└──┘"
-        });
-
-        public static readonly Sprite RoverSpriteEast = Sprite.FromStringArray(new[]
-        {
-            @"┌═  ═\",
-            @"│#══#│",
-            @"│#══#│",
-            @"└═  ═/"
-        });
-
-        public static readonly Sprite RoverSpriteWest = Sprite.FromStringArray(new[]
-        {
-            @"/═  ═┐",
-            @"│#══#│",
-            @"│#══#│",
-            @"\═  ═┘"
-        });
-
-        public Rover(TerraformGame game) : base(game)
-        {
-            MaxPower = game.World.MaxPower;
-            RemainingPower = MaxPower;
-            RemainingSequences = game.World.Sequences;
-        }
+              
+        //**********************************************************
+        //** public methods:
+        //**********************************************************
 
         public void Update()
         {
@@ -107,19 +125,18 @@ namespace TerraForM.GameObjects
                 GetRoverSprite());
         }
 
-        public bool PowerDepleted()
-            => RemainingPower <= 0;
+        public bool PowerDepleted() => RemainingPower <= 0;
 
         public void MoveNorth()
         {
             ApplyForce(new Vector2(0, -1f) * Thrust);
             Direction = Direction.North;
 
-            if (Game.World.Intersects(this, out var with))
-            {
-                if (with.Any(x => x is Rock || x is Craves))
-                    Position -= new Vector2(0, 1);
-            }
+            if (!_scene.World.Intersects(this, out var with)) 
+                return;
+            
+            if (with.Any(x => x is Rock or Craves))
+                Position -= new Vector2(0, 1);
         }
 
         public void MoveSouth()
@@ -152,7 +169,7 @@ namespace TerraForM.GameObjects
         
         public void Plant()
         {
-            if (StandingOnPlantingSpot && Game.World.Intersects(this, out var with))
+            if (StandingOnPlantingSpot && _scene.World.Intersects(this, out var with))
             {
                 foreach (var tile in with)
                 {
@@ -161,9 +178,7 @@ namespace TerraForM.GameObjects
                         AthmosphereGeneratorsPlanted++;
                         Game.Score += 10000;
                         plantSpot.HasBeenPlanted = true;
-                        Game.PlantEmitters.Add(new PlantEmitter(Game) {
-                            Position = Position
-                        });
+                        OnAthmosphereGeneratorsPlanted?.Invoke(this, EventArgs.Empty);
                     }
                 }
             }
@@ -173,7 +188,7 @@ namespace TerraForM.GameObjects
         {
             var shouldStopMotions = false;
 
-            if (Game.World.Intersects(this, out var with))
+            if (_scene.World.Intersects(this, out var with))
             {
                 foreach (var tile in with)
                 {
@@ -185,7 +200,7 @@ namespace TerraForM.GameObjects
                             break;
                         case Craves:
                             shouldStopMotions = true;
-                            this.RemainingPower = 0;
+                            RemainingPower = 0;
                             break;
                         case PlantSpot:
                             StandingOnPlantingSpot = true;
@@ -194,7 +209,7 @@ namespace TerraForM.GameObjects
                             HandleBonusPointCollision(bp);
                             break;
                         case FinishPoint:
-                            HandleFinishPointCollision();
+                            OnFinishReached?.Invoke(this, EventArgs.Empty);
                             break;
                     }
                 }
@@ -207,16 +222,10 @@ namespace TerraForM.GameObjects
             }
         }
 
-        private void HandleFinishPointCollision()
-        {
-            Game.Score += (int)RemainingPower - (DamageTaken);
-            Game.Score += (AthmosphereGeneratorsPlanted * 10000);
-            Game.RotateMap();
-        }
-
         private void HandleBonusPointCollision(BonusPoint bp)
         {
             StandingOnBonusSpot = true;
+            
             if (!bp.HasBeenConsumed)
             {
                 bp.HasBeenConsumed = true;
@@ -227,17 +236,13 @@ namespace TerraForM.GameObjects
 
         private Sprite GetRoverSprite()
         {
-            switch (Direction)
+            return Direction switch
             {
-                case Direction.North:
-                    return RoverSpriteNorth;
-                case Direction.South:
-                    return RoverSpriteSouth;
-                case Direction.East:
-                    return RoverSpriteEast;
-                default:
-                    return RoverSpriteWest;
-            }
+                Direction.North => RoverSpriteNorth,
+                Direction.South => RoverSpriteSouth,
+                Direction.East => RoverSpriteEast,
+                _ => RoverSpriteWest
+            };
         }
     }
 }

@@ -4,6 +4,7 @@ using ConsoleEngine.Infrastructure;
 using ConsoleEngine.Infrastructure.Inputs;
 using ConsoleEngine.Infrastructure.Logging;
 using ConsoleEngine.Infrastructure.Rendering;
+using ConsoleEngine.Infrastructure.Scenery;
 using ConsoleEngine.Native;
 
 namespace ConsoleEngine
@@ -16,13 +17,14 @@ namespace ConsoleEngine
 
         private readonly RenderConsole _console;
         private bool _running;
-        
+
         //**********************************************************
         //** ctor
         //**********************************************************
 
-        protected GameBase(int width, int height, int fontWidth, int fontHeight) 
-            : this(width, height, new FontInfo {
+        protected GameBase(int width, int height, int fontWidth, int fontHeight)
+            : this(width, height, new FontInfo
+            {
                 FontFace = "Consolas",
                 FontWidth = fontWidth,
                 FontHeight = fontHeight
@@ -32,6 +34,7 @@ namespace ConsoleEngine
         {
             _console = new RenderConsole(new ConsoleHandler(width, height, fontInfo));
             Name = "Game";
+            Scenes = new SceneManager(this);
         }
               
         //**********************************************************
@@ -43,7 +46,9 @@ namespace ConsoleEngine
         public bool ShowFps { get; set; }
         public bool EnableLogger { get; init; }
         public bool ClearScreenOnEachFrame { get; set; } = true;
-        
+        public SceneManager Scenes { get; }
+        public Scene Scene => Scenes.Current;
+
         //**********************************************************
         //** abstract methods:
         //**********************************************************
@@ -83,9 +88,16 @@ namespace ConsoleEngine
                 if (ClearScreenOnEachFrame)
                     _console.Clear();
                 
+                
+                Scenes.Update();
                 OnUpdate();
+                
+                Scenes.Render();
                 OnRender();
+                
                 _console.Display();
+                
+                Scenes.Cleanup();
             }
         }
         
@@ -96,5 +108,7 @@ namespace ConsoleEngine
             if (EnableLogger) 
                 Log.Stop();
         }
+
+        
     }
 }

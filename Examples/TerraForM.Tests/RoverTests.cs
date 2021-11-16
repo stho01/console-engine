@@ -5,6 +5,7 @@ using TerraForM;
 using TerraForM.Commands;
 using TerraForM.GameObjects;
 using TerraForM.GameObjects.Tiles;
+using TerraForM.Scenes;
 
 namespace TerraForM.Tests
 {
@@ -18,13 +19,14 @@ namespace TerraForM.Tests
         [Test]
         public void Rover_PowerIsDepletedWhenRemainingPowerIsZeroOrLess()
         {
-            var game = Substitute.For<TerraformGame>();
             var world = Substitute.For<World>();
+            var scene = Substitute.For<GameScene>("map");
+            
+            scene.World.Returns(world);
             world.MaxPower = 10000;
             world.Sequences = 30;
-            game.World = world;
             
-            var sut = new Rover(game);
+            var sut = new Rover(scene);
             sut.RemainingPower -= world.MaxPower;
             Assert.That(sut.PowerDepleted(), Is.True);
         }

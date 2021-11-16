@@ -26,6 +26,9 @@ namespace TerraForM
         
         public void Update()
         {
+            if (_gameObject == null)
+                return;
+            
             Position = (_gameObject.Position - new Vector2(_game.Console.ScreenCenter.X, 35/2f));
         }
     }

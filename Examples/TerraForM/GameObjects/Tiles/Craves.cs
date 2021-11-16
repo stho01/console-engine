@@ -5,17 +5,6 @@ namespace TerraForM.GameObjects.Tiles
 {
     public class Craves : MapTile
     {
-        
-         // 
-        // private static readonly Sprite Sprite = Sprite.FromStringArray(new []{
-        //     " ▓▓░░", 
-        //     "▓▓░▓░", 
-        //     "▓█▓▒▓", 
-        //     "███▒▓", 
-        //     " █▓▓ " 
-        // }, ConsoleColor.DarkGray);
-        
-        
         // ░ ▒ ▓ █
         private static readonly Sprite Sprite = Sprite.FromStringArray(new []{
             " ░▓▓░", 
