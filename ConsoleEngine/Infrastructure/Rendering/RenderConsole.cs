@@ -14,6 +14,7 @@ namespace ConsoleEngine.Infrastructure.Rendering
         private readonly IConsoleHandler _consoleHandler;
         private readonly Pixel[] _pixels;
         private FontInfo _fontInfo;
+        private Pixel _clearColor = Pixel.Blank;
         
         //**********************************************************
         //** ctor:
@@ -39,7 +40,13 @@ namespace ConsoleEngine.Infrastructure.Rendering
 
         public int Width => _consoleHandler.Width;
         public int Height => _consoleHandler.Height;
-        public Vector2 ScreenCenter => new Vector2(Width / 2, Height / 2);
+        public Vector2 ScreenCenter => new((Width / 2f), (Height / 2f));
+
+        public ConsoleColor ClearColor
+        {
+            get => _clearColor.BackgroundColor;
+            set => _clearColor = new Pixel { BackgroundColor = value, Char = ' ' };
+        } 
         
         /// <summary> The total Screen area. W * H </summary>
         public int Area { get; }
@@ -73,6 +80,11 @@ namespace ConsoleEngine.Infrastructure.Rendering
                 var pixel = pixels[dataX, dataY];
                 Draw(dataX + x, dataY + y, pixel.Char, pixel.ForegroundColor, pixel.BackgroundColor);
             }  
+        }
+
+        public void Draw(int x, int y, Pixel pixel)
+        {
+            Draw(x, y, pixel.Char, pixel.ForegroundColor, pixel.BackgroundColor);
         }
 
         public void Draw(int x, int y, Span2D<char> data, ConsoleColor foregroundColor = ConsoleColor.White, ConsoleColor backgroundColor = ConsoleColor.Black)
@@ -194,7 +206,7 @@ namespace ConsoleEngine.Infrastructure.Rendering
         public void Clear()
         {
             for (var i = 0; i < _pixels.Length; i++) {
-                _pixels[i] = Pixel.Blank;
+                _pixels[i] = _clearColor;
             }
         }
 

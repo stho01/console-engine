@@ -1,4 +1,6 @@
 ﻿using System;
+using System.Collections.Generic;
+using System.Linq;
 using ConsoleEngine.Abstractions.Inputs;
 using ConsoleEngine.Native;
 
@@ -28,7 +30,11 @@ namespace ConsoleEngine.Infrastructure.Inputs
         {
             return _handler?.GetKey(id) ?? throw new InvalidOperationException("Input handler not set");
         }
-
+        
+        public IEnumerable<int> GetPressedKeyCodesSpace09AZ() => GetPressedKeyCodes().Where(c => c == 32 || (c >= 48 && c <= 90));
+        
+        private IEnumerable<int> GetPressedKeyCodes() => _handler?.GetPressedKeyCodes();
+        
         internal void Update()
         {
             _handler?.Update();

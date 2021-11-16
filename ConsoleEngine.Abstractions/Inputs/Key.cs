@@ -33,10 +33,12 @@ namespace ConsoleEngine.Abstractions.Inputs
         SELECT = 0x29,
         PRINT = 0x2A,
         EXECUTE = 0x2B,
+        ENTER = 0x0D,
         SNAPSHOT = 0x2C,
         INSERT = 0x2D,
         DELETE = 0x2E,
         HELP = 0x2F,
+        BACKSPACE = 0x08,
         
         NUMPAD0 = 0x60, NUMPAD1 = 0x61, NUMPAD2 = 0x62, 
         NUMPAD3 = 0x63, NUMPAD4 = 0x64, NUMPAD5 = 0x65, 

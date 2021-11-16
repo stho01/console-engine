@@ -14,7 +14,7 @@ namespace Platformer
         private World _world;
 
         public PlatformerGame()
-            : base(60, 60, new FontInfo {
+            : base(70, 35, new FontInfo {
                 FontWidth = 10,
                 FontHeight = 10,
                 FontFace = "Consolas"
@@ -32,7 +32,7 @@ namespace Platformer
             ShowFps = true;
 
             _player = new Player(this) {
-                Position = new Vector2(10, Console.Height - 10)
+                Position = new Vector2(10, Console.Height - 50)
             };
             
             _camera = new Camera(this);

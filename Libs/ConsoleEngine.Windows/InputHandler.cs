@@ -1,4 +1,6 @@
-﻿using ConsoleEngine.Abstractions.Inputs;
+﻿using System.Collections.Generic;
+using System.Linq;
+using ConsoleEngine.Abstractions.Inputs;
 
 namespace ConsoleEngine.Native
 {
@@ -22,6 +24,8 @@ namespace ConsoleEngine.Native
             return _keyStates[id];
         }
 
+        public IEnumerable<int> GetPressedKeyCodes() => _keyStates.Where(k => k.Pressed).Select(k => k.Index);
+
         public void Update()
         {
             for (var i = 0; i < 256; i++)
@@ -29,6 +33,7 @@ namespace ConsoleEngine.Native
                 _newState[i] = GetAsyncKeyState(i);
                 _keyStates[i].Pressed = false;
                 _keyStates[i].Released = false;
+                _keyStates[i].Index = i;
 
                 if (_newState[i] != _previousState[i])
                 {

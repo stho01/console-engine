@@ -1,8 +1,9 @@
 ﻿using System;
 using System.Linq;
-using System.Numerics;
 using ConsoleEngine.Abstractions.Rendering;
 using Microsoft.Toolkit.HighPerformance;
+using Microsoft.Xna.Framework;
+using Vector2 = System.Numerics.Vector2;
 
 namespace ConsoleEngine.Infrastructure.Rendering
 {
@@ -66,6 +67,22 @@ namespace ConsoleEngine.Infrastructure.Rendering
         
         public int Width { get; }
         public int Height { get; }
+        public Point Size => new(Width, Height);
         public Vector2 Origin { get; set; }
+        
+        public void Draw(int x, int y, string str, ConsoleColor foregroundColor, ConsoleColor backgroundColor)
+        {
+            for (var dataX = 0; dataX < str.Length; dataX++){
+                
+                var pixel = str[dataX];
+                
+                var pixelReplacement = new Pixel();
+                pixelReplacement.Char = pixel;
+                pixelReplacement.ForegroundColor = foregroundColor;
+                pixelReplacement.BackgroundColor = backgroundColor;
+                Data[x + dataX, y] = pixelReplacement;
+            }  
+        }
+
     }
 }
