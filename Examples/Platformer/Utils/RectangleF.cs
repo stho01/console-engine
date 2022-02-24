@@ -2,7 +2,7 @@
 
 namespace Platformer.Utils;
 
-public record RectangleF(float X, float Y, float Width, float Height)
+public record struct RectangleF(float X, float Y, float Width, float Height)
 {
     public float Left => X;
     public float Right => X + Width;
