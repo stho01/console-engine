@@ -1,5 +1,6 @@
 ﻿using System;
 using System.Collections.Generic;
+using System.Diagnostics;
 
 namespace ConsoleEngine.Infrastructure
 {
@@ -11,6 +12,7 @@ namespace ConsoleEngine.Infrastructure
 
         private static long? _previous;
         private static TimeSpan _delta;
+        private static Stopwatch _stopwatch;
           
         //**********************************************************
         //** props:
@@ -21,17 +23,18 @@ namespace ConsoleEngine.Infrastructure
         public static int Fps { get; private set; }
         
         private static readonly List<Interval> _intervals = new();
-          
+        
         //**********************************************************
         //** methods:
         //**********************************************************
 
         internal static void Update()
         {
-            _previous ??= DateTime.UtcNow.Ticks;
-            var now = DateTime.UtcNow.Ticks;
+            _stopwatch ??= Stopwatch.StartNew();
+            _previous ??= _stopwatch.Elapsed.Ticks;
+            var now = _stopwatch.Elapsed.Ticks;
             var dt = (now - _previous.Value);
-            _delta = new TimeSpan(dt);
+            _delta = TimeSpan.FromTicks(dt);
             _previous = now;
             
             Fps = (int)(1f / _delta.TotalSeconds);

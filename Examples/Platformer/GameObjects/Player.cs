@@ -2,67 +2,60 @@
 using ConsoleEngine.Infrastructure;
 using ConsoleEngine.Infrastructure.Rendering;
 using Microsoft.Xna.Framework;
+using Platformer.Utils;
 
 namespace Platformer.GameObjects
 {
     public class Player : GameObject
     {
         private readonly PlatformerGame _game;
-        private static readonly Sprite _playerSprite = Sprite.FromStringArray(new[]{
+        private static readonly Sprite PlayerSprite = Sprite.FromStringArray(new[]{
             "▓O▓",
             "▓▓▓",
             "▓O▓"
         }, ConsoleColor.Red);
-   
-        public Player(PlatformerGame game) {
+
+        private bool _jump;
+
+        public Player(PlatformerGame game) 
+        {
             _game = game; 
         }
-        
-        public bool IsAirborne { get; private set; }
-        public float MovementStrength => IsAirborne ? 0.1f : .4f;
+
+        public bool IsAirborne { get; private set; } = true;
+        public float MovementStrength => IsAirborne ? 75f : 150f;
         
         public void MoveLeft() => ApplyForce(new Vector2(-1, 0) * MovementStrength);
         public void MoveRight() => ApplyForce(new Vector2(1, 0) * MovementStrength);
-        
-        public void Jump()
-        {
-            if (IsAirborne) 
-                return;
-            
-            ApplyForce(new Vector2(0, -80));
-            IsAirborne = true;
-        }
-        
-        public void ApplyForce(Vector2 force) => Acceleration += force;
-        public void ApplyForce(float x, float y) => Acceleration += new Vector2(x, y);
+        public void Jump() => _jump = true;
+
+        public void ApplyForce(Vector2 force) => Acceleration += force * (float)GameTime.Delta.TotalSeconds;
 
         public void Update()
         {
-            ApplyForce(new Vector2(0f, .5f));
-            ApplyDrag();
-            
-            Velocity += Acceleration;
-            var newX = Position.X + Velocity.X * (float)GameTime.Delta.TotalSeconds;
-            var newY = Position.Y + Velocity.Y * (float)GameTime.Delta.TotalSeconds;
+            ApplyForce(new Vector2(0f, 200f));
 
-            Position = ResolveCollision(newX, newY);
+            PerformJumpIfApplicable();
             
-            if (Velocity.LengthSquared() < 0.1) 
-                Velocity = Vector2.Zero;
+            // Drag
+            Velocity += new Vector2(-3f, -.1f) * Velocity * (float) GameTime.Delta.TotalSeconds;
+            Velocity += Acceleration * (float) GameTime.Delta.TotalSeconds;
+            
+            Position = CheckCollisions(Position + Velocity);
+           
             Acceleration = Vector2.Zero;
-        }
+            if (Velocity.LengthSquared() < 0.000001)
+                Velocity = Vector2.Zero;
 
-        private void ApplyDrag()
-        {
-            if (Velocity.X == 0)
-                return;
 
-            var c = IsAirborne ? .5 : 5;
-            var dragX = -c * Velocity.X * GameTime.Delta.TotalSeconds;
-            
-            ApplyForce((float)dragX, 0f);
+            if (_game.IsDebugMode)
+            {
+                _game.Console.Draw(0, 0, $"POS: {Position}");
+                _game.Console.Draw(0, 1, $"VEL: {Velocity}");
+                _game.Console.Draw(0, 2, $"AIR: {IsAirborne}");    
+            }
         }
-        
+     
         public void Draw()
         {
             var (x, y) = _game.Camera.WorldToScreenPos(Position);
@@ -70,43 +63,74 @@ namespace Platformer.GameObjects
             _game.Console.Draw(
                 (int)x,
                 (int)y,
-                _playerSprite
+                PlayerSprite
             );
         }
 
-        private Vector2 ResolveCollision(float newX, float newY)
+        private void PerformJumpIfApplicable()
         {
-            const float offset = .2f;
-            var world = _game.World;
+            if (!_jump || IsAirborne) return;
             
-            var left = newX;
-            var right = newX + _playerSprite.Width;
-            var top = newY;
-            var bottom = newY + _playerSprite.Height;
-            
-            if (Velocity.X >= 0 && (world.GetTile(right, top + offset) != '.' || world.GetTile(right, bottom - offset) != '.')) // right
-            {
-                newX = (int)newX;
-                Velocity = new Vector2(0, Velocity.Y);
-            } 
-            else if (world.GetTile(left, top + offset) != '.' || world.GetTile(left, bottom - offset) != '.') // left
-            {
-                newX = (int)(newX + .5f);
-                Velocity = new Vector2(0, Velocity.Y);
-            }
+            Velocity = new Vector2(Velocity.X, -.05f);
 
-            if (Velocity.Y >= 0 && world.GetTile(left + offset, bottom) != '.' || world.GetTile(right - offset, bottom) != '.') // down
+            IsAirborne = true;
+            _jump = false;
+        }
+        
+        private Vector2 CheckCollisions(Vector2 newPos)
+        {
+            var newX = newPos.X;
+            var newY = newPos.Y;
+            
+            var playerBounds = new RectangleF(
+                newPos.X, 
+                newPos.Y, 
+                PlayerSprite.Width, 
+                PlayerSprite.Height
+            );
+
+            const float off = .05f;
+            var yRbTile = _game.World.GetTile(playerBounds.Right - off, playerBounds.Bottom);
+            var yLbTile = _game.World.GetTile(playerBounds.Left + off, playerBounds.Bottom);
+            var yLtTile = _game.World.GetTile(playerBounds.Left + off, playerBounds.Top);
+            var yRtTile = _game.World.GetTile(playerBounds.Right - off, playerBounds.Top);
+            var xRbTile = _game.World.GetTile(playerBounds.Right, playerBounds.Bottom - off);
+            var xLtTile = _game.World.GetTile(playerBounds.Left, playerBounds.Top + off);
+            var xLbTile = _game.World.GetTile(playerBounds.Left, playerBounds.Bottom - off);
+            var xRtTile = _game.World.GetTile(playerBounds.Right, playerBounds.Top + off);
+
+            bool IsWall(char c) => c is not ('.' or ' ');
+            
+            if (Velocity.Y > 0 && (IsWall(yRbTile) || IsWall(yLbTile)))
             {
-                newY = (int)newY;
-                Velocity = new Vector2(Velocity.X, 0);
+                newY = (int) newY;
                 IsAirborne = false;
+                Velocity = new Vector2(Velocity.X, 0f);
             }
-            else if (world.GetTile(left + offset, top) != '.' || world.GetTile(right - offset, top) != '.') // up
+            else if (Velocity.Y < 0 && (IsWall(yRtTile) || IsWall(yLtTile)))
             {
-                newY = (int)(newY + .5f);
-                Velocity = new Vector2(Velocity.X, 0);
+                newY = (int) (newY + .5f);
+                Velocity = new Vector2(Velocity.X, 0f);
             }
 
+            if (Velocity.X > 0 && (IsWall(xRbTile) || IsWall(xLbTile)))
+            {
+                newX = (int) newX;
+                Velocity = new Vector2(0f, Velocity.Y);
+            } 
+            else if (Velocity.X < 0 && (IsWall(xRtTile) || IsWall(xLtTile)))
+            {
+                newX = (int) (newX + .5f);
+                Velocity = new Vector2(0f, Velocity.Y);
+            }
+
+            if (_game.IsDebugMode)
+            {
+                _game.Console.Draw(0, 3, playerBounds.ToString());
+                _game.Console.Draw(0, 4, $"X - RB: {xRbTile}  LB: {xLbTile}  RT: {xRtTile}  LT: {xLtTile}");
+                _game.Console.Draw(0, 5, $"Y - RB: {yRbTile}  LB: {yLbTile}  RT: {yRtTile}  LT: {yLtTile}");
+            }
+            
             return new Vector2(newX, newY);
         }
     }
