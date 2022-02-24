@@ -21,7 +21,7 @@ namespace ConsoleGame
         protected override void OnInitialize()
         {
             // callback called every 500ms
-            GameTime.SetInterval(500, () => {
+            _ = GameTime.SetInterval(500, () => {
                 for (var x = 0; x < Width; x++)
                 for (var y = 0; y < Height; y++) {
                     _display[x, y].Char = '█'; //Chars[Random.Next(0, Chars.Length)];
