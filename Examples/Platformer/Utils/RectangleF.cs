@@ -11,6 +11,6 @@ public record RectangleF(float X, float Y, float Width, float Height)
 
     public override string ToString()
     {
-        return $"{{ {nameof(Left)} = {Left}, {nameof(Right)} = {Right}, {nameof(Top)} = {Top}, {nameof(Bottom)} = {Bottom} }}";
+        return $"{{ {nameof(Left)} = {Left:0.000}, {nameof(Right)} = {Right:0.000}, {nameof(Top)} = {Top:0.000}, {nameof(Bottom)} = {Bottom:0.000} }}";
     }
 }

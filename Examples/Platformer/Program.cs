@@ -2,7 +2,6 @@
 using Platformer;
 
 var game = new PlatformerGame {
-    EnableLogger = true,
     IsDebugMode = true
 };
             
