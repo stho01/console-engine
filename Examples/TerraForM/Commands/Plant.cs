@@ -1,22 +1,16 @@
 ﻿using TerraForM.GameObjects;
 
-namespace TerraForM.Commands
+namespace TerraForM.Commands;
+
+public class Plant() : Command(1.0f)
 {
-    public class Plant : Command
+    protected override void OnUpdate(Rover rover)
     {
-        public Plant() : base(1.0f)
-        {
-            
-        }
+        rover.Plant();
+    }
 
-        protected override void OnUpdate(Rover rover)
-        {
-            rover.Plant();
-        }
-
-        public override char GetVisualRepresentation()
-        {
-            return 'P';
-        }
+    public override char GetVisualRepresentation()
+    {
+        return 'P';
     }
 }

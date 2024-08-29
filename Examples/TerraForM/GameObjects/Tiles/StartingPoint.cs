@@ -1,20 +1,17 @@
 ﻿using System;
 using ConsoleEngine.Infrastructure.Rendering;
 
-namespace TerraForM.GameObjects.Tiles
-{
-    public class StartingPoint : MapTile
-    {
-        private static readonly Sprite StartSprite = Sprite.FromStringArray(new []{
-            "  ▒  ",
-            " ▒▓▒ ",
-            "▒▓S▓▒",
-            " ▒▓▒ ",
-            "  ▒  ",
-        }, ConsoleColor.Gray);
-                
-        public StartingPoint(TerraformGame game) : base(game) { }
+namespace TerraForM.GameObjects.Tiles;
 
-        public override Sprite GetSprite() => StartSprite;
-    }
+public class StartingPoint(TerraformGame game) : MapTile(game)
+{
+    private static readonly Sprite StartSprite = Sprite.FromStringArray(new []{
+        "  ▒  ",
+        " ▒▓▒ ",
+        "▒▓S▓▒",
+        " ▒▓▒ ",
+        "  ▒  ",
+    }, ConsoleColor.Gray);
+
+    public override Sprite GetSprite() => StartSprite;
 }

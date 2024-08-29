@@ -1,7 +1,6 @@
-﻿namespace ConsoleEngine.Native.LowLevel
+﻿namespace ConsoleEngine.Native.LowLevel;
+
+internal enum StdHandle : int
 {
-    internal enum StdHandle : int
-    {
-        OutputHandle = -11
-    }
+    OutputHandle = -11
 }

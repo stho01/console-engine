@@ -1,63 +1,62 @@
 ﻿using System;
 using ConsoleEngine.Infrastructure.Rendering;
 
-namespace ConsoleEngine.Infrastructure.Scenery
+namespace ConsoleEngine.Infrastructure.Scenery;
+
+public abstract class Scene<TGame> : Scene where TGame : GameBase
 {
-    public abstract class Scene<TGame> : Scene where TGame : GameBase
-    {
-        public new TGame Game => (TGame)base.Game;
-    }
+    public new TGame Game => (TGame)base.Game;
+}
     
-    public abstract class Scene
-    {
-        //**********************************************************
-        //** props:
-        //**********************************************************
+public abstract class Scene
+{
+    //**********************************************************
+    //** props:
+    //**********************************************************
 
-        public bool IsPaused { get; private set; }
-        public GameBase Game { get; internal set; }
-        public RenderConsole Console => Game.Console;
+    public bool IsPaused { get; private set; }
+    public GameBase Game { get; internal set; }
+    public RenderConsole Console => Game.Console;
       
-        //**********************************************************
-        //** abstract:
-        //**********************************************************
+    //**********************************************************
+    //** abstract:
+    //**********************************************************
 
-        public abstract void OnLoad();
-        public abstract void OnUnload();
-        public abstract void OnUpdate();
-        public abstract void OnRender();
+    public abstract void OnLoad();
+    public abstract void OnUnload();
+    public abstract void OnUpdate();
+    public abstract void OnRender();
               
-        //**********************************************************
-        //** public methods:
-        //**********************************************************
+    //**********************************************************
+    //** public methods:
+    //**********************************************************
 
-        public void Pause() => IsPaused = true;
-        public void Unpause() => IsPaused = false;
+    public void Pause() => IsPaused = true;
+    public void Unpause() => IsPaused = false;
               
-        //**********************************************************
-        //** internals:
-        //**********************************************************
+    //**********************************************************
+    //** internals:
+    //**********************************************************
 
-        internal void Unload()
-        {
-            OnUnload();
-            GC.Collect();
-        }
+    internal void Unload()
+    {
+        OnUnload();
+        GC.Collect();
+    }
         
-        internal void Update()
-        {
-            if (IsPaused) 
-                return;
+    internal void Update()
+    {
+        if (IsPaused) 
+            return;
 
-            OnUpdate();
-        }
+        OnUpdate();
+    }
 
-        internal void Render()
-        {
-            if (IsPaused) 
-                return;
+    internal void Render()
+    {
+        if (IsPaused) 
+            return;
 
-            OnRender();
-        }
+        OnRender();
     }
 }

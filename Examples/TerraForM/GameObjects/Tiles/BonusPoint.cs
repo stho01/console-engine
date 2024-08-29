@@ -1,31 +1,28 @@
 ﻿using System;
 using ConsoleEngine.Infrastructure.Rendering;
 
-namespace TerraForM.GameObjects.Tiles
+namespace TerraForM.GameObjects.Tiles;
+
+public class BonusPoint(TerraformGame game) : MapTile(game)
 {
-    public class BonusPoint : MapTile
+    private static readonly Sprite BonusSpotSprite = Sprite.FromStringArray(new []{
+        "  ▒  ",
+        " ▒▓▒ ",
+        "▒▓B▓▒",
+        " ▒▓▒ ",
+        "  ▒  ",
+    }, ConsoleColor.Blue);
+
+    private static readonly Sprite BonusSpotConsumedSprite = Sprite.FromStringArray(new[]
     {
-        private static readonly Sprite BonusSpotSprite = Sprite.FromStringArray(new []{
-            "  ▒  ",
-            " ▒▓▒ ",
-            "▒▓B▓▒",
-            " ▒▓▒ ",
-            "  ▒  ",
-        }, ConsoleColor.Blue);
+        "     ",
+        " ▒ ▒ ",
+        "▒▓▼▓▒",
+        " ▒ ▒ ",
+        "     ",
+    }, ConsoleColor.Green);
 
-        private static readonly Sprite BonusSpotConsumedSprite = Sprite.FromStringArray(new[]
-        {
-            "     ",
-            " ▒ ▒ ",
-            "▒▓▼▓▒",
-            " ▒ ▒ ",
-            "     ",
-        }, ConsoleColor.Green);
-        
-        public BonusPoint(TerraformGame game) : base(game) { }
+    public override Sprite GetSprite() => HasBeenConsumed ? BonusSpotConsumedSprite : BonusSpotSprite;
 
-        public override Sprite GetSprite() => HasBeenConsumed ? BonusSpotConsumedSprite : BonusSpotSprite;
-
-        public bool HasBeenConsumed;
-    }
+    public bool HasBeenConsumed;
 }
