@@ -1,11 +1,10 @@
 ﻿using System.Runtime.InteropServices;
 
-namespace ConsoleEngine.Native.LowLevel
+namespace ConsoleEngine.Native.LowLevel;
+
+[StructLayout(LayoutKind.Sequential)]
+internal struct ConsoleCursorInfo
 {
-    [StructLayout(LayoutKind.Sequential)]
-    internal struct ConsoleCursorInfo
-    {
-        public uint Size;
-        public bool Visible;
-    }
+    public uint Size;
+    public bool Visible;
 }

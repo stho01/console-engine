@@ -1,21 +1,20 @@
 ﻿using TerraForM.GameObjects;
 
-namespace TerraForM.Commands
+namespace TerraForM.Commands;
+
+public class Wait : Command
 {
-    public class Wait : Command
+    public Wait(float durationInMilliseconds) : base(durationInMilliseconds)
     {
-        public Wait(float durationInMilliseconds) : base(durationInMilliseconds)
-        {
-        }
+    }
 
-        protected override void OnUpdate(Rover rover)
-        {
-            // Just wait
-        }
+    protected override void OnUpdate(Rover rover)
+    {
+        // Just wait
+    }
 
-        public override char GetVisualRepresentation()
-        {
-            return 'W';
-        }
+    public override char GetVisualRepresentation()
+    {
+        return 'W';
     }
 }

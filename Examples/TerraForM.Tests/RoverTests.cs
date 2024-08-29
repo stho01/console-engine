@@ -7,29 +7,27 @@ using TerraForM.GameObjects;
 using TerraForM.GameObjects.Tiles;
 using TerraForM.Scenes;
 
-namespace TerraForM.Tests
-{
-    public class Tests
-    {
-        [SetUp]
-        public void Setup()
-        {
-        }
+namespace TerraForM.Tests;
 
-        [Test]
-        public void Rover_PowerIsDepletedWhenRemainingPowerIsZeroOrLess()
-        {
-            var world = Substitute.For<World>();
-            var scene = Substitute.For<GameScene>("map");
+public class Tests
+{
+    [SetUp]
+    public void Setup()
+    {
+    }
+
+    [Test]
+    public void Rover_PowerIsDepletedWhenRemainingPowerIsZeroOrLess()
+    {
+        var world = Substitute.For<World>();
+        var scene = Substitute.For<GameScene>("map");
             
-            scene.World.Returns(world);
-            world.MaxPower = 10000;
-            world.Sequences = 30;
+        scene.World.Returns(world);
+        world.MaxPower = 10000;
+        world.Sequences = 30;
             
-            var sut = new Rover(scene);
-            sut.RemainingPower -= world.MaxPower;
-            Assert.That(sut.PowerDepleted(), Is.True);
-        }
+        var sut = new Rover(scene);
+        sut.RemainingPower -= world.MaxPower;
+        Assert.That(sut.PowerDepleted(), Is.True);
     }
 }
-

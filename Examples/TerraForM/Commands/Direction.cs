@@ -1,10 +1,9 @@
-﻿namespace TerraForM.Commands
+﻿namespace TerraForM.Commands;
+
+public enum Direction
 {
-    public enum Direction
-    {
-        North,
-        South,
-        East,
-        West
-    }
+    North,
+    South,
+    East,
+    West
 }
