@@ -5,8 +5,8 @@ using ConsoleEngine.Native.LowLevel;
 
 namespace ConsoleEngine.Native;
 
-using static LowLevel.Kernel32;
-using static LowLevel.User32;
+using static Kernel32;
+using static User32;
     
 public sealed class ConsoleHandler : IConsoleHandler
 {

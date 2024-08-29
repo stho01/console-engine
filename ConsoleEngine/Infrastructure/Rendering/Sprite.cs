@@ -59,7 +59,7 @@ public class Sprite
         Data = data;
         Width = data.GetLength(0);
         Height = data.GetLength(1);
-        Origin = new Vector2(Width / 2, Height / 2);
+        Origin = new Vector2((int)(Width / 2f), (int)(Height / 2f));
     }
 
     public Pixel[,] Data { get; }
@@ -75,11 +75,13 @@ public class Sprite
         for (var dataX = 0; dataX < str.Length; dataX++){
                 
             var pixel = str[dataX];
-                
-            var pixelReplacement = new Pixel();
-            pixelReplacement.Char = pixel;
-            pixelReplacement.ForegroundColor = foregroundColor;
-            pixelReplacement.BackgroundColor = backgroundColor;
+            
+            var pixelReplacement = new Pixel {
+                Char = pixel,
+                ForegroundColor = foregroundColor,
+                BackgroundColor = backgroundColor
+            };
+            
             Data[x + dataX, y] = pixelReplacement;
         }  
     }

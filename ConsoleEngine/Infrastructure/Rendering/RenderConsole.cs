@@ -149,19 +149,20 @@ public class RenderConsole
 
             for (i = 0; x < xe; i++)
             {
-                x = x + 1;
+                x += 1;
+                
                 if (px < 0) 
                 {
-                    px = px + 2 * dy1;
+                    px += 2 * dy1;
                 } 
                 else
                 {
                     if ((d.X < 0 && d.Y < 0) || (d.X > 0 && d.Y > 0)) 
-                        y = y + 1; 
+                        y += 1; 
                     else 
-                        y = y - 1;
+                        y -= 1;
                         
-                    px = px + 2 * (dy1 - dx1);
+                    px += 2 * (dy1 - dx1);
                 }
                     
                 Draw(x, y, character, foregroundColor, backgroundColor);
@@ -176,17 +177,17 @@ public class RenderConsole
                 
             for (i = 0; y < ye; i++)
             {
-                y = y + 1;
+                y += 1;
                 if (py <= 0)
-                    py = py + 2 * dx1;
+                    py += 2 * dx1;
                 else
                 {
                     if ((d.X < 0 && d.Y < 0) || (d.X > 0 && d.Y > 0)) 
-                        x = x + 1; 
+                        x += 1; 
                     else 
-                        x = x - 1;
+                        x -= 1;
                         
-                    py = py + 2 * (dx1 - dy1);
+                    py += 2 * (dx1 - dy1);
                 }
                     
                 Draw(x, y, character, foregroundColor, backgroundColor);
