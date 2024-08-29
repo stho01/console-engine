@@ -3,7 +3,7 @@ using ConsoleEngine.Infrastructure.Rendering;
 
 namespace TerraForM.GameObjects.Tiles;
 
-public class Rock : MapTile
+public class Rock(TerraformGame game) : MapTile(game)
 {
     // ░ ▒ ▓ █
     private static readonly Sprite Sprite = Sprite.FromStringArray(new []{
@@ -13,8 +13,6 @@ public class Rock : MapTile
         "▓▓░▓░",
         " ▓▓░░", 
     }, ConsoleColor.Gray);
-
-    public Rock(TerraformGame game) : base(game) {}
 
     public override Sprite GetSprite() => Sprite;
 }

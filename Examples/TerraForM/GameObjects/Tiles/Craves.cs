@@ -3,7 +3,7 @@ using ConsoleEngine.Infrastructure.Rendering;
 
 namespace TerraForM.GameObjects.Tiles;
 
-public class Craves : MapTile
+public class Craves(TerraformGame game) : MapTile(game)
 {
     // ░ ▒ ▓ █
     private static readonly Sprite Sprite = Sprite.FromStringArray(new []{
@@ -13,8 +13,6 @@ public class Craves : MapTile
         "▓░░░▓", 
         " ▒▓▒ " 
     }, ConsoleColor.DarkGray);
-        
-    public Craves(TerraformGame game) : base(game) {}
 
     public override Sprite GetSprite() => Sprite;
 }

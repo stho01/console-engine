@@ -3,16 +3,10 @@
 namespace ConsoleEngine.Native.LowLevel;
 
 [StructLayout(LayoutKind.Sequential)]
-internal struct Coord
+internal struct Coord(short x, short y)
 {
-    public short X;
-    public short Y;
-
-    public Coord(short x, short y)
-    {
-        X = x;
-        Y = y;
-    }
+    public short X = x;
+    public short Y = y;
 
     public static readonly Coord Zero = new(0, 0);
 }

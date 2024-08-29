@@ -3,16 +3,10 @@ using Microsoft.Xna.Framework;
 
 namespace Asteroids.GameObjects;
 
-public class Camera
+public class Camera(GameBase game)
 {
-    private readonly GameBase _game;
     private GameObject _gameObject;
 
-    public Camera(GameBase game) 
-    {
-        _game = game;
-    }
-        
     public Vector2 Position { get; set; }
         
     public void Follow(GameObject gameObject) 
@@ -25,6 +19,6 @@ public class Camera
         
     public void Update()
     {
-        Position = _gameObject.Position - _game.Console.ScreenCenter;
+        Position = _gameObject.Position - game.Console.ScreenCenter;
     }
 }

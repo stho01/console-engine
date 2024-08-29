@@ -18,7 +18,12 @@ public enum Direction
     West = 4
 }
     
-public class SnakeGame : GameBase
+public class SnakeGame() : GameBase(30, 30, new FontInfo
+{
+    FontWidth = 14,
+    FontHeight = 14,
+    FontFace = "Consolas"
+})
 {
     private readonly Deque<(int x, int y)> _snake = new();
     private double _time;
@@ -27,13 +32,6 @@ public class SnakeGame : GameBase
     private Direction _direction = Direction.East;
     private (int x, int y) _food;
     private static readonly Random Random = new((int)DateTime.Now.Ticks);
-        
-    public SnakeGame() 
-        : base(30, 30, new FontInfo {
-            FontWidth = 14,
-            FontHeight = 14,
-            FontFace = "Consolas"
-        }) {}
 
     protected override void OnInitialize()
     {

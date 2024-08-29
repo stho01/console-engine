@@ -4,7 +4,7 @@ using Microsoft.Xna.Framework;
 
 namespace TerraForM.GameObjects.Tiles;
 
-public class PlantSpot : MapTile
+public class PlantSpot(TerraformGame game) : MapTile(game)
 {
     private static readonly Sprite PlantSpotSprite = Sprite.FromStringArray(new []{
         "    ░░    ",
@@ -20,8 +20,6 @@ public class PlantSpot : MapTile
     }, ConsoleColor.Green);
 
     public override Rectangle BoundingBox => new Rectangle(Position.ToPoint(), PlantSpotSprite.Size);
-
-    public PlantSpot(TerraformGame game) : base(game) { }
 
     public override Sprite GetSprite() => PlantSpotSprite;
 

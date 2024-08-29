@@ -67,14 +67,9 @@ public class Deque<T> : IEnumerable<T>
     public IEnumerator<T> GetEnumerator() => new Enumerator(_frontNode);
     IEnumerator IEnumerable.GetEnumerator() => GetEnumerator();
 
-    public class Node
+    public class Node(T value)
     {
-        public Node(T value)
-        {
-            Value = value;
-        }
-
-        public T Value { get; }
+        public T Value { get; } = value;
         public Node Left { get; private set; }
         public Node Right { get; private set; }
 
@@ -116,21 +111,14 @@ public class Deque<T> : IEnumerable<T>
         }
     }
 
-    private struct Enumerator : IEnumerator<T>
+    private struct Enumerator(Node current) : IEnumerator<T>
     {
-        private readonly Node _start;
-        private Node _current;
-            
-        public Enumerator(Node current)
-        {
-            _start = current;
-            _current = null;
-        }
-            
+        private Node _current = null;
+
         public bool MoveNext()
         {
             if (_current == null) {
-                _current = _start;
+                _current = current;
                  
                 return _current != null;
             }

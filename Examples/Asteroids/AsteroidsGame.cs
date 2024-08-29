@@ -9,14 +9,12 @@ using Microsoft.Xna.Framework;
 
 namespace Asteroids;
 
-public class AsteroidsGame : GameBase
+public class AsteroidsGame() : GameBase(200, 200, 4, 4)
 {
     private Player _player;
     private Camera _camera;
     private readonly HashSet<Asteroid> _asteroids = new();
     private static readonly Random _random = new((int)DateTime.Now.Ticks);
-
-    public AsteroidsGame() : base(200, 200, 4, 4) { }
 
     public Camera Camera => _camera;
     public Random Random => _random;

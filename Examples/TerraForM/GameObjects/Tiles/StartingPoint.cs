@@ -3,7 +3,7 @@ using ConsoleEngine.Infrastructure.Rendering;
 
 namespace TerraForM.GameObjects.Tiles;
 
-public class StartingPoint : MapTile
+public class StartingPoint(TerraformGame game) : MapTile(game)
 {
     private static readonly Sprite StartSprite = Sprite.FromStringArray(new []{
         "  ▒  ",
@@ -12,8 +12,6 @@ public class StartingPoint : MapTile
         " ▒▓▒ ",
         "  ▒  ",
     }, ConsoleColor.Gray);
-                
-    public StartingPoint(TerraformGame game) : base(game) { }
 
     public override Sprite GetSprite() => StartSprite;
 }

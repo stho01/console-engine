@@ -10,25 +10,20 @@ using TerraForM.GameObjects;
 
 namespace TerraForM.Scenes;
 
-public class GameScene : Scene<TerraformGame>
+public class GameScene(string worldName) : Scene<TerraformGame>
 {
     //**********************************************************
     //** fields
     //**********************************************************
 
     private const string MapAssetPath = "Assets/Maps";
-    private readonly string _worldName;
+    private readonly string _worldName = worldName ?? throw new ArgumentNullException(nameof(worldName));
     private readonly Queue<Command> _currentCommands = new();
               
     //**********************************************************
     //** ctor
     //**********************************************************
-        
-    public GameScene(string worldName)
-    {
-        _worldName = worldName ?? throw new ArgumentNullException(nameof(worldName));
-    }
-              
+
     //**********************************************************
     //** props:
     //**********************************************************

@@ -7,7 +7,7 @@ using ConsoleEngine.Infrastructure.Inputs;
 
 namespace ConsoleGame;
 
-public class Game : GameBase
+public class Game() : GameBase(Width, Height, fontWidth: 8, fontHeight: 8)
 {
     private static readonly char[] Chars = { '*', '#', 'A', '?', 'H' };
     private static readonly ConsoleColor[] Colors = { ConsoleColor.Cyan, ConsoleColor.Red, ConsoleColor.Green, ConsoleColor.White, ConsoleColor.DarkGray };
@@ -15,8 +15,6 @@ public class Game : GameBase
     private const int Width = 64;
     private const int Height = 64;
     private readonly Pixel[,] _display = new Pixel[Width,Height];
-
-    public Game() : base(Width, Height, fontWidth: 8, fontHeight:8) {}
 
     protected override void OnInitialize()
     {

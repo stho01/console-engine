@@ -2,12 +2,8 @@
 
 namespace TerraForM.Commands;
 
-public class Wait : Command
+public class Wait(float durationInMilliseconds) : Command(durationInMilliseconds)
 {
-    public Wait(float durationInMilliseconds) : base(durationInMilliseconds)
-    {
-    }
-
     protected override void OnUpdate(Rover rover)
     {
         // Just wait

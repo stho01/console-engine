@@ -3,7 +3,7 @@ using ConsoleEngine.Infrastructure.Rendering;
 
 namespace TerraForM.GameObjects.Tiles;
 
-public class BonusPoint : MapTile
+public class BonusPoint(TerraformGame game) : MapTile(game)
 {
     private static readonly Sprite BonusSpotSprite = Sprite.FromStringArray(new []{
         "  ▒  ",
@@ -21,8 +21,6 @@ public class BonusPoint : MapTile
         " ▒ ▒ ",
         "     ",
     }, ConsoleColor.Green);
-        
-    public BonusPoint(TerraformGame game) : base(game) { }
 
     public override Sprite GetSprite() => HasBeenConsumed ? BonusSpotConsumedSprite : BonusSpotSprite;
 

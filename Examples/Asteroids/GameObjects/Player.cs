@@ -5,20 +5,14 @@ using Microsoft.Xna.Framework;
 
 namespace Asteroids.GameObjects;
 
-public class Player : GameObject
+public class Player(AsteroidsGame game) : GameObject
 {
-    private readonly AsteroidsGame _game;
     private readonly Vector2[] _vertices = {
         new( 0f, -1f),
         new( .7f,  .7f),
         new(-.7f,  .7f)
     };
-        
-    public Player(AsteroidsGame game)
-    {
-        _game = game;
-    }
-        
+
     public float Thrust { get; set; } = 150f;
     public float SteeringStrength { get; set; } = 360f; // deg/sec
 
@@ -48,7 +42,7 @@ public class Player : GameObject
 
     public void Draw()
     {
-        var screenPos = _game.Camera.WorldToScreenPos(Position);
+        var screenPos = game.Camera.WorldToScreenPos(Position);
 
         var matrix = Matrix.Identity;
         matrix *= Matrix.CreateRotationZ(MathHelper.ToRadians(Angle));
@@ -65,7 +59,7 @@ public class Player : GameObject
             var p1 = transformed[index % transformed.Count];
             var p2 = transformed[nextIndex % transformed.Count];
                 
-            _game.Console.DrawLine(p1.ToPoint(), p2.ToPoint(), '#');
+            game.Console.DrawLine(p1.ToPoint(), p2.ToPoint(), '#');
         }
     }
 }

@@ -2,22 +2,17 @@
 
 namespace TerraForM.GameObjects;
 
-public abstract class GameObject
+public abstract class GameObject(TerraformGame game)
 {
     //**********************************************************
     //** ctor:
     //**********************************************************
-        
-    public GameObject(TerraformGame game)
-    {
-        Game = game;
-    }
-        
+
     //**********************************************************
     //** props:
     //**********************************************************
 
-    public TerraformGame Game { get; }
+    public TerraformGame Game { get; } = game;
     public Vector2 Position { get; set; }
     public virtual Rectangle BoundingBox => new((int)Position.X, (int)Position.Y, World.TileSize, World.TileSize);
               

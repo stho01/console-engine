@@ -10,13 +10,12 @@ using TerraForM.Scenes;
 
 namespace TerraForM;
 
-public class Hud
+public class Hud(GameScene scene)
 {
     //**********************************************************
     //** constants
     //**********************************************************
 
-    private readonly GameScene _scene;
     private const int ScoreHeight = 0;
     private const int Top = 35;
     private const int WorldNameHeight = 36;
@@ -31,20 +30,14 @@ public class Hud
     //** fields
     //**********************************************************
         
-    private readonly int _height;
-    private List<Command> _commandSequence { get; set; }
+    private readonly int _height = scene.Game.Console.Height - Top;
+    private List<Command> _commandSequence { get; set; } = new();
     private bool _sequenceReadyToShip { get; set; }
-    public TerraformGame Game => _scene.Game;
+    public TerraformGame Game => scene.Game;
 
     //**********************************************************
     //** ctor
     //**********************************************************
-    public Hud(GameScene scene)
-    {
-        _scene = scene;
-        _commandSequence = new List<Command>();
-        _height = scene.Game.Console.Height - Top;
-    }
 
     //**********************************************************
     //** public methods
@@ -65,7 +58,7 @@ public class Hud
     }
     public void Draw()
     {
-        if (_scene.GameOver)
+        if (scene.GameOver)
         {
             DrawGameOver();
             return;
@@ -73,7 +66,7 @@ public class Hud
             
         for (var x = 0; x < Game.Console.Width; x++)
         for (var y = Top; y < Game.Console.Height; y++)
-            _scene.Console.Draw(x, y, ' ', backgroundColor: HudBackgroundColor);
+            scene.Console.Draw(x, y, ' ', backgroundColor: HudBackgroundColor);
 
         DrawWorldName();
         DrawAcceleratorsPlanted();
@@ -83,14 +76,14 @@ public class Hud
         DrawMoveSequence();
         DrawGameScore();
             
-        _scene.Console.DrawLine(0, Top, Game.Console.Width, Top, '╍');
+        scene.Console.DrawLine(0, Top, Game.Console.Width, Top, '╍');
     }
         
     public void DrawText(string text, int startPosY, int startPosX, ConsoleColor fgColor, ConsoleColor bgColor = HudBackgroundColor ,Direction direction = Direction.East)
     {
         foreach (var character in text)
         {
-            _scene.Console.Draw(startPosX, startPosY, character, fgColor, bgColor);
+            scene.Console.Draw(startPosX, startPosY, character, fgColor, bgColor);
             if (direction == Direction.East) startPosX++;
             if (direction == Direction.West) startPosX--;
             if (direction == Direction.South) startPosY++;
@@ -116,15 +109,15 @@ public class Hud
     //**********************************************************
         
     private void DrawRemainingSequences() 
-        => DrawText($"{HudTexts.RemainingCommandSequences}: {_scene.Rover.RemainingSequences}", RemainingSequencesHeight, 1,ConsoleColor.Blue);
+        => DrawText($"{HudTexts.RemainingCommandSequences}: {scene.Rover.RemainingSequences}", RemainingSequencesHeight, 1,ConsoleColor.Blue);
 
     private void DrawAcceleratorsPlanted()
-        => DrawText($"{HudTexts.AtmosphereGeneratorsPlanted}: {_scene.Rover.AthmosphereGeneratorsPlanted}", AcceleratorsPlantedHeight, 1,ConsoleColor.Blue);
+        => DrawText($"{HudTexts.AtmosphereGeneratorsPlanted}: {scene.Rover.AthmosphereGeneratorsPlanted}", AcceleratorsPlantedHeight, 1,ConsoleColor.Blue);
        
     private void DrawGameOver()
-        => _scene.Console.Draw(
-            x: (int)_scene.Console.ScreenCenter.X - (Sprites.GameOver.Width / 2),
-            y: (int)_scene.Console.ScreenCenter.Y - Sprites.GameOver.Height / 2,
+        => scene.Console.Draw(
+            x: (int)scene.Console.ScreenCenter.X - (Sprites.GameOver.Width / 2),
+            y: (int)scene.Console.ScreenCenter.Y - Sprites.GameOver.Height / 2,
             sprite: Sprites.GameOver
         );
 
@@ -141,48 +134,48 @@ public class Hud
 
     private void DrawPowerUsage()
     {
-        if (_scene.Rover.PowerDepleted())
+        if (scene.Rover.PowerDepleted())
         {
             DrawText($"{HudTexts.NoPower}", PowerUsageHeight, 1, fgColor: ConsoleColor.Red, bgColor: ConsoleColor.White);
         }
         else
         {
-            DrawText($"{HudTexts.Power}: {_scene.Rover.RemainingPower.ToString("N")} {HudTexts.PowerUnit}", PowerUsageHeight, 1, fgColor: GetPowerColor());
+            DrawText($"{HudTexts.Power}: {scene.Rover.RemainingPower.ToString("N")} {HudTexts.PowerUnit}", PowerUsageHeight, 1, fgColor: GetPowerColor());
         }
     }
 
     private void DrawDamageTaken()
-        => DrawText($"{HudTexts.DamageTaken}: {_scene.Rover.DamageTaken}", DamageTakenHeight, 1,GetDamageTakenColor());
+        => DrawText($"{HudTexts.DamageTaken}: {scene.Rover.DamageTaken}", DamageTakenHeight, 1,GetDamageTakenColor());
         
     private void DrawWorldName()
-        => DrawText($"{HudTexts.MapPrefix}:  {_scene.World.Name}", WorldNameHeight, 0, ConsoleColor.DarkGreen );
+        => DrawText($"{HudTexts.MapPrefix}:  {scene.World.Name}", WorldNameHeight, 0, ConsoleColor.DarkGreen );
 
     private void DrawGameScore()
     {
         var scoreText = $"{HudTexts.Score}:";
         var scoreValueText = Game.Score.ToString();
-        DrawText("____________________", ScoreHeight, _scene.Console.Width - (scoreText.Length + scoreValueText.Length), ConsoleColor.DarkGray);
-        DrawText(scoreText, ScoreHeight+1, _scene.Console.Width - (scoreText.Length + scoreValueText.Length), ConsoleColor.DarkGray);
-        DrawText(scoreValueText, ScoreHeight+1, _scene.Console.Width - scoreValueText.Length, ConsoleColor.DarkGreen);
-        DrawText("____________________", ScoreHeight+2, _scene.Console.Width - (scoreText.Length + scoreValueText.Length), ConsoleColor.DarkGray);
-        DrawText("                    ", ScoreHeight+3, _scene.Console.Width - (scoreText.Length + scoreValueText.Length), ConsoleColor.DarkGray);
+        DrawText("____________________", ScoreHeight, scene.Console.Width - (scoreText.Length + scoreValueText.Length), ConsoleColor.DarkGray);
+        DrawText(scoreText, ScoreHeight+1, scene.Console.Width - (scoreText.Length + scoreValueText.Length), ConsoleColor.DarkGray);
+        DrawText(scoreValueText, ScoreHeight+1, scene.Console.Width - scoreValueText.Length, ConsoleColor.DarkGreen);
+        DrawText("____________________", ScoreHeight+2, scene.Console.Width - (scoreText.Length + scoreValueText.Length), ConsoleColor.DarkGray);
+        DrawText("                    ", ScoreHeight+3, scene.Console.Width - (scoreText.Length + scoreValueText.Length), ConsoleColor.DarkGray);
             
     }
 
     private ConsoleColor GetPowerColor()
     {
-        if (_scene.Rover.RemainingPower >= ((_scene.Rover.MaxPower / 4) * 3)) return ConsoleColor.Green;
-        if (_scene.Rover.RemainingPower >= ((_scene.Rover.MaxPower / 4) * 2)) return ConsoleColor.Yellow;
-        if (_scene.Rover.RemainingPower >= ((_scene.Rover.MaxPower / 4) * 1)) return ConsoleColor.Red;
+        if (scene.Rover.RemainingPower >= ((scene.Rover.MaxPower / 4) * 3)) return ConsoleColor.Green;
+        if (scene.Rover.RemainingPower >= ((scene.Rover.MaxPower / 4) * 2)) return ConsoleColor.Yellow;
+        if (scene.Rover.RemainingPower >= ((scene.Rover.MaxPower / 4) * 1)) return ConsoleColor.Red;
             
         return ConsoleColor.Red;
     }
         
     private ConsoleColor GetDamageTakenColor()
     {
-        if (_scene.Rover.DamageTaken > 75) return ConsoleColor.Red;
-        if (_scene.Rover.DamageTaken > 50) return ConsoleColor.Yellow;
-        if (_scene.Rover.DamageTaken > 25) return ConsoleColor.DarkGreen;
+        if (scene.Rover.DamageTaken > 75) return ConsoleColor.Red;
+        if (scene.Rover.DamageTaken > 50) return ConsoleColor.Yellow;
+        if (scene.Rover.DamageTaken > 25) return ConsoleColor.DarkGreen;
         return ConsoleColor.Green;
     }
 }

@@ -2,12 +2,10 @@
 
 namespace TerraForM.GameObjects.Tiles;
 
-public abstract class MapTile : GameObject
+public abstract class MapTile(TerraformGame game) : GameObject(game)
 {
     public abstract Sprite GetSprite();
-        
-    protected MapTile(TerraformGame game) : base(game) { }
-        
+
     public void Draw()
     {
         var screenPos = GetScreenPos();

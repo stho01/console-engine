@@ -7,7 +7,7 @@ using TerraForM.Scenes;
 
 namespace TerraForM.GameObjects;
 
-public class PlantEmitter : GameObject
+public class PlantEmitter(GameScene scene) : GameObject(scene.Game)
 {
     //**********************************************************
     //** fields:
@@ -19,7 +19,7 @@ public class PlantEmitter : GameObject
     private float _emitTimer = 0f;
     private readonly List<Vector2> _pixels = new();
     private int _iteration = 0;
-    private readonly GameScene _scene;
+    private readonly GameScene _scene = scene;
     private static readonly Random Random = new();
     private static readonly Pixel Grass = new()
     {
@@ -30,11 +30,6 @@ public class PlantEmitter : GameObject
     //**********************************************************
     //** ctor:
     //**********************************************************
-        
-    public PlantEmitter(GameScene scene) : base(scene.Game)
-    {
-        _scene = scene;
-    }
 
     //**********************************************************
     //** public:

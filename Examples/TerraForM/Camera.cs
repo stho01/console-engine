@@ -4,16 +4,10 @@ using TerraForM.GameObjects;
 
 namespace TerraForM;
 
-public class Camera
+public class Camera(GameBase game)
 {
-    private readonly GameBase _game;
     private GameObject _gameObject;
 
-    public Camera(GameBase game) 
-    {
-        _game = game;
-    }
-        
     public Vector2 Position { get; set; }
         
     public void Follow(GameObject gameObject) 
@@ -29,6 +23,6 @@ public class Camera
         if (_gameObject == null)
             return;
             
-        Position = (_gameObject.Position - new Vector2(_game.Console.ScreenCenter.X, 35/2f));
+        Position = (_gameObject.Position - new Vector2(game.Console.ScreenCenter.X, 35/2f));
     }
 }

@@ -3,14 +3,9 @@ using TerraForM.GameObjects;
 
 namespace TerraForM.Commands;
 
-public class Move : Command
+public class Move(Direction direction, float duration = 100) : Command(duration)
 {
-    public readonly Direction Direction;
-
-    public Move(Direction direction, float duration = 100 ) : base(duration)
-    {
-        Direction = direction;
-    }
+    public readonly Direction Direction = direction;
 
     protected override void OnUpdate(Rover rover)
     {

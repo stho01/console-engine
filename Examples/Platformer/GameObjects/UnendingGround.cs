@@ -7,9 +7,8 @@ namespace Platformer.GameObjects;
 
 // NOTE: Not currently in use 
 // <summary>Displays a ground on the bottom of the screen that scrolls forever in x direction.</summary>
-public class UnendingGround
+public class UnendingGround(PlatformerGame game)
 {
-    private readonly PlatformerGame _game;
     private readonly Sprite _tileSprite = Sprite.FromStringArray(new [] {
         "█▒░░",
         "░░██",
@@ -18,15 +17,10 @@ public class UnendingGround
     }, ConsoleColor.Red);
     private readonly Deque<Vector2> _tiles = new();
 
-    public UnendingGround(PlatformerGame game)
-    {
-        _game = game;
-    }
-        
     public void Init()
     {
-        var numberOfTiles = (_game.Console.Width / _tileSprite.Width) + 1;
-        var y = _game.Console.Width - _tileSprite.Height;
+        var numberOfTiles = (game.Console.Width / _tileSprite.Width) + 1;
+        var y = game.Console.Width - _tileSprite.Height;
             
         for (var i = 0; i < numberOfTiles; i++) {
             _tiles.PushBack(new Vector2(i * _tileSprite.Width, y));
@@ -37,19 +31,19 @@ public class UnendingGround
     {
         foreach (var tile in _tiles)
         {
-            var (x, y) = _game.Camera.WorldToScreenPos(tile);
+            var (x, y) = game.Camera.WorldToScreenPos(tile);
 
             if (x + _tileSprite.Width < 0) {
                 _tiles.PopFront();
                 _tiles.PushBack(new Vector2(_tiles.Back.X + _tileSprite.Width, _tiles.Back.Y));
             }
 
-            if (x > _game.Console.Width) {
+            if (x > game.Console.Width) {
                 _tiles.PopBack();
                 _tiles.PushFront(new Vector2(_tiles.Front.X - _tileSprite.Width, _tiles.Front.Y));
             }
                 
-            _game.Console.Draw((int)x, (int)y, _tileSprite);    
+            game.Console.Draw((int)x, (int)y, _tileSprite);    
         }
     }
 }

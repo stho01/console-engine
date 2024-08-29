@@ -3,16 +3,11 @@ using TerraForM.GameObjects;
 
 namespace TerraForM.Commands;
 
-public abstract class Command
+public abstract class Command(float durationInMilliseconds)
 {
         
     protected double _elapsed = 0.0f;
-    public readonly float DurationInMilliseconds;
-
-    public Command(float durationInMilliseconds)
-    {
-        DurationInMilliseconds = durationInMilliseconds;
-    }
+    public readonly float DurationInMilliseconds = durationInMilliseconds;
 
     protected abstract void OnUpdate(Rover rover);
 

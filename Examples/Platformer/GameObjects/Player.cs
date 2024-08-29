@@ -6,9 +6,8 @@ using Platformer.Utils;
 
 namespace Platformer.GameObjects;
 
-public class Player : GameObject
+public class Player(PlatformerGame game) : GameObject
 {
-    private readonly PlatformerGame _game;
     private static readonly Sprite PlayerSprite = Sprite.FromStringArray(new[]{
         "▓O▓",
         "▓▓▓",
@@ -16,11 +15,6 @@ public class Player : GameObject
     }, ConsoleColor.Red);
 
     private bool _jump;
-
-    public Player(PlatformerGame game) 
-    {
-        _game = game; 
-    }
 
     public bool IsAirborne { get; private set; } = true;
     public float MovementStrength => IsAirborne ? 75f : 150f;
@@ -48,19 +42,19 @@ public class Player : GameObject
             Velocity = Vector2.Zero;
 
 
-        if (_game.IsDebugMode)
+        if (game.IsDebugMode)
         {
-            _game.Console.Draw(0, 0, $"POS: {Position}");
-            _game.Console.Draw(0, 1, $"VEL: {Velocity}");
-            _game.Console.Draw(0, 2, $"AIR: {IsAirborne}");    
+            game.Console.Draw(0, 0, $"POS: {Position}");
+            game.Console.Draw(0, 1, $"VEL: {Velocity}");
+            game.Console.Draw(0, 2, $"AIR: {IsAirborne}");    
         }
     }
      
     public void Draw()
     {
-        var (x, y) = _game.Camera.WorldToScreenPos(Position);
+        var (x, y) = game.Camera.WorldToScreenPos(Position);
 
-        _game.Console.Draw(
+        game.Console.Draw(
             (int)x,
             (int)y,
             PlayerSprite
@@ -90,14 +84,14 @@ public class Player : GameObject
         );
 
         const float off = .05f;
-        var yRbTile = _game.World.GetTile(playerBounds.Right - off, playerBounds.Bottom);
-        var yLbTile = _game.World.GetTile(playerBounds.Left + off, playerBounds.Bottom);
-        var yLtTile = _game.World.GetTile(playerBounds.Left + off, playerBounds.Top);
-        var yRtTile = _game.World.GetTile(playerBounds.Right - off, playerBounds.Top);
-        var xRbTile = _game.World.GetTile(playerBounds.Right, playerBounds.Bottom - off);
-        var xLtTile = _game.World.GetTile(playerBounds.Left, playerBounds.Top + off);
-        var xLbTile = _game.World.GetTile(playerBounds.Left, playerBounds.Bottom - off);
-        var xRtTile = _game.World.GetTile(playerBounds.Right, playerBounds.Top + off);
+        var yRbTile = game.World.GetTile(playerBounds.Right - off, playerBounds.Bottom);
+        var yLbTile = game.World.GetTile(playerBounds.Left + off, playerBounds.Bottom);
+        var yLtTile = game.World.GetTile(playerBounds.Left + off, playerBounds.Top);
+        var yRtTile = game.World.GetTile(playerBounds.Right - off, playerBounds.Top);
+        var xRbTile = game.World.GetTile(playerBounds.Right, playerBounds.Bottom - off);
+        var xLtTile = game.World.GetTile(playerBounds.Left, playerBounds.Top + off);
+        var xLbTile = game.World.GetTile(playerBounds.Left, playerBounds.Bottom - off);
+        var xRtTile = game.World.GetTile(playerBounds.Right, playerBounds.Top + off);
 
         bool IsWall(char c) => c is not ('.' or ' ');
             
@@ -124,11 +118,11 @@ public class Player : GameObject
             Velocity = new Vector2(0f, Velocity.Y);
         }
 
-        if (_game.IsDebugMode)
+        if (game.IsDebugMode)
         {
-            _game.Console.Draw(0, 3, playerBounds.ToString());
-            _game.Console.Draw(0, 4, $"X - RB: {xRbTile}  LB: {xLbTile}  RT: {xRtTile}  LT: {xLtTile}");
-            _game.Console.Draw(0, 5, $"Y - RB: {yRbTile}  LB: {yLbTile}  RT: {yRtTile}  LT: {yLtTile}");
+            game.Console.Draw(0, 3, playerBounds.ToString());
+            game.Console.Draw(0, 4, $"X - RB: {xRbTile}  LB: {xLbTile}  RT: {xRtTile}  LT: {xLtTile}");
+            game.Console.Draw(0, 5, $"Y - RB: {yRbTile}  LB: {yLbTile}  RT: {yRtTile}  LT: {yLtTile}");
         }
             
         return new Vector2(newX, newY);

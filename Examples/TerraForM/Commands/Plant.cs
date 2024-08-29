@@ -2,13 +2,8 @@
 
 namespace TerraForM.Commands;
 
-public class Plant : Command
+public class Plant() : Command(1.0f)
 {
-    public Plant() : base(1.0f)
-    {
-            
-    }
-
     protected override void OnUpdate(Rover rover)
     {
         rover.Plant();
