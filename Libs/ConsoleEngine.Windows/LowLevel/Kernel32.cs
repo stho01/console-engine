@@ -11,6 +11,7 @@ namespace ConsoleEngine.Native.LowLevel;
 /// </summary>
 internal static class Kernel32
 {
+#if WINDOWS_PLATFORM
     [DllImport("kernel32.dll", SetLastError = true, CharSet = CharSet.Unicode)]
     internal static extern IntPtr GetStdHandle(StdHandle nStdHandle);
         
@@ -67,4 +68,24 @@ internal static class Kernel32
     [SuppressUnmanagedCodeSecurity]
     [return: MarshalAs(UnmanagedType.Bool)]
     internal static extern bool CloseHandle(IntPtr hObject);
+#else 
+    // Unix/macOS/Linux
+    // Can´t deal with Kernel32 calls, so void them
+    internal static IntPtr GetStdHandle(StdHandle nStdHandle) => IntPtr.Zero;
+    internal static bool SetConsoleActiveScreenBuffer(IntPtr hConsoleOutput) => false;
+    internal static IntPtr CreateConsoleScreenBuffer(GenericRights dwDesiredAccess, uint dwShareMode, IntPtr securityAttributes, uint flags, IntPtr screenBufferData) => IntPtr.Zero;
+    internal static bool WriteConsoleOutputCharacter(IntPtr screenBuffer, string characters, uint length, Coord writeCoord, out UInt32 numCharsWritten) { numCharsWritten = 0; return false; }
+    internal static bool WriteConsoleOutput(IntPtr hConsoleOutput, CharInfo[] lpBuffer, Coord dwBufferSize, Coord dwBufferCoord, ref SmallRect lpWriteRegion) => false;
+    internal static IntPtr GetConsoleWindow() => IntPtr.Zero;
+    internal static int SetCurrentConsoleFontEx(IntPtr consoleOutput, bool maximumWindow, ref ConsoleFontInfoEx consoleCurrentFontEx) => 0;
+    internal static bool SetConsoleWindowInfo(IntPtr hConsoleOutput, bool bAbsolute, ref SmallRect lpConsoleWindow) => false;
+    internal static bool SetConsoleScreenBufferSize(IntPtr hConsoleOutput, Coord dwSize) => false;
+    internal static int GetAsyncKeyState(int vKeys) => 0;
+    internal static bool SetConsoleOutputCP(uint wCodePageID) => false;
+    internal static bool SetConsoleCP(uint wCodePageID) => false;
+    internal static bool SetConsoleTitle(char[] lpConsoleTitle) { try { Console.Title = new string(lpConsoleTitle); return true; } catch { return false; } }
+    internal static bool GetConsoleCursorInfo(IntPtr hConsoleOutput, out ConsoleCursorInfo lpConsoleCursorInfo) { lpConsoleCursorInfo = default; return false; }
+    internal static bool SetConsoleCursorInfo(IntPtr hConsoleOutput, ref ConsoleCursorInfo lpConsoleCursorInfo) => false;
+    internal static bool CloseHandle(IntPtr hObject) => false;
+#endif
 }
