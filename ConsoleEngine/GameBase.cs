@@ -6,6 +6,7 @@ using ConsoleEngine.Infrastructure.Logging;
 using ConsoleEngine.Infrastructure.Rendering;
 using ConsoleEngine.Infrastructure.Scenery;
 using ConsoleEngine.Native;
+using ConsoleEngine.CrossPlatform;
 
 namespace ConsoleEngine;
 
@@ -32,7 +33,11 @@ public abstract class GameBase
         
     protected GameBase(int width, int height, FontInfo fontInfo) 
     {
+#if WINDOWS_PLATFORM
         _console = new RenderConsole(new ConsoleHandler(width, height, fontInfo));
+#else
+        _console = new RenderConsole(new CrossPlatformConsoleHandler(width, height, fontInfo));
+#endif
         Name = "Game";
         Scenes = new SceneManager(this);
     }

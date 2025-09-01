@@ -3,6 +3,7 @@ using System.Collections.Generic;
 using System.Linq;
 using ConsoleEngine.Abstractions.Inputs;
 using ConsoleEngine.Native;
+using ConsoleEngine.CrossPlatform;
 
 namespace ConsoleEngine.Infrastructure.Inputs;
 
@@ -13,8 +14,13 @@ public class Input
     //**********************************************************
 
     public static readonly Input Instance = new();
+
+#if WINDOWS_PLATFORM
     private static readonly IInputHandler Handler = new InputHandler();
-        
+#else
+    private static readonly IInputHandler Handler = new CrossPlatformInputHandler();
+#endif
+
     //**********************************************************
     //** ctor:
     //**********************************************************

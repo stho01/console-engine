@@ -15,8 +15,12 @@
     </ItemGroup>
     <ItemGroup>
       <ProjectReference Include="..\ConsoleEngine.Abstractions\ConsoleEngine.Abstractions.csproj" />
+      <ProjectReference Include="..\Libs\ConsoleEngine.CrossPlatform\ConsoleEngine.CrossPlatform.csproj" />
       <ProjectReference Include="..\Libs\ConsoleEngine.Logger\ConsoleEngine.Logger.csproj" />
       <ProjectReference Include="..\Libs\Microsoft.Xna.Framework\Microsoft.Xna.Framework.csproj" />
       <ProjectReference Include="..\Libs\ConsoleEngine.Windows\ConsoleEngine.Windows.csproj" />
     </ItemGroup>
+    <PropertyGroup Condition=" '$(OS)' == 'Windows_NT' ">
+        <DefineConstants>$(DefineConstants);WINDOWS_PLATFORM</DefineConstants>
+    </PropertyGroup>
 </Project>
