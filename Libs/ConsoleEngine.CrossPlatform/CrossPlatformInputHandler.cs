@@ -3,10 +3,8 @@ using System.Collections.Generic;
 using System.Linq;
 using ConsoleEngine.Abstractions.Inputs;
 
-namespace ConsoleEngine.Native;
+namespace ConsoleEngine.CrossPlatform;
 
-using static LowLevel.Kernel32;
-    
 public class CrossPlatformInputHandler : IInputHandler
 {
     private readonly int[] _previousState = new int[256];

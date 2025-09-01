@@ -6,6 +6,7 @@ using ConsoleEngine.Infrastructure.Logging;
 using ConsoleEngine.Infrastructure.Rendering;
 using ConsoleEngine.Infrastructure.Scenery;
 using ConsoleEngine.Native;
+using ConsoleEngine.CrossPlatform;
 
 namespace ConsoleEngine;
 

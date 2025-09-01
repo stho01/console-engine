@@ -3,6 +3,7 @@ using System.Collections.Generic;
 using System.Linq;
 using ConsoleEngine.Abstractions.Inputs;
 using ConsoleEngine.Native;
+using ConsoleEngine.CrossPlatform;
 
 namespace ConsoleEngine.Infrastructure.Inputs;
 

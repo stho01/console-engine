@@ -1,13 +1,8 @@
 ﻿using System;
-using System.Runtime.InteropServices;
 using ConsoleEngine.Abstractions.Rendering;
-using ConsoleEngine.Native.LowLevel;
 
-namespace ConsoleEngine.Native;
+namespace ConsoleEngine.CrossPlatform;
 
-using static Kernel32;
-using static User32;
-    
 public sealed class CrossPlatformConsoleHandler : IConsoleHandler
 {
     private readonly FontInfo _fontInfo;
