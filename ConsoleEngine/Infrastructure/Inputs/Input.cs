@@ -14,12 +14,9 @@ public class Input
     //**********************************************************
 
     public static readonly Input Instance = new();
-
-#if WINDOWS_PLATFORM
-    private static readonly IInputHandler Handler = new InputHandler();
-#else
-    private static readonly IInputHandler Handler = new CrossPlatformInputHandler();
-#endif
+    private static readonly IInputHandler Handler = OperatingSystem.IsWindows()
+        ? new InputHandler()
+        : new CrossPlatformInputHandler();
 
     //**********************************************************
     //** ctor:

@@ -8,11 +8,8 @@
         <Platforms>AnyCPU</Platforms>
         <TreatWarningsAsErrors>True</TreatWarningsAsErrors>
     </PropertyGroup>
-    <PropertyGroup Condition=" '$(OS)' == 'Windows_NT' ">
-      <DefineConstants>$(DefineConstants);WINDOWS_PLATFORM</DefineConstants>
-    </PropertyGroup>
+
     <ItemGroup>
       <ProjectReference Include="..\..\ConsoleEngine.Abstractions\ConsoleEngine.Abstractions.csproj" />
     </ItemGroup>
 </Project>
-

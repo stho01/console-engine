@@ -1,5 +1,7 @@
-﻿using System.Collections.Concurrent;
+﻿using System;
+using System.Collections.Concurrent;
 using System.Diagnostics;
+using System.IO;
 using System.Net;
 using System.Net.Sockets;
 using System.Text;
@@ -77,16 +79,42 @@ public static class Log
         Socket.Listen(10);
         LoggerThread.Start();
             
+        StartLoggerProcess();
+    }
+
+    private static void StartLoggerProcess()
+    {
+        var logger = Path.Combine(AppContext.BaseDirectory, OperatingSystem.IsWindows() ? "ConsoleEngine.Logger.exe" : "ConsoleEngine.Logger");
+        
         _loggerProcess = new Process();
-        _loggerProcess.StartInfo.FileName = "ConsoleEngine.Logger.exe";
-        _loggerProcess.StartInfo.UseShellExecute = true;
-        _loggerProcess.Start();
+        if (OperatingSystem.IsMacOS())
+        {
+            // The game owns the current terminal, open the logger in a new Terminal window.
+            _loggerProcess.StartInfo.FileName = "open";
+            _loggerProcess.StartInfo.ArgumentList.Add("-a");
+            _loggerProcess.StartInfo.ArgumentList.Add("Terminal");
+            _loggerProcess.StartInfo.ArgumentList.Add(logger);
+        }
+        else
+        {
+            _loggerProcess.StartInfo.FileName = logger;
+            _loggerProcess.StartInfo.UseShellExecute = true;
+        }
+
+        try
+        {
+            _loggerProcess.Start();
+        }
+        catch (Exception)
+        {
+            // No way to open a new console window here (e.g. linux without a desktop). Run ConsoleEngine.Logger manually to see the log.
+        }
     }
 
     internal static void Stop()
     {
         _running = false;
-        _loggerConnection.Dispose();
+        _loggerConnection?.Dispose();
         Socket.Dispose();
         Messages.Clear();
     }

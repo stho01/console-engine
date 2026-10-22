@@ -1,4 +1,5 @@
-﻿using System.Threading;
+﻿using System;
+using System.Threading;
 using ConsoleEngine.Abstractions.Rendering;
 using ConsoleEngine.Infrastructure;
 using ConsoleEngine.Infrastructure.Inputs;
@@ -33,11 +34,9 @@ public abstract class GameBase
         
     protected GameBase(int width, int height, FontInfo fontInfo) 
     {
-#if WINDOWS_PLATFORM
-        _console = new RenderConsole(new ConsoleHandler(width, height, fontInfo));
-#else
-        _console = new RenderConsole(new CrossPlatformConsoleHandler(width, height, fontInfo));
-#endif
+        _console = new RenderConsole(OperatingSystem.IsWindows()
+            ? new ConsoleHandler(width, height, fontInfo)
+            : new CrossPlatformConsoleHandler(width, height, fontInfo));
         Name = "Game";
         Scenes = new SceneManager(this);
     }
