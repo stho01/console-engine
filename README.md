@@ -18,3 +18,5 @@ macOS/Linux notes:
 - On macOS key up/down state is read from the OS (like `GetAsyncKeyState` on Windows), which gives precise held/released keys.
   Like on Windows it sees keys pressed while another window is focused. Elsewhere, or with `CONSOLE_ENGINE_INPUT=terminal`, keys
   are read from the terminal; terminals only report presses and auto repeat, so a key counts as held until its repeat stops.
+- The terminal input waits 750ms for the first auto repeat before it reports a key as released. If your "delay until repeat"
+  is longer, set `CONSOLE_ENGINE_REPEAT_DELAY` to it in milliseconds.

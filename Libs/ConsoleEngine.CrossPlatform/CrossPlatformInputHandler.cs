@@ -16,9 +16,14 @@ namespace ConsoleEngine.CrossPlatform;
 public class CrossPlatformInputHandler : IInputHandler
 {
     // A terminal key is held until no new press/repeat arrives within this window. The first window has to
-    // outlast the OS' "delay until repeat", the following ones only the repeat interval.
-    private static readonly long InitialHoldTicks = Stopwatch.Frequency * 550 / 1000;
+    // outlast the OS' "delay until repeat" (macOS ~375ms, X11 660ms by default), the following ones only the
+    // repeat interval. Override the first with CONSOLE_ENGINE_REPEAT_DELAY (milliseconds) for longer delays.
+    private const int DefaultInitialHoldMs = 750;
+    private static readonly long InitialHoldTicks = Stopwatch.Frequency * ReadInitialHoldMs() / 1000;
     private static readonly long RepeatHoldTicks = Stopwatch.Frequency * 150 / 1000;
+
+    // No OS repeats sooner than this after a key press, so an event before it is the key being pressed again.
+    private static readonly long MinRepeatDelayTicks = Stopwatch.Frequency * 200 / 1000;
 
     // How far apart a terminal key press and the native key down may be to count as the same key press.
     private static readonly long CalibrationTicks = Stopwatch.Frequency * 300 / 1000;
@@ -28,13 +33,15 @@ public class CrossPlatformInputHandler : IInputHandler
     private readonly bool[] _down = new bool[256];
     private readonly bool[] _nativeDown = new bool[256];
     private readonly long[] _terminalHeldUntil = new long[256];
-    private readonly long[] _terminalLastEvent = new long[256];
+    private readonly long[] _terminalPressedAt = new long[256];
+    private readonly bool[] _terminalRepeating = new bool[256];
     private readonly bool[] _terminalPressed = new bool[256];
     private readonly long[] _nativeLastDown = new long[256];
     private readonly List<(int Key, long Time)> _pendingCalibration = new();
     private bool _nativeSupported;
     private bool _nativeTrusted;
     private int _calibrationMisses;
+    private long _lastUpdate;
 
     public CrossPlatformInputHandler()
     {
@@ -58,6 +65,7 @@ public class CrossPlatformInputHandler : IInputHandler
 
         // Always drain the terminal, otherwise key presses pile up in stdin (and get echoed when the game exits).
         ReadTerminalKeys(now);
+        _lastUpdate = now;
 
         if (_nativeSupported)
         {
@@ -144,17 +152,35 @@ public class CrossPlatformInputHandler : IInputHandler
                 if (vk <= 0 || vk >= _terminalHeldUntil.Length)
                     continue;
 
-                // Auto repeat events arrive in a rapid stream, anything slower is a new key press.
-                var isRepeat = now - _terminalLastEvent[vk] < RepeatHoldTicks;
-                _terminalLastEvent[vk] = now;
+                // Every event drained this frame shares one timestamp and may have arrived any time since the
+                // last update, so the key counts as held if its window was still open back then.
+                var held = _terminalHeldUntil[vk] > _lastUpdate;
+                var isRepeat = held && (_terminalRepeating[vk] || now - _terminalPressedAt[vk] >= MinRepeatDelayTicks);
+                if (isRepeat)
+                {
+                    _terminalRepeating[vk] = true;
+                }
+                else
+                {
+                    _terminalPressedAt[vk] = now;
+                    _terminalRepeating[vk] = false;
+                    _terminalPressed[vk] = true;
+                }
+
                 _terminalHeldUntil[vk] = now + (isRepeat ? RepeatHoldTicks : InitialHoldTicks);
-                _terminalPressed[vk] |= !isRepeat;
             }
         }
         catch (InvalidOperationException)
         {
             // No console attached
         }
+    }
+
+    private static long ReadInitialHoldMs()
+    {
+        var setting = Environment.GetEnvironmentVariable("CONSOLE_ENGINE_REPEAT_DELAY");
+        // Leave some headroom above the repeat delay for slow frames.
+        return int.TryParse(setting, out var delay) && delay > 0 ? delay + 100 : DefaultInitialHoldMs;
     }
 
     private static int ToVirtualKey(ConsoleKeyInfo keyInfo)
