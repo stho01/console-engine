@@ -1,4 +1,5 @@
 ﻿using System;
+using System.Collections.Generic;
 using System.Runtime.InteropServices;
 using ConsoleEngine.Abstractions.Inputs;
 
@@ -12,11 +13,35 @@ namespace ConsoleEngine.CrossPlatform;
 internal static class MacKeyboard
 {
     private const string CoreGraphics = "/System/Library/Frameworks/CoreGraphics.framework/CoreGraphics";
+    private const string CoreFoundation = "/System/Library/Frameworks/CoreFoundation.framework/CoreFoundation";
+    private const string Carbon = "/System/Library/Frameworks/Carbon.framework/Carbon";
     private const int CombinedSessionState = 0; // kCGEventSourceStateCombinedSessionState
+    private const ushort KeyActionDisplay = 3; // kUCKeyActionDisplay
+    private const uint NoDeadKeys = 1; // kUCKeyTranslateNoDeadKeysMask
 
     [DllImport(CoreGraphics)]
     [return: MarshalAs(UnmanagedType.U1)]
     private static extern bool CGEventSourceKeyState(int stateId, ushort key);
+
+    [DllImport(Carbon)]
+    private static extern IntPtr TISCopyCurrentKeyboardLayoutInputSource();
+
+    [DllImport(Carbon)]
+    private static extern IntPtr TISGetInputSourceProperty(IntPtr inputSource, IntPtr propertyKey);
+
+    [DllImport(Carbon)]
+    private static extern byte LMGetKbdType();
+
+    [DllImport(Carbon)]
+    private static extern int UCKeyTranslate(IntPtr keyLayout, ushort virtualKeyCode, ushort keyAction, uint modifierKeyState,
+        uint keyboardType, uint keyTranslateOptions, ref uint deadKeyState, nuint maxStringLength, out nuint actualStringLength,
+        [Out] char[] unicodeString);
+
+    [DllImport(CoreFoundation)]
+    private static extern IntPtr CFDataGetBytePtr(IntPtr data);
+
+    [DllImport(CoreFoundation)]
+    private static extern void CFRelease(IntPtr cf);
 
     /// <summary>Windows virtual key code (index) to macOS virtual key codes (kVK_*).</summary>
     private static readonly ushort[][] KeyMap = BuildKeyMap();
@@ -134,6 +159,97 @@ internal static class MacKeyboard
         Map(0xDD, 0x1E); // ]
         Map(0xDE, 0x27); // '
 
+        ApplyKeyboardLayout(map);
         return map;
+    }
+
+    /// <summary>
+    /// kVK_ANSI_* codes are physical key positions, Windows virtual key codes follow the active layout. Remaps the
+    /// letter and punctuation keys by the character they type in the current layout (AZERTY, Dvorak, ...), like
+    /// Windows does. The digit row keeps its positions, Windows reports VK_0-VK_9 there on every layout.
+    /// Keys typing a character without a Windows equivalent (ø, ü, ...) keep their US position, unless another key
+    /// types that character in this layout.
+    /// </summary>
+    private static void ApplyKeyboardLayout(ushort[][] map)
+    {
+        var layoutKeys = new List<(int UsVk, ushort MacKey)>();
+        for (var vk = 0; vk < map.Length; vk++)
+            if (vk is >= 'A' and <= 'Z' or >= 0xBA and <= 0xDE)
+                foreach (var macKey in map[vk])
+                    layoutKeys.Add((vk, macKey));
+
+        var translated = new Dictionary<ushort, int>();
+        try
+        {
+            var source = TISCopyCurrentKeyboardLayoutInputSource();
+            if (source == IntPtr.Zero)
+                return;
+
+            try
+            {
+                var propertyKey = Marshal.ReadIntPtr(NativeLibrary.GetExport(NativeLibrary.Load(Carbon), "kTISPropertyUnicodeKeyLayoutData"));
+                var layoutData = TISGetInputSourceProperty(source, propertyKey);
+                if (layoutData == IntPtr.Zero)
+                    return;
+
+                var layout = CFDataGetBytePtr(layoutData);
+                var keyboardType = LMGetKbdType();
+                var chars = new char[4];
+                foreach (var (_, macKey) in layoutKeys)
+                {
+                    uint deadKeyState = 0;
+                    if (UCKeyTranslate(layout, macKey, KeyActionDisplay, 0, keyboardType, NoDeadKeys, ref deadKeyState,
+                            (nuint)chars.Length, out var length, chars) != 0 || length != 1)
+                        continue;
+
+                    var vk = CharToVirtualKey(chars[0]);
+                    if (vk != 0)
+                        translated[macKey] = vk;
+                }
+            }
+            finally
+            {
+                CFRelease(source);
+            }
+        }
+        catch (Exception e) when (e is DllNotFoundException or EntryPointNotFoundException)
+        {
+            return; // keep the US layout
+        }
+
+        if (translated.Count == 0)
+            return;
+
+        foreach (var (usVk, _) in layoutKeys)
+            map[usVk] = Array.Empty<ushort>();
+
+        foreach (var (usVk, macKey) in layoutKeys)
+        {
+            if (translated.TryGetValue(macKey, out var vk))
+                map[vk] = [..map[vk], macKey];
+            else if (!translated.ContainsValue(usVk))
+                map[usVk] = [..map[usVk], macKey];
+        }
+    }
+
+    private static int CharToVirtualKey(char c)
+    {
+        c = char.ToUpperInvariant(c);
+        return c switch
+        {
+            >= 'A' and <= 'Z' => c,
+            ';' => 0xBA,
+            '=' or '+' => 0xBB,
+            ',' => 0xBC,
+            '-' => 0xBD,
+            '.' => 0xBE,
+            '/' => 0xBF,
+            '`' => 0xC0,
+            '[' => 0xDB,
+            '\\' => 0xDC,
+            ']' => 0xDD,
+            '\'' => 0xDE,
+            _ => 0
+        };
     }
 }
