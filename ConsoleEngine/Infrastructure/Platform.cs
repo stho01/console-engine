@@ -13,7 +13,7 @@ internal static class Platform
 {
     public static IConsoleHandler CreateConsoleHandler(int width, int height, FontInfo fontInfo) => OperatingSystem.IsWindows()
         ? new ConsoleHandler(width, height, fontInfo)
-        : new CrossPlatformConsoleHandler(width, height, fontInfo);
+        : new CrossPlatformConsoleHandler(width, height);
 
     public static IInputHandler CreateInputHandler() => OperatingSystem.IsWindows()
         ? new InputHandler()

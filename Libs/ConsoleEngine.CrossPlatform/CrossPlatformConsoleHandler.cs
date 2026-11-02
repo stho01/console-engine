@@ -13,7 +13,6 @@ public sealed class CrossPlatformConsoleHandler : IConsoleHandler
 {
     private const string Esc = "\u001b";
 
-    private readonly FontInfo _fontInfo;
     private readonly Pixel[] _previous;
     private readonly StringBuilder _frame = new();
     private readonly bool _trueColor;
@@ -28,9 +27,8 @@ public sealed class CrossPlatformConsoleHandler : IConsoleHandler
     private int _originalWidth;
     private int _originalHeight;
 
-    public CrossPlatformConsoleHandler(int width, int height, FontInfo fontInfo)
+    public CrossPlatformConsoleHandler(int width, int height)
     {
-        _fontInfo = fontInfo;
         Width = width;
         Height = height;
         _previous = new Pixel[width * height];
@@ -56,8 +54,6 @@ public sealed class CrossPlatformConsoleHandler : IConsoleHandler
             $"{Esc}[?7l" +    // disable auto wrap so drawing the bottom right cell never scrolls
             $"{Esc}[8;{Height};{Width}t" + // ask the terminal to resize itself (ignored by terminals that don't support it)
             $"{Esc}[0m{Esc}[2J");
-
-        SetFont(_fontInfo);
     }
 
     public void SetTitle(string title)

@@ -40,10 +40,8 @@ internal static class MacKeyboard
     public static bool IsMapped(int vk) => vk >= 0 && vk < KeyMap.Length && KeyMap[vk].Length > 0;
 
     /// <summary>Writes the current down state of every mapped key into <paramref name="down"/>, indexed by Windows virtual key code.</summary>
-    /// <returns>true if any key is down.</returns>
-    public static bool Poll(bool[] down)
+    public static void Poll(bool[] down)
     {
-        var any = false;
         for (var vk = 0; vk < KeyMap.Length && vk < down.Length; vk++)
         {
             var isDown = false;
@@ -57,10 +55,7 @@ internal static class MacKeyboard
             }
 
             down[vk] = isDown;
-            any |= isDown;
         }
-
-        return any;
     }
 
     private static ushort[][] BuildKeyMap()
