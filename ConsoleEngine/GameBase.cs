@@ -64,7 +64,7 @@ public abstract class GameBase
     public void Initialize()
     {
         if (EnableLogger) {
-            Log.Start(this);
+            Log.Start();
         }
 
         OnInitialize();

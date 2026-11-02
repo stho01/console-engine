@@ -22,3 +22,5 @@ macOS/Linux notes:
   (`ø`, `ü`, ...) fall back to their US layout position.
 - The terminal input waits 750ms for the first auto repeat before it reports a key as released. If your "delay until repeat"
   is longer, set `CONSOLE_ENGINE_REPEAT_DELAY` to it in milliseconds.
+- With `EnableLogger` the logger opens in a new Terminal window on macOS. On Linux it starts in `$TERMINAL`
+  (or `x-terminal-emulator`); if neither is available logging is disabled.

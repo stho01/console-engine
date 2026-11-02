@@ -18,7 +18,6 @@ public static class Log
     private static Socket _loggerConnection;
     private static Process _loggerProcess;
     private static bool _running;
-    private static GameBase _game;
     private const char EndOfMessage = '\0';
 
     static Log()
@@ -45,7 +44,8 @@ public static class Log
 
     private static void EnqueueMessage(StringBuilder messageBuilder)
     {
-        if (!(_game?.EnableLogger ?? false))
+        // Nothing reads the queue unless the logger is running.
+        if (!_running)
             return;
             
         messageBuilder.Append(EndOfMessage);
@@ -71,23 +71,34 @@ public static class Log
         }
     }
         
-    internal static void Start(GameBase game)
+    internal static void Start()
     {
-        _game = game;
-        _running = true;
         Socket.Bind(EndPoint);
         Socket.Listen(10);
+
+        if (!StartLoggerProcess())
+        {
+            // Without a logger nobody would ever connect or read the messages.
+            Socket.Dispose();
+            return;
+        }
+
+        _running = true;
         LoggerThread.Start();
-            
-        StartLoggerProcess();
     }
 
-    private static void StartLoggerProcess()
+    private static bool StartLoggerProcess()
     {
         var logger = Path.Combine(AppContext.BaseDirectory, OperatingSystem.IsWindows() ? "ConsoleEngine.Logger.exe" : "ConsoleEngine.Logger");
         
         _loggerProcess = new Process();
-        if (OperatingSystem.IsMacOS())
+        if (OperatingSystem.IsWindows())
+        {
+            // Opens the logger in its own console window.
+            _loggerProcess.StartInfo.FileName = logger;
+            _loggerProcess.StartInfo.UseShellExecute = true;
+        }
+        else if (OperatingSystem.IsMacOS())
         {
             // The game owns the current terminal, open the logger in a new Terminal window.
             _loggerProcess.StartInfo.FileName = "open";
@@ -97,17 +108,26 @@ public static class Log
         }
         else
         {
-            _loggerProcess.StartInfo.FileName = logger;
-            _loggerProcess.StartInfo.UseShellExecute = true;
+            // On Linux a shell executed binary runs in the game's own terminal, so it needs a terminal emulator.
+            var terminal = Environment.GetEnvironmentVariable("TERMINAL");
+            if (string.IsNullOrWhiteSpace(terminal))
+                terminal = "x-terminal-emulator";
+
+            _loggerProcess.StartInfo.FileName = terminal;
+            _loggerProcess.StartInfo.ArgumentList.Add("-e");
+            _loggerProcess.StartInfo.ArgumentList.Add(logger);
+            _loggerProcess.StartInfo.UseShellExecute = false;
         }
 
         try
         {
-            _loggerProcess.Start();
+            return _loggerProcess.Start();
         }
         catch (Exception)
         {
-            // No way to open a new console window here (e.g. linux without a desktop). Run ConsoleEngine.Logger manually to see the log.
+            // Printed before the game takes over the terminal, so it's visible once the game exits.
+            Console.Error.WriteLine("Could not open the logger in a new window, logging is disabled. Set $TERMINAL to a terminal emulator to enable it.");
+            return false;
         }
     }
 
