@@ -2,8 +2,6 @@
 using System.Collections.Generic;
 using System.Linq;
 using ConsoleEngine.Abstractions.Inputs;
-using ConsoleEngine.Native;
-using ConsoleEngine.CrossPlatform;
 
 namespace ConsoleEngine.Infrastructure.Inputs;
 
@@ -14,9 +12,7 @@ public class Input
     //**********************************************************
 
     public static readonly Input Instance = new();
-    private static readonly IInputHandler Handler = OperatingSystem.IsWindows()
-        ? new InputHandler()
-        : new CrossPlatformInputHandler();
+    private static readonly IInputHandler Handler = Platform.CreateInputHandler();
 
     //**********************************************************
     //** ctor:
