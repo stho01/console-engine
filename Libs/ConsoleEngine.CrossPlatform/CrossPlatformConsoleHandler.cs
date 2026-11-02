@@ -46,7 +46,9 @@ public sealed class CrossPlatformConsoleHandler : IConsoleHandler
         _originalHeight = SafeWindowSize(() => Console.WindowHeight, 0);
         _initialized = true;
 
+        // ProcessExit isn't raised when the process dies from an unhandled exception.
         AppDomain.CurrentDomain.ProcessExit += (_, _) => RestoreTerminal();
+        AppDomain.CurrentDomain.UnhandledException += (_, _) => RestoreTerminal();
         Console.CancelKeyPress += (_, _) => RestoreTerminal();
 
         Write(

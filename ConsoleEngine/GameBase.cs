@@ -80,24 +80,32 @@ public abstract class GameBase
         Thread.Sleep(100); // lazy way to wait for the console to load and initialize xD. 
             
         _running = true;
-        while (_running)
+        try
         {
-            GameTime.Update();
-            Input.Instance.Update();
-                
-            if (ClearScreenOnEachFrame)
-                _console.Clear();
-                
-                
-            Scenes.Update();
-            OnUpdate();
-                
-            Scenes.Render();
-            OnRender();
-                
-            _console.Display();
-                
-            Scenes.Cleanup();
+            while (_running)
+            {
+                GameTime.Update();
+                Input.Instance.Update();
+
+                if (ClearScreenOnEachFrame)
+                    _console.Clear();
+
+                Scenes.Update();
+                OnUpdate();
+
+                Scenes.Render();
+                OnRender();
+
+                _console.Display();
+
+                Scenes.Cleanup();
+            }
+        }
+        catch
+        {
+            // Give the terminal back before the exception is printed, otherwise it ends up in the alternate screen.
+            _console.Restore();
+            throw;
         }
     }
         

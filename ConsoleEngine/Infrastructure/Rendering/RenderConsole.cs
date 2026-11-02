@@ -238,4 +238,6 @@ public class RenderConsole
     /// instead of calling <see cref="Draw(int, int, char, ConsoleColor, ConsoleColor)"/> (and its bounds check) per cell.
     /// </summary>
     internal Span<Pixel> Pixels => _pixels;
+
+    internal void Restore() => _consoleHandler.Close();
 }
