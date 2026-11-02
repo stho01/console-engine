@@ -63,6 +63,13 @@ public class RenderConsole
 
     public bool Resizeable { get; init; }
     public bool HideCursor { get; init; }
+
+    /// <summary>
+    /// The game draws pixels rather than text. Terminals (macOS/Linux) then show two square pixels per character
+    /// cell, as colors, instead of the characters. Set it before the game is initialized. No effect on Windows,
+    /// where the font itself is square.
+    /// </summary>
+    public bool PixelMode { get; set; }
         
     //**********************************************************
     //** public methods:
@@ -224,6 +231,7 @@ public class RenderConsole
        
     internal void Initialize()
     {
+        _consoleHandler.SetPixelMode(PixelMode);
         _consoleHandler.InitializeConsole();
         if (!Resizeable)
             _consoleHandler.Resizable(false);

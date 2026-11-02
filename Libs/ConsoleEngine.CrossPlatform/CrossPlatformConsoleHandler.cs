@@ -8,14 +8,22 @@ namespace ConsoleEngine.CrossPlatform;
 /// <summary>
 /// Renders to any ANSI/VT capable terminal (macOS Terminal, iTerm2, kitty, WezTerm, Ghostty, Linux terminals ...).
 /// Each frame is diffed against the previous one and flushed to stdout in a single write.
+///
+/// Terminal cells are about twice as tall as they are wide, so in pixel mode the frame is drawn with half blocks:
+/// every cell shows two pixels stacked on top of each other, as colors. If the terminal is smaller than the game
+/// the middle of the frame is shown.
 /// </summary>
 public sealed class CrossPlatformConsoleHandler : IConsoleHandler
 {
     private const string Esc = "\u001b";
+    private const char UpperHalfBlock = '\u2580';
 
-    private readonly Pixel[] _previous;
+    private Pixel[] _previous;
     private readonly StringBuilder _frame = new();
     private readonly bool _trueColor;
+    private bool _halfBlocks;
+    private int _columns;
+    private int _rows;
     private readonly object _writeLock = new();
     private Stream _stdout;
     private byte[] _bytes = Array.Empty<byte>();
@@ -31,12 +39,21 @@ public sealed class CrossPlatformConsoleHandler : IConsoleHandler
     {
         Width = width;
         Height = height;
-        _previous = new Pixel[width * height];
         _trueColor = DetectTrueColor();
+        SetPixelMode(false);
     }
 
     public int Width { get; }
     public int Height { get; }
+
+    public void SetPixelMode(bool pixelMode)
+    {
+        _halfBlocks = DetectHalfBlocks(pixelMode);
+        _columns = Width;
+        _rows = _halfBlocks ? (Height + 1) / 2 : Height;
+        _previous = new Pixel[_columns * _rows];
+        _fullRedraw = true;
+    }
 
     public void InitializeConsole()
     {
@@ -54,7 +71,7 @@ public sealed class CrossPlatformConsoleHandler : IConsoleHandler
         Write(
             $"{Esc}[?1049h" + // alternate screen buffer, keeps the user's scrollback intact
             $"{Esc}[?7l" +    // disable auto wrap so drawing the bottom right cell never scrolls
-            $"{Esc}[8;{Height};{Width}t" + // ask the terminal to resize itself (ignored by terminals that don't support it)
+            $"{Esc}[8;{_rows};{_columns}t" + // ask the terminal to resize itself (ignored by terminals that don't support it)
             $"{Esc}[0m{Esc}[2J");
     }
 
@@ -86,8 +103,8 @@ public sealed class CrossPlatformConsoleHandler : IConsoleHandler
         if (!_initialized)
             return;
 
-        var visibleWidth = Math.Min(Width, SafeWindowSize(() => Console.WindowWidth, Width));
-        var visibleHeight = Math.Min(Height, SafeWindowSize(() => Console.WindowHeight, Height));
+        var visibleWidth = Math.Min(_columns, SafeWindowSize(() => Console.WindowWidth, _columns));
+        var visibleHeight = Math.Min(_rows, SafeWindowSize(() => Console.WindowHeight, _rows));
         if (visibleWidth != _visibleWidth || visibleHeight != _visibleHeight)
         {
             _visibleWidth = visibleWidth;
@@ -105,18 +122,18 @@ public sealed class CrossPlatformConsoleHandler : IConsoleHandler
         var currentBg = -1;
         var changed = _fullRedraw;
 
+        // Show the middle of the frame when the terminal is too small for all of it.
+        var offsetX = (_columns - visibleWidth) / 2;
+        var offsetY = (_rows - visibleHeight) / 2;
+
         for (var y = 0; y < visibleHeight; y++)
         {
             var cursorX = -1;
             for (var x = 0; x < visibleWidth; x++)
             {
-                var i = y * Width + x;
-                if (i >= pixels.Length)
-                    break;
-
-                var pixel = pixels[i];
-                var c = Sanitize(pixel.Char);
-                ref var previous = ref _previous[i];
+                var pixel = GetCell(pixels, x + offsetX, y + offsetY);
+                var c = pixel.Char;
+                ref var previous = ref _previous[(y + offsetY) * _columns + x + offsetX];
 
                 if (!_fullRedraw
                     && previous.Char == c
@@ -125,9 +142,7 @@ public sealed class CrossPlatformConsoleHandler : IConsoleHandler
                     continue;
 
                 changed = true;
-                previous.Char = c;
-                previous.ForegroundColor = pixel.ForegroundColor;
-                previous.BackgroundColor = pixel.BackgroundColor;
+                previous = pixel;
 
                 if (cursorX != x)
                     _frame.Append(Esc).Append('[').Append(y + 1).Append(';').Append(x + 1).Append('H');
@@ -234,6 +249,34 @@ public sealed class CrossPlatformConsoleHandler : IConsoleHandler
         }
     }
 
+    /// <summary>The character and colors to show in a terminal cell.</summary>
+    private Pixel GetCell(Span<Pixel> pixels, int column, int row)
+    {
+        if (!_halfBlocks)
+        {
+            var pixel = row * Width + column < pixels.Length ? pixels[row * Width + column] : default;
+            pixel.Char = Sanitize(pixel.Char);
+            return pixel;
+        }
+
+        var top = PixelColor(pixels, column, row * 2);
+        var bottom = PixelColor(pixels, column, row * 2 + 1);
+        return top == bottom
+            ? new Pixel { Char = ' ', ForegroundColor = top, BackgroundColor = bottom }
+            : new Pixel { Char = UpperHalfBlock, ForegroundColor = top, BackgroundColor = bottom };
+    }
+
+    /// <summary>A pixel's color in half block mode: its foreground if anything is drawn there, its background otherwise.</summary>
+    private ConsoleColor PixelColor(Span<Pixel> pixels, int x, int y)
+    {
+        var i = y * Width + x;
+        if (y >= Height || i >= pixels.Length)
+            return ConsoleColor.Black;
+
+        var pixel = pixels[i];
+        return Sanitize(pixel.Char) == ' ' ? pixel.BackgroundColor : pixel.ForegroundColor;
+    }
+
     /// <summary>
     /// Windows renders NUL and control characters as blanks, terminals don't (they'd shift the rest of the line).
     /// </summary>
@@ -250,6 +293,15 @@ public sealed class CrossPlatformConsoleHandler : IConsoleHandler
         {
             return fallback;
         }
+    }
+
+    private static bool DetectHalfBlocks(bool pixelMode)
+    {
+        var setting = Environment.GetEnvironmentVariable("CONSOLE_ENGINE_RENDER");
+        if (!string.IsNullOrEmpty(setting))
+            return setting.Equals("halfblock", StringComparison.OrdinalIgnoreCase);
+
+        return pixelMode;
     }
 
     private static bool DetectTrueColor()

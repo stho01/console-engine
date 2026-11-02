@@ -12,7 +12,10 @@ build runs everywhere.
 macOS/Linux notes:
 
 - Font face/size and window resizing can't be controlled from the game. Set them in your terminal; the game asks the terminal
-  to resize to fit, which Terminal.app and iTerm2 honor. If the terminal is smaller than the game, the output is clipped.
+  to resize to fit, which Terminal.app and iTerm2 honor. If the terminal is smaller than the game, the middle of the frame is shown.
+- Terminal cells are about twice as tall as wide. Games that draw pixels rather than text (like Asteroids) should set
+  `Console.PixelMode = true` in `OnInitialize`; each cell then shows two square pixels as half blocks, so a 200x200 game
+  needs 200x100 cells. Force it on or off with `CONSOLE_ENGINE_RENDER=halfblock|text`.
 - Colors use 24-bit RGB when `COLORTERM` is `truecolor`/`24bit`, otherwise the terminal's 16 color palette.
   Override with `CONSOLE_ENGINE_COLORS=truecolor|16`.
 - On macOS key up/down state is read from the OS (like `GetAsyncKeyState` on Windows), which gives precise held/released keys.
