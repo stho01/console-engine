@@ -19,8 +19,10 @@ macOS/Linux notes:
 - Colors use 24-bit RGB when `COLORTERM` is `truecolor`/`24bit`, otherwise the terminal's 16 color palette.
   Override with `CONSOLE_ENGINE_COLORS=truecolor|16`.
 - On macOS key up/down state is read from the OS (like `GetAsyncKeyState` on Windows), which gives precise held/released keys.
-  Like on Windows it sees keys pressed while another window is focused. Elsewhere, or with `CONSOLE_ENGINE_INPUT=terminal`, keys
-  are read from the terminal; terminals only report presses and auto repeat, so a key counts as held until its repeat stops.
+  This needs your terminal app to be allowed under System Settings > Privacy & Security > Input Monitoring. Like on Windows it
+  sees keys pressed while another window is focused. Without the permission, elsewhere, or with `CONSOLE_ENGINE_INPUT=terminal`,
+  keys are read from the terminal; terminals only report presses and auto repeat, never releases. A key then counts as held
+  for a short tap (120ms), and again from its first auto repeat until the repeat stops.
   Keys are mapped through the active keyboard layout like on Windows; punctuation keys without a Windows equivalent
   (`ø`, `ü`, ...) fall back to their US layout position.
 - The terminal input waits 750ms for the first auto repeat before it reports a key as released. If your "delay until repeat"

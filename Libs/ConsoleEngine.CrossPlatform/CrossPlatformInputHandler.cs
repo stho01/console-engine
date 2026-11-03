@@ -10,8 +10,9 @@ namespace ConsoleEngine.CrossPlatform;
 /// Keyboard input for non Windows platforms. Key codes are Windows virtual key codes, same as <see cref="Key"/>.
 ///
 /// On macOS the real keyboard state is read through CoreGraphics. Everywhere else (or if macOS refuses to
-/// report key state) keys are read from the terminal, which only reports presses and auto repeats. A key
-/// read from the terminal is then considered held until the auto repeat stops.
+/// report key state) keys are read from the terminal, which only reports presses and auto repeats, never
+/// releases. A key read from the terminal is then held for a short tap, and again once its auto repeat starts
+/// until the repeat stops. Pressed and Released fire once per key press.
 /// </summary>
 public class CrossPlatformInputHandler : IInputHandler
 {
@@ -22,6 +23,10 @@ public class CrossPlatformInputHandler : IInputHandler
     private static readonly long InitialHoldTicks = Stopwatch.Frequency * ReadInitialHoldMs() / 1000;
     private static readonly long RepeatHoldTicks = Stopwatch.Frequency * 150 / 1000;
 
+    // How long a terminal key press counts as held before its auto repeat starts. Until the first repeat
+    // arrives a tap and a hold look the same, so without this every tap would last the whole initial window.
+    private static readonly long TapTicks = Stopwatch.Frequency * 120 / 1000;
+
     // No OS repeats sooner than this after a key press, so an event before it is the key being pressed again.
     private static readonly long MinRepeatDelayTicks = Stopwatch.Frequency * 200 / 1000;
 
@@ -30,12 +35,12 @@ public class CrossPlatformInputHandler : IInputHandler
     private const int MaxCalibrationMisses = 2;
 
     private readonly KeyState[] _keyStates = new KeyState[256];
-    private readonly bool[] _down = new bool[256];
     private readonly bool[] _nativeDown = new bool[256];
     private readonly long[] _terminalHeldUntil = new long[256];
     private readonly long[] _terminalPressedAt = new long[256];
     private readonly bool[] _terminalRepeating = new bool[256];
     private readonly bool[] _terminalPressed = new bool[256];
+    private readonly bool[] _terminalActive = new bool[256];
     private readonly long[] _nativeLastDown = new long[256];
     private readonly List<(int Key, long Time)> _pendingCalibration = new();
     private bool _nativeSupported;
@@ -79,26 +84,36 @@ public class CrossPlatformInputHandler : IInputHandler
         }
 
         if (_nativeTrusted)
-        {
-            Array.Copy(_nativeDown, _down, _down.Length);
-        }
+            UpdateFromNative();
         else
-        {
-            for (var i = 0; i < _down.Length; i++)
-                _down[i] = _terminalHeldUntil[i] > now;
-        }
+            UpdateFromTerminal(now);
+    }
 
+    private void UpdateFromNative()
+    {
         for (var i = 0; i < _keyStates.Length; i++)
         {
             var wasHeld = _keyStates[i].Held;
-            var isDown = _down[i];
+            var isDown = _nativeDown[i];
 
-            // A key tapped again within its terminal hold window is still a new press.
-            var repressed = !_nativeTrusted && _terminalPressed[i] && wasHeld;
-
-            _keyStates[i].Pressed = (isDown && !wasHeld) || repressed;
+            _keyStates[i].Pressed = isDown && !wasHeld;
             _keyStates[i].Released = !isDown && wasHeld;
             _keyStates[i].Held = isDown;
+        }
+    }
+
+    private void UpdateFromTerminal(long now)
+    {
+        for (var i = 0; i < _keyStates.Length; i++)
+        {
+            // A key press is active until its hold window runs out, but only held during the tap and while repeating.
+            var active = _terminalHeldUntil[i] > now;
+            var held = active && (_terminalRepeating[i] || now - _terminalPressedAt[i] < TapTicks);
+
+            _keyStates[i].Pressed = _terminalPressed[i];
+            _keyStates[i].Released = _terminalActive[i] && !active;
+            _keyStates[i].Held = held;
+            _terminalActive[i] = active;
         }
     }
 
