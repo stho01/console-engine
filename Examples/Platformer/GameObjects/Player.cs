@@ -16,6 +16,8 @@ public class Player(PlatformerGame game) : GameObject
 
     private bool _jump;
 
+    private const float JumpSpeed = 45f; // cells/sec
+
     public bool IsAirborne { get; private set; } = true;
     public float MovementStrength => IsAirborne ? 75f : 150f;
         
@@ -23,7 +25,7 @@ public class Player(PlatformerGame game) : GameObject
     public void MoveRight() => ApplyForce(new Vector2(1, 0) * MovementStrength);
     public void Jump() => _jump = true;
 
-    public void ApplyForce(Vector2 force) => Acceleration += force * (float)GameTime.Delta.TotalSeconds;
+    public void ApplyForce(Vector2 force) => Acceleration += force;
 
     public void Update()
     {
@@ -31,11 +33,14 @@ public class Player(PlatformerGame game) : GameObject
 
         PerformJumpIfApplicable();
             
+        // Velocity is in cells/sec, so movement doesn't depend on the frame rate.
+        var dt = (float) GameTime.Delta.TotalSeconds;
+
         // Drag
-        Velocity += new Vector2(-3f, -.1f) * Velocity * (float) GameTime.Delta.TotalSeconds;
-        Velocity += Acceleration * (float) GameTime.Delta.TotalSeconds;
+        Velocity += new Vector2(-3f, -.1f) * Velocity * dt;
+        Velocity += Acceleration * dt;
             
-        Position = CheckCollisions(Position + Velocity);
+        Position = CheckCollisions(Position + Velocity * dt);
            
         Acceleration = Vector2.Zero;
         if (Velocity.LengthSquared() < 0.000001)
@@ -65,7 +70,7 @@ public class Player(PlatformerGame game) : GameObject
     {
         if (!_jump || IsAirborne) return;
             
-        Velocity = new Vector2(Velocity.X, -.05f);
+        Velocity = new Vector2(Velocity.X, -JumpSpeed);
 
         IsAirborne = true;
         _jump = false;

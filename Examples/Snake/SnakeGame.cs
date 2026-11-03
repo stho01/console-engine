@@ -64,7 +64,10 @@ public class SnakeGame() : GameBase(30, 30, new FontInfo
                 : 0;
                 
             _cleared = _snake.PopBack();
-            _snake.PushFront((_snake.Front.x + x, _snake.Front.y + y));
+            // Wrap around the edges, otherwise the snake leaves the board for good.
+            _snake.PushFront((
+                (_snake.Front.x + x + Console.Width) % Console.Width,
+                (_snake.Front.y + y + Console.Height) % Console.Height));
                 
             if (_snake.Front.x == _food.x && _snake.Front.y == _food.y) {
                 _snake.PushBack((_snake.Back.x, _snake.Back.y));
