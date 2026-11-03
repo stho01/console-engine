@@ -5,7 +5,7 @@ for code and commits.
 
 ## What this is
 
-**console-engine** is a small **game engine** that renders into the Windows console, written in C# / .NET 8. It ships as
+**console-engine** is a small **game engine** that renders into the Windows console, written in C# / .NET 10. It ships as
 the `ConsoleEngine` library (NuGet package, `PackageVersion` 0.1.0) with example games under `Examples/`.
 
 The two priorities for every change:
@@ -47,10 +47,10 @@ Every name in `docs/agent/` is grep-able. Search for the identifier you are inte
 | `ConsoleEngine.Logger` | `Libs/ConsoleEngine.Logger/` | Exe: TCP log viewer (port 11000) | — |
 | `Microsoft.Xna.Framework` | `Libs/Microsoft.Xna.Framework/` | Library: math types | — |
 | `TerraForM`, `Snake`, `Asteroids`, `Platformer`, `ConsoleGame` | `Examples/*` | Exe | ConsoleEngine |
-| `TerraForM.Tests` | `Examples/TerraForM.Tests/` | NUnit 4 + NSubstitute | TerraForM |
-| `ConsoleEngine.Tests` | `ConsoleEngine.Tests/` | NUnit 4, hand-written fakes in `Fakes/` | ConsoleEngine |
+| `TerraForM.Tests` | `Examples/TerraForM.Tests/` | NUnit 5 + NSubstitute | TerraForM |
+| `ConsoleEngine.Tests` | `ConsoleEngine.Tests/` | NUnit 5, hand-written fakes in `Fakes/` | ConsoleEngine |
 
-All projects: `net8.0`, `LangVersion` 12, `TreatWarningsAsErrors` = `True`. Solution: `ConsoleEngine.sln`.
+All projects: `net10.0`, `LangVersion` 14, `TreatWarningsAsErrors` = `True`. Solution: `ConsoleEngine.sln`.
 
 ```bash
 dotnet build
@@ -79,7 +79,7 @@ ReportGenerator is a local tool pinned in `dotnet-tools.json`. There is no cover
 
 Games need a real Windows console, so an agent cannot run them headless. TerraForM loads `Assets/Maps/*.txt` and the
 logger exe by **relative path**, so run a game's exe from its output folder (e.g.
-`Examples/TerraForM/bin/Debug/net8.0/`). CI runs restore → build → test with coverage on `windows-latest` for PRs to
+`Examples/TerraForM/bin/Debug/net10.0/`). CI runs restore → build → test with coverage on `windows-latest` for PRs to
 `main`. The coverage summary is in the job summary, and the HTML report is the `coverage-report` artifact.
 
 ## Folder structure
@@ -254,7 +254,7 @@ Use [Conventional Commits 1.0.0](https://www.conventionalcommits.org/en/v1.0.0/#
 | **Test seams** | `GameScene.World` is `virtual` and `World` has a parameterless ctor so NSubstitute can mock them (`RoverTests`). Don't remove them. Engine tests use `FakeConsoleHandler` (NSubstitute can't capture `Span<Pixel>` in `Render`) and `InternalsVisibleTo` for `RenderConsole.Initialize`/`Display`. `GameBase`, `SceneManager`, `GameTime` and `Input` have no tests: they need Win32 or static state. Add tests in `Method_State_Expected` style when you change logic |
 | **Threading** | Everything runs on the game-loop thread, including `GameTime.SetInterval` callbacks. The only other thread is `Log`'s `"Logger"` thread. There is no locking, so never touch engine state from another thread |
 | **NuGet package** | `ConsoleEngine` has `GeneratePackageOnBuild`, so every build produces a `.nupkg` (gitignored). `PackageVersion` (0.1.0) is bumped by hand, and no pipeline publishes it. Any change to its public API is a breaking change for consumers (`!` commit) |
-| **Dependencies** | `Microsoft.Toolkit.HighPerformance` 7.1.2 supplies `Span2D<T>`. It is the old package name of `CommunityToolkit.HighPerformance` **[external]**. Moving to the new name is a `build:` change with namespace updates |
+| **Dependencies** | `CommunityToolkit.HighPerformance` 8.4.2 supplies `Span2D<T>` (namespace `CommunityToolkit.HighPerformance`). It replaced the deprecated `Microsoft.Toolkit.HighPerformance` |
 | **Third-party code / licence** | `Libs/Microsoft.Xna.Framework` is copied from MonoGame (see its `README.md`). The repo has **no LICENSE file**. Don't copy in more third-party code, and don't add or change licensing, without asking the owner |
 | **Running games** | Not possible headless. Verify with `dotnet build` + `dotnet test`, and say plainly that a change was not checked in a real console |
 

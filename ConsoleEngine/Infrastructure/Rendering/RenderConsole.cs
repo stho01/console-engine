@@ -1,5 +1,5 @@
 ﻿using System;
-using Microsoft.Toolkit.HighPerformance;
+using CommunityToolkit.HighPerformance;
 using ConsoleEngine.Abstractions.Rendering;
 using Microsoft.Xna.Framework;
 

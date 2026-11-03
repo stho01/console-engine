@@ -2,7 +2,7 @@ using System;
 using ConsoleEngine.Abstractions.Rendering;
 using ConsoleEngine.Infrastructure.Rendering;
 using ConsoleEngine.Tests.Fakes;
-using Microsoft.Toolkit.HighPerformance;
+using CommunityToolkit.HighPerformance;
 using Microsoft.Xna.Framework;
 using NUnit.Framework;
 
