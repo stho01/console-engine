@@ -1,0 +1,52 @@
+# EditorConfig is awesome: https://EditorConfig.org
+
+# top-most EditorConfig file
+root = true
+
+[*]
+indent_style = space
+end_of_line = lf
+charset = utf-8
+trim_trailing_whitespace = true
+insert_final_newline = true
+
+[*.resx]
+tab_width = 2
+indent_size = 2
+
+[*.{xml,razor,csproj}]
+tab_width = 2
+indent_size = 4
+
+[*.{cs,fs}]
+indent_size = 4
+tab_width = 4
+max_line_length = 125
+csharp_style_expression_bodied_methods = true
+csharp_style_var_for_built_in_types = true
+csharp_style_var_when_type_is_apparent = true
+csharp_style_var_elsewhere = true
+csharp_style_prefer_primary_constructors = false
+csharp_style_namespace_declarations = file_scoped
+csharp_prefer_braces = when_multiline:warning
+csharp_style_expression_bodied_methods = when_on_single_line
+csharp_prefer_static_anonymous_function= false
+# dotnet
+dotnet_sort_system_directives_first = true
+dotnet_separate_import_directive_groups = false
+dotnet_style_prefer_auto_properties = false
+dotnet_diagnostic.IDE0058.severity = none
+dotnet_diagnostic.IDE0044.severity = none
+dotnet_diagnostic.IDE0022.severity = none
+dotnet_diagnostic.IDE0305.severity = none
+dotnet_diagnostic.IDE0270.severity = none
+dotnet_diagnostic.IDE0320.severity = none
+dotnet_diagnostic.CA1707.severity = none
+dotnet_diagnostic.CA2201.severity = none
+
+[*.{yaml,yml}]
+tab_width = 2
+indent_size = 2
+
+# RCS1228: Unused element in a documentation comment
+dotnet_diagnostic.RCS1228.severity = silent

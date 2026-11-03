@@ -1,0 +1,72 @@
+# 01 — System map
+
+## Deployable units
+
+Nothing is hosted and nothing is exposed to the internet. Every unit is a local Windows executable or a library.
+
+| Project (path) | Kind | Purpose |
+|---|---|---|
+| `ConsoleEngine` (`ConsoleEngine/ConsoleEngine.csproj`) | Library, NuGet `PackageVersion` 0.1.0, `GeneratePackageOnBuild` | `GameBase` game loop, `RenderConsole`, `Input`, `GameTime`, `SceneManager`, `Log`, `Deque<T>` |
+| `ConsoleEngine.Abstractions` | Library | `IConsoleHandler`, `IInputHandler`, `Pixel`, `FontInfo`, `Key`, `KeyState` |
+| `ConsoleEngine.Windows` (`Libs/ConsoleEngine.Windows`, namespace `ConsoleEngine.Native`) | Library | Win32 implementation: `ConsoleHandler`, `InputHandler`, P/Invoke in `LowLevel/Kernel32.cs`, `LowLevel/User32.cs` |
+| `ConsoleEngine.Logger` (`Libs/ConsoleEngine.Logger`) | **Exe** `ConsoleEngine.Logger.exe` | Separate console window that shows `Log.WriteLine` output and FPS. Referenced by `ConsoleEngine.csproj`, so the build copies it next to every game |
+| `Microsoft.Xna.Framework` (`Libs/Microsoft.Xna.Framework`) | Library | Math types (`Vector2`, `Point`, `Rectangle`, `Matrix`…) copied from MonoGame |
+| `TerraForM` (`Examples/TerraForM`) | Exe | Mars-rover puzzle game: scenes, maps in `Assets/Maps/*.txt`, scoring |
+| `TerraForM.Tests` | NUnit test project | One test: `Rover_PowerIsDepletedWhenRemainingPowerIsZeroOrLess` |
+| `Snake`, `Asteroids`, `Platformer`, `ConsoleGame` (`Examples/*`) | Exe | Small demo games |
+
+Hard dependency: **Windows only.** `ConsoleHandler` and `InputHandler` call `kernel32.dll`/`user32.dll` directly
+(`GetStdHandle`, `WriteConsoleOutputW`, `SetCurrentConsoleFontEx`, `GetAsyncKeyState`…). No other platform
+implementation exists; macOS support is GitHub issue 7, open.
+
+## Processes and what talks to what
+
+```
+ Game.exe (e.g. TerraForM.exe)                       ConsoleEngine.Logger.exe   (only if EnableLogger = true)
+ ├─ main thread: GameBase.Start() loop                ├─ Socket.Connect(localhost:11000)
+ │   GameTime → Input → Scenes → Display              └─ prints lines / sets title "Game FPS: n"
+ ├─ thread "Logger" (Log.DispatchMessages)  ──TCP──▶  (game is the server, logger is the client)
+ │   Socket.Bind/Listen localhost:11000
+ └─ Win32 console APIs (kernel32/user32) ──▶ the console window the game was started in
+```
+
+| Link | Direction | Detail | Where |
+|---|---|---|---|
+| Game → console window | out | Whole frame written each frame with `WriteConsoleOutput` | `ConsoleHandler.Render` |
+| Keyboard → game | in | `GetAsyncKeyState(i)` polled for all 256 virtual keys every frame | `InputHandler.Update` |
+| Game → logger | out, TCP | Game **listens** on `Dns.GetHostEntry("localhost").AddressList[0]`, port **11000** (hard-coded). No auth. Messages are UTF-8 and end with `'\0'` | `Log` static ctor, `Log.Start` |
+| Game → logger process | spawn | `Process.Start` of `"ConsoleEngine.Logger.exe"` with `UseShellExecute = true` (relative file name) | `Log.Start` |
+| TerraForM → filesystem | in | `File.ReadAllLines("Assets/Maps/{name}.txt")`, a path **relative to the working directory** | `GameScene.MapAssetPath`, `WorldLoader.LoadWorld` |
+
+No async machinery exists beyond this: no queues and no scheduled jobs. "Timers" are `GameTime.SetInterval`
+callbacks that run on the game loop thread ([03 § Intervals](03-rules.md#intervals)).
+
+## Example game configuration (as constructed)
+
+| Game | Width × Height (cells) | Font (W×H px, face) | Flags set in `Program.cs` / ctor |
+|---|---|---|---|
+| `TerraformGame` | 72 × 50 | 15×15 Consolas | `Console.ClearColor = Black` |
+| `SnakeGame` | 30 × 30 | 14×14 Consolas | `ShowFps = true`, `ClearScreenOnEachFrame = false` (in `OnInitialize`) |
+| `AsteroidsGame` | 200 × 200 | 4×4 Consolas | `EnableLogger = true` |
+| `PlatformerGame` | 70 × 35 | 10×10 Consolas | `IsDebugMode = true`, `ShowFps = true` (in `OnInitialize`), `Name = "Platformer game"` |
+| `ConsoleGame.Game` | 64 × 64 | 8×8 Consolas | `ShowFps = true`, `EnableLogger = true` |
+
+`GameBase(width, height, fontWidth, fontHeight)` always uses face `"Consolas"`.
+
+<a id="environments"></a>
+## Environments
+
+There is no dev/staging/prod split. What changes behaviour:
+
+| Dimension | Values | Effect |
+|---|---|---|
+| OS | Windows / other | Other OS: fails at first P/Invoke (`ConsoleHandler` ctor calls `GetStdHandle`). See [P1](05-triage.md#p1) |
+| Console host **[external]** | classic `conhost` / Windows Terminal | The resize and font calls (`SetConsoleWindowInfo`, `SetConsoleScreenBufferSize`, `SetCurrentConsoleFontEx`) target the classic console. Under Windows Terminal (the default host on Windows 11) they are generally ignored, so the size and font are wrong. Return values are not checked, so nothing reports this. See [P2](05-triage.md#p2) |
+| Working directory | game's output folder / elsewhere | TerraForM maps and the logger exe are found by relative path. See [P1](05-triage.md#p1) |
+| Machine speed (FPS) | any | The loop is uncapped (no sleep in `GameBase.Start`), and TerraForM physics/power depend on FPS. See [03 § Frame-rate dependence](03-rules.md#fps) |
+| Build config | `Debug` / `Release` | No behavioural difference in code. No `#if DEBUG` exists |
+
+## CI
+
+`.github/workflows/build-and-test.yml`: on push/PR to `main`, `windows-latest`, .NET 8.0.x,
+`dotnet restore` → `dotnet build --no-restore` → `dotnet test --no-build`. All projects set `TreatWarningsAsErrors`.
