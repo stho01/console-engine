@@ -1,7 +1,7 @@
 ﻿using System;
 using System.Linq;
 using ConsoleEngine.Abstractions.Rendering;
-using Microsoft.Toolkit.HighPerformance;
+using CommunityToolkit.HighPerformance;
 using Microsoft.Xna.Framework;
 using Vector2 = System.Numerics.Vector2;
 
