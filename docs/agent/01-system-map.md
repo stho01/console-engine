@@ -68,5 +68,5 @@ There is no dev/staging/prod split. What changes behaviour:
 
 ## CI
 
-`.github/workflows/build-and-test.yml`: on push/PR to `main`, `windows-latest`, .NET 8.0.x,
+`.github/workflows/build-and-test.yml`: on push/PR to `main`, `windows-latest`, .NET 10.0.x,
 `dotnet restore` → `dotnet build --no-restore` → `dotnet test --no-build`. All projects set `TreatWarningsAsErrors`.

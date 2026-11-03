@@ -77,12 +77,12 @@ Expected for a loadable map ([04 § F6](04-flows.md#f6)):
 Key matching in `WorldLoader` lower-cases the key, so `!Width` works. The regex above assumes lower case.
 
 <a id="q7"></a>
-## Q7 — Is the .NET 8 runtime present?
+## Q7 — Is the .NET 10 runtime present?
 
 ```powershell
-dotnet --list-runtimes | Select-String 'Microsoft.NETCore.App 8\.'
+dotnet --list-runtimes | Select-String 'Microsoft.NETCore.App 10.'
 ```
-All projects target `net8.0`. Nothing → install the .NET 8 runtime.
+All projects target `net10.0`. Nothing → install the .NET 10 runtime.
 
 <a id="q8"></a>
 ## Q8 — What FPS is the user getting?
