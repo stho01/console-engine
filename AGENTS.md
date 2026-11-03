@@ -1,4 +1,4 @@
-# AGENT.md
+# AGENTS.md
 
 Guide for AI agents working in this repository: what it is, where to find answers, how it is laid out, and the rules
 for code and commits.
@@ -68,7 +68,7 @@ logger exe by **relative path**, so run a game's exe from its output folder (e.g
 ```
 ConsoleEngine.sln
 .editorconfig                     formatting rules (see Code style)
-AGENT.md / CLAUDE.md              agent instructions
+AGENTS.md / CLAUDE.md             agent instructions (CLAUDE.md imports AGENTS.md)
 docs/agent/                       support/triage docs for agents (01–09 + README)
 ConsoleEngine/                    the engine
   GameBase.cs                       abstract game: Initialize/Start/Stop, frame loop
@@ -208,7 +208,7 @@ Use [Conventional Commits 1.0.0](https://www.conventionalcommits.org/en/v1.0.0/#
 | `perf` | Performance improvement (allocations, frame time) |
 | `refactor` | Code change with no behaviour change |
 | `test` | Tests only |
-| `docs` | Documentation only (`docs/agent`, `AGENT.md`, README) |
+| `docs` | Documentation only (`docs/agent`, `AGENTS.md`, README) |
 | `build` | `.csproj`, NuGet packages, target framework |
 | `ci` | `.github/workflows` |
 | `style` | Formatting only |
@@ -239,7 +239,7 @@ change that alters what they describe is **not finished** until the docs are upd
 | A file/port/runtime prerequisite | `docs/agent/07-checks.md` |
 | A control key or anything a user can do without code | `docs/agent/08-operator-actions.md` |
 | A new domain term | `docs/agent/09-glossary.md` |
-| Project/folder layout, build commands, code style, naming or commit conventions | `AGENT.md` |
+| Project/folder layout, build commands, code style, naming or commit conventions | `AGENTS.md` |
 
 Rules:
 - Use real identifiers and quote strings verbatim from source. Never write a name you haven't seen in the code.
