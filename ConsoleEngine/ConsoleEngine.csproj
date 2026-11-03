@@ -14,6 +14,9 @@
       <PackageReference Include="Microsoft.Toolkit.HighPerformance" Version="7.1.2" />
     </ItemGroup>
     <ItemGroup>
+      <InternalsVisibleTo Include="ConsoleEngine.Tests" />
+    </ItemGroup>
+    <ItemGroup>
       <ProjectReference Include="..\ConsoleEngine.Abstractions\ConsoleEngine.Abstractions.csproj" />
       <ProjectReference Include="..\Libs\ConsoleEngine.Logger\ConsoleEngine.Logger.csproj" />
       <ProjectReference Include="..\Libs\Microsoft.Xna.Framework\Microsoft.Xna.Framework.csproj" />
