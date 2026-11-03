@@ -221,9 +221,35 @@ Use [Conventional Commits 1.0.0](https://www.conventionalcommits.org/en/v1.0.0/#
   `BREAKING CHANGE:` footer. For example `chore!: net8.0` (#10).
 - One logical change per commit. Don't mix formatting with behaviour changes.
 
+<a id="keep-docs-current"></a>
+## Keeping agent docs up to date (mandatory)
+
+**Every agent working in this repository must keep `docs/agent/` and this file current.** The docs describe behaviour
+through exact identifiers, file paths and user-visible strings, so any code change can silently make them wrong. A
+change that alters what they describe is **not finished** until the docs are updated **in the same commit or PR**.
+
+| If you change… | Update |
+|---|---|
+| A project, process, port, P/Invoke surface, game size/font/flags, CI | `docs/agent/01-system-map.md` |
+| Runtime state fields, TerraForM state, the map file format or a shipped map | `docs/agent/02-state-model.md` |
+| A rule: timing, key semantics, scenes, drawing, power, damage, sequences, game over, score, planting, map rotation, name entry | `docs/agent/03-rules.md` (+ the affected playbook in `05-triage.md`) |
+| A guard clause, early return, thrown exception or ignored Win32 result in a flow | `docs/agent/04-flows.md`, `06-diagnostics.md` |
+| Any user-visible string (`HudTexts`, `Sprites`, logger output, exception messages) | `docs/agent/06-diagnostics.md` (verbatim) |
+| A new failure mode or common complaint | `docs/agent/05-triage.md` + the routing table in `docs/agent/README.md` |
+| A file/port/runtime prerequisite | `docs/agent/07-checks.md` |
+| A control key or anything a user can do without code | `docs/agent/08-operator-actions.md` |
+| A new domain term | `docs/agent/09-glossary.md` |
+| Project/folder layout, build commands, code style, naming or commit conventions | `AGENT.md` |
+
+Rules:
+- Use real identifiers and quote strings verbatim from source. Never write a name you haven't seen in the code.
+- If you find a doc that is already wrong, fix it, even if your change didn't cause it.
+- Delete statements you can no longer back with a file and line. An admitted gap is better than a wrong claim.
+- Rows tagged **[inferred]** are guesses about support's wording. Replace them with real ticket language when you have it.
+- Docs-only updates use `docs:` commits. When the docs change together with code, include them in the code's commit.
+
 ## Before you finish a change
 
 1. `dotnet build` with 0 warnings and `dotnet test` passing.
 2. No new per-frame allocations in the hot path.
-3. Update `docs/agent/` as described in the maintenance table in [`CLAUDE.md`](CLAUDE.md#documentation), and update this
-   file if the project layout, conventions or commands change.
+3. Docs updated per [§ Keeping agent docs up to date](#keep-docs-current).
