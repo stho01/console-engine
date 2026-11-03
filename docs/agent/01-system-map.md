@@ -13,6 +13,7 @@ Nothing is hosted and nothing is exposed to the internet. Every unit is a local 
 | `Microsoft.Xna.Framework` (`Libs/Microsoft.Xna.Framework`) | Library | Math types (`Vector2`, `Point`, `Rectangle`, `Matrix`…) copied from MonoGame |
 | `TerraForM` (`Examples/TerraForM`) | Exe | Mars-rover puzzle game: scenes, maps in `Assets/Maps/*.txt`, scoring |
 | `TerraForM.Tests` | NUnit test project | One test: `Rover_PowerIsDepletedWhenRemainingPowerIsZeroOrLess` |
+| `ConsoleEngine.Tests` (`ConsoleEngine.Tests/`) | NUnit test project | Engine tests: `RenderConsole`, `Sprite`, `Deque<T>`, `ArrayExtensions`. Uses `Fakes/FakeConsoleHandler`, no Win32 |
 | `Snake`, `Asteroids`, `Platformer`, `ConsoleGame` (`Examples/*`) | Exe | Small demo games |
 
 Hard dependency: **Windows only.** `ConsoleHandler` and `InputHandler` call `kernel32.dll`/`user32.dll` directly
@@ -69,4 +70,7 @@ There is no dev/staging/prod split. What changes behaviour:
 ## CI
 
 `.github/workflows/build-and-test.yml`: on push/PR to `main`, `windows-latest`, .NET 8.0.x,
-`dotnet restore` → `dotnet build --no-restore` → `dotnet test --no-build`. All projects set `TreatWarningsAsErrors`.
+`dotnet restore` → `dotnet build --no-restore` → `dotnet test --no-build` with `--settings coverage.runsettings
+--collect:"XPlat Code Coverage"` → `dotnet reportgenerator` (local tool from `dotnet-tools.json`). The Markdown summary
+goes to the job summary, and the HTML report is uploaded as the `coverage-report` artifact. There is no coverage
+threshold, so coverage never fails the build. All projects set `TreatWarningsAsErrors`.

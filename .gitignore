@@ -147,6 +147,9 @@ coverage*.json
 coverage*.xml
 coverage*.info
 
+# ReportGenerator output (see coverage.runsettings)
+/coverage/
+
 # Visual Studio code coverage results
 *.coverage
 *.coveragexml

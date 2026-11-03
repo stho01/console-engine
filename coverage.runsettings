@@ -1,0 +1,18 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- Coverage settings for `dotnet test`. Usage is in AGENTS.md (Project setup). -->
+<RunSettings>
+    <DataCollectionRunSettings>
+        <DataCollectors>
+            <DataCollector friendlyName="XPlat Code Coverage">
+                <Configuration>
+                    <Format>cobertura</Format>
+                    <!-- Copied MonoGame math, Win32 P/Invoke and the logger exe can't be unit tested here. -->
+                    <Exclude>[Microsoft.Xna.Framework]*,[ConsoleEngine.Windows]*,[ConsoleEngine.Logger]*</Exclude>
+                    <ExcludeByFile>**/Program.cs</ExcludeByFile>
+                    <ExcludeByAttribute>GeneratedCodeAttribute,CompilerGeneratedAttribute</ExcludeByAttribute>
+                    <SkipAutoProps>true</SkipAutoProps>
+                </Configuration>
+            </DataCollector>
+        </DataCollectors>
+    </DataCollectionRunSettings>
+</RunSettings>
