@@ -16,7 +16,8 @@ public abstract class GameBase
     //**********************************************************
 
     private readonly RenderConsole _console;
-    private bool _running;
+    private volatile bool _running;
+    private int _cancelRequests;
 
     //**********************************************************
     //** ctor
@@ -80,6 +81,7 @@ public abstract class GameBase
         Thread.Sleep(100); // lazy way to wait for the console to load and initialize xD. 
             
         _running = true;
+        System.Console.CancelKeyPress += OnCancelKeyPress;
         try
         {
             while (_running)
@@ -107,8 +109,31 @@ public abstract class GameBase
             _console.Restore();
             throw;
         }
+        finally
+        {
+            System.Console.CancelKeyPress -= OnCancelKeyPress;
+        }
+
+        // Stopped by Ctrl+C
+        if (EnableLogger)
+            Log.Stop();
     }
         
+    /// <summary>
+    /// The first Ctrl+C lets the current frame finish and returns from <see cref="Start"/>, the second one
+    /// terminates the process right away in case the game hangs.
+    /// </summary>
+    private void OnCancelKeyPress(object sender, ConsoleCancelEventArgs e)
+    {
+        if (Interlocked.Increment(ref _cancelRequests) > 1)
+            return;
+
+        e.Cancel = true;
+        _running = false;
+        _console.Restore();
+        System.Console.WriteLine($"Shutting down {Name}... press Ctrl+C again to force quit.");
+    }
+
     public void Stop()
     {
         _running = false;
