@@ -48,6 +48,7 @@ Every name in `docs/agent/` is grep-able. Search for the identifier you are inte
 | `Microsoft.Xna.Framework` | `Libs/Microsoft.Xna.Framework/` | Library: math types | — |
 | `TerraForM`, `Snake`, `Asteroids`, `Platformer`, `ConsoleGame` | `Examples/*` | Exe | ConsoleEngine |
 | `TerraForM.Tests` | `Examples/TerraForM.Tests/` | NUnit 5 + NSubstitute | TerraForM |
+| `ConsoleEngine.Tests` | `ConsoleEngine.Tests/` | NUnit 5, hand-written fakes in `Fakes/` | ConsoleEngine |
 
 All projects: `net10.0`, `LangVersion` 14, `TreatWarningsAsErrors` = `True`. Solution: `ConsoleEngine.sln`.
 
@@ -59,15 +60,35 @@ dotnet build
 dotnet test
 ```
 
+Coverage (same as CI; HTML report in `coverage/index.html`, gitignored):
+
+```bash
+dotnet test --settings coverage.runsettings --collect:"XPlat Code Coverage" --results-directory TestResults
+```
+
+```bash
+dotnet tool restore
+```
+
+```bash
+dotnet reportgenerator -reports:"TestResults/**/coverage.cobertura.xml" -targetdir:coverage -reporttypes:Html
+```
+
+`coverage.runsettings` excludes `Microsoft.Xna.Framework`, `ConsoleEngine.Windows`, `ConsoleEngine.Logger` and `Program.cs`.
+ReportGenerator is a local tool pinned in `dotnet-tools.json`. There is no coverage threshold yet.
+
 Games need a real Windows console, so an agent cannot run them headless. TerraForM loads `Assets/Maps/*.txt` and the
 logger exe by **relative path**, so run a game's exe from its output folder (e.g.
-`Examples/TerraForM/bin/Debug/net10.0/`). CI runs restore → build → test on `windows-latest` for PRs to `main`.
+`Examples/TerraForM/bin/Debug/net10.0/`). CI runs restore → build → test with coverage on `windows-latest` for PRs to
+`main`. The coverage summary is in the job summary, and the HTML report is the `coverage-report` artifact.
 
 ## Folder structure
 
 ```
 ConsoleEngine.sln
 .editorconfig                     formatting rules (see Code style)
+coverage.runsettings              coverlet settings for `dotnet test` coverage
+dotnet-tools.json                 local tools (ReportGenerator)
 AGENTS.md / CLAUDE.md             agent instructions (CLAUDE.md imports AGENTS.md)
 docs/agent/                       support/triage docs for agents (01–09 + README)
 ConsoleEngine/                    the engine
@@ -81,6 +102,7 @@ ConsoleEngine/                    the engine
     Rendering/RenderConsole.cs      frame buffer + Draw* API
     Rendering/Sprite.cs             Pixel[,] sprites, FromString/FromStringArray
     Scenery/Scene.cs, SceneManager.cs  scene stack (Push/Pop/Set)
+ConsoleEngine.Tests/              engine unit tests (mirrors ConsoleEngine/ folders), Fakes/ (console handler, scene)
 ConsoleEngine.Abstractions/
   Inputs/  IInputHandler, Key, KeyState
   Rendering/  IConsoleHandler, Pixel, FontInfo
@@ -229,7 +251,7 @@ Use [Conventional Commits 1.0.0](https://www.conventionalcommits.org/en/v1.0.0/#
 | **Two `Vector2` types** | Engine and games use `Microsoft.Xna.Framework.Vector2`, but `Sprite.Origin` is `System.Numerics.Vector2` (alias in `Sprite.cs`), and `PlatformerGame` imports `System.Numerics`. Be explicit when you mix them |
 | **Characters** | A cell holds one UTF-16 `char` (`CharInfo.UnicodeChar`). Box-drawing/block characters work with Consolas. Emoji and other surrogate pairs don't fit in a cell |
 | **Global/static state** | `Input.Instance`, `GameTime` and `Log` are static and process-wide. Constructing any `GameBase` calls Win32 (`GetStdHandle` in `ConsoleHandler`), so don't instantiate games in unit tests. Test game logic against scenes/objects instead |
-| **Test seams** | `GameScene.World` is `virtual` and `World` has a parameterless ctor so NSubstitute can mock them (`RoverTests`). Don't remove them. Only one test exists. Add tests in `Method_State_Expected` style when you change logic |
+| **Test seams** | `GameScene.World` is `virtual` and `World` has a parameterless ctor so NSubstitute can mock them (`RoverTests`). Don't remove them. Engine tests use `FakeConsoleHandler` (NSubstitute can't capture `Span<Pixel>` in `Render`) and `InternalsVisibleTo` for `RenderConsole.Initialize`/`Display` and `SceneManager`'s internal ctor (tests pass `null` as the game, with `Fakes/RecordingScene`). `GameTime` is only tested where it doesn't depend on elapsed time. `GameBase`, `Input` and `Log` have no tests: they need Win32, sockets or a real clock. Add tests in `Method_State_Expected` style when you change logic |
 | **Threading** | Everything runs on the game-loop thread, including `GameTime.SetInterval` callbacks. The only other thread is `Log`'s `"Logger"` thread. There is no locking, so never touch engine state from another thread |
 | **NuGet package** | `ConsoleEngine` has `GeneratePackageOnBuild`, so every build produces a `.nupkg` (gitignored). `PackageVersion` (0.1.0) is bumped by hand, and no pipeline publishes it. Any change to its public API is a breaking change for consumers (`!` commit) |
 | **Dependencies** | `CommunityToolkit.HighPerformance` 8.4.2 supplies `Span2D<T>` (namespace `CommunityToolkit.HighPerformance`). It replaced the deprecated `Microsoft.Toolkit.HighPerformance` |

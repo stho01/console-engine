@@ -44,7 +44,9 @@ public class Deque<T> : IEnumerable<T>
 
         var toRemove = _frontNode;
         _frontNode = _frontNode.Right;
-            
+        if (_frontNode == null)
+            _backNode = null;
+
         toRemove.Unlink();
             
         Count--;
@@ -57,7 +59,9 @@ public class Deque<T> : IEnumerable<T>
             
         var toRemove = _backNode;
         _backNode = _backNode.Left;
-            
+        if (_backNode == null)
+            _frontNode = null;
+
         toRemove.Unlink();
             
         Count--;
