@@ -79,4 +79,62 @@ public class DequeTests
     {
         Assert.Throws<InvalidOperationException>(() => new Deque<int>().PopBack());
     }
+
+    [Test]
+    public void PopFront_LastItem_ClearsBack()
+    {
+        var deque = new Deque<int>();
+        deque.PushBack(1);
+
+        deque.PopFront();
+
+        Assert.That(deque.Back, Is.Zero);
+    }
+
+    [Test]
+    public void PopBack_LastItem_ClearsFront()
+    {
+        var deque = new Deque<int>();
+        deque.PushBack(1);
+
+        deque.PopBack();
+
+        Assert.Multiple(() =>
+        {
+            Assert.That(deque.Front, Is.Zero);
+            Assert.That(deque, Is.Empty);
+        });
+    }
+
+    [Test]
+    public void PushFront_AfterPoppingLastItem_HoldsOnlyNewItem()
+    {
+        var deque = new Deque<int>();
+        deque.PushBack(1);
+        deque.PopFront();
+
+        deque.PushFront(2);
+
+        Assert.Multiple(() =>
+        {
+            Assert.That(deque, Is.EqualTo(new[] { 2 }));
+            Assert.That(deque.Back, Is.EqualTo(2));
+        });
+    }
+
+    [Test]
+    public void PushBack_AfterPoppingLastItem_HoldsOnlyNewItem()
+    {
+        var deque = new Deque<int>();
+        deque.PushBack(1);
+        deque.PopBack();
+
+        deque.PushBack(2);
+
+        Assert.Multiple(() =>
+        {
+            Assert.That(deque, Is.EqualTo(new[] { 2 }));
+            Assert.That(deque.Front, Is.EqualTo(2));
+        });
+    }
 }
