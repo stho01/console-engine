@@ -221,6 +221,21 @@ Use [Conventional Commits 1.0.0](https://www.conventionalcommits.org/en/v1.0.0/#
   `BREAKING CHANGE:` footer. For example `chore!: net8.0` (#10).
 - One logical change per commit. Don't mix formatting with behaviour changes.
 
+## Gotchas for agents
+
+| Topic | What to know |
+|---|---|
+| **Coordinates** | 2D data is indexed `[x, y]`, width first: `Pixel[,]`, `char[,]`, `Sprite.Data`, and `Sprite.Width = GetLength(0)`. With `Span2D<T>`, `.Height` is dimension 0, i.e. x. That's why the loops in `RenderConsole.Draw(Span2D…)` look swapped. The frame buffer is 1D: `index = y * Width + x` |
+| **Two `Vector2` types** | Engine and games use `Microsoft.Xna.Framework.Vector2`, but `Sprite.Origin` is `System.Numerics.Vector2` (alias in `Sprite.cs`), and `PlatformerGame` imports `System.Numerics`. Be explicit when you mix them |
+| **Characters** | A cell holds one UTF-16 `char` (`CharInfo.UnicodeChar`). Box-drawing/block characters work with Consolas. Emoji and other surrogate pairs don't fit in a cell |
+| **Global/static state** | `Input.Instance`, `GameTime` and `Log` are static and process-wide. Constructing any `GameBase` calls Win32 (`GetStdHandle` in `ConsoleHandler`), so don't instantiate games in unit tests. Test game logic against scenes/objects instead |
+| **Test seams** | `GameScene.World` is `virtual` and `World` has a parameterless ctor so NSubstitute can mock them (`RoverTests`). Don't remove them. Only one test exists. Add tests in `Method_State_Expected` style when you change logic |
+| **Threading** | Everything runs on the game-loop thread, including `GameTime.SetInterval` callbacks. The only other thread is `Log`'s `"Logger"` thread. There is no locking, so never touch engine state from another thread |
+| **NuGet package** | `ConsoleEngine` has `GeneratePackageOnBuild`, so every build produces a `.nupkg` (gitignored). `PackageVersion` (0.1.0) is bumped by hand, and no pipeline publishes it. Any change to its public API is a breaking change for consumers (`!` commit) |
+| **Dependencies** | `Microsoft.Toolkit.HighPerformance` 7.1.2 supplies `Span2D<T>`. It is the old package name of `CommunityToolkit.HighPerformance` **[external]**. Moving to the new name is a `build:` change with namespace updates |
+| **Third-party code / licence** | `Libs/Microsoft.Xna.Framework` is copied from MonoGame (see its `README.md`). The repo has **no LICENSE file**. Don't copy in more third-party code, and don't add or change licensing, without asking the owner |
+| **Running games** | Not possible headless. Verify with `dotnet build` + `dotnet test`, and say plainly that a change was not checked in a real console |
+
 <a id="keep-docs-current"></a>
 ## Keeping agent docs up to date (mandatory)
 
