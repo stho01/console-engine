@@ -3,6 +3,10 @@
 Windows-only .NET 8 console game engine (`ConsoleEngine`, `ConsoleEngine.Windows`, `ConsoleEngine.Logger`) plus example
 games under `Examples/`. Build and test: `dotnet build`, `dotnet test` (CI: `.github/workflows/build-and-test.yml`).
 
+**Read [`AGENT.md`](AGENT.md) first.** It covers where to find answers, project and folder layout, the performance
+rules for the frame loop, code style (`.editorconfig`), naming, and the commit format
+([Conventional Commits](https://www.conventionalcommits.org/en/v1.0.0/#specification)).
+
 ## Documentation
 
 Support/triage docs for AI agents live in [`docs/agent/README.md`](docs/agent/README.md). They describe behaviour
@@ -20,6 +24,7 @@ using exact identifiers, file paths and user-visible strings, so they go stale s
 | A file/port/runtime prerequisite | `07-checks.md` |
 | A control key or anything a user can do without code | `08-operator-actions.md` |
 | A new domain term | `09-glossary.md` |
+| Project/folder layout, build commands, code style, naming or commit conventions | `AGENT.md` |
 
 Rows marked **[inferred]** in the docs are guesses about support's wording and scope. Replace them with real ticket
 language when available.
