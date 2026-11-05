@@ -19,6 +19,16 @@ internal static class EcsThrowHelper
         throw new InvalidOperationException($"{entity} already has a {type.Name} component.");
 
     [DoesNotReturn]
+    public static void ThrowStructuralChangeDuringIteration() =>
+        throw new InvalidOperationException(
+            "Cannot create, destroy, add or remove while a query is being iterated. Use a CommandBuffer.");
+
+    [DoesNotReturn]
+    public static void ThrowNotInChunk(Type type) =>
+        throw new InvalidOperationException(
+            $"{type.Name} is not in this chunk. Add it to the query with With<{type.Name}>().");
+
+    [DoesNotReturn]
     public static void ThrowTagHasNoData(Type type) =>
         throw new InvalidOperationException($"{type.Name} is a tag component and has no data.");
 

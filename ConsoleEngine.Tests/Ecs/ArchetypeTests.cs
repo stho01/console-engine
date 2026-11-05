@@ -7,10 +7,10 @@ namespace ConsoleEngine.Tests.Ecs;
 public class ArchetypeTests
 {
     [Test]
-    public void Layout_PositionAndVelocity_ColumnsAreCacheLineAlignedAndFitInChunk()
+    public void Layout_LocationAndSpeed_ColumnsAreCacheLineAlignedAndFitInChunk()
     {
         using var world = new World();
-        var archetype = world.GetArchetype(world.Create(new Position(), new Velocity()));
+        var archetype = world.GetArchetype(world.Create(new Location(), new Speed()));
 
         Assert.Multiple(() =>
         {
@@ -21,12 +21,12 @@ public class ArchetypeTests
     }
 
     [Test]
-    public void Layout_PositionAndVelocity_UsesAlmostAllOfTheChunk()
+    public void Layout_LocationAndSpeed_UsesAlmostAllOfTheChunk()
     {
         using var world = new World();
-        var archetype = world.GetArchetype(world.Create(new Position(), new Velocity()));
+        var archetype = world.GetArchetype(world.Create(new Location(), new Speed()));
 
-        // Entity (8) + Position (8) + Velocity (8) = 24 bytes per row. Only alignment padding may be lost.
+        // Entity (8) + Location (8) + Speed (8) = 24 bytes per row. Only alignment padding may be lost.
         Assert.That(archetype.ChunkCapacity, Is.GreaterThan((Chunk.Size - 2 * Chunk.CacheLineSize) / 24));
     }
 
@@ -59,7 +59,7 @@ public class ArchetypeTests
     public void ColumnIds_MixedComponentsAndTag_AreAscendingAndExcludeTag()
     {
         using var world = new World();
-        var entity = world.Create(new Velocity(), new Position(), new Frozen());
+        var entity = world.Create(new Speed(), new Location(), new Frozen());
 
         var ids = world.GetArchetype(entity).ColumnIds;
 

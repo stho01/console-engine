@@ -1,6 +1,7 @@
 # Plan: ECS i ConsoleEngine
 
-Status (2026-11-04): fase 0 og 1 er implementert (`ConsoleEngine.Benchmarks/`, `ConsoleEngine/Ecs/`). Fase 2–5 gjenstår.
+Status (2026-11-05): fase 0–3 er implementert (`ConsoleEngine.Benchmarks/`, `ConsoleEngine/Ecs/`). Alle fem eksemplene
+har en ECS-port (`Examples/<Game>.Ecs`). Gjenstår: `Swarm`-eksempelet og fase 5.
 
 ## 1. Mål og ikke-mål
 
@@ -101,9 +102,7 @@ public readonly struct Entity : IEquatable<Entity>   // 8 bytes
 ## 3. Queries og iterasjon
 
 ```csharp
-var query = world.Query(new QueryDescription()
-    .With<Position, Velocity>()
-    .Without<Dead>());
+var query = world.Query(Query.With<Position, Velocity>().Without<Dead>());
 ```
 
 - **Cachet**: en `Query` holder listen over matchende arketyper og oppdateres *inkrementelt* når nye arketyper
@@ -158,6 +157,15 @@ Standardløsningen (DOTS `EntityCommandBuffer`, Bevy `Commands`, Flecs deferred 
   arketype-overgang for batch-flytting.
 - Direkte `world.Add/Remove/Destroy` er tillatt utenfor iterasjon. Under iterasjon kaster debug-builds
   `InvalidOperationException` (en `_iterationDepth`-teller), mens release hopper over sjekken.
+
+**Slik ble det (fase 3):**
+- `Create` i bufferet gir **ingen** midlertidig entitet tilbake. Asteroids trengte det ikke, og det kan legges til
+  senere.
+- Playback kjører kommandoene i rekkefølge, uten sortering per arketype. Mål først om spawn-bølger blir dyre.
+- Vakten er på i **alle** builds. Repoet har ingen `#if DEBUG`, og NuGet-pakken er Release, så en debug-only sjekk ville
+  aldri slått inn hos brukerne. Den koster én int-sammenligning per strukturell endring, ikke per entitet.
+- `Destroy`/`Add`/`Remove` for døde entiteter hoppes over ved playback. Da kan to systemer trygt ødelegge samme
+  entitet (to kuler treffer samme asteroide).
 
 ## 5. Systemer og integrasjon i frame-loopen
 
@@ -230,20 +238,27 @@ Hver fase er én PR med Conventional Commits, `dotnet build` uten warnings og `d
 
 ### Fase 2: Queries og iterasjon (`feat(engine):`)
 
-- `QueryDescription`, `Query` (cachet), chunk-enumerator, `IForEach<...>` med 1–4 komponenter.
+- `QueryDescription`, `Query` (cachet), chunk-enumerator (`EntityChunk`), `IForEach<...>` med 1–3 komponenter. **Ferdig.**
 - Test: allokering i steady state er 0 (`GC.GetAllocatedBytesForCurrentThread()` før/etter N iterasjoner).
 - Benchmark mot fase 0-baseline.
 
 ### Fase 3: CommandBuffer, systemer, scene-integrasjon (`feat(engine):`)
 
-- `CommandBuffer`, `EntitySystem`, `SystemGroup`, `EcsScene<TGame>`.
+- `CommandBuffer`, `EntitySystem`, `SystemGroup`, `EcsScene<TGame>`. **Ferdig.**
 - `RenderConsole`-tilgang til frame-buffer, `GlyphRenderSystem`, `SpriteRenderSystem`, `SpriteRegistry`.
-- Debug-guard mot strukturelle endringer under iterasjon.
+  **Delvis:** `GlyphRenderSystem` og `OutlineRenderSystem` (med `OutlineLibrary` og `Camera`) er ferdige og tegner via
+  `RenderConsole.Draw`/`DrawLine`. `SpriteRenderSystem` (med `SpriteLibrary` og `SpriteRef`, inkludert `Offset`
+  og et lagfilter) ble flyttet inn etter at både `Platformer.Ecs` og `TerraForM.Ecs` hadde laget hver sin. Frame-bufferen
+  er ikke eksponert (åpent spørsmål 3).
+- Debug-guard mot strukturelle endringer under iterasjon. **Ferdig**, og på i alle builds (se §4).
+- Innebygde komponenter `Position`, `Velocity`, `Rotation`, `Glyph` (4 bytes), `Outline` og `MovementSystem`.
+  `Asteroids.Ecs` bruker dem og har bare spillspesifikke systemer igjen.
 
 ### Fase 4: Eksempel og dokumentasjon (`feat:`, `docs:`)
 
-- Nytt `Examples/Swarm` (stresstest: 100k+ partikler, FPS i logger via `ShowFps`), og/eller port av `Asteroids` til
-  ECS for å vise før/etter.
+- **Ferdig:** `Examples/Asteroids.Ecs` er `Asteroids` portet til ECS (komponenter i `Components/`, systemer i
+  `Systems/`, antall asteroider som første argument). Den har i tillegg skyting, kollisjon, drift og wrap, så den bruker
+  create/destroy hver frame. Senere portert: `Snake.Ecs`, `ConsoleGame.Ecs`, `Platformer.Ecs` og `TerraForM.Ecs`. Begge sprite-spillene måtte lage sin egen `SpriteRenderSystem`, og det er argumentet for å flytte den inn i motoren. Gjenstår: `Examples/Swarm` (stresstest med 100k+ partikler).
 - Oppdater docs per AGENTS.md § Keeping agent docs up to date:
   `AGENTS.md` (prosjekttabell, mappestruktur, hot-path-listen, `Ecs/`-navnekonvensjoner),
   `docs/agent/01-system-map.md` (Benchmarks-prosjekt, Swarm), `03-rules.md` (system-/sync-point-rekkefølge),
@@ -285,6 +300,28 @@ Hva tallene sier:
 - Arketype-overganger (34 ns) domineres trolig av `Dictionary`-oppslag for kantene. Kandidat for optimalisering:
   array indeksert på komponent-id i stedet for `Dictionary<int, Archetype>`. Mål før endring.
 
+### Fase 2: queries (2026-11-05, samme maskin og oppsett)
+
+| Benchmark (`position += velocity * delta`) | 10 000 | 100 000 | 1 000 000 |
+|---|---|---|---|
+| `OopUpdateBenchmarks.ObjectList_Sequential` | 14,9 µs | 164 µs | 3,57 ms |
+| `OopUpdateBenchmarks.ObjectList_Shuffled` | 23,5 µs | 356 µs | 16,1 ms |
+| `OopUpdateBenchmarks.StructArrays` (nedre grense) | 7,6 µs | 75 µs | 0,89 ms |
+| `QueryBenchmarks.GetChunks` | 7,5 µs | 79 µs | 0,98 ms |
+| `QueryBenchmarks.ForEach` | 8,5 µs | 89 µs | 1,18 ms |
+
+- Chunk-iterasjon ligger på nivå med rene struct-arrays og er 3,6× raskere enn OOP-lista (16× mot en spredt heap).
+  Målet fra §1 (1M entiteter < 2 ms) er nådd for denne operasjonen.
+- `ForEach` kjører jobben på en lokal kopi. Gjennom `ref job` må JIT anta at komponentskriving kan endre jobben, og
+  leste feltene på nytt for hver entitet. Det kostet 2× ved 10k (16,6 → 8,5 µs).
+
+### Fase 3: kostnaden av iterasjonsvakten
+
+Med vakten på (sjekk ved hver strukturelle endring, teller ved start og slutt av hver query-løkke) ligger tallene for
+10k og 100k innenfor feilmarginen fra fase 1 og 2. For eksempel tar `CreateThenDestroy_OneByOne` 332 µs mot 345 µs,
+`AddThenRemoveTag` 668 µs mot 650 µs, og `GetChunks` 7,6 µs mot 7,5 µs. 1M-radene var for støyete i denne kjøringen
+(feilmargin over 100 %) til å si noe.
+
 ## 8. Relaterte forbedringer (utenfor ECS, men påvirker resultatet)
 
 - `Pixel` er 12 bytes, mens `CharInfo` (Win32) er 4. Å pakke `Pixel` til `char` + `byte` + `byte` reduserer
@@ -301,4 +338,4 @@ Hva tallene sier:
    lagt til: krever eierens ja.
 3. Skal `RenderConsole`-bufferen eksponeres `public` (så spill kan skrive egne raske render-systemer) eller
    `internal`?
-4. Hvilket eksempel skal vise ECS: nytt `Swarm`, port av `Asteroids`, eller begge?
+4. ~~Hvilket eksempel?~~ Port av Asteroids: `Examples/Asteroids.Ecs`. `Swarm` er ikke laget.

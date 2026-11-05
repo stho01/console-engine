@@ -40,14 +40,39 @@ public class WorldTests
     {
         using var world = new World();
 
-        var entity = world.Create(new Position(1, 2), new Velocity(3, 4), new Health(5), new Frozen());
+        var entity = world.Create(new Location(1, 2), new Speed(3, 4), new Health(5), new Frozen());
 
         Assert.Multiple(() =>
         {
-            Assert.That(world.Get<Position>(entity).Y, Is.EqualTo(2));
-            Assert.That(world.Get<Velocity>(entity).X, Is.EqualTo(3));
+            Assert.That(world.Get<Location>(entity).Y, Is.EqualTo(2));
+            Assert.That(world.Get<Speed>(entity).X, Is.EqualTo(3));
             Assert.That(world.Get<Health>(entity).Value, Is.EqualTo(5));
             Assert.That(world.Has<Frozen>(entity), Is.True);
+        });
+    }
+
+    [Test]
+    public void Create_SixComponents_StoresEachValue()
+    {
+        using var world = new World();
+        var entities = new Entity[2];
+
+        var single = world.Create(new Location(1, 0), new Speed(2, 0), new Health(3), new Frozen(),
+            new Lifetime(4), new Mass(5));
+        world.Create(entities, new Location(1, 0), new Speed(2, 0), new Health(3), new Frozen(),
+            new Lifetime(4), new Mass(5));
+
+        Assert.Multiple(() =>
+        {
+            foreach (var entity in new[] { single, entities[0], entities[1] })
+            {
+                Assert.That(world.Get<Location>(entity).X, Is.EqualTo(1));
+                Assert.That(world.Get<Speed>(entity).X, Is.EqualTo(2));
+                Assert.That(world.Get<Health>(entity).Value, Is.EqualTo(3));
+                Assert.That(world.Has<Frozen>(entity), Is.True);
+                Assert.That(world.Get<Lifetime>(entity).Seconds, Is.EqualTo(4));
+                Assert.That(world.Get<Mass>(entity).Value, Is.EqualTo(5));
+            }
         });
     }
 
@@ -65,8 +90,8 @@ public class WorldTests
     {
         using var world = new World();
 
-        var first = world.Create(new Position(), new Velocity());
-        var second = world.Create(new Velocity(), new Position());
+        var first = world.Create(new Location(), new Speed());
+        var second = world.Create(new Speed(), new Location());
 
         Assert.That(world.GetArchetype(first), Is.SameAs(world.GetArchetype(second)));
     }
@@ -77,7 +102,7 @@ public class WorldTests
         using var world = new World(initialCapacity: 1);
         var entities = new Entity[5_000];
 
-        world.Create(entities, new Position(7, 8), new Health(9));
+        world.Create(entities, new Location(7, 8), new Health(9));
 
         Assert.Multiple(() =>
         {
@@ -86,7 +111,7 @@ public class WorldTests
             Assert.That(world.GetArchetype(entities[0]).ChunkCount, Is.GreaterThan(1));
             for (var i = 0; i < entities.Length; i++)
             {
-                Assert.That(world.Get<Position>(entities[i]).X, Is.EqualTo(7));
+                Assert.That(world.Get<Location>(entities[i]).X, Is.EqualTo(7));
                 Assert.That(world.Get<Health>(entities[i]).Value, Is.EqualTo(9));
             }
         });
@@ -161,18 +186,18 @@ public class WorldTests
     public void Get_WriteThroughReference_ChangesStoredValue()
     {
         using var world = new World();
-        var entity = world.Create(new Position(1, 1));
+        var entity = world.Create(new Location(1, 1));
 
-        world.Get<Position>(entity).X = 10;
+        world.Get<Location>(entity).X = 10;
 
-        Assert.That(world.Get<Position>(entity).X, Is.EqualTo(10));
+        Assert.That(world.Get<Location>(entity).X, Is.EqualTo(10));
     }
 
     [Test]
     public void Get_MissingComponent_Throws()
     {
         using var world = new World();
-        var entity = world.Create(new Position());
+        var entity = world.Create(new Location());
 
         Assert.That(() => world.Get<Health>(entity),
             Throws.InvalidOperationException.With.Message.EqualTo($"{entity} has no Health component."));
@@ -203,15 +228,15 @@ public class WorldTests
     public void Add_NewComponent_KeepsExistingDataAndStoresNewValue()
     {
         using var world = new World();
-        var entity = world.Create(new Position(1, 2));
+        var entity = world.Create(new Location(1, 2));
 
-        world.Add(entity, new Velocity(3, 4));
+        world.Add(entity, new Speed(3, 4));
 
         Assert.Multiple(() =>
         {
-            Assert.That(world.Get<Position>(entity).X, Is.EqualTo(1));
-            Assert.That(world.Get<Position>(entity).Y, Is.EqualTo(2));
-            Assert.That(world.Get<Velocity>(entity).Y, Is.EqualTo(4));
+            Assert.That(world.Get<Location>(entity).X, Is.EqualTo(1));
+            Assert.That(world.Get<Location>(entity).Y, Is.EqualTo(2));
+            Assert.That(world.Get<Speed>(entity).Y, Is.EqualTo(4));
         });
     }
 
@@ -244,13 +269,13 @@ public class WorldTests
     public void Remove_Component_KeepsOtherData()
     {
         using var world = new World();
-        var entity = world.Create(new Position(1, 2), new Health(3));
+        var entity = world.Create(new Location(1, 2), new Health(3));
 
-        world.Remove<Position>(entity);
+        world.Remove<Location>(entity);
 
         Assert.Multiple(() =>
         {
-            Assert.That(world.Has<Position>(entity), Is.False);
+            Assert.That(world.Has<Location>(entity), Is.False);
             Assert.That(world.Get<Health>(entity).Value, Is.EqualTo(3));
         });
     }
@@ -269,7 +294,7 @@ public class WorldTests
     public void AddThenRemove_SameComponent_ReturnsToOriginalArchetype()
     {
         using var world = new World();
-        var entity = world.Create(new Position());
+        var entity = world.Create(new Location());
         var original = world.GetArchetype(entity);
 
         world.Add<Frozen>(entity);
@@ -295,7 +320,7 @@ public class WorldTests
             if (roll < 5 || expected.Count == 0)
             {
                 var value = random.Next();
-                expected.Add(world.Create(new Health(value), new Position(value, 0)), value);
+                expected.Add(world.Create(new Health(value), new Location(value, 0)), value);
                 continue;
             }
 
@@ -319,7 +344,7 @@ public class WorldTests
         foreach (var (entity, value) in expected)
         {
             Assert.That(world.Get<Health>(entity).Value, Is.EqualTo(value));
-            Assert.That(world.Get<Position>(entity).X, Is.EqualTo((float)value));
+            Assert.That(world.Get<Location>(entity).X, Is.EqualTo((float)value));
         }
     }
 
@@ -328,12 +353,12 @@ public class WorldTests
     {
         using var world = new World();
         var entities = new Entity[3_000];
-        world.Create(entities, new Position(), new Velocity());
+        world.Create(entities, new Location(), new Speed());
         var allocated = world.ChunkPool.AllocatedCount;
 
         for (var i = 0; i < entities.Length; i++)
             world.Destroy(entities[i]);
-        world.Create(entities, new Position(), new Velocity());
+        world.Create(entities, new Location(), new Speed());
 
         Assert.That(world.ChunkPool.AllocatedCount, Is.EqualTo(allocated));
     }
@@ -343,7 +368,7 @@ public class WorldTests
     {
         using var world = new World();
         var entities = new Entity[1_000];
-        world.Create(entities, new Position(), new Velocity());
+        world.Create(entities, new Location(), new Speed());
         CycleComponents(world, entities); // warm-up: creates archetypes, edges and pooled chunks
 
         var before = GC.GetAllocatedBytesForCurrentThread();
@@ -377,8 +402,8 @@ public class WorldTests
     {
         for (var i = 0; i < entities.Length; i++)
         {
-            world.Get<Position>(entities[i]).X += 1;
-            world.Set(entities[i], new Velocity(1, 1));
+            world.Get<Location>(entities[i]).X += 1;
+            world.Set(entities[i], new Speed(1, 1));
             world.Add(entities[i], new Health(i));
             world.Add<Frozen>(entities[i]);
         }

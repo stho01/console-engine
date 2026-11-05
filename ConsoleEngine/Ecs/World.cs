@@ -25,6 +25,7 @@ public sealed unsafe partial class World : IDisposable
     private int _recordCount;
     private int[] _freeIds;
     private int _freeCount;
+    private int _iterationDepth;
     private bool _disposed;
 
     //**********************************************************
@@ -60,7 +61,7 @@ public sealed unsafe partial class World : IDisposable
     /// <summary>Creates an entity without components.</summary>
     public Entity Create()
     {
-        ObjectDisposedException.ThrowIf(_disposed, this);
+        ThrowIfStructuralChangeNotAllowed();
         return CreateIn(_emptyArchetype, out _, out _);
     }
 
@@ -69,6 +70,7 @@ public sealed unsafe partial class World : IDisposable
 
     public void Destroy(Entity entity)
     {
+        ThrowIfStructuralChangeNotAllowed();
         ref var record = ref GetAliveRecord(entity);
         RemoveFromArchetype(ref record);
 
@@ -106,41 +108,15 @@ public sealed unsafe partial class World : IDisposable
     /// <summary>Adds a component the entity doesn't have yet. Moves the entity to another archetype.</summary>
     public void Add<T>(Entity entity, in T value = default) where T : unmanaged
     {
-        ref var record = ref GetAliveRecord(entity);
-        var source = _archetypes[record.ArchetypeIndex];
-        var id = ComponentType<T>.Id;
-        if (source.Mask.Contains(id))
-            EcsThrowHelper.ThrowAlreadyHasComponent(entity, typeof(T));
-
-        if (!source.TryGetAddEdge(id, out var target))
-        {
-            target = GetOrCreateArchetype(source.Mask.With(id));
-            source.SetAddEdge(id, target);
-            target.SetRemoveEdge(id, source);
-        }
-
-        MoveTo(entity, ref record, source, target);
-        Write(target, ref target.GetChunk(record.ChunkIndex), record.Row, value);
+        var target = AddComponent(entity, ComponentType<T>.Id, out var chunkIndex, out var row);
+        Write(target, ref target.GetChunk(chunkIndex), row, value);
     }
 
     /// <summary>Removes a component the entity has. Moves the entity to another archetype.</summary>
-    public void Remove<T>(Entity entity) where T : unmanaged
-    {
-        ref var record = ref GetAliveRecord(entity);
-        var source = _archetypes[record.ArchetypeIndex];
-        var id = ComponentType<T>.Id;
-        if (!source.Mask.Contains(id))
-            EcsThrowHelper.ThrowMissingComponent(entity, typeof(T));
+    public void Remove<T>(Entity entity) where T : unmanaged => RemoveComponent(entity, ComponentType<T>.Id);
 
-        if (!source.TryGetRemoveEdge(id, out var target))
-        {
-            target = GetOrCreateArchetype(source.Mask.Without(id));
-            source.SetRemoveEdge(id, target);
-            target.SetAddEdge(id, source);
-        }
-
-        MoveTo(entity, ref record, source, target);
-    }
+    /// <summary>Creates a query. Keep and reuse it: matching is cached inside the query.</summary>
+    public Query Query(in QueryDescription description) => new(this, description);
 
     /// <summary>Frees all component memory. Every entity handle stops being alive.</summary>
     public void Dispose()
@@ -161,6 +137,79 @@ public sealed unsafe partial class World : IDisposable
     //**********************************************************
 
     internal Archetype GetArchetype(Entity entity) => _archetypes[GetAliveRecord(entity).ArchetypeIndex];
+
+    internal Archetype GetArchetypeAt(int index) => _archetypes[index];
+
+    /// <summary>Called when a query enumeration starts. Structural changes throw until the matching end.</summary>
+    internal void BeginIteration() => _iterationDepth++;
+
+    internal void EndIteration() => _iterationDepth--;
+
+    /// <summary>Moves the entity to the archetype with one more component. The new component's data is unwritten.</summary>
+    internal Archetype AddComponent(Entity entity, int componentId, out int chunkIndex, out int row)
+    {
+        ThrowIfStructuralChangeNotAllowed();
+        ref var record = ref GetAliveRecord(entity);
+        var source = _archetypes[record.ArchetypeIndex];
+        if (source.Mask.Contains(componentId))
+            EcsThrowHelper.ThrowAlreadyHasComponent(entity, ComponentRegistry.TypeOf(componentId));
+
+        if (!source.TryGetAddEdge(componentId, out var target))
+        {
+            target = GetOrCreateArchetype(source.Mask.With(componentId));
+            source.SetAddEdge(componentId, target);
+            target.SetRemoveEdge(componentId, source);
+        }
+
+        MoveTo(entity, ref record, source, target);
+        chunkIndex = record.ChunkIndex;
+        row = record.Row;
+        return target;
+    }
+
+    internal void RemoveComponent(Entity entity, int componentId)
+    {
+        ThrowIfStructuralChangeNotAllowed();
+        ref var record = ref GetAliveRecord(entity);
+        var source = _archetypes[record.ArchetypeIndex];
+        if (!source.Mask.Contains(componentId))
+            EcsThrowHelper.ThrowMissingComponent(entity, ComponentRegistry.TypeOf(componentId));
+
+        if (!source.TryGetRemoveEdge(componentId, out var target))
+        {
+            target = GetOrCreateArchetype(source.Mask.Without(componentId));
+            source.SetRemoveEdge(componentId, target);
+            target.SetAddEdge(componentId, source);
+        }
+
+        MoveTo(entity, ref record, source, target);
+    }
+
+    /// <summary>Creates an entity in the archetype for <paramref name="mask"/>. Component data is unwritten.</summary>
+    internal Archetype CreateWithMask(in ComponentMask mask, out int chunkIndex, out int row)
+    {
+        ThrowIfStructuralChangeNotAllowed();
+        var archetype = GetOrCreateArchetype(mask);
+        CreateIn(archetype, out chunkIndex, out row);
+        return archetype;
+    }
+
+    /// <summary>Copies raw component bytes into a row. Used by <see cref="CommandBuffer"/> playback.</summary>
+    internal static void WriteRaw(Archetype archetype, ref Chunk chunk, int row, int componentId, ReadOnlySpan<byte> data)
+    {
+        if (data.IsEmpty)
+            return;
+
+        var destination = chunk.Memory + archetype.GetOffset(componentId) + row * data.Length;
+        data.CopyTo(new Span<byte>(destination, data.Length));
+    }
+
+    private void ThrowIfStructuralChangeNotAllowed()
+    {
+        ObjectDisposedException.ThrowIf(_disposed, this);
+        if (_iterationDepth != 0)
+            EcsThrowHelper.ThrowStructuralChangeDuringIteration();
+    }
 
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
     private ref EntityRecord GetAliveRecord(Entity entity)
