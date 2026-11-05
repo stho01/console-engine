@@ -12,7 +12,7 @@ team's process differs.
 | Run the game in the classic console host instead of Windows Terminal **[external]** | Size/font calls take effect | [P2](05-triage.md#p2) |
 | Lower display scaling / use a larger screen | Window can reach the requested size | [P2](05-triage.md#p2) |
 | Close the other process holding port 11000 / the other game instance | `Log.Start` can bind | [P1](05-triage.md#p1) |
-| Close the window | Only way to exit every game except ConsoleGame and ConsoleGame.Ecs | [P5](05-triage.md#p5) |
+| Close the window | Only way to exit every game except ConsoleGame, ConsoleGame.Ecs and Swarm | [P5](05-triage.md#p5) |
 | Close a leftover logger window | — | [P5](05-triage.md#p5) |
 | Start the exe from an open terminal to keep crash text | Captures the exception | [06 § Capture](06-diagnostics.md#capture) |
 
@@ -36,6 +36,7 @@ team's process differs.
 | Platformer.Ecs | A D / SPACE / F1 | Move / jump / toggle debug | `PlayerControlSystem`, `DebugToggleSystem` |
 | ConsoleGame | ESC | Quit (`Stop()`) | `Game.OnUpdate` |
 | ConsoleGame.Ecs | ESC | Quit (`Stop()`) | `ConsoleEcsGame.OnUpdate` |
+| Swarm | SPACE / BACKSPACE / ESC | +10 000 particles / −10 000 particles / quit | `SpawnControlSystem`, `SwarmGame.OnUpdate` |
 
 There is **no** way to skip a TerraForM level, choose a map, reset the score, or enable TerraForM debug mode without a
 code change.

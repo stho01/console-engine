@@ -1,7 +1,7 @@
 # Plan: ECS i ConsoleEngine
 
-Status (2026-11-05): fase 0–3 er implementert (`ConsoleEngine.Benchmarks/`, `ConsoleEngine/Ecs/`). Alle fem eksemplene
-har en ECS-port (`Examples/<Game>.Ecs`). Gjenstår: `Swarm`-eksempelet og fase 5.
+Status (2026-11-05): fase 0–4 er ferdige. Motoren ligger i `ConsoleEngine/Ecs/`, målingene i `ConsoleEngine.Benchmarks/`,
+alle fem eksemplene har en ECS-port (`Examples/<Game>.Ecs`), og `Examples/Swarm` er stresstesten. Fase 5 gjenstår.
 
 ## 1. Mål og ikke-mål
 
@@ -265,13 +265,13 @@ Hver fase er én PR med Conventional Commits, `dotnet build` uten warnings og `d
 
 - **Ferdig:** `Examples/Asteroids.Ecs` er `Asteroids` portet til ECS (komponenter i `Components/`, systemer i
   `Systems/`, antall asteroider som første argument). Den har i tillegg skyting, kollisjon, drift og wrap, så den bruker
-  create/destroy hver frame. Senere portert: `Snake.Ecs`, `ConsoleGame.Ecs`, `Platformer.Ecs` og `TerraForM.Ecs`. Begge sprite-spillene måtte lage sin egen `SpriteRenderSystem`, og det er argumentet for å flytte den inn i motoren. Gjenstår: `Examples/Swarm` (stresstest med 100k+ partikler).
+  create/destroy hver frame. Senere portert: `Snake.Ecs`, `ConsoleGame.Ecs`, `Platformer.Ecs` og `TerraForM.Ecs`. Begge sprite-spillene laget sin egen `SpriteRenderSystem`, som så ble flyttet inn i motoren. `Examples/Swarm` (stresstest, 100 000 partikler som standard) er ferdig, se §7b.
 - Oppdater docs per AGENTS.md § Keeping agent docs up to date:
   `AGENTS.md` (prosjekttabell, mappestruktur, hot-path-listen, `Ecs/`-navnekonvensjoner),
   `docs/agent/01-system-map.md` (Benchmarks-prosjekt, Swarm), `03-rules.md` (system-/sync-point-rekkefølge),
   `04-flows.md` + `06-diagnostics.md` (exceptions ordrett), `09-glossary.md` (entity, archetype, chunk, query,
   sync point, command buffer).
-- Bump `PackageVersion` til 0.2.0 (additivt API).
+- Bump `PackageVersion` til 0.2.0 (additivt API). **Ferdig.**
 
 ### Fase 5: Avansert (egne PR-er, kun når benchmarks viser behov)
 
@@ -346,6 +346,17 @@ Med vakten på (sjekk ved hver strukturelle endring, teller ved start og slutt a
 | `Sprites` 4×3 rett i frame-bufferen (etter) | 24 µs | 233 µs | 2,29 ms |
 
 Alle radene allokerte 0 B.
+### Fase 4: Swarm, en hel frame (2026-11-05)
+
+`SwarmScene` kjørt headless i Release med fast delta på 16 ms: alle systemene og tegning i frame-bufferen, men uten
+skriving til konsollet (`WriteConsoleOutput`).
+
+| Partikler | Tid per frame | FPS uten konsollskriving |
+|---|---|---|
+| 100 000 | 1,4 ms | cirka 700 |
+| 1 000 000 | 14,6 ms | cirka 68 |
+
+Allokering ved stabil drift: cirka 0 B (40 B over 500 frames utenom testharnessens egen reflection).
 
 ## 8. Relaterte forbedringer (utenfor ECS, men påvirker resultatet)
 

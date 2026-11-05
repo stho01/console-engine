@@ -16,6 +16,7 @@ Nothing is hosted and nothing is exposed to the internet. Every unit is a local 
 | `ConsoleEngine.Tests` (`ConsoleEngine.Tests/`) | NUnit test project | Engine tests: `RenderConsole`, `Sprite`, `SceneManager`, `GameTime.Interval`, `Deque<T>`, `ArrayExtensions`, ECS (`Ecs/`: `World`, `Query`, `CommandBuffer`, `SystemGroup`, `EcsScene`, `Archetype`, `ComponentMask`, `Systems/`). Uses `Fakes/`, no Win32 |
 | `ConsoleEngine.Benchmarks` (`ConsoleEngine.Benchmarks/`) | **Exe**, BenchmarkDotNet 0.15.8 | `Baseline/OopUpdateBenchmarks` (list of classes vs. struct arrays), `Ecs/WorldBenchmarks`, `Ecs/QueryBenchmarks`. Built by CI, never run by CI |
 | `Snake`, `Asteroids`, `Platformer`, `ConsoleGame` and their ECS ports `Snake.Ecs`, `Asteroids.Ecs`, `Platformer.Ecs`, `ConsoleGame.Ecs`, `TerraForM.Ecs` (`Examples/*`) | Exe | Small demo games. Each `*.Ecs` project is the same game rebuilt on the ECS (`ConsoleEngine.Ecs`) for comparison |
+| `Swarm` (`Examples/Swarm`) | Exe | ECS-only stress test: 100 000 particles (first argument) chasing a moving attractor |
 
 Hard dependency: **Windows only.** `ConsoleHandler` and `InputHandler` call `kernel32.dll`/`user32.dll` directly
 (`GetStdHandle`, `WriteConsoleOutputW`, `SetCurrentConsoleFontEx`, `GetAsyncKeyState`…). No other platform
@@ -57,6 +58,7 @@ callbacks that run on the game loop thread ([03 § Intervals](03-rules.md#interv
 | `PlatformerEcsGame` | 70 × 35 | 10×10 Consolas | `Name = "Platformer (ECS)"`, `IsDebugMode = true`, `ShowFps = true` (in `Program.cs`) |
 | `ConsoleGame.Game` | 64 × 64 | 8×8 Consolas | `ShowFps = true`, `EnableLogger = true` |
 | `ConsoleEcsGame` | 64 × 64 | 8×8 Consolas | `ShowFps = true`, `EnableLogger = true` |
+| `SwarmGame` | 160 × 100 | 6×6 Consolas | `Name = "Swarm (ECS)"`, `EnableLogger = true`, `ShowFps = true`. First command-line argument = starting particle count (default 100 000) |
 
 `GameBase(width, height, fontWidth, fontHeight)` always uses face `"Consolas"`.
 

@@ -32,7 +32,7 @@ Platform: **Windows only.** Rendering and input go through Win32 P/Invoke (`kern
 | Vector/matrix math | `Libs/Microsoft.Xna.Framework/` (copied from MonoGame, change only with good reason) |
 | ECS (entities, components, archetypes, chunks) | `ConsoleEngine/Ecs/`, design and phases in [`docs/design/ecs-plan.md`](docs/design/ecs-plan.md) |
 | Performance measurements | `ConsoleEngine.Benchmarks/` (BenchmarkDotNet) |
-| How to use the engine | `Examples/Snake` (smallest), `Examples/TerraForM` (scenes, assets, tests), `Examples/<Game>.Ecs` (ECS port of each game: components, systems, queries, `EcsScene`; compare with `Examples/<Game>`. `Snake.Ecs` is the smallest, `TerraForM.Ecs` the fullest) |
+| How to use the engine | `Examples/Snake` (smallest), `Examples/TerraForM` (scenes, assets, tests), `Examples/<Game>.Ecs` (ECS port of each game: components, systems, queries, `EcsScene`; compare with `Examples/<Game>`. `Snake.Ecs` is the smallest, `TerraForM.Ecs` the fullest), `Examples/Swarm` (ECS at scale, system ordering attributes) |
 | Build/test pipeline | `.github/workflows/build-and-test.yml` |
 | Formatting rules | `.editorconfig` + [§ Code style](#code-style) |
 | Open feature requests | GitHub issues: mouse input (8), macOS (7), more colours (6) |
@@ -48,7 +48,7 @@ Every name in `docs/agent/` is grep-able. Search for the identifier you are inte
 | `ConsoleEngine.Windows` | `Libs/ConsoleEngine.Windows/` | Library, namespace `ConsoleEngine.Native` | Abstractions |
 | `ConsoleEngine.Logger` | `Libs/ConsoleEngine.Logger/` | Exe: TCP log viewer (port 11000) | — |
 | `Microsoft.Xna.Framework` | `Libs/Microsoft.Xna.Framework/` | Library: math types | — |
-| `TerraForM`, `Snake`, `Asteroids`, `Platformer`, `ConsoleGame` and their ports `<Game>.Ecs` | `Examples/*` | Exe | ConsoleEngine |
+| `TerraForM`, `Snake`, `Asteroids`, `Platformer`, `ConsoleGame`, their ports `<Game>.Ecs`, and `Swarm` (ECS stress test) | `Examples/*` | Exe | ConsoleEngine |
 | `TerraForM.Tests` | `Examples/TerraForM.Tests/` | NUnit 5 + NSubstitute | TerraForM |
 | `ConsoleEngine.Tests` | `ConsoleEngine.Tests/` | NUnit 5, hand-written fakes in `Fakes/` | ConsoleEngine |
 | `ConsoleEngine.Benchmarks` | `ConsoleEngine.Benchmarks/` | Exe: BenchmarkDotNet 0.15.8 | ConsoleEngine |
@@ -138,6 +138,7 @@ Examples/
   <Game>.Ecs/                     ECS port of <Game>: <Name>EcsGame.cs, Components/ (game-only, Tags.cs for tags),
                                   Systems/ (EntitySystem subclasses), Scenes/ (an EcsScene that spawns entities and
                                   adds systems in run order). TerraForM.Ecs links Assets/ from Examples/TerraForM
+  Swarm/                          ECS stress test (no OOP original): Components/, Systems/, Scenes/SwarmScene
   TerraForM/Scenes/               GameScene, MenuScene, InputNameScene
   TerraForM/Commands/             Command, Move, Plant, Wait
   TerraForM/Assets/               Maps/*.txt, Sprites.cs, Texts/HudTexts.cs, Story/ (unused)
