@@ -16,7 +16,12 @@ Support/user words are **[inferred]**. The team may also use Norwegian terms. Ad
 | holding a key | Key is down | `KeyState.Held` |
 | screen / page / menu | A scene on the scene stack | `Scene`, `SceneManager` (`Push`, `Pop`, `Set`) |
 | timer | Repeating callback | `GameTime.SetInterval`, `GameTime.Interval` |
-| level / map / world | A TerraForM map | `World`, `WorldLoader`, `Assets/Maps/mapN.txt`, `GameScene` |
+| level / map / world | A TerraForM map | `World`, `WorldLoader`, `Assets/Maps/mapN.txt`, `GameScene`. Not the same as the ECS `ConsoleEngine.Ecs.World` |
+| ECS / entity | A game object as an id with components attached | `ConsoleEngine.Ecs.Entity` (`Id`, `Version`), `World` |
+| component | A plain `unmanaged` data struct on an entity | `World.Add<T>`, `Get<T>`, `ComponentType<T>` |
+| tag | A component with no fields: only marks an entity | `ComponentType<T>.IsTag` |
+| archetype | All entities with exactly the same component set | `Archetype`, `ComponentMask` |
+| chunk | 16 KiB block of native memory with the rows of one archetype, column by column | `Chunk`, `ChunkPool` |
 | level name | Text after `NOW ENTERING` | map `!name` → `World.Name` |
 | rover / player | TerraForM player object | `Rover` |
 | power / energy / battery / kWh | Fuel for moves | `Rover.RemainingPower`, `MaxPower`, map `!power` |

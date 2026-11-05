@@ -6,14 +6,15 @@ Nothing is hosted and nothing is exposed to the internet. Every unit is a local 
 
 | Project (path) | Kind | Purpose |
 |---|---|---|
-| `ConsoleEngine` (`ConsoleEngine/ConsoleEngine.csproj`) | Library, NuGet `PackageVersion` 0.1.0, `GeneratePackageOnBuild` | `GameBase` game loop, `RenderConsole`, `Input`, `GameTime`, `SceneManager`, `Log`, `Deque<T>` |
+| `ConsoleEngine` (`ConsoleEngine/ConsoleEngine.csproj`) | Library, NuGet `PackageVersion` 0.1.0, `GeneratePackageOnBuild` | `GameBase` game loop, `RenderConsole`, `Input`, `GameTime`, `SceneManager`, `Log`, `Deque<T>`, ECS `World` (namespace `ConsoleEngine.Ecs`, not wired into the frame loop yet) |
 | `ConsoleEngine.Abstractions` | Library | `IConsoleHandler`, `IInputHandler`, `Pixel`, `FontInfo`, `Key`, `KeyState` |
 | `ConsoleEngine.Windows` (`Libs/ConsoleEngine.Windows`, namespace `ConsoleEngine.Native`) | Library | Win32 implementation: `ConsoleHandler`, `InputHandler`, P/Invoke in `LowLevel/Kernel32.cs`, `LowLevel/User32.cs` |
 | `ConsoleEngine.Logger` (`Libs/ConsoleEngine.Logger`) | **Exe** `ConsoleEngine.Logger.exe` | Separate console window that shows `Log.WriteLine` output and FPS. Referenced by `ConsoleEngine.csproj`, so the build copies it next to every game |
 | `Microsoft.Xna.Framework` (`Libs/Microsoft.Xna.Framework`) | Library | Math types (`Vector2`, `Point`, `Rectangle`, `Matrix`…) copied from MonoGame |
 | `TerraForM` (`Examples/TerraForM`) | Exe | Mars-rover puzzle game: scenes, maps in `Assets/Maps/*.txt`, scoring |
 | `TerraForM.Tests` | NUnit test project | One test: `Rover_PowerIsDepletedWhenRemainingPowerIsZeroOrLess` |
-| `ConsoleEngine.Tests` (`ConsoleEngine.Tests/`) | NUnit test project | Engine tests: `RenderConsole`, `Sprite`, `SceneManager`, `GameTime.Interval`, `Deque<T>`, `ArrayExtensions`. Uses `Fakes/`, no Win32 |
+| `ConsoleEngine.Tests` (`ConsoleEngine.Tests/`) | NUnit test project | Engine tests: `RenderConsole`, `Sprite`, `SceneManager`, `GameTime.Interval`, `Deque<T>`, `ArrayExtensions`, ECS (`Ecs/`: `World`, `Archetype`, `ComponentMask`). Uses `Fakes/`, no Win32 |
+| `ConsoleEngine.Benchmarks` (`ConsoleEngine.Benchmarks/`) | **Exe**, BenchmarkDotNet 0.15.8 | `Baseline/OopUpdateBenchmarks` (list of classes vs. struct arrays), `Ecs/WorldBenchmarks`. Built by CI, never run by CI |
 | `Snake`, `Asteroids`, `Platformer`, `ConsoleGame` (`Examples/*`) | Exe | Small demo games |
 
 Hard dependency: **Windows only.** `ConsoleHandler` and `InputHandler` call `kernel32.dll`/`user32.dll` directly

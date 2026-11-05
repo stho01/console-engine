@@ -30,6 +30,8 @@ Platform: **Windows only.** Rendering and input go through Win32 P/Invoke (`kern
 | Rendering abstraction vs. Win32 implementation | `ConsoleEngine.Abstractions/Rendering/IConsoleHandler.cs` vs. `Libs/ConsoleEngine.Windows/ConsoleHandler.cs` |
 | Win32 signatures and structs | `Libs/ConsoleEngine.Windows/LowLevel/` (`Kernel32.cs`, `User32.cs`) |
 | Vector/matrix math | `Libs/Microsoft.Xna.Framework/` (copied from MonoGame, change only with good reason) |
+| ECS (entities, components, archetypes, chunks) | `ConsoleEngine/Ecs/`, design and phases in [`docs/design/ecs-plan.md`](docs/design/ecs-plan.md) |
+| Performance measurements | `ConsoleEngine.Benchmarks/` (BenchmarkDotNet) |
 | How to use the engine | `Examples/Snake` (smallest), `Examples/TerraForM` (scenes, assets, tests) |
 | Build/test pipeline | `.github/workflows/build-and-test.yml` |
 | Formatting rules | `.editorconfig` + [§ Code style](#code-style) |
@@ -49,6 +51,7 @@ Every name in `docs/agent/` is grep-able. Search for the identifier you are inte
 | `TerraForM`, `Snake`, `Asteroids`, `Platformer`, `ConsoleGame` | `Examples/*` | Exe | ConsoleEngine |
 | `TerraForM.Tests` | `Examples/TerraForM.Tests/` | NUnit 5 + NSubstitute | TerraForM |
 | `ConsoleEngine.Tests` | `ConsoleEngine.Tests/` | NUnit 5, hand-written fakes in `Fakes/` | ConsoleEngine |
+| `ConsoleEngine.Benchmarks` | `ConsoleEngine.Benchmarks/` | Exe: BenchmarkDotNet 0.15.8 | ConsoleEngine |
 
 All projects: `net10.0`, `LangVersion` 14, `TreatWarningsAsErrors` = `True`. Solution: `ConsoleEngine.sln`.
 
@@ -74,6 +77,13 @@ dotnet tool restore
 dotnet reportgenerator -reports:"TestResults/**/coverage.cobertura.xml" -targetdir:coverage -reporttypes:Html
 ```
 
+Benchmarks (always `Release`; `--job short` for a quick run; add `--counters CacheMisses+BranchMispredictions` for
+hardware counters, which needs an elevated prompt on Windows):
+
+```bash
+dotnet run -c Release --project ConsoleEngine.Benchmarks -- --filter "*"
+```
+
 `coverage.runsettings` excludes `Microsoft.Xna.Framework`, `ConsoleEngine.Windows`, `ConsoleEngine.Logger` and `Program.cs`.
 ReportGenerator is a local tool pinned in `dotnet-tools.json`. There is no coverage threshold yet.
 
@@ -91,9 +101,12 @@ coverage.runsettings              coverlet settings for `dotnet test` coverage
 dotnet-tools.json                 local tools (ReportGenerator)
 AGENTS.md / CLAUDE.md             agent instructions (CLAUDE.md imports AGENTS.md)
 docs/agent/                       support/triage docs for agents (01–09 + README)
+docs/design/                      design plans (ecs-plan.md)
 ConsoleEngine/                    the engine
   GameBase.cs                       abstract game: Initialize/Start/Stop, frame loop
   Collections/Deque.cs              double-ended queue (used by Snake)
+  Ecs/                              World (+ World.Create.cs overloads), Entity, Archetype, Chunk, ChunkPool,
+                                    ComponentMask, ComponentType<T>/ComponentRegistry, EcsThrowHelper
   Extensions/ArrayExtensions.cs     To1D for 2D arrays
   Infrastructure/
     GameTime.cs                     Delta, Fps, SetInterval
@@ -103,6 +116,7 @@ ConsoleEngine/                    the engine
     Rendering/Sprite.cs             Pixel[,] sprites, FromString/FromStringArray
     Scenery/Scene.cs, SceneManager.cs  scene stack (Push/Pop/Set)
 ConsoleEngine.Tests/              engine unit tests (mirrors ConsoleEngine/ folders), Fakes/ (console handler, scene)
+ConsoleEngine.Benchmarks/         BenchmarkDotNet: Baseline/ (OOP vs. struct arrays), Ecs/ (World)
 ConsoleEngine.Abstractions/
   Inputs/  IInputHandler, Key, KeyState
   Rendering/  IConsoleHandler, Pixel, FontInfo
@@ -139,7 +153,9 @@ Examples/
 ## Performance
 
 **Hot path** = anything reachable from the frame loop: game and scene `OnUpdate`/`OnRender`, `RenderConsole.Draw*`,
-`Sprite` drawing, `InputHandler.Update`, `ConsoleHandler.Render`.
+`Sprite` drawing, `InputHandler.Update`, `ConsoleHandler.Render`, and all of `ConsoleEngine/Ecs/` (`World.Get` is
+called per entity). In `Ecs/`, keep throws in `EcsThrowHelper` so checked methods stay inlinable, and run
+`ConsoleEngine.Benchmarks` before and after a change.
 
 | Do | Don't |
 |---|---|
@@ -252,6 +268,7 @@ Use [Conventional Commits 1.0.0](https://www.conventionalcommits.org/en/v1.0.0/#
 | **Characters** | A cell holds one UTF-16 `char` (`CharInfo.UnicodeChar`). Box-drawing/block characters work with Consolas. Emoji and other surrogate pairs don't fit in a cell |
 | **Global/static state** | `Input.Instance`, `GameTime` and `Log` are static and process-wide. Constructing any `GameBase` calls Win32 (`GetStdHandle` in `ConsoleHandler`), so don't instantiate games in unit tests. Test game logic against scenes/objects instead |
 | **Test seams** | `GameScene.World` is `virtual` and `World` has a parameterless ctor so NSubstitute can mock them (`RoverTests`). Don't remove them. Engine tests use `FakeConsoleHandler` (NSubstitute can't capture `Span<Pixel>` in `Render`) and `InternalsVisibleTo` for `RenderConsole.Initialize`/`Display` and `SceneManager`'s internal ctor (tests pass `null` as the game, with `Fakes/RecordingScene`). `GameTime` is only tested where it doesn't depend on elapsed time. `GameBase`, `Input` and `Log` have no tests: they need Win32, sockets or a real clock. Add tests in `Method_State_Expected` style when you change logic |
+| **ECS memory** | `World` keeps component data in native memory (`NativeMemory.AlignedAlloc`, 16 KiB chunks, 64-byte aligned columns). Always `Dispose` a world (tests: `using var world = new World();`). Components must be `unmanaged` structs. Never store a `ref` from `World.Get<T>` across a structural change. `Archetype`, `Chunk` and `ComponentMask` are `internal`: tests reach them through `World.GetArchetype` / `World.ChunkPool` (`InternalsVisibleTo`) |
 | **Threading** | Everything runs on the game-loop thread, including `GameTime.SetInterval` callbacks. The only other thread is `Log`'s `"Logger"` thread. There is no locking, so never touch engine state from another thread |
 | **NuGet package** | `ConsoleEngine` has `GeneratePackageOnBuild`, so every build produces a `.nupkg` (gitignored). `PackageVersion` (0.1.0) is bumped by hand, and no pipeline publishes it. Any change to its public API is a breaking change for consumers (`!` commit) |
 | **Dependencies** | `CommunityToolkit.HighPerformance` 8.4.2 supplies `Span2D<T>` (namespace `CommunityToolkit.HighPerformance`). It replaced the deprecated `Microsoft.Toolkit.HighPerformance` |

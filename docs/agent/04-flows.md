@@ -126,3 +126,16 @@ See [03 § Scenes](03-rules.md#scenes). TerraForM's scene graph:
 
 `Rover.ApplyForce`: after deducting cost, `if (PowerDepleted()) return;` means no acceleration. `Rover.Plant`: needs
 `StandingOnPlantingSpot && World.Intersects(...)`, otherwise nothing. `Rover.MoveNorth`: `if (!_scene.World.Intersects(this, out var with)) return;`.
+
+<a id="f8"></a>
+## F8 — ECS structural change (`World.Add<T>` / `Remove<T>` / `Destroy`)
+
+| # | Step | Class.method | Stops / skips if | Observable |
+|---|---|---|---|---|
+| 1 | Look up the entity's record. Id out of range, or `Version` differs | `World.GetAliveRecord` | Not alive | `InvalidOperationException` "… is not alive." |
+| 2 | `Add`: component already in the source mask. `Remove`: not in it | `World.Add` / `Remove` | Present / missing | `InvalidOperationException` ([06](06-diagnostics.md)) |
+| 3 | Find the target archetype through the cached edge, or create it once (`GetOrCreateArchetype`) | `Archetype.TryGetAddEdge` / `TryGetRemoveEdge` | — | — |
+| 4 | Append a row in the target. A new chunk comes from `ChunkPool` (pooled first, otherwise `NativeMemory.AlignedAlloc`) | `Archetype.Allocate` | — | — |
+| 5 | Copy the components both archetypes share | `Archetype.CopyShared` | — | — |
+| 6 | Remove the old row: the archetype's last row is copied into it (swap-back), and the moved entity's record is repointed. An emptied last chunk goes back to the pool | `World.RemoveFromArchetype` → `Archetype.RemoveAt` | — | Earlier `ref`s from `Get<T>` in that archetype now point at other data |
+| 7 | `Add`: write the new value (skipped for tags). `Destroy` instead does step 6 only, then bumps `Version` and frees the id | `World.Write`, `World.Destroy` | — | — |

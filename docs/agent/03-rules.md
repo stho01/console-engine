@@ -86,6 +86,26 @@ Gotchas:
 - FPS is shown **only in the logger window's title** (`Game FPS: n`), never in the game window.
 - Port 11000 and the exe name `ConsoleEngine.Logger.exe` are hard-coded.
 
+<a id="ecs"></a>
+### ECS (`ConsoleEngine.Ecs.World`)
+
+Not called by `GameBase` or `Scene`: a game creates and disposes its own `World`. Systems, queries and scene
+integration are not implemented yet (plan: `docs/design/ecs-plan.md`).
+
+- Components are `unmanaged` structs. A struct with no instance fields is a **tag** (`ComponentType<T>.IsTag`): it
+  changes the archetype but has no data, so `Get<T>` on a tag throws.
+- `Add<T>` throws if the entity already has `T`. `Remove<T>`, `Get<T>` and `Set<T>` throw if it doesn't.
+  `Set<T>` never adds.
+- `Create(...)` with the same component type twice throws `ArgumentException`.
+- Every operation on a destroyed entity, a stale handle (old `Version`), `Entity.Null`, or any entity after
+  `World.Dispose()` throws "is not alive". `IsAlive` is the non-throwing check. `Create` after `Dispose` throws
+  `ObjectDisposedException`.
+- Destroying an entity bumps its id's `Version` and puts the id on a free list. The next `Create` reuses it.
+- The `ref` from `Get<T>` is only valid until the next structural change (`Create`, `Add`, `Remove`, `Destroy`) in
+  that archetype: swap-back removal moves the archetype's last row into the freed row.
+- At most 256 component types per process (`ComponentMask.Capacity`). An archetype whose row (8-byte `Entity` plus
+  every component) doesn't fit in one 16 384-byte chunk throws on first use.
+
 <a id="terraform"></a>
 ## TerraForM
 
