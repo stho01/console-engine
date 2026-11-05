@@ -110,6 +110,86 @@ public class CommandBufferTests
     }
 
     [Test]
+    public void Create_DeferredHandle_IsNotAliveBeforePlayback()
+    {
+        using var world = new World();
+        var commands = new CommandBuffer();
+
+        var deferred = commands.Create(new Health(1));
+
+        Assert.Multiple(() =>
+        {
+            Assert.That(deferred.Id, Is.Negative);
+            Assert.That(world.IsAlive(deferred), Is.False);
+        });
+    }
+
+    [Test]
+    public void Playback_CommandsOnDeferredHandle_ApplyToCreatedEntity()
+    {
+        using var world = new World();
+        var commands = new CommandBuffer();
+        var first = commands.Create(new Health(1));
+        var second = commands.Create(new Health(2));
+        commands.Add(second, new Location(5, 6));
+        commands.Add<Frozen>(first);
+        commands.Remove<Frozen>(first);
+
+        commands.Playback(world);
+
+        var withLocation = world.Query(Query.With<Health, Location>());
+        var health = 0;
+        foreach (var chunk in withLocation.GetChunks())
+            health = chunk.GetSpan<Health>()[0].Value;
+        Assert.Multiple(() =>
+        {
+            Assert.That(world.Count, Is.EqualTo(2));
+            Assert.That(withLocation.Count, Is.EqualTo(1));
+            Assert.That(health, Is.EqualTo(2));
+            Assert.That(world.Query(Query.With<Frozen>()).Count, Is.Zero);
+        });
+    }
+
+    [Test]
+    public void Playback_DestroyDeferredHandle_CreatesThenDestroys()
+    {
+        using var world = new World();
+        var commands = new CommandBuffer();
+        var deferred = commands.Create(new Health(1));
+        commands.Destroy(deferred);
+
+        commands.Playback(world);
+
+        Assert.That(world.Count, Is.Zero);
+    }
+
+    [Test]
+    public void Playback_DeferredHandleFromEarlierPlayback_Throws()
+    {
+        using var world = new World();
+        var commands = new CommandBuffer();
+        var stale = commands.Create(new Health(1));
+        commands.Playback(world);
+        commands.Destroy(stale);
+
+        Assert.That(() => commands.Playback(world), Throws.InvalidOperationException.With.Message.EqualTo(
+            $"{stale} is a deferred handle from another CommandBuffer or from before its last playback."));
+    }
+
+    [Test]
+    public void Playback_DeferredHandleFromOtherBuffer_Throws()
+    {
+        using var world = new World();
+        var other = new CommandBuffer();
+        var commands = new CommandBuffer();
+        var foreign = other.Create(new Health(1));
+        commands.Create(new Health(2));
+        commands.Destroy(foreign);
+
+        Assert.That(() => commands.Playback(world), Throws.InvalidOperationException);
+    }
+
+    [Test]
     public void Create_SameComponentTwice_ThrowsWhenRecorded()
     {
         var commands = new CommandBuffer();

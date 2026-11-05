@@ -108,7 +108,8 @@ ConsoleEngine/                    the engine
   Ecs/                              World (+ World.Create.cs overloads), Entity, Archetype, Chunk, ChunkPool,
                                     ComponentMask, ComponentType<T>/ComponentRegistry, EcsThrowHelper,
                                     Query, QueryDescription, EntityChunk, IForEach<…>, CommandBuffer
-                                    (+ .Create.cs), EntitySystem, SystemGroup, EcsScene<TGame>
+                                    (+ .Create.cs), EntitySystem, SystemGroup, UpdateBefore/UpdateAfter
+                                    attributes (UpdateOrderAttributes.cs), EcsScene<TGame>
     Components/                     built-in components: Position, Velocity, Rotation, Glyph, Outline, SpriteRef
     Rendering/                      Camera, OutlineLibrary, SpriteLibrary (namespace ConsoleEngine.Ecs.Rendering)
     Systems/                        built-in systems: MovementSystem, GlyphRenderSystem, OutlineRenderSystem,
@@ -227,7 +228,7 @@ Tag performance work as `perf:` commits.
 | Game objects | Noun in `GameObjects/` | `Rover`, `Asteroid`, `Player`, `Camera` |
 | Map tiles | Noun deriving `MapTile`, in `GameObjects/Tiles/` | `Rock`, `PlantSpot`, `FinishPoint` |
 | ECS components | Noun `struct` (data only, `unmanaged`) in `Components/`. Tags have no fields. Reuse the engine's (`ConsoleEngine.Ecs.Components`) before adding a game one | `Position`, `Velocity`, `Collider`, `Asteroid` |
-| ECS systems | `<Name>System : EntitySystem` in `Systems/`. Queries are fields, created in `OnCreate`. Structural changes go through `Commands` | `MovementSystem`, `CollisionSystem` |
+| ECS systems | `<Name>System : EntitySystem` in `Systems/`. Queries are fields, created in `OnCreate`. Structural changes go through `Commands`. Prefer `Add` order in the scene; use `[UpdateBefore]`/`[UpdateAfter]` when a system must keep its place wherever it is added | `MovementSystem`, `CollisionSystem` |
 | ECS jobs | `<Verb>Job : IForEach<…>`, a private struct inside its system | `MoveJob` |
 | Commands (TerraForM) | Verb deriving `Command`, in `Commands/` | `Move`, `Plant`, `Wait` |
 | Events / handlers | `On<Event>` / `<Sender>On<Event>` | `OnFinishReached` / `RoverOnOnFinishReached` |

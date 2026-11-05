@@ -26,6 +26,8 @@ Support/user words are **[inferred]**. The team may also use Norwegian terms. Ad
 | system | Game logic that runs over queries each frame | `EntitySystem` subclasses: engine `MovementSystem`, `GlyphRenderSystem`, `OutlineRenderSystem`, `SpriteRenderSystem`; game ones in `Examples/Asteroids.Ecs/Systems/` |
 | system group / sync point | Ordered list of systems. After the last one, deferred changes are applied | `SystemGroup`, `EcsScene.Simulation` / `Presentation` |
 | command buffer / deferred change | Create/destroy/add/remove recorded during a loop, applied later | `CommandBuffer`, `EntitySystem.Commands` |
+| deferred handle / deferred entity | Handle returned by a buffered Create, usable only in the same buffer until playback | Negative `Entity.Id`, `CommandBuffer.Create`, `CommandBuffer.Resolve` |
+| system order | Which system in a group runs first | `SystemGroup.RunOrder`, `UpdateBeforeAttribute`, `UpdateAfterAttribute` |
 | level name | Text after `NOW ENTERING` | map `!name` → `World.Name` |
 | rover / player | TerraForM player object | `Rover` |
 | power / energy / battery / kWh | Fuel for moves | `Rover.RemainingPower`, `MaxPower`, map `!power` |

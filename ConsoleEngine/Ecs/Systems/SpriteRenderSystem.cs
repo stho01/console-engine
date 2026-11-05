@@ -1,4 +1,5 @@
 using System;
+using ConsoleEngine.Abstractions.Rendering;
 using ConsoleEngine.Ecs.Components;
 using ConsoleEngine.Ecs.Rendering;
 using ConsoleEngine.Infrastructure.Rendering;
@@ -28,6 +29,9 @@ public sealed class SpriteRenderSystem(
 
     protected override void OnUpdate(float deltaSeconds)
     {
+        var pixels = console.Pixels;
+        var width = console.Width;
+        var height = console.Height;
         var cameraPosition = camera.Position;
         foreach (var chunk in _sprites.GetChunks())
         {
@@ -39,12 +43,32 @@ public sealed class SpriteRenderSystem(
                 var screen = positions[i].Value - cameraPosition;
                 var x = (int)MathF.Floor(screen.X) + refs[i].Offset.X;
                 var y = (int)MathF.Floor(screen.Y) + refs[i].Offset.Y;
-
-                if (x + sprite.Width <= 0 || x >= console.Width || y + sprite.Height <= 0 || y >= console.Height)
-                    continue;
-
-                console.Draw(x, y, sprite);
+                CopyClipped(sprite.Data, x, y, pixels, width, height);
             }
+        }
+    }
+
+    //**********************************************************
+    //** internals
+    //**********************************************************
+
+    /// <summary>
+    /// Copies the part of the sprite that is on screen straight into the frame buffer. The visible rectangle is worked
+    /// out once, so the inner loop has no bounds checks of its own. Sprite data is indexed <c>[x, y]</c>.
+    /// </summary>
+    private static void CopyClipped(Pixel[,] data, int x, int y, Span<Pixel> pixels, int width, int height)
+    {
+        var fromX = Math.Max(0, -x);
+        var toX = Math.Min(data.GetLength(0), width - x);
+        var fromY = Math.Max(0, -y);
+        var toY = Math.Min(data.GetLength(1), height - y);
+
+        for (var spriteY = fromY; spriteY < toY; spriteY++)
+        {
+            // x can be negative (sprite partly left of the screen); rowStart + spriteX never is.
+            var rowStart = (y + spriteY) * width + x;
+            for (var spriteX = fromX; spriteX < toX; spriteX++)
+                pixels[rowStart + spriteX] = data[spriteX, spriteY];
         }
     }
 }

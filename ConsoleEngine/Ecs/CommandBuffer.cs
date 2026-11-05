@@ -1,5 +1,6 @@
 using System;
 using System.Runtime.CompilerServices;
+using System.Threading;
 
 namespace ConsoleEngine.Ecs;
 
@@ -10,7 +11,12 @@ namespace ConsoleEngine.Ecs;
 /// </summary>
 /// <remarks>
 /// Playback skips commands for entities that are no longer alive, so destroying the same entity twice (two bullets
-/// hitting one asteroid) is safe. Created entities get no handle back: they don't exist until playback.
+/// hitting one asteroid) is safe.
+/// <para>
+/// <c>Create</c> returns a <b>deferred</b> handle: an <see cref="Entity"/> with a negative id that only this buffer
+/// understands, until its next playback or clear. Pass it to later <c>Add</c>/<c>Remove</c>/<c>Destroy</c> calls on
+/// the same buffer; playback swaps it for the real entity. The world doesn't know it (<c>IsAlive</c> is false).
+/// </para>
 /// </remarks>
 public sealed partial class CommandBuffer
 {
@@ -18,8 +24,17 @@ public sealed partial class CommandBuffer
     //** fields
     //**********************************************************
 
+    /// <summary>Process-wide, so a deferred handle from another buffer or an earlier playback is never accepted.</summary>
+    private static int _lastGeneration;
+
     private byte[] _buffer;
     private int _length;
+
+    /// <summary>Real entities created during the current playback, indexed by deferred handle (-Id - 1).</summary>
+    private Entity[] _created = new Entity[16];
+    private int _createCount;
+    private int _playedCreateCount;
+    private int _generation = NextGeneration();
 
     //**********************************************************
     //** ctor
@@ -74,7 +89,7 @@ public sealed partial class CommandBuffer
             while (position < _length)
             {
                 var command = ReadValue<Command>(ref position);
-                var entity = command == Command.Create ? Entity.Null : ReadValue<Entity>(ref position);
+                var entity = command == Command.Create ? Entity.Null : Resolve(ReadValue<Entity>(ref position));
                 switch (command)
                 {
                     case Command.Destroy:
@@ -101,11 +116,16 @@ public sealed partial class CommandBuffer
         }
     }
 
-    /// <summary>Drops all recorded commands without applying them.</summary>
+    /// <summary>
+    /// Drops all recorded commands without applying them. Deferred handles from this buffer become invalid.
+    /// </summary>
     public void Clear()
     {
         _length = 0;
         Count = 0;
+        _createCount = 0;
+        _playedCreateCount = 0;
+        _generation = NextGeneration();
     }
 
     //**********************************************************
@@ -136,7 +156,8 @@ public sealed partial class CommandBuffer
             position += ComponentRegistry.SizeOf(componentId);
         }
 
-        var archetype = world.CreateWithMask(mask, out var chunkIndex, out var row);
+        var archetype = world.CreateWithMask(mask, out var entity, out var chunkIndex, out var row);
+        _created[_playedCreateCount++] = entity;
         ref var chunk = ref archetype.GetChunk(chunkIndex);
         position = start;
         for (var i = 0; i < componentCount; i++)
@@ -146,8 +167,11 @@ public sealed partial class CommandBuffer
         }
     }
 
-    /// <summary>Starts a Create command. Checks the component list for duplicates, like <see cref="World"/> does.</summary>
-    private void BeginCreate(ReadOnlySpan<int> componentIds)
+    /// <summary>
+    /// Starts a Create command and returns its deferred handle. Checks the component list for duplicates, like
+    /// <see cref="World"/> does.
+    /// </summary>
+    private Entity BeginCreate(ReadOnlySpan<int> componentIds)
     {
         var mask = default(ComponentMask);
         for (var i = 0; i < componentIds.Length; i++)
@@ -160,7 +184,26 @@ public sealed partial class CommandBuffer
         WriteValue(Command.Create);
         WriteValue(componentIds.Length);
         Count++;
+
+        // Reserve the slot the real entity will land in at playback, so the array never grows during playback.
+        if (_createCount == _created.Length)
+            Array.Resize(ref _created, _created.Length * 2);
+        return new Entity(-++_createCount, _generation);
     }
+
+    /// <summary>Swaps a deferred handle for the entity its Create made. Real handles pass through unchanged.</summary>
+    private Entity Resolve(Entity entity)
+    {
+        if (entity.Id >= 0)
+            return entity;
+
+        if (entity.Version != _generation)
+            EcsThrowHelper.ThrowForeignDeferredEntity(entity);
+
+        return _created[-entity.Id - 1];
+    }
+
+    private static int NextGeneration() => Interlocked.Increment(ref _lastGeneration);
 
     /// <summary>Writes the component id followed by its bytes (none for tags).</summary>
     private void WriteComponent<T>(in T value) where T : unmanaged

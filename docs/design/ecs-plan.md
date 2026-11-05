@@ -158,10 +158,13 @@ Standardløsningen (DOTS `EntityCommandBuffer`, Bevy `Commands`, Flecs deferred 
 - Direkte `world.Add/Remove/Destroy` er tillatt utenfor iterasjon. Under iterasjon kaster debug-builds
   `InvalidOperationException` (en `_iterationDepth`-teller), mens release hopper over sjekken.
 
-**Slik ble det (fase 3):**
-- `Create` i bufferet gir **ingen** midlertidig entitet tilbake. Asteroids trengte det ikke, og det kan legges til
-  senere.
-- Playback kjører kommandoene i rekkefølge, uten sortering per arketype. Mål først om spawn-bølger blir dyre.
+- `Create` i bufferet gir et **deferred håndtak** tilbake: en `Entity` med negativ id og bufferets generasjon som
+  versjon (samme modell som Unity sin `EntityCommandBuffer`). Det kan brukes i senere kommandoer på samme buffer og
+  byttes ut med den ekte entiteten ved playback. Håndtak fra et annet buffer eller fra før siste playback kaster.
+- Playback kjører kommandoene i rekkefølge, uten sortering per arketype. `CommandBufferBenchmarks` viser at buffering
+  koster cirka 2× for create+destroy (54 mot 27 ns per entitet) og 1,25× for add/remove. Arketype-oppslaget gjøres
+  uansett per Create, så batching ville ikke fjernet ekstrakostnaden. Den kommer fra å skrive og lese bytes. Ikke
+  verdt kompleksiteten nå.
 - Vakten er på i **alle** builds. Repoet har ingen `#if DEBUG`, og NuGet-pakken er Release, så en debug-only sjekk ville
   aldri slått inn hos brukerne. Den koster én int-sammenligning per strukturell endring, ikke per entitet.
 - `Destroy`/`Add`/`Remove` for døde entiteter hoppes over ved playback. Da kan to systemer trygt ødelegge samme
@@ -183,7 +186,8 @@ public abstract class EntitySystem
 - Systemer er klasser (ett virtuelt kall per system per frame er neglisjerbart). Arbeidet per entitet skjer i
   struct-jobs/chunk-loops.
 - `SystemGroup`: ordnet liste. To standardgrupper: **Simulation** og **Presentation**. Rekkefølge er eksplisitt
-  (registreringsrekkefølge, ev. `UpdateBefore/After`-attributter senere), ikke implisitt.
+  (registreringsrekkefølge, justert av `[UpdateBefore]`/`[UpdateAfter]` med stabil topologisk sortering), ikke
+  implisitt.
 - Sync point (CommandBuffer-playback) etter hver gruppe.
 
 **Integrasjon uten å bryte noe:**
@@ -249,7 +253,10 @@ Hver fase er én PR med Conventional Commits, `dotnet build` uten warnings og `d
   **Delvis:** `GlyphRenderSystem` og `OutlineRenderSystem` (med `OutlineLibrary` og `Camera`) er ferdige og tegner via
   `RenderConsole.Draw`/`DrawLine`. `SpriteRenderSystem` (med `SpriteLibrary` og `SpriteRef`, inkludert `Offset`
   og et lagfilter) ble flyttet inn etter at både `Platformer.Ecs` og `TerraForM.Ecs` hadde laget hver sin. Frame-bufferen
-  er ikke eksponert (åpent spørsmål 3).
+  er `internal` (`RenderConsole.Pixels`). `GlyphRenderSystem` og `SpriteRenderSystem` skriver rett i den med én
+  klipp-sjekk per entitet. Det gjør glyphs 1,8× og sprites 2,7× raskere (se §7b). `OutlineRenderSystem` bruker fortsatt
+  `DrawLine`.
+- `[UpdateBefore]`/`[UpdateAfter]` på systemklasser, sortert stabilt i `SystemGroup.RunOrder`. **Ferdig.**
 - Debug-guard mot strukturelle endringer under iterasjon. **Ferdig**, og på i alle builds (se §4).
 - Innebygde komponenter `Position`, `Velocity`, `Rotation`, `Glyph` (4 bytes), `Outline` og `MovementSystem`.
   `Asteroids.Ecs` bruker dem og har bare spillspesifikke systemer igjen.
@@ -322,6 +329,24 @@ Med vakten på (sjekk ved hver strukturelle endring, teller ved start og slutt a
 `AddThenRemoveTag` 668 µs mot 650 µs, og `GetChunks` 7,6 µs mot 7,5 µs. 1M-radene var for støyete i denne kjøringen
 (feilmargin over 100 %) til å si noe.
 
+### Fase 3, del 2: command buffer og tegning (2026-11-05, samme oppsett)
+
+| Benchmark | 10 000 | 100 000 |
+|---|---|---|
+| `CommandBufferBenchmarks.CreateThenDestroy_Direct` | 266 µs | 2,75 ms |
+| `CommandBufferBenchmarks.CreateThenDestroy_Buffered` | 538 µs | 5,21 ms |
+| `CommandBufferBenchmarks.AddThenRemoveTag_Direct` | 651 µs | 6,64 ms |
+| `CommandBufferBenchmarks.AddThenRemoveTag_Buffered` | 812 µs | 7,83 ms |
+
+| `RenderBenchmarks` (200×200 konsoll) | 1 000 | 10 000 | 100 000 |
+|---|---|---|---|
+| `Glyphs` via `RenderConsole.Draw` (før) | 6,0 µs | 54 µs | 543 µs |
+| `Glyphs` rett i frame-bufferen (etter) | 3,2 µs | 30 µs | 286 µs |
+| `Sprites` 4×3 via `RenderConsole.Draw` (før) | 67 µs | 632 µs | 6,18 ms |
+| `Sprites` 4×3 rett i frame-bufferen (etter) | 24 µs | 233 µs | 2,29 ms |
+
+Alle radene allokerte 0 B.
+
 ## 8. Relaterte forbedringer (utenfor ECS, men påvirker resultatet)
 
 - `Pixel` er 12 bytes, mens `CharInfo` (Win32) er 4. Å pakke `Pixel` til `char` + `byte` + `byte` reduserer
@@ -336,6 +361,6 @@ Med vakten på (sjekk ved hver strukturelle endring, teller ved start og slutt a
 1. ~~Egen pakke eller namespace?~~ Fase 1 bruker namespace `ConsoleEngine.Ecs` i samme pakke.
 2. ~~BenchmarkDotNet?~~ Lagt til (0.15.8, MIT) i `ConsoleEngine.Benchmarks`. Arch som referanse-benchmark er ikke
    lagt til: krever eierens ja.
-3. Skal `RenderConsole`-bufferen eksponeres `public` (så spill kan skrive egne raske render-systemer) eller
-   `internal`?
+3. ~~Skal `RenderConsole`-bufferen eksponeres `public` eller `internal`?~~ `internal` (`RenderConsole.Pixels`): bare
+   motorens render-systemer skriver direkte. Spill bruker Draw-API-et.
 4. ~~Hvilket eksempel?~~ Port av Asteroids: `Examples/Asteroids.Ecs`. `Swarm` er ikke laget.

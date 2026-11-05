@@ -120,15 +120,23 @@ itself.
 - Commands are applied in recording order by `Playback(world)`, which then clears the buffer (also when it throws).
 - At playback, `Destroy`/`Add`/`Remove` for an entity that is **no longer alive are skipped silently**: destroying
   twice is safe. `Add` of a component the entity already has, or `Remove` of one it lacks, still throws.
-- `Create(...)` returns no handle: the entity exists only after playback. Duplicate component types throw
-  `ArgumentException` when recorded.
+- `Create(...)` returns a **deferred handle**: an `Entity` with a negative `Id` and the buffer's current generation
+  as `Version`. The entity exists only after playback, and the world treats the handle as not alive. Later
+  `Add`/`Remove`/`Destroy` calls on the **same** buffer accept it, and playback swaps it for the created entity. A
+  deferred handle from another buffer, or from before this buffer's last `Playback`/`Clear`, throws at playback.
+- Duplicate component types in `Create` throw `ArgumentException` when recorded.
+- Deferring costs roughly 2× a direct create+destroy and 1.25× a direct add/remove (`CommandBufferBenchmarks`).
 
 **Systems** (`EntitySystem`, `SystemGroup`):
 - `SystemGroup.Add` calls the system's `OnCreate` (where it builds its queries) with `World` and the group's
   `Commands` already set.
-- `SystemGroup.Update(delta)` runs enabled systems in `Add` order, then plays back `Commands`. That playback is the
+- `SystemGroup.Update(delta)` runs enabled systems in `RunOrder`, then plays back `Commands`. That playback is the
   only sync point: entities created by a system become visible to the **next** group, not to later systems in the
   same group.
+- `RunOrder` is `Add` order, except where `[UpdateBefore(typeof(X))]` / `[UpdateAfter(typeof(X))]` on a system's class
+  says otherwise. Among systems that are free to run, the one added first goes first. A constraint naming a type
+  not in the group is ignored. Constraints that form a cycle throw `InvalidOperationException` on the first
+  `Update` (or `RunOrder` read) after the systems were added.
 
 **`EcsScene<TGame>`**: `OnLoad` creates `World`, `Simulation` and `Presentation`, then calls `OnCreate`. The scene's
 `OnUpdate` runs `Simulation`, `OnRender` runs `Presentation`, both with `(float)GameTime.Delta.TotalSeconds`. `OnUnload`

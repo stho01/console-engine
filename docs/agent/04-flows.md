@@ -148,9 +148,9 @@ Runs inside [F2](#f2) steps "Scenes.Update" and "Scenes.Render". Both are skippe
 
 | # | Step | Class.method | Stops / skips if | Observable |
 |---|---|---|---|---|
-| 1 | `Simulation.Update((float)GameTime.Delta.TotalSeconds)`: each enabled system's `OnUpdate`, in `Add` order | `EcsScene.OnUpdate` → `SystemGroup.Update` | `EntitySystem.Enabled == false` → that system is skipped | — |
+| 1 | `Simulation.Update((float)GameTime.Delta.TotalSeconds)`: each enabled system's `OnUpdate`, in `SystemGroup.RunOrder` (`Add` order adjusted by `UpdateBefore`/`UpdateAfter`) | `EcsScene.OnUpdate` → `SystemGroup.Update` | `EntitySystem.Enabled == false` → that system is skipped | — |
 | 2 | Systems iterate queries and record structural changes in `Commands` | game systems, `MovementSystem` | Direct `World.Create/Destroy/Add/Remove` inside the loop | `InvalidOperationException` ([F8](#f8) step 0) |
-| 3 | Sync point: `Commands.Playback(World)` applies the recorded changes in order, then clears the buffer | `CommandBuffer.Playback` | Target entity no longer alive → that `Destroy`/`Add`/`Remove` is **skipped silently** | Entities created/destroyed this frame show up in the render below |
+| 3 | Sync point: `Commands.Playback(World)` applies the recorded changes in order (deferred handles from `Create` are swapped for the created entities), then clears the buffer | `CommandBuffer.Playback` | Target entity no longer alive → that `Destroy`/`Add`/`Remove` is **skipped silently**. Foreign or stale deferred handle → `InvalidOperationException` | Entities created/destroyed this frame show up in the render below |
 | 4 | `Presentation.Update(delta)` runs the render systems into the frame buffer, which `GameBase.Start` cleared at the start of the frame (if `ClearScreenOnEachFrame`) | `EcsScene.OnRender` → `SystemGroup.Update` | `OutlineRenderSystem`: bounding circle off-screen → entity skipped | Drawn cells |
 | 5 | `Presentation` plays back its own `Commands` (normally empty) | `CommandBuffer.Playback` | — | — |
 | 6 | On scene unload: `OnDestroy`, then `World.Dispose()` frees all chunks | `EcsScene.OnUnload` | — | Old entity handles stop being alive |

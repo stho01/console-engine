@@ -186,11 +186,11 @@ public sealed unsafe partial class World : IDisposable
     }
 
     /// <summary>Creates an entity in the archetype for <paramref name="mask"/>. Component data is unwritten.</summary>
-    internal Archetype CreateWithMask(in ComponentMask mask, out int chunkIndex, out int row)
+    internal Archetype CreateWithMask(in ComponentMask mask, out Entity entity, out int chunkIndex, out int row)
     {
         ThrowIfStructuralChangeNotAllowed();
         var archetype = GetOrCreateArchetype(mask);
-        CreateIn(archetype, out chunkIndex, out row);
+        entity = CreateIn(archetype, out chunkIndex, out row);
         return archetype;
     }
 

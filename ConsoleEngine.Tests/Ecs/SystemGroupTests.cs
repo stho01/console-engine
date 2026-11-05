@@ -71,6 +71,93 @@ public class SystemGroupTests
         });
     }
 
+    [Test]
+    public void Update_UpdateBeforeAndAfter_OverrideAddOrder()
+    {
+        using var world = new World();
+        var group = new SystemGroup(world);
+        var log = new List<string>();
+        group.Add(new RenderStep(log));
+        group.Add(new InputStep(log));
+        group.Add(new PhysicsStep(log));
+
+        group.Update(0f);
+
+        Assert.That(log, Is.EqualTo(new[] { "input", "physics", "render" }));
+    }
+
+    [Test]
+    public void Update_ConstraintOnTypeNotInGroup_IsIgnored()
+    {
+        using var world = new World();
+        var group = new SystemGroup(world);
+        var log = new List<string>();
+        group.Add(new RecordingSystem("plain", log));
+        group.Add(new PhysicsStep(log));
+
+        group.Update(0f);
+
+        Assert.That(log, Is.EqualTo(new[] { "plain", "physics" }));
+    }
+
+    [Test]
+    public void Update_SystemAddedLater_IsSortedIn()
+    {
+        using var world = new World();
+        var group = new SystemGroup(world);
+        var log = new List<string>();
+        group.Add(new PhysicsStep(log));
+        group.Update(0f);
+        log.Clear();
+
+        group.Add(new InputStep(log));
+        group.Update(0f);
+
+        Assert.That(log, Is.EqualTo(new[] { "input", "physics" }));
+    }
+
+    [Test]
+    public void RunOrder_CyclicConstraints_Throws()
+    {
+        using var world = new World();
+        var group = new SystemGroup(world);
+        group.Add(new CycleA());
+        group.Add(new CycleB());
+
+        Assert.That(() => group.Update(0f), Throws.InvalidOperationException.With.Message.EqualTo(
+            "The UpdateBefore/UpdateAfter attributes of these systems form a cycle: CycleA, CycleB."));
+    }
+
+    [UpdateAfter(typeof(PhysicsStep))]
+    private sealed class RenderStep(List<string> log) : EntitySystem
+    {
+        protected override void OnUpdate(float deltaSeconds) => log.Add("render");
+    }
+
+    [UpdateBefore(typeof(PhysicsStep))]
+    private sealed class InputStep(List<string> log) : EntitySystem
+    {
+        protected override void OnUpdate(float deltaSeconds) => log.Add("input");
+    }
+
+    [UpdateAfter(typeof(InputStep))]
+    private sealed class PhysicsStep(List<string> log) : EntitySystem
+    {
+        protected override void OnUpdate(float deltaSeconds) => log.Add("physics");
+    }
+
+    [UpdateBefore(typeof(CycleB))]
+    private sealed class CycleA : EntitySystem
+    {
+        protected override void OnUpdate(float deltaSeconds) { }
+    }
+
+    [UpdateBefore(typeof(CycleA))]
+    private sealed class CycleB : EntitySystem
+    {
+        protected override void OnUpdate(float deltaSeconds) { }
+    }
+
     private sealed class RecordingSystem(string name, List<string> log) : EntitySystem
     {
         public World CreatedWith { get; private set; }

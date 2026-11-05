@@ -24,6 +24,16 @@ internal static class EcsThrowHelper
             "Cannot create, destroy, add or remove while a query is being iterated. Use a CommandBuffer.");
 
     [DoesNotReturn]
+    public static void ThrowForeignDeferredEntity(Entity entity) =>
+        throw new InvalidOperationException(
+            $"{entity} is a deferred handle from another CommandBuffer or from before its last playback.");
+
+    [DoesNotReturn]
+    public static void ThrowSystemOrderCycle(string systemNames) =>
+        throw new InvalidOperationException(
+            $"The UpdateBefore/UpdateAfter attributes of these systems form a cycle: {systemNames}.");
+
+    [DoesNotReturn]
     public static void ThrowNotInChunk(Type type) =>
         throw new InvalidOperationException(
             $"{type.Name} is not in this chunk. Add it to the query with With<{type.Name}>().");
