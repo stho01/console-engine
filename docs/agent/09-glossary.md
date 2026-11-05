@@ -4,7 +4,7 @@ Support/user words are **[inferred]**. The team may also use Norwegian terms. Ad
 
 | User / support word | Meaning | Code identifier |
 |---|---|---|
-| the game / the app | One example exe built on the engine | `GameBase` subclass: `TerraformGame`, `SnakeGame`, `AsteroidsGame`, `PlatformerGame`, `ConsoleGame.Game` |
+| the game / the app | One example exe built on the engine | `GameBase` subclass: `TerraformGame`, `SnakeGame`, `AsteroidsGame`, `PlatformerGame`, `ConsoleGame.Game`, and the ECS ports `TerraformEcsGame`, `SnakeEcsGame`, `AsteroidsEcsGame`, `PlatformerEcsGame`, `ConsoleEcsGame` |
 | the engine | The shared library | `ConsoleEngine` project, namespace `ConsoleEngine` |
 | window / screen | The console window and its cell buffer | `RenderConsole`, `ConsoleHandler`, `IConsoleHandler` |
 | pixel / cell / character | One console cell | `Pixel` (`Char`, `ForegroundColor`, `BackgroundColor`) |
@@ -21,7 +21,11 @@ Support/user words are **[inferred]**. The team may also use Norwegian terms. Ad
 | component | A plain `unmanaged` data struct on an entity | `World.Add<T>`, `Get<T>`, `ComponentType<T>` |
 | tag | A component with no fields: only marks an entity | `ComponentType<T>.IsTag` |
 | archetype | All entities with exactly the same component set | `Archetype`, `ComponentMask` |
-| chunk | 16 KiB block of native memory with the rows of one archetype, column by column | `Chunk`, `ChunkPool` |
+| chunk | 16 KiB block of native memory with the rows of one archetype, column by column | `Chunk`, `ChunkPool`, `EntityChunk` (query view) |
+| query | The entities that have a given set of components | `Query`, `QueryDescription` (`With`, `Without`), `IForEach<…>` |
+| system | Game logic that runs over queries each frame | `EntitySystem` subclasses: engine `MovementSystem`, `GlyphRenderSystem`, `OutlineRenderSystem`, `SpriteRenderSystem`; game ones in `Examples/Asteroids.Ecs/Systems/` |
+| system group / sync point | Ordered list of systems. After the last one, deferred changes are applied | `SystemGroup`, `EcsScene.Simulation` / `Presentation` |
+| command buffer / deferred change | Create/destroy/add/remove recorded during a loop, applied later | `CommandBuffer`, `EntitySystem.Commands` |
 | level name | Text after `NOW ENTERING` | map `!name` → `World.Name` |
 | rover / player | TerraForM player object | `Rover` |
 | power / energy / battery / kWh | Fuel for moves | `Rover.RemainingPower`, `MaxPower`, map `!power` |

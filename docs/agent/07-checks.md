@@ -87,7 +87,7 @@ All projects target `net10.0`. Nothing → install the .NET 10 runtime.
 <a id="q8"></a>
 ## Q8 — What FPS is the user getting?
 
-No in-game display exists. Options: (a) the logger title `Game FPS: n` in Asteroids/ConsoleGame-style builds with
+No in-game display exists. Options: (a) the logger title `Game FPS: n` in Asteroids.Ecs/ConsoleGame-style builds with
 `ShowFps` + `EnableLogger`, or (b) ask about the machine. Use it in [03 § Power](03-rules.md#power):
 power per TerraForM move ≈ `0.64 × (0.1 × FPS + 1)`.
 
