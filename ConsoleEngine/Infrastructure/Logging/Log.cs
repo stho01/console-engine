@@ -20,6 +20,10 @@ public static class Log
     private static bool _running;
     private const char EndOfMessage = '\0';
 
+    // The logger opens in a new terminal window, which can fail after the process started fine (a terminal that
+    // doesn't take -e, a window the user closes), so give up if it doesn't connect in time.
+    private static readonly TimeSpan ConnectTimeout = TimeSpan.FromSeconds(10);
+
     static Log()
     {
         var host = Dns.GetHostEntry("localhost");  
@@ -54,20 +58,38 @@ public static class Log
 
     private static void DispatchMessages()
     {
-        while (_running)
+        try
         {
-            var loggerConnected = _loggerConnection?.Connected ?? false;
-                
-            if (!loggerConnected)
-                _loggerConnection = Socket.Accept(); // wait for new connection
-                
-            while (loggerConnected && Messages.TryDequeue(out var msg))
+            // Wait in short slices: on macOS disposing a listening socket doesn't wake a thread blocked on it.
+            var waited = Stopwatch.StartNew();
+            while (!Socket.Poll(TimeSpan.FromMilliseconds(100), SelectMode.SelectRead))
             {
-                var bytes = Encoding.UTF8.GetBytes(msg);
-                _loggerConnection.Send(bytes);
+                if (!_running || waited.Elapsed > ConnectTimeout)
+                    return;
             }
 
-            Thread.Sleep(100); 
+            _loggerConnection = Socket.Accept();
+
+            while (_running)
+            {
+                while (Messages.TryDequeue(out var msg))
+                {
+                    var bytes = Encoding.UTF8.GetBytes(msg);
+                    _loggerConnection.Send(bytes);
+                }
+
+                Thread.Sleep(100);
+            }
+        }
+        catch (Exception e) when (e is SocketException or ObjectDisposedException)
+        {
+            // Stop() closed the socket, or the logger went away.
+        }
+        finally
+        {
+            // Without a logger nobody reads the queue, stop filling it.
+            _running = false;
+            Messages.Clear();
         }
     }
         
@@ -134,6 +156,9 @@ public static class Log
     internal static void Stop()
     {
         _running = false;
+        if (LoggerThread.IsAlive)
+            LoggerThread.Join(TimeSpan.FromSeconds(1));
+
         _loggerConnection?.Dispose();
         Socket.Dispose();
         Messages.Clear();
