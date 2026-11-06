@@ -5,7 +5,7 @@
 
 | Fact | Why | How to get it |
 |---|---|---|
-| **Which game** (TerraForM, Snake, Asteroids, Platformer, ConsoleGame, or their own game on `ConsoleEngine`) | Rules differ per game ([03](03-rules.md)) | Ask, or the exe name |
+| **Which game** (TerraForM, Snake, Asteroids, Platformer, ConsoleGame, Scripted, or their own game on `ConsoleEngine`) | Rules differ per game ([03](03-rules.md)) | Ask, or the exe name |
 | **OS and console host** | Windows only. Windows Terminal ignores the sizing/font calls **[external]** | [07 § Q1, Q2](07-checks.md#q1) |
 | **How it was launched and from which folder** (double-click the exe, `dotnet run`, IDE, a shortcut, a terminal in another folder) | Map files and the logger exe are found by **relative path** | [07 § Q3](07-checks.md#q3) |
 | **The exact error text**, if any | There are no log files. The exception printed to the console is the only record | Ask them to start it from an already-open terminal so the text stays ([06 § Capturing a crash](06-diagnostics.md#capture)) |
@@ -54,7 +54,7 @@
 
 **Symptom [inferred]:** "the window is too small/big", "there are scrollbars", "letters are tiny", "the picture is broken/shifted".
 
-1. [07 § Q2](07-checks.md#q2): running in **Windows Terminal**? → **Cause [external]:** `ConsoleHandler.InitializeConsole`/`SetFont` use classic-console APIs that Windows Terminal ignores, and the return values are not checked ([04 § F1](04-flows.md#f1) step 7). **Fix:** set Windows' default terminal application to "Windows Console Host", or start the exe from `conhost.exe`. Stop.
+1. [07 § Q2](07-checks.md#q2): running in **Windows Terminal**? → **Cause [external]:** `ConsoleHandler.InitializeConsole`/`SetFont` use classic-console APIs that Windows Terminal ignores, and the return values are not checked ([04 § F1](04-flows.md#f1) step 7). **Fix:** double-click `start-conhost.cmd` in the game's folder (it starts the game in `conhost.exe`), or set Windows' default terminal application to "Windows Console Host" ([08](08-operator-actions.md)). Stop.
 2. Classic console: does `width × fontWidth` by `height × fontHeight` fit the screen? (Table in [01](01-system-map.md). E.g. TerraForM 72×50 cells at 15×15 px = 1080×750 px plus borders. Asteroids 200×200 at 4×4 = 800×800.)
    - Doesn't fit, or display scaling makes it not fit → **Cause [external]:** `SetConsoleWindowInfo` fails silently when the window would exceed the maximum size. **Fix:** higher resolution, lower display scaling, or a developer reduces size/font in the game ctor. Stop.
 3. Font face: the face is `"Consolas"` for every example. If the user's own game passes another `FontInfo.FontFace`, is that font installed and ≤ 31 characters (`ConsoleFontInfoEx.FaceName` `SizeConst = 32`)? If not → **Cause:** `SetCurrentConsoleFontEx` fails silently. **Fix:** use an installed console font. Stop.
@@ -167,3 +167,25 @@
 ## P15 — TerraForM: Norwegian story missing
 
 1. **Cause:** `Assets/Story/story-NO.txt` (and `story-EN.txt`) are not used by code or copied to output. The story is hard-coded English in `Sprites.Story`. **Fix:** feature request. Stop.
+
+<a id="p16"></a>
+## P16 — Lua: script fails to load / object does nothing / F5 changes nothing
+
+**Symptom [inferred]:** "my Lua script doesn't run", "the object just stands still", "I edited the script and
+pressed F5 but nothing changed", "error about lua54.dll".
+
+1. Crash at startup with `LuaScriptException` (`Lua script '<name>': …`) → read the message ([06 § Lua](06-diagnostics.md)):
+   - .NET file message (`Could not find file…`) → **Cause:** the script is not in the output folder. `LuaRuntime.Load` resolves relative paths against the exe's folder, not the working directory ([04 § F8](04-flows.md#f8) step 1). **Fix:** set `CopyToOutputDirectory` for `Assets/Scripts/*.lua` in the game's `.csproj` ([07 § Q10](07-checks.md#q10)). Stop.
+   - `<name>:<line>: …` → **Cause:** syntax or runtime error at that line. **Fix:** fix the script. Stop.
+   - `the script must return a table` → **Cause:** the file does not end with `return <module>`. **Fix:** add it ([03 § Lua](03-rules.md#lua)). Stop.
+2. `DllNotFoundException` for `lua54` → **Cause:** the native library is missing from `runtimes/<rid>/native/`, usually a partial copy of the output folder ([07 § Q10](07-checks.md#q10)). **Fix:** rebuild or copy the whole output folder. Stop.
+3. Object does nothing:
+   - `LuaBehaviour.IsFaulted` is true (Scripted demo: red error line at the bottom) → **Cause:** a Lua error stopped it ([03 § Lua](03-rules.md#lua)). `unknown field '…' on a game object` means the script wrote a field that is not part of `self`'s fixed format (often a typo like `self.X`, or own state that belongs in `self.data`). `self.x must be a number` means a wrong type. **Fix:** fix the script and reload. Stop.
+   - Not faulted → is the hook named exactly `on_update` on the **returned module table**, is the `LuaBehaviour` set as the object's `Behaviour`, and does game code call `Update()` each frame? Either missing → **Cause:** hook never runs (silent, [04 § F8](04-flows.md#f8) step 7, [F9](04-flows.md#f9)). Stop.
+   - Moves in the script but stays put on screen → the move happened in `on_render`, whose field changes are not copied back ([03 § Lua](03-rules.md#lua)). **Fix:** move in `on_update`. Stop.
+   - Not drawn at all → `self.visible`/`GameObject.Visible` is false, or game code does not call `Render(Console)`. Stop.
+   - Moves very slowly → movement not multiplied by `dt`, or multiplied twice. `dt` is in seconds ([03 § Lua](03-rules.md#lua)). Stop.
+4. F5 changes nothing (Scripted demo):
+   - They edited the file in the **project** folder → **Cause:** `Reload` reads the copy in the output folder (`FullPath`). **Fix:** edit the output copy, or rebuild and restart. Stop.
+   - A removed function still runs → **Cause:** reload copies new fields but never deletes old ones. **Fix:** restart the game. Stop.
+   - A reload error → `ReloadAll` returned it, but `ScriptedGame` only sends it to `Log.WriteLine`, which is dropped without `EnableLogger`, and the old version stays. **Fix:** check the script for errors (load it in a test), then reload again. Stop.

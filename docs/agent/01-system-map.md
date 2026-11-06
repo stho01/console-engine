@@ -6,7 +6,7 @@ Nothing is hosted and nothing is exposed to the internet. Every unit is a local 
 
 | Project (path) | Kind | Purpose |
 |---|---|---|
-| `ConsoleEngine` (`ConsoleEngine/ConsoleEngine.csproj`) | Library, NuGet `PackageVersion` 0.1.0, `GeneratePackageOnBuild` | `GameBase` game loop, `RenderConsole`, `Input`, `GameTime`, `SceneManager`, `Log`, `Deque<T>` |
+| `ConsoleEngine` (`ConsoleEngine/ConsoleEngine.csproj`) | Library, NuGet `PackageVersion` 0.1.0, `GeneratePackageOnBuild` | `GameBase` game loop, `RenderConsole`, `Input`, `GameTime`, `SceneManager`, `GameObject`/`IBehaviour`, `Log`, `Deque<T>` |
 | `ConsoleEngine.Abstractions` | Library | `IConsoleHandler`, `IInputHandler`, `Pixel`, `FontInfo`, `Key`, `KeyState` |
 | `ConsoleEngine.Windows` (`Libs/ConsoleEngine.Windows`, namespace `ConsoleEngine.Native`) | Library | Win32 implementation: `ConsoleHandler`, `InputHandler`, P/Invoke in `LowLevel/Kernel32.cs`, `LowLevel/User32.cs` |
 | `ConsoleEngine.Logger` (`Libs/ConsoleEngine.Logger`) | **Exe** `ConsoleEngine.Logger.exe` | Separate console window that shows `Log.WriteLine` output and FPS. Referenced by `ConsoleEngine.csproj`, so the build copies it next to every game |
@@ -14,11 +14,19 @@ Nothing is hosted and nothing is exposed to the internet. Every unit is a local 
 | `TerraForM` (`Examples/TerraForM`) | Exe | Mars-rover puzzle game: scenes, maps in `Assets/Maps/*.txt`, scoring |
 | `TerraForM.Tests` | NUnit test project | One test: `Rover_PowerIsDepletedWhenRemainingPowerIsZeroOrLess` |
 | `ConsoleEngine.Tests` (`ConsoleEngine.Tests/`) | NUnit test project | Engine tests: `RenderConsole`, `Sprite`, `SceneManager`, `GameTime.Interval`, `Deque<T>`, `ArrayExtensions`. Uses `Fakes/`, no Win32 |
+| `ConsoleEngine.Benchmarks` (`ConsoleEngine.Benchmarks/`) | **Exe**, BenchmarkDotNet | `GameObjectFrame`: one frame of 100/1000 `GameObject`s with a `LuaBehaviour` vs the same logic as a C# `IBehaviour`. Not referenced by anything |
+| `ConsoleEngine.Scripting` (`ConsoleEngine.Scripting/`) | Library (not packed) | Lua 5.4 scripting for game objects on KeraLua 1.4.11: `LuaRuntime`, `LuaScript`, `LuaBehaviour` (an `IBehaviour` for the engine's `GameObject`), `LuaScriptException`. Only games that reference it get Lua |
+| `Scripted` (`Examples/Scripted`) | Exe | Demo: a player and 30 fireflies, all Lua scripts in `Assets/Scripts/*.lua`. F5 reloads them |
 | `Snake`, `Asteroids`, `Platformer`, `ConsoleGame` (`Examples/*`) | Exe | Small demo games |
 
 Hard dependency: **Windows only.** `ConsoleHandler` and `InputHandler` call `kernel32.dll`/`user32.dll` directly
 (`GetStdHandle`, `WriteConsoleOutputW`, `SetCurrentConsoleFontEx`, `GetAsyncKeyState`…). No other platform
 implementation exists; macOS support is GitHub issue 7, open.
+
+Games that reference `ConsoleEngine.Scripting` also load the native Lua library `lua54.dll` from
+`runtimes/<rid>/native/` in their output folder (shipped by the KeraLua package for win-x64/x86/arm/arm64, and
+macOS/Linux). Besides KeraLua's own calls, `LuaNative.lua_tolstring` (`ConsoleEngine.Scripting/LowLevel/`) is a direct
+P/Invoke into it.
 
 ## Processes and what talks to what
 
@@ -51,6 +59,7 @@ callbacks that run on the game loop thread ([03 § Intervals](03-rules.md#interv
 | `AsteroidsGame` | 200 × 200 | 4×4 Consolas | `EnableLogger = true` |
 | `PlatformerGame` | 70 × 35 | 10×10 Consolas | `IsDebugMode = true`, `ShowFps = true` (in `OnInitialize`), `Name = "Platformer game"` |
 | `ConsoleGame.Game` | 64 × 64 | 8×8 Consolas | `ShowFps = true`, `EnableLogger = true` |
+| `ScriptedGame` | 80 × 40 | 12×12 Consolas | `ShowFps = true` |
 
 `GameBase(width, height, fontWidth, fontHeight)` always uses face `"Consolas"`.
 
@@ -62,8 +71,8 @@ There is no dev/staging/prod split. What changes behaviour:
 | Dimension | Values | Effect |
 |---|---|---|
 | OS | Windows / other | Other OS: fails at first P/Invoke (`ConsoleHandler` ctor calls `GetStdHandle`). See [P1](05-triage.md#p1) |
-| Console host **[external]** | classic `conhost` / Windows Terminal | The resize and font calls (`SetConsoleWindowInfo`, `SetConsoleScreenBufferSize`, `SetCurrentConsoleFontEx`) target the classic console. Under Windows Terminal (the default host on Windows 11) they are generally ignored, so the size and font are wrong. Return values are not checked, so nothing reports this. See [P2](05-triage.md#p2) |
-| Working directory | game's output folder / elsewhere | TerraForM maps and the logger exe are found by relative path. See [P1](05-triage.md#p1) |
+| Console host **[external]** | classic `conhost` / Windows Terminal | The resize and font calls (`SetConsoleWindowInfo`, `SetConsoleScreenBufferSize`, `SetCurrentConsoleFontEx`) target the classic console. Under Windows Terminal (the default host on Windows 11) they are generally ignored, so the size and font are wrong. Return values are not checked, so nothing reports this. `start-conhost.cmd` (in every example's output folder) and `run-game.ps1` always start the game in `conhost.exe`. See [P2](05-triage.md#p2) |
+| Working directory | game's output folder / elsewhere | TerraForM maps and the logger exe are found by relative path. See [P1](05-triage.md#p1). Lua scripts are not: `LuaRuntime.Load` resolves relative paths against the exe's folder (`AppContext.BaseDirectory`) |
 | Machine speed (FPS) | any | The loop is uncapped (no sleep in `GameBase.Start`), and TerraForM physics/power depend on FPS. See [03 § Frame-rate dependence](03-rules.md#fps) |
 | Build config | `Debug` / `Release` | No behavioural difference in code. No `#if DEBUG` exists |
 

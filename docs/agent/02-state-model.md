@@ -16,6 +16,10 @@ no high scores, settings or save games. The only persistent inputs are the Terra
 | Clock | `GameTime` (static) | `Delta` (time since last frame), `Fps` (= `1 / Delta`, one frame, not averaged), `_intervals` | Static, so shared by everything in the process |
 | Scenes | `SceneManager._scenes` (`Stack<Scene>`), `_unloadScenes` (`Queue<Scene>`) | `Count`, `Current` (top of stack), `PreviousScene` | `Scene.IsPaused` per scene ([03 § Scenes](03-rules.md#scenes)) |
 | Logger | `Log` (static) | `Messages` (`ConcurrentQueue<string>`), `Socket`, `_loggerConnection`, `_loggerProcess`, `_running` | Only active when `GameBase.EnableLogger` |
+| Lua state | `LuaRuntime` (`ConsoleEngine.Scripting`) | One native Lua state `_lua`, `_scripts` (every `Load`ed `LuaScript`), `_hostError` (exception from a host function, reported by the next `Call`), registry refs to the field names (`_keyX` …) and `UnknownFieldGuard` | One per game, created by game code. Not static |
+| Script | `LuaScript` | `Name` (path as passed to `Load`), `FullPath`, `Version` (+1 per successful `Reload`), registry refs to the module table, its metatable and `on_start`/`on_update`/`on_render` | The module table is kept across reloads and updated in place |
+| Game object | `GameObject` (`ConsoleEngine.Infrastructure.Objects`) | `Position`, `Char` (default `'?'`), `Color` (White), `Background` (Black), `Sprite` (`null`), `Visible` (`true`), `Behaviour`, private `_started` | The engine's object format. Created and held by game code, not by the engine |
+| Lua behaviour | `LuaBehaviour` | Registry ref `_self` (the Lua `self` table), `Error` (`null` unless faulted), `_faultedVersion` | `self` mirrors the `GameObject` fields (copied around each hook) plus `self.data`, the script's own state, which C# never reads |
 
 ## TerraForM state
 

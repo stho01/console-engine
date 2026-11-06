@@ -4,7 +4,7 @@ Support/user words are **[inferred]**. The team may also use Norwegian terms. Ad
 
 | User / support word | Meaning | Code identifier |
 |---|---|---|
-| the game / the app | One example exe built on the engine | `GameBase` subclass: `TerraformGame`, `SnakeGame`, `AsteroidsGame`, `PlatformerGame`, `ConsoleGame.Game` |
+| the game / the app | One example exe built on the engine | `GameBase` subclass: `TerraformGame`, `SnakeGame`, `AsteroidsGame`, `PlatformerGame`, `ConsoleGame.Game`, `ScriptedGame` |
 | the engine | The shared library | `ConsoleEngine` project, namespace `ConsoleEngine` |
 | window / screen | The console window and its cell buffer | `RenderConsole`, `ConsoleHandler`, `IConsoleHandler` |
 | pixel / cell / character | One console cell | `Pixel` (`Char`, `ForegroundColor`, `BackgroundColor`) |
@@ -34,4 +34,13 @@ Support/user words are **[inferred]**. The team may also use Norwegian terms. Ad
 | game over | HUD state, not a stop | `GameScene.GameOver`, `Sprites.GameOver` |
 | restart | Reload same map | `R` → `Scenes.Set(new GameScene(_worldName))` |
 | player name | Typed on first screen (PII) | `TerraformGame.Playername`, `InputNameScene` |
+| script / Lua script | A `.lua` file that returns a module table with `on_start`/`on_update`/`on_render` | `LuaScript`, `LuaRuntime.Load` |
+| game object / entity | An object in the engine's format: position, character/sprite, colours, visibility, behaviour | `GameObject` (`ConsoleEngine.Infrastructure.Objects`). The examples' own `GameObjects/GameObject` classes are older, per-game types |
+| behaviour / script on an object | What a game object does each frame | `IBehaviour`, `GameObject.Behaviour`, `LuaBehaviour` (`LuaScript.CreateBehaviour`) |
+| `self` / object fields | The Lua view of a game object: `x`, `y`, `char`, `color`, `background`, `visible`, `data` | `LuaRuntime.WriteFields`/`ReadFields` |
+| script data | A script's own per-object state | `self.data` |
+| hook | `on_start`, `on_update`, `on_render` in a script's module | `LuaScript.OnStart`/`OnUpdate`/`OnRender` |
+| host function | A C# function callable from Lua (`input.*`, `console.*`, `print`) | `LuaRuntime.RegisterApi` |
+| reload / hot reload / F5 | Re-run scripts and update their modules in place | `LuaScript.Reload`, `LuaRuntime.ReloadAll` |
+| script error / broken script / faulted | A Lua error stopped a behaviour until its script reloads | `LuaBehaviour.Error`, `IsFaulted`, `LuaScriptException` |
 | debug mode | Developer overlay | `PlatformerGame.IsDebugMode` (F1), `TerraformGame.IsDebugMode` (unreachable) |

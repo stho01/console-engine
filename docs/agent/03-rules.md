@@ -79,12 +79,76 @@ Gotchas:
 - `Sprite.FromString` splits on `Environment.NewLine` (`\r\n` on Windows). A string with bare `\n` becomes one row.
 - Colours: only the 16 `ConsoleColor` values (`GetColorValue` packs fg | bg<<4). More colours is GitHub issue 6.
 
+<a id="logger"></a>
 ### Logger (`Log`)
 
 - `Log.WriteLine` / `Log.ReportFps` silently drop messages unless the game has `EnableLogger = true`
   (`EnqueueMessage` guard).
 - FPS is shown **only in the logger window's title** (`Game FPS: n`), never in the game window.
 - Port 11000 and the exe name `ConsoleEngine.Logger.exe` are hard-coded.
+
+<a id="lua"></a>
+### Lua scripting (`ConsoleEngine.Scripting`)
+
+- **Object model.** The engine owns the object: `GameObject` (`ConsoleEngine.Infrastructure.Objects`) has `Position`,
+  `Char`, `Color`, `Background`, `Sprite`, `Visible` and a `Behaviour` (`IBehaviour`). A Lua script is one kind of
+  behaviour: `LuaScript.CreateBehaviour()` returns a `LuaBehaviour`, one per object.
+- `GameObject.Update()` calls `Behaviour.Start` once (before the first update), then `Behaviour.Update` with
+  `GameTime.Delta`. Setting a new `Behaviour` starts it again on the next update. Without a behaviour, `Update` does
+  nothing.
+- `GameObject.Render(console)` does nothing when `Visible` is false. Otherwise it draws `Sprite` (if set) or `Char` in
+  `Color` on `Background` at the **floored** `Position`, then calls `Behaviour.Render`. A hidden object is still
+  updated.
+- Nothing happens unless game code calls `Update()`/`Render(Console)` on its objects each frame. Objects are not
+  attached to scenes automatically.
+- A script file must **return a table** (its module). The module may define `on_start(self)`, `on_update(self, dt)`
+  and `on_render(self)`. Missing hooks are skipped. `self` has metatable `{ __index = module, __newindex = guard }`, so
+  `self:method()` calls module functions.
+- **`self` has a fixed format:**
+
+| Field | Type | `GameObject` property |
+|---|---|---|
+| `self.x`, `self.y` | number | `Position` (stored as `float`) |
+| `self.char` | string (first character used) or code point | `Char` |
+| `self.color`, `self.background` | number (`colors.*`, masked to 0–15) | `Color`, `Background` |
+| `self.visible` | boolean (anything but `false`/`nil` is true) | `Visible` |
+| `self.data` | table owned by the script, starts empty, kept across reloads | — |
+
+- The engine fields are copied into `self` **before every hook** and back into the `GameObject` **after `on_start` and
+  `on_update`**. Changes made in `on_render` are not copied back. `Sprite` is not visible to Lua.
+- Writing any other field on `self` (`self.X = 1`, `self.speed = 2`) is an error:
+  `unknown field '<key>' on a game object, put script data in self.data`. Reading an unknown field returns the module's
+  value or `nil` (no error).
+- If a hook stores the wrong type in an engine field (`self.x = "left"`), nothing is copied back and the behaviour
+  faults with `self.<field> must be a number` or `self.char must be a string or a code point`. The object keeps its
+  last good state.
+- `dt` is `GameTime.Delta` in **seconds** (`TotalSeconds`). Scripts must scale movement by it ([§ FPS](#fps)).
+- Lua API (Lua 5.4 standard libraries are all open, including `io` and `os`):
+
+| Lua | Behaviour |
+|---|---|
+| `input.held(key)`, `input.pressed(key)`, `input.released(key)` | `KeyState.Held`/`Pressed`/`Released` of that virtual key ([§ Keys](#keys)). A key outside 0–255 returns `false` |
+| `keys.LEFT`, `keys.A`, … | Every `Key` enum name → its virtual key code |
+| `colors.Red`, … | Every `ConsoleColor` name → its number |
+| `console.draw(x, y, char, fg, bg)` | `RenderConsole.Draw`. `x`/`y` are **floored**. `char` is a string (its first character is used) or a code point. `fg` defaults to White, `bg` to Black. Characters outside the BMP become `?`. Off-screen is clipped |
+| `console.text(x, y, text, fg, bg)` | Draws a string or number left to right, **at most 256 characters** (the rest is dropped) |
+| `console.width`, `console.height` | Set once when the runtime is created |
+| `print(...)` | `Log.WriteLine("Lua: " + args joined by tab)`. Dropped unless `EnableLogger` ([§ Logger](#logger)) |
+
+- **Errors.** A Lua error in a hook, or a .NET exception in a host function, **faults the behaviour**:
+  `LuaBehaviour.Error` is set (Lua's `name:line: message`, or `ExceptionType: message`),
+  `Log.WriteLine("Lua: " + error)` is called, and its hooks stop running. Field changes from the failed hook are not
+  copied back. The `GameObject` is still drawn at its last good state. A host-function exception does not stop the
+  Lua code immediately: the hook runs to its end with the failing call returning nothing, then the behaviour faults.
+- A faulted behaviour runs again after its script's next successful `Reload` (`Version` changed). There is no other
+  way to clear `Error`.
+- **Reload.** `LuaScript.Reload` / `LuaRuntime.ReloadAll` re-read the file from `FullPath` (the copy in the output
+  folder, not the project source), run it, and copy every field of the new module into the existing module table.
+  Existing behaviours keep their `self.data` and use the new functions. `on_start` does **not** run again. Fields
+  **removed** from the new version stay in the module. A failing reload throws (`ReloadAll` returns the failures) and
+  the previous version stays active.
+- Lua shortens chunk names longer than 60 bytes in error messages to `...<end of path>`.
+- A UTF-8 byte order mark at the start of a script is skipped.
 
 <a id="terraform"></a>
 ## TerraForM
@@ -201,3 +265,5 @@ Gotchas:
 | Platformer | `ShowFps = true` but no `EnableLogger`, so no FPS anywhere | `PlatformerGame.OnInitialize` |
 | Asteroids | Steer `A`/`D`, thrust `W`. No collisions, no objective. Logger enabled but nothing is logged | `AsteroidsGame` |
 | ConsoleGame | Recolours all cells every **500 ms**. `ESC` calls `Stop()`, which exits | `Game.OnInitialize`, `OnUpdate` |
+| Scripted | Arrows move the player (`@`, yellow, starts at `Console.ScreenCenter`) at 20 cells/s, kept inside rows 1 to height−2. 30 fireflies (`•`, positions from `Random(1)`, velocities from `math.randomseed(1)`) bounce and switch `self.color` Green/DarkGreen every 0.3 s. No collisions, no objective, no quit key | `player.lua`, `firefly.lua`, `ScriptedGame.OnInitialize` |
+| Scripted | `F5` (`Pressed`) calls `LuaRuntime.ReloadAll()`. Failures go to `Log.WriteLine`, which is dropped because `EnableLogger` is off. The first faulted `LuaBehaviour.Error` is drawn on the bottom row (white on dark red) | `ScriptedGame.OnUpdate`, `ReloadScripts`, `OnRender` |

@@ -19,7 +19,8 @@ Run **in the same kind of window the game opens in**:
 if ($env:WT_SESSION) { 'Windows Terminal' } else { 'Not Windows Terminal (likely conhost)' }
 ```
 Windows Terminal sets `WT_SESSION`. A double-clicked exe opens in whatever the Windows "default terminal application"
-setting says. Ask the user what that setting is. Windows Terminal → [P2](05-triage.md#p2) step 1.
+setting says. Ask the user what that setting is. Windows Terminal → [P2](05-triage.md#p2) step 1. A game started with
+`start-conhost.cmd` or `run-game.ps1` runs in conhost regardless.
 
 <a id="q3"></a>
 ## Q3 — Is the working directory the game's output folder?
@@ -99,3 +100,13 @@ git grep -n "RotateMap" -- Examples/TerraForM
 git grep -n "11000\|ConsoleEngine.Logger.exe" -- ConsoleEngine
 dotnet test --no-build
 ```
+
+<a id="q10"></a>
+## Q10 — Are the Lua scripts and `lua54.dll` in the output folder?
+
+From the game's output folder (the one holding the exe):
+```powershell
+Get-ChildItem -Recurse -Name -Include *.lua; Get-ChildItem -Recurse -Name -Filter lua54.dll
+```
+No `.lua` files → the `.csproj` lacks `CopyToOutputDirectory` for them ([P16](05-triage.md#p16) step 1). No
+`runtimes\<rid>\native\lua54.dll` for this machine's architecture → [P16](05-triage.md#p16) step 2.

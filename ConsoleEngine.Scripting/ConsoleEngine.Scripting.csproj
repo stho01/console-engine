@@ -1,0 +1,21 @@
+<Project Sdk="Microsoft.NET.Sdk">
+    <PropertyGroup>
+        <TargetFramework>net10.0</TargetFramework>
+        <LangVersion>14</LangVersion>
+        <AllowUnsafeBlocks>true</AllowUnsafeBlocks>
+        <Configurations>Release;Debug</Configurations>
+        <Platforms>AnyCPU</Platforms>
+        <IsPackable>false</IsPackable>
+        <TreatWarningsAsErrors>True</TreatWarningsAsErrors>
+    </PropertyGroup>
+    <ItemGroup>
+      <PackageReference Include="KeraLua" Version="1.4.11" />
+    </ItemGroup>
+    <ItemGroup>
+      <InternalsVisibleTo Include="ConsoleEngine.Tests" />
+      <InternalsVisibleTo Include="ConsoleEngine.Benchmarks" />
+    </ItemGroup>
+    <ItemGroup>
+      <ProjectReference Include="..\ConsoleEngine\ConsoleEngine.csproj" />
+    </ItemGroup>
+</Project>

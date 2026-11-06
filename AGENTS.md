@@ -6,7 +6,8 @@ for code and commits.
 ## What this is
 
 **console-engine** is a small **game engine** that renders into the Windows console, written in C# / .NET 10. It ships as
-the `ConsoleEngine` library (NuGet package, `PackageVersion` 0.1.0) with example games under `Examples/`.
+the `ConsoleEngine` library (NuGet package, `PackageVersion` 0.1.0) with example games under `Examples/`. Game objects
+can optionally be scripted in Lua 5.4 through `ConsoleEngine.Scripting`.
 
 The two priorities for every change:
 
@@ -15,7 +16,8 @@ The two priorities for every change:
 2. **Clean code.** Follow best practices, use precise and consistent names, keep code small and readable
    ([§ Code style](#code-style), [§ Naming](#naming)).
 
-Platform: **Windows only.** Rendering and input go through Win32 P/Invoke (`kernel32.dll`, `user32.dll`).
+Platform: **Windows only.** Rendering and input go through Win32 P/Invoke (`kernel32.dll`, `user32.dll`). Lua
+scripting loads the native `lua54.dll` that the KeraLua package ships for each runtime.
 
 ## Where to look for answers
 
@@ -31,6 +33,8 @@ Platform: **Windows only.** Rendering and input go through Win32 P/Invoke (`kern
 | Win32 signatures and structs | `Libs/ConsoleEngine.Windows/LowLevel/` (`Kernel32.cs`, `User32.cs`) |
 | Vector/matrix math | `Libs/Microsoft.Xna.Framework/` (copied from MonoGame, change only with good reason) |
 | How to use the engine | `Examples/Snake` (smallest), `Examples/TerraForM` (scenes, assets, tests) |
+| Lua scripting: API, hooks, errors, reload | [`docs/agent/03-rules.md § Lua`](docs/agent/03-rules.md#lua), `ConsoleEngine.Scripting/`, `Examples/Scripted` |
+| Why KeraLua, and what Lua costs per object | `ConsoleEngine.Benchmarks/README.md` |
 | Build/test pipeline | `.github/workflows/build-and-test.yml` |
 | Formatting rules | `.editorconfig` + [§ Code style](#code-style) |
 | Open feature requests | GitHub issues: mouse input (8), macOS (7), more colours (6) |
@@ -46,9 +50,12 @@ Every name in `docs/agent/` is grep-able. Search for the identifier you are inte
 | `ConsoleEngine.Windows` | `Libs/ConsoleEngine.Windows/` | Library, namespace `ConsoleEngine.Native` | Abstractions |
 | `ConsoleEngine.Logger` | `Libs/ConsoleEngine.Logger/` | Exe: TCP log viewer (port 11000) | — |
 | `Microsoft.Xna.Framework` | `Libs/Microsoft.Xna.Framework/` | Library: math types | — |
+| `ConsoleEngine.Scripting` | `ConsoleEngine.Scripting/` | Library: Lua 5.4 game-object scripting (KeraLua 1.4.11) | ConsoleEngine |
 | `TerraForM`, `Snake`, `Asteroids`, `Platformer`, `ConsoleGame` | `Examples/*` | Exe | ConsoleEngine |
+| `Scripted` | `Examples/Scripted/` | Exe: Lua-scripted demo | ConsoleEngine, Scripting |
 | `TerraForM.Tests` | `Examples/TerraForM.Tests/` | NUnit 5 + NSubstitute | TerraForM |
-| `ConsoleEngine.Tests` | `ConsoleEngine.Tests/` | NUnit 5, hand-written fakes in `Fakes/` | ConsoleEngine |
+| `ConsoleEngine.Tests` | `ConsoleEngine.Tests/` | NUnit 5, hand-written fakes in `Fakes/` | ConsoleEngine, Scripting |
+| `ConsoleEngine.Benchmarks` | `ConsoleEngine.Benchmarks/` | Exe: BenchmarkDotNet, engine micro-benchmarks | ConsoleEngine, Scripting |
 
 All projects: `net10.0`, `LangVersion` 14, `TreatWarningsAsErrors` = `True`. Solution: `ConsoleEngine.sln`.
 
@@ -74,13 +81,30 @@ dotnet tool restore
 dotnet reportgenerator -reports:"TestResults/**/coverage.cobertura.xml" -targetdir:coverage -reporttypes:Html
 ```
 
+Benchmarks (Release only):
+
+```bash
+dotnet run -c Release --project ConsoleEngine.Benchmarks -- --filter '*'
+```
+
 `coverage.runsettings` excludes `Microsoft.Xna.Framework`, `ConsoleEngine.Windows`, `ConsoleEngine.Logger` and `Program.cs`.
 ReportGenerator is a local tool pinned in `dotnet-tools.json`. There is no coverage threshold yet.
 
 Games need a real Windows console, so an agent cannot run them headless. TerraForM loads `Assets/Maps/*.txt` and the
 logger exe by **relative path**, so run a game's exe from its output folder (e.g.
-`Examples/TerraForM/bin/Debug/net10.0/`). CI runs restore → build → test with coverage on `windows-latest` for PRs to
-`main`. The coverage summary is in the job summary, and the HTML report is the `coverage-report` artifact.
+`Examples/TerraForM/bin/Debug/net10.0/`). Windows Terminal ignores the engine's window size and font, so start games
+in the classic console host (`conhost.exe`). `run-game.ps1` builds a game and does both (`-Configuration Release` is
+optional):
+
+```bash
+pwsh -File run-game.ps1 Scripted
+```
+
+Every example's output folder also gets `start-conhost.cmd` (from `Examples/start-conhost.cmd`, copied by
+`Examples/Directory.Build.targets`), which does the same when double-clicked. A new game under `Examples/` gets it
+automatically. Add it to `run-game.ps1`'s `ValidateSet`.
+
+CI runs restore → build → test with coverage on `windows-latest` for PRs to `main`. The coverage summary is in the job summary, and the HTML report is the `coverage-report` artifact.
 
 ## Folder structure
 
@@ -89,6 +113,7 @@ ConsoleEngine.sln
 .editorconfig                     formatting rules (see Code style)
 coverage.runsettings              coverlet settings for `dotnet test` coverage
 dotnet-tools.json                 local tools (ReportGenerator)
+run-game.ps1                      build an example and start it in conhost
 AGENTS.md / CLAUDE.md             agent instructions (CLAUDE.md imports AGENTS.md)
 docs/agent/                       support/triage docs for agents (01–09 + README)
 ConsoleEngine/                    the engine
@@ -102,7 +127,11 @@ ConsoleEngine/                    the engine
     Rendering/RenderConsole.cs      frame buffer + Draw* API
     Rendering/Sprite.cs             Pixel[,] sprites, FromString/FromStringArray
     Scenery/Scene.cs, SceneManager.cs  scene stack (Push/Pop/Set)
-ConsoleEngine.Tests/              engine unit tests (mirrors ConsoleEngine/ folders), Fakes/ (console handler, scene)
+ConsoleEngine.Tests/              engine unit tests (mirrors ConsoleEngine/ folders), Fakes/ (console handler, scene),
+                                    Scripting/ (Lua runtime tests)
+ConsoleEngine.Scripting/          LuaRuntime (state, engine API, field sync), LuaScript (module, reload),
+                                    LuaBehaviour, LowLevel/LuaNative.cs (direct lua54 P/Invoke)
+ConsoleEngine.Benchmarks/         BenchmarkDotNet: Scenarios/GameObjectFrame.cs, Scripts/mover.lua
 ConsoleEngine.Abstractions/
   Inputs/  IInputHandler, Key, KeyState
   Rendering/  IConsoleHandler, Pixel, FontInfo
@@ -111,6 +140,7 @@ Libs/
   ConsoleEngine.Logger/           Program.cs (logger exe)
   Microsoft.Xna.Framework/        Vector2/3/4, Point, Rectangle, Matrix, …
 Examples/
+  start-conhost.cmd               launcher copied next to every game exe (Directory.Build.targets)
   <Game>/Program.cs               creates the game, Initialize(), Start()
   <Game>/<Name>Game.cs            GameBase subclass
   <Game>/GameObjects/             game entities (TerraForM: Tiles/ for map tiles)
@@ -118,6 +148,7 @@ Examples/
   TerraForM/Commands/             Command, Move, Plant, Wait
   TerraForM/Assets/               Maps/*.txt, Sprites.cs, Texts/HudTexts.cs, Story/ (unused)
   TerraForM.Tests/                RoverTests.cs
+  Scripted/Assets/Scripts/        player.lua, firefly.lua (copied to output)
 .github/workflows/                build-and-test.yml
 ```
 
@@ -134,12 +165,21 @@ Examples/
   `GameBase` and `Input` currently `new` up `ConsoleHandler`/`InputHandler` directly.
 - Win32 return values are currently ignored. When touching `ConsoleHandler`, prefer checking them over adding more
   silent calls.
+- Game objects have one engine format: `GameObject` (`Infrastructure/Objects/`) owns `Position`, `Char`/`Sprite`,
+  `Color`, `Background`, `Visible` and draws itself. What it does is an `IBehaviour` (C# or Lua). Game code holds the
+  objects and calls `Update()`/`Render(Console)` from its own `OnUpdate`/`OnRender`. The examples' own
+  `GameObjects/GameObject` classes predate it and are not related.
+- Lua is a layer on top: `LuaRuntime(game)` → `Load` → `CreateBehaviour()` → `GameObject.Behaviour`. A script sees the
+  object as `self` with fixed fields (`x`, `y`, `char`, `color`, `background`, `visible`) that `LuaRuntime` copies in
+  and out around each hook, plus `self.data` for its own state. Never let C# read script data by field name. Add an
+  engine field to `GameObject` and to `WriteFields`/`ReadFields` instead. The engine itself has no Lua dependency.
 
 <a id="performance"></a>
 ## Performance
 
 **Hot path** = anything reachable from the frame loop: game and scene `OnUpdate`/`OnRender`, `RenderConsole.Draw*`,
-`Sprite` drawing, `InputHandler.Update`, `ConsoleHandler.Render`.
+`Sprite` drawing, `InputHandler.Update`, `ConsoleHandler.Render`, `GameObject.Update`/`Render`, `LuaBehaviour` and the
+field sync and host functions in `LuaRuntime`.
 
 | Do | Don't |
 |---|---|
@@ -149,7 +189,14 @@ Examples/
 | Plain `for` loops in hot code | LINQ, `foreach` over interfaces, lambdas/closures capturing state |
 | Keep exactly one console write per frame (`WriteConsoleOutput`) | Add per-cell or per-line Win32 calls |
 | Scale movement/timers by `GameTime.Delta` | Add per-frame amounts. The loop is uncapped, so behaviour changes with FPS |
-| Measure: `ShowFps = true` + `EnableLogger = true` shows FPS in the logger title | Guess about performance |
+| Measure: `ShowFps = true` + `EnableLogger = true` shows FPS in the logger title, `ConsoleEngine.Benchmarks` for micro-benchmarks | Guess about performance |
+
+Lua: `GameObject.Update`/`Render` with a `LuaBehaviour` allocate nothing (guarded by
+`UpdateAndRender_InSteadyState_DoNotAllocate`). Keep it that way: read and push Lua strings with
+`LuaNative.lua_tolstring`/`lua_pushlstring`, never KeraLua's `ToString`/`PushString`/`SetField(…, string)`, in the
+hot path, and use registry refs for functions and field names instead of looking them up by name. In
+scripts, build constant strings once (`local HELP = "…"`) rather than concatenating every frame, because Lua's own
+heap is invisible to .NET allocation checks.
 
 String interpolation in debug overlays (`IsDebugMode`) is acceptable. Known debt, which you should not copy and should
 fix when nearby:
@@ -197,6 +244,7 @@ Tag performance work as `perf:` commits.
 | Games | `<Name>Game : GameBase` | `SnakeGame`, `TerraformGame`, `AsteroidsGame` |
 | Scenes | `<Name>Scene : Scene<TGame>` in `Scenes/` | `GameScene`, `MenuScene`, `InputNameScene` |
 | Game objects | Noun in `GameObjects/` | `Rover`, `Asteroid`, `Player`, `Camera` |
+| Behaviours | `<Noun>Behaviour : IBehaviour` | `LuaBehaviour` |
 | Map tiles | Noun deriving `MapTile`, in `GameObjects/Tiles/` | `Rock`, `PlantSpot`, `FinishPoint` |
 | Commands (TerraForM) | Verb deriving `Command`, in `Commands/` | `Move`, `Plant`, `Wait` |
 | Events / handlers | `On<Event>` / `<Sender>On<Event>` | `OnFinishReached` / `RoverOnOnFinishReached` |
@@ -205,6 +253,8 @@ Tag performance work as `perf:` commits.
 | Win32 constants / virtual keys | Win32 spelling (UPPER_CASE) | `SC_MAXIMIZE`, `MF_BYCOMMAND`, `Key.ESCAPE`, `Key.LEFT` |
 | Assets | `Assets/<Kind>/`, maps `map<N>.txt`, sprites as `static readonly` on `Sprites` | `Assets/Maps/map1.txt`, `Sprites.GameOver` |
 | UI text constants | `const string` on a `*Texts` class | `HudTexts.NoPower` |
+| Lua scripts | `Assets/Scripts/<snake_case>.lua`, returning a `local` PascalCase module. Functions, fields and hooks snake_case, constants UPPER_CASE | `player.lua` → `Player.on_update(self, dt)`, `SPEED` |
+| Lua API | Global tables in snake_case: `input`, `console`, `keys`, `colors` | `input.held(keys.LEFT)`, `console.draw` |
 | Test classes | `<ClassUnderTest>Tests` | `RoverTests` |
 | Test names | `Method_State_Expected` | `PowerDepleted_WhenRemainingPowerIsZero_ReturnsTrue` |
 
@@ -236,8 +286,8 @@ Use [Conventional Commits 1.0.0](https://www.conventionalcommits.org/en/v1.0.0/#
 | `style` | Formatting only |
 | `chore` | Anything else |
 
-- **Scopes** (optional): `engine`, `abstractions`, `windows`, `logger`, `xna`, `terraform`, `snake`, `asteroids`,
-  `platformer`, `consolegame`, `docs`, `ci`.
+- **Scopes** (optional): `engine`, `abstractions`, `windows`, `logger`, `xna`, `scripting`, `benchmarks`,
+  `terraform`, `snake`, `asteroids`, `platformer`, `consolegame`, `scripted`, `docs`, `ci`.
 - **Description:** imperative, lower case, no trailing period. For example `fix(terraform): reset score on restart`.
 - **Breaking changes** to the public `ConsoleEngine` API or target framework: `!` after the type/scope and/or a
   `BREAKING CHANGE:` footer. For example `chore!: net8.0` (#10).
@@ -254,8 +304,11 @@ Use [Conventional Commits 1.0.0](https://www.conventionalcommits.org/en/v1.0.0/#
 | **Test seams** | `GameScene.World` is `virtual` and `World` has a parameterless ctor so NSubstitute can mock them (`RoverTests`). Don't remove them. Engine tests use `FakeConsoleHandler` (NSubstitute can't capture `Span<Pixel>` in `Render`) and `InternalsVisibleTo` for `RenderConsole.Initialize`/`Display` and `SceneManager`'s internal ctor (tests pass `null` as the game, with `Fakes/RecordingScene`). `GameTime` is only tested where it doesn't depend on elapsed time. `GameBase`, `Input` and `Log` have no tests: they need Win32, sockets or a real clock. Add tests in `Method_State_Expected` style when you change logic |
 | **Threading** | Everything runs on the game-loop thread, including `GameTime.SetInterval` callbacks. The only other thread is `Log`'s `"Logger"` thread. There is no locking, so never touch engine state from another thread |
 | **NuGet package** | `ConsoleEngine` has `GeneratePackageOnBuild`, so every build produces a `.nupkg` (gitignored). `PackageVersion` (0.1.0) is bumped by hand, and no pipeline publishes it. Any change to its public API is a breaking change for consumers (`!` commit) |
-| **Dependencies** | `CommunityToolkit.HighPerformance` 8.4.2 supplies `Span2D<T>` (namespace `CommunityToolkit.HighPerformance`). It replaced the deprecated `Microsoft.Toolkit.HighPerformance` |
+| **Dependencies** | `CommunityToolkit.HighPerformance` 8.4.2 supplies `Span2D<T>` (namespace `CommunityToolkit.HighPerformance`). It replaced the deprecated `Microsoft.Toolkit.HighPerformance`. `KeraLua` 1.4.11 (MIT, NuGet) supplies Lua 5.4 for `ConsoleEngine.Scripting`. It was chosen over Lua-CSharp, NLua and MoonSharp by a benchmark (numbers in `ConsoleEngine.Benchmarks/README.md`). That decision is made: don't add other Lua libraries |
 | **Third-party code / licence** | `Libs/Microsoft.Xna.Framework` is copied from MonoGame (see its `README.md`). The repo has **no LICENSE file**. Don't copy in more third-party code, and don't add or change licensing, without asking the owner |
+| **Lua host functions** | Static `LuaFunction` delegates that find their `LuaRuntime` through upvalue 1 (a `GCHandle`). They must **never raise a Lua error** (`lua_error`, `luaL_check*`, `luaL_opt*`): it long-jumps across managed frames and crashes the process. Catch every exception, store it in `_hostError`, return 0 |
+| **Lua scripts in tests** | `LuaRuntime`'s internal ctor takes a `RenderConsole` and a `Func<int, KeyState>`, so tests need neither Win32 nor `Input.Instance` (`InternalsVisibleTo` for `ConsoleEngine.Tests` and `ConsoleEngine.Benchmarks`). Tests write scripts to a temp folder, load them by absolute path and assert on the `GameObject`'s typed fields. `Fakes/RecordingBehaviour` records `IBehaviour` calls |
+| **Lua reload** | `Reload` reads the copy in the **output** folder. Editing `Examples/*/Assets/Scripts` changes nothing until the next build |
 | **Running games** | Not possible headless. Verify with `dotnet build` + `dotnet test`, and say plainly that a change was not checked in a real console |
 
 <a id="keep-docs-current"></a>

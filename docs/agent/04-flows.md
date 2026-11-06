@@ -1,7 +1,8 @@
 # 04 — Flows, hop by hop
 
-**No step in any flow writes a log line** ([06](06-diagnostics.md#no-logs)). The "Observable" column is what the user
-sees instead: an unhandled exception (the process dies), a silent no-op, or a visible screen state. "Silent" means
+**No engine step writes a log line** ([06](06-diagnostics.md#no-logs)). The exceptions are Lua script errors
+([F9](#f9)), which go to the logger only when `EnableLogger` is on. The "Observable" column is what the user sees
+instead: an unhandled exception (the process dies), a silent no-op, or a visible screen state. "Silent" means
 the code continues with no signal at all.
 
 <a id="f1"></a>
@@ -126,3 +127,46 @@ See [03 § Scenes](03-rules.md#scenes). TerraForM's scene graph:
 
 `Rover.ApplyForce`: after deducting cost, `if (PowerDepleted()) return;` means no acceleration. `Rover.Plant`: needs
 `StandingOnPlantingSpot && World.Intersects(...)`, otherwise nothing. `Rover.MoveNorth`: `if (!_scene.World.Intersects(this, out var with)) return;`.
+
+<a id="f8"></a>
+## F8 — Lua script load and reload (`LuaRuntime.Load` → `LuaScript.Reload`)
+
+| # | Step | Class.method | Stops / skips if | Observable |
+|---|---|---|---|---|
+| 1 | Resolve the path: rooted as is, otherwise `Path.Combine(AppContext.BaseDirectory, path)` | `LuaRuntime.Load` | — | — |
+| 2 | Read the file bytes, drop a UTF-8 BOM | `LuaScript.ReadSource` | `IOException` (missing file, folder, locked) | `LuaScriptException` with the .NET message |
+| 3 | Compile with chunk name `"@" + Name` | `KeraLua.Lua.LoadBuffer` | Syntax error | `LuaScriptException`: `Lua script '<name>': <name>:<line>: <message>` |
+| 4 | Run the chunk, expect one result | `LuaRuntime.Call` | Runtime error in top-level code | `LuaScriptException` with Lua's message |
+| 5 | Result must be a table | `LuaScript.Reload` | Not a table | `LuaScriptException`: `the script must return a table` |
+| 6 | First load: keep the table as the module and build `{ __index = module, __newindex = guard }`. Reload: copy every field into the existing module | `CreateModule` / `UpdateModule` | — | Existing behaviours use the new functions |
+| 7 | Cache `on_start`, `on_update`, `on_render`. A missing or non-function field becomes "no hook" | `CacheFunction` | — | That hook silently never runs |
+| 8 | `Version++`. `Load` adds the script to the runtime's list for `ReloadAll` | `LuaScript.Reload`, `LuaRuntime.Load` | — | — |
+
+Steps 2–5 throw before anything is replaced, so a failed reload leaves the previous version running.
+`ReloadAll` catches each `LuaScriptException` and returns them as an array. It never throws for script errors.
+
+<a id="f9"></a>
+## F9 — Game object frame (`GameObject.Update`, then `GameObject.Render`)
+
+| # | Step | Class.method | Stops / skips if | Observable |
+|---|---|---|---|---|
+| 1 | No behaviour → return | `GameObject.Update` | `Behaviour == null` | Object never changes |
+| 2 | First update after the behaviour was set: `Behaviour.Start(this)` | `GameObject.Update` | — | — |
+| 3 | `Behaviour.Update(this, GameTime.Delta)` | `GameObject.Update` | — | — |
+| 4 | Hidden → return | `GameObject.Render` | `Visible == false` | Nothing drawn, `Behaviour.Render` not called |
+| 5 | Draw `Sprite` or `Char`/`Color`/`Background` at the floored `Position` | `GameObject.Render` → `RenderConsole.Draw` | Off-screen → clipped | The object |
+| 6 | `Behaviour.Render(this, console)` | `GameObject.Render` | — | Extra drawing |
+
+For a `LuaBehaviour`, each of steps 2, 3 and 6 is:
+
+| # | Step | Class.method | Stops / skips if | Observable |
+|---|---|---|---|---|
+| a | Disposed, or faulted for the current script `Version` → return. Faulted for an older version → clear `Error` | `LuaBehaviour.CanRun` | `_self == NoRef`, or still faulted | Object frozen (still drawn), `IsFaulted` true |
+| b | Hook missing → return | `LuaBehaviour.Start`/`Update`/`Render` | `on_start`/`on_update`/`on_render` not a function | Hook silently never runs |
+| c | Copy engine fields into `self` | `LuaRuntime.WriteFields` | — | — |
+| d | Call the hook (`on_update` gets `dt` in seconds) | `LuaRuntime.Call` | Lua error or stored host exception | Fault (step f) |
+| e | `on_start`/`on_update` only: copy engine fields back | `LuaRuntime.ReadFields` | A field has the wrong type → nothing copied | Fault: `self.<field> must be …` |
+| f | On error: `Error` set, `Log.WriteLine("Lua: " + error)` | `LuaBehaviour.Fault` | — | Logger only (dropped unless `EnableLogger`) |
+
+Host functions (`input.*`, `console.*`, `print`) catch every .NET exception, store the first one and return no values.
+They never call `lua_error`.
