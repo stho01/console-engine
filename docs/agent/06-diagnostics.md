@@ -45,7 +45,18 @@ Grep these to locate the code path. None of them has a log level.
 | `Empty deque` | `Deque<T>.PopFront` / `PopBack` (`InvalidOperationException`) | Game popped an empty `Deque` |
 | `no go` | `Move.OnUpdate` / `GetVisualRepresentation` (`Exception`) | Invalid `Direction` value. Unreachable via the UI |
 | `worldName` (param name of `ArgumentNullException`) | `GameScene` ctor | `GameScene` created with null name |
-| Window title = `GameBase.Name` | `GameBase.Initialize` → `SetTitle` | Default `"Game"`. Platformer `"Platformer game"` |
+| `Entity(<id>v<version>) is not alive.` | `World` (`EcsThrowHelper.ThrowNotAlive`, `InvalidOperationException`) | Entity destroyed, stale handle or `Entity.Null`. After `World.Dispose()` the same calls throw `ObjectDisposedException` instead ([03 § ECS](03-rules.md#ecs)) |
+| `Entity(<id>v<version>) has no <Type> component.` | `World.Get`/`Set`/`Remove` (`InvalidOperationException`) | Component missing |
+| `Entity(<id>v<version>) already has a <Type> component.` | `World.Add` (`InvalidOperationException`) | Use `Set` to overwrite |
+| `<Type> is a tag component and has no data.` | `World.Get`/`Set`, `EntityChunk.GetSpan` (`InvalidOperationException`) | `Get` on a field-less struct |
+| `Cannot create, destroy, add or remove while a query is being iterated. Use a CommandBuffer.` | `World.Create`/`Destroy`/`Add`/`Remove`, `CommandBuffer.Playback` (`InvalidOperationException`) | Structural change inside a `foreach` over `Query.GetChunks()` or a `ForEach` job ([03 § ECS](03-rules.md#ecs)) |
+| `Entity(<negative id>v<generation>) is a deferred handle from another CommandBuffer or from before its last playback.` | `CommandBuffer.Playback` (`InvalidOperationException`) | A handle from `CommandBuffer.Create` was used with a different buffer, or kept past `Playback`/`Clear` |
+| `The UpdateBefore/UpdateAfter attributes of these systems form a cycle: <System>, <System>….` | `SystemGroup.Update` / `RunOrder` (`InvalidOperationException`) | Ordering attributes contradict each other. The list names every system that couldn't be scheduled |
+| `<Type> is not in this chunk. Add it to the query with With<<Type>>().` | `EntityChunk.GetSpan` (`InvalidOperationException`) | A system read a component its query doesn't require |
+| `Component type <Type> is listed more than once.` | `World.Create` (`ArgumentException`) | Same type twice in one `Create` |
+| `Cannot register <Type>: the ECS supports at most 256 component types.` | `ComponentRegistry.Register` (`InvalidOperationException`, wrapped in `TypeInitializationException`) | 257th component type used in the process |
+| `An archetype row needs <n> bytes and does not fit in one 16384-byte chunk.` | `Archetype` ctor (`InvalidOperationException`) | A component set too large for a chunk |
+| Window title = `GameBase.Name` | `GameBase.Initialize` → `SetTitle` | Default `"Game"`. Platformer `"Platformer game"`, Asteroids.Ecs `"Asteroids (ECS)"`, Snake.Ecs `"Snake (ECS)"`, TerraForM.Ecs `"TerraForM (ECS)"`, Platformer.Ecs `"Platformer (ECS)"`, Swarm `"Swarm (ECS)"` |
 
 Runtime exceptions without repo-authored text (message comes from .NET and varies): `DllNotFoundException`,
 `SocketException`, `Win32Exception`, `FileNotFoundException`, `DirectoryNotFoundException`, `FormatException`,

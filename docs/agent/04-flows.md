@@ -126,3 +126,31 @@ See [03 § Scenes](03-rules.md#scenes). TerraForM's scene graph:
 
 `Rover.ApplyForce`: after deducting cost, `if (PowerDepleted()) return;` means no acceleration. `Rover.Plant`: needs
 `StandingOnPlantingSpot && World.Intersects(...)`, otherwise nothing. `Rover.MoveNorth`: `if (!_scene.World.Intersects(this, out var with)) return;`.
+
+<a id="f8"></a>
+## F8 — ECS structural change (`World.Add<T>` / `Remove<T>` / `Destroy`)
+
+| # | Step | Class.method | Stops / skips if | Observable |
+|---|---|---|---|---|
+| 0 | World disposed, or a query on this world is being iterated (`_iterationDepth != 0`) | `World.ThrowIfStructuralChangeNotAllowed` | Either | `ObjectDisposedException` / `InvalidOperationException` "Cannot create, destroy, add or remove while a query is being iterated…" |
+| 1 | Look up the entity's record. Id out of range, or `Version` differs | `World.GetAliveRecord` → `ThrowNotAliveOrDisposed` | Not alive | `ObjectDisposedException` if the world is disposed, otherwise `InvalidOperationException` "… is not alive." |
+| 2 | `Add`: component already in the source mask. `Remove`: not in it | `World.AddComponent` / `RemoveComponent` | Present / missing | `InvalidOperationException` ([06](06-diagnostics.md)) |
+| 3 | Find the target archetype through the cached edge (array indexed by component id), or create it once (`GetOrCreateArchetype`) | `World.GetAddTarget`, `Archetype.GetAddEdge` / `GetRemoveEdge` | — | — |
+| 4 | Append a row in the target. A new chunk comes from `ChunkPool` (pooled first, otherwise `NativeMemory.AlignedAlloc`) | `Archetype.Allocate` | — | — |
+| 5 | Copy the components both archetypes share | `Archetype.CopyShared` | — | — |
+| 6 | Remove the old row: the archetype's last row is copied into it (swap-back), and the moved entity's record is repointed. An emptied last chunk goes back to the pool | `World.RemoveFromArchetype` → `Archetype.RemoveAt` | — | Earlier `ref`s from `Get<T>` in that archetype now point at other data |
+| 7 | `Add`: write the new value (skipped for tags). `Destroy` instead does step 6 only, then bumps `Version` and frees the id (or retires it at `int.MaxValue`) | `World.Write`, `World.Destroy` | — | — |
+
+<a id="f9"></a>
+## F9 — ECS frame in an `EcsScene` (`SceneManager.Update` → `Simulation`, `SceneManager.Render` → `Presentation`)
+
+Runs inside [F2](#f2) steps "Scenes.Update" and "Scenes.Render". Both are skipped while the scene is paused.
+
+| # | Step | Class.method | Stops / skips if | Observable |
+|---|---|---|---|---|
+| 1 | `Simulation.Update((float)GameTime.Delta.TotalSeconds)`: each enabled system's `OnUpdate`, in `SystemGroup.RunOrder` (`Add` order adjusted by `UpdateBefore`/`UpdateAfter`) | `EcsScene.OnUpdate` → `SystemGroup.Update` | `EntitySystem.Enabled == false` → that system is skipped | — |
+| 2 | Systems iterate queries and record structural changes in `Commands` | game systems, `MovementSystem` | Direct `World.Create/Destroy/Add/Remove` inside the loop | `InvalidOperationException` ([F8](#f8) step 0) |
+| 3 | Sync point: `Commands.Playback(World)` applies the recorded changes in order (deferred handles from `Create` are swapped for the created entities), then clears the buffer | `CommandBuffer.Playback` | Target entity no longer alive → that `Destroy`/`Add`/`Remove` is **skipped silently**. Foreign or stale deferred handle → `InvalidOperationException` | Entities created/destroyed this frame show up in the render below |
+| 4 | `Presentation.Update(delta)` runs the render systems into the frame buffer, which `GameBase.Start` cleared at the start of the frame (if `ClearScreenOnEachFrame`) | `EcsScene.OnRender` → `SystemGroup.Update` | `OutlineRenderSystem`: bounding circle off-screen → entity skipped | Drawn cells |
+| 5 | `Presentation` plays back its own `Commands` (normally empty) | `CommandBuffer.Playback` | — | — |
+| 6 | On scene unload: `OnDestroy`, then `World.Dispose()` frees all chunks | `EcsScene.OnUnload` | — | Old entity handles stop being alive |
