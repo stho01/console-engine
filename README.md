@@ -18,11 +18,15 @@ macOS/Linux notes:
   needs 200x100 cells. Force it on or off with `CONSOLE_ENGINE_RENDER=halfblock|text`.
 - Colors use 24-bit RGB when `COLORTERM` is `truecolor`/`24bit`, otherwise the terminal's 16 color palette.
   Override with `CONSOLE_ENGINE_COLORS=truecolor|16`.
-- On macOS key up/down state is read from the OS (like `GetAsyncKeyState` on Windows), which gives precise held/released keys.
-  This needs your terminal app to be allowed under System Settings > Privacy & Security > Input Monitoring. Like on Windows it
-  sees keys pressed while another window is focused. Without the permission, elsewhere, or with `CONSOLE_ENGINE_INPUT=terminal`,
-  keys are read from the terminal; terminals only report presses and auto repeat, never releases. A key then counts as held
-  for a short tap (120ms), and again from its first auto repeat until the repeat stops.
+- Terminals that support the [kitty keyboard protocol](https://sw.kovidgoyal.net/kitty/keyboard-protocol/) (kitty, Alacritty,
+  WezTerm, Ghostty, foot, recent iTerm2) report real key presses and releases, which gives precise held/released keys like on
+  Windows. It's switched on automatically when the terminal answers the query at startup.
+- Otherwise, on macOS key up/down state is read from the OS (like `GetAsyncKeyState` on Windows). This needs your terminal app
+  to be allowed under System Settings > Privacy & Security > Input Monitoring. Like on Windows it sees keys pressed while
+  another window is focused. Without the permission, in other terminals, or with `CONSOLE_ENGINE_INPUT=terminal` (or `legacy`,
+  which also skips the kitty protocol), keys are read from the terminal the classic way; it only reports presses and auto
+  repeat, never releases. A key then counts as held for a short tap (120ms), and again from its first auto repeat until the
+  repeat stops, so a key held down reads as let go between the two.
   Keys are mapped through the active keyboard layout like on Windows; punctuation keys without a Windows equivalent
   (`ø`, `ü`, ...) fall back to their US layout position.
 - The terminal input waits 750ms for the first auto repeat before it reports a key as released. If your "delay until repeat"

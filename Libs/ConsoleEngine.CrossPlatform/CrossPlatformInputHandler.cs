@@ -9,10 +9,11 @@ namespace ConsoleEngine.CrossPlatform;
 /// <summary>
 /// Keyboard input for non Windows platforms. Key codes are Windows virtual key codes, same as <see cref="Key"/>.
 ///
-/// On macOS the real keyboard state is read through CoreGraphics. Everywhere else (or if macOS refuses to
-/// report key state) keys are read from the terminal, which only reports presses and auto repeats, never
-/// releases. A key read from the terminal is then held for a short tap, and again once its auto repeat starts
-/// until the repeat stops. Pressed and Released fire once per key press.
+/// Terminals that support the kitty keyboard protocol report real press, repeat and release events, which are
+/// used when available. Otherwise, on macOS the real keyboard state is read through CoreGraphics. Everywhere else
+/// (or if macOS refuses to report key state) keys are read from the terminal the classic way, which only reports
+/// presses and auto repeats, never releases. A key is then held for a short tap, and again once its auto repeat
+/// starts until the repeat stops. Pressed and Released fire once per key press.
 /// </summary>
 public class CrossPlatformInputHandler : IInputHandler
 {
@@ -35,6 +36,9 @@ public class CrossPlatformInputHandler : IInputHandler
     private const int MaxCalibrationMisses = 2;
 
     private readonly KeyState[] _keyStates = new KeyState[256];
+    private readonly TerminalKeyReader _reader;
+    private readonly bool[] _kittyDown = new bool[256];
+    private readonly bool[] _kittyReleaseNextFrame = new bool[256];
     private readonly bool[] _nativeDown = new bool[256];
     private readonly long[] _terminalHeldUntil = new long[256];
     private readonly long[] _terminalPressedAt = new long[256];
@@ -46,12 +50,16 @@ public class CrossPlatformInputHandler : IInputHandler
     private bool _nativeSupported;
     private bool _nativeTrusted;
     private int _calibrationMisses;
-    private long _lastUpdate;
+    private bool _started;
 
     public CrossPlatformInputHandler()
     {
+        // auto (default), terminal (no native macOS input), legacy (no native input and no kitty protocol)
         var mode = Environment.GetEnvironmentVariable("CONSOLE_ENGINE_INPUT");
-        _nativeSupported = !string.Equals(mode, "terminal", StringComparison.OrdinalIgnoreCase) && MacKeyboard.IsSupported();
+        var legacy = string.Equals(mode, "legacy", StringComparison.OrdinalIgnoreCase);
+        var terminalOnly = legacy || string.Equals(mode, "terminal", StringComparison.OrdinalIgnoreCase);
+        _nativeSupported = !terminalOnly && MacKeyboard.IsSupported();
+        _reader = new TerminalKeyReader(kittyAllowed: !legacy);
 
         for (var i = 0; i < _keyStates.Length; i++)
             _keyStates[i].Index = i;
@@ -66,11 +74,24 @@ public class CrossPlatformInputHandler : IInputHandler
 
     public void Update()
     {
+        // Started on the first update, from the game loop, so the kitty protocol is switched on in the game's
+        // alternate screen and the terminal drops it again when the game leaves it.
+        if (!_started)
+        {
+            _started = true;
+            _reader.Start();
+        }
+
         var now = Stopwatch.GetTimestamp();
 
         // Always drain the terminal, otherwise key presses pile up in stdin (and get echoed when the game exits).
-        ReadTerminalKeys(now);
-        _lastUpdate = now;
+        ReadTerminalKeys();
+
+        if (_reader.KittyActive)
+        {
+            UpdateFromKitty();
+            return;
+        }
 
         if (_nativeSupported)
         {
@@ -87,6 +108,24 @@ public class CrossPlatformInputHandler : IInputHandler
             UpdateFromNative();
         else
             UpdateFromTerminal(now);
+    }
+
+    private void UpdateFromKitty()
+    {
+        // Generic modifier keys, like GetAsyncKeyState reports them
+        _kittyDown[0x10] = _kittyDown[0xA0] || _kittyDown[0xA1];
+        _kittyDown[0x11] = _kittyDown[0xA2] || _kittyDown[0xA3];
+        _kittyDown[0x12] = _kittyDown[0xA4] || _kittyDown[0xA5];
+
+        for (var i = 0; i < _keyStates.Length; i++)
+        {
+            var wasHeld = _keyStates[i].Held;
+            var isDown = _kittyDown[i];
+
+            _keyStates[i].Pressed = _terminalPressed[i] || (isDown && !wasHeld);
+            _keyStates[i].Released = !isDown && wasHeld;
+            _keyStates[i].Held = isDown;
+        }
     }
 
     private void UpdateFromNative()
@@ -151,44 +190,64 @@ public class CrossPlatformInputHandler : IInputHandler
         }
     }
 
-    private void ReadTerminalKeys(long now)
+    private void ReadTerminalKeys()
     {
         Array.Clear(_terminalPressed);
 
-        if (Console.IsInputRedirected)
-            return;
-
-        try
+        // A key pressed and released within one frame is held for that frame and released in the next one.
+        for (var vk = 0; vk < _kittyReleaseNextFrame.Length; vk++)
         {
-            while (Console.KeyAvailable)
+            if (_kittyReleaseNextFrame[vk])
             {
-                var keyInfo = Console.ReadKey(intercept: true);
-                var vk = ToVirtualKey(keyInfo);
-                if (vk <= 0 || vk >= _terminalHeldUntil.Length)
-                    continue;
-
-                // Every event drained this frame shares one timestamp and may have arrived any time since the
-                // last update, so the key counts as held if its window was still open back then.
-                var held = _terminalHeldUntil[vk] > _lastUpdate;
-                var isRepeat = held && (_terminalRepeating[vk] || now - _terminalPressedAt[vk] >= MinRepeatDelayTicks);
-                if (isRepeat)
-                {
-                    _terminalRepeating[vk] = true;
-                }
-                else
-                {
-                    _terminalPressedAt[vk] = now;
-                    _terminalRepeating[vk] = false;
-                    _terminalPressed[vk] = true;
-                }
-
-                _terminalHeldUntil[vk] = now + (isRepeat ? RepeatHoldTicks : InitialHoldTicks);
+                _kittyReleaseNextFrame[vk] = false;
+                _kittyDown[vk] = false;
             }
         }
-        catch (InvalidOperationException)
+
+        while (_reader.TryDequeue(out var keyEvent))
         {
-            // No console attached
+            var vk = keyEvent.Key;
+            if (vk <= 0 || vk >= _keyStates.Length)
+                continue;
+
+            switch (keyEvent.Type)
+            {
+                case KeyEventType.Press:
+                    _terminalPressed[vk] = true;
+                    _kittyDown[vk] = true;
+                    break;
+                case KeyEventType.Repeat:
+                    _kittyDown[vk] = true;
+                    break;
+                case KeyEventType.Release when _terminalPressed[vk]:
+                    _kittyReleaseNextFrame[vk] = true;
+                    break;
+                case KeyEventType.Release:
+                    _kittyDown[vk] = false;
+                    break;
+                default:
+                    ReadLegacyKey(vk, keyEvent.Time);
+                    break;
+            }
         }
+    }
+
+    private void ReadLegacyKey(int vk, long time)
+    {
+        var held = _terminalHeldUntil[vk] > time;
+        var isRepeat = held && (_terminalRepeating[vk] || time - _terminalPressedAt[vk] >= MinRepeatDelayTicks);
+        if (isRepeat)
+        {
+            _terminalRepeating[vk] = true;
+        }
+        else
+        {
+            _terminalPressedAt[vk] = time;
+            _terminalRepeating[vk] = false;
+            _terminalPressed[vk] = true;
+        }
+
+        _terminalHeldUntil[vk] = time + (isRepeat ? RepeatHoldTicks : InitialHoldTicks);
     }
 
     private static long ReadInitialHoldMs()
@@ -196,15 +255,5 @@ public class CrossPlatformInputHandler : IInputHandler
         var setting = Environment.GetEnvironmentVariable("CONSOLE_ENGINE_REPEAT_DELAY");
         // Leave some headroom above the repeat delay for slow frames.
         return int.TryParse(setting, out var delay) && delay > 0 ? delay + 100 : DefaultInitialHoldMs;
-    }
-
-    private static int ToVirtualKey(ConsoleKeyInfo keyInfo)
-    {
-        // ConsoleKey values are Windows virtual key codes.
-        if (keyInfo.Key != 0)
-            return (int)keyInfo.Key;
-
-        var c = char.ToUpperInvariant(keyInfo.KeyChar);
-        return c is ' ' or >= '0' and <= '9' or >= 'A' and <= 'Z' ? c : 0;
     }
 }

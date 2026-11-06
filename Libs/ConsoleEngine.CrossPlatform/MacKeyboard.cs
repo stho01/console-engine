@@ -233,7 +233,7 @@ internal static class MacKeyboard
         }
     }
 
-    private static int CharToVirtualKey(char c)
+    internal static int CharToVirtualKey(char c)
     {
         c = char.ToUpperInvariant(c);
         return c switch
