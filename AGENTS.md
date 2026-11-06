@@ -49,7 +49,9 @@ Every name in `docs/agent/` is grep-able. Search for the identifier you are inte
 | `ConsoleEngine.Logger` | `Libs/ConsoleEngine.Logger/` | Exe: TCP log viewer (port 11000) | — |
 | `Microsoft.Xna.Framework` | `Libs/Microsoft.Xna.Framework/` | Library: math types | — |
 | `TerraForM`, `Snake`, `Asteroids`, `Platformer`, `ConsoleGame`, their ports `<Game>.Ecs`, and `Swarm` (ECS stress test) | `Examples/*` | Exe | ConsoleEngine |
+| `Launcher` | `Examples/Launcher/` | Exe: text menu that starts the ECS games (plain `System.Console`, no engine) | ECS games (build order only) |
 | `TerraForM.Tests` | `Examples/TerraForM.Tests/` | NUnit 5 + NSubstitute | TerraForM |
+| `Launcher.Tests` | `Examples/Launcher.Tests/` | NUnit 5 | Launcher |
 | `ConsoleEngine.Tests` | `ConsoleEngine.Tests/` | NUnit 5, hand-written fakes in `Fakes/` | ConsoleEngine |
 | `ConsoleEngine.Benchmarks` | `ConsoleEngine.Benchmarks/` | Exe: BenchmarkDotNet 0.15.8 | ConsoleEngine |
 
@@ -91,6 +93,14 @@ Games need a real Windows console, so an agent cannot run them headless. TerraFo
 logger exe by **relative path**, so run a game's exe from its output folder (e.g.
 `Examples/TerraForM/bin/Debug/net10.0/`). CI runs restore → build → test with coverage on `windows-latest` for PRs to
 `main`. The coverage summary is in the job summary, and the HTML report is the `coverage-report` artifact.
+
+To play the ECS games, start the launcher. It builds them first and starts each one in its own classic console window
+(`conhost.exe`, even when Windows Terminal is the default) from its output folder. A new game in `Examples/` is added
+to `GameCatalog.Games` **and** as a build-order `ProjectReference` in `Launcher.csproj`; `GameLocatorTests` checks both:
+
+```bash
+dotnet run --project Examples/Launcher
+```
 
 ## Folder structure
 
@@ -139,6 +149,9 @@ Examples/
                                   Systems/ (EntitySystem subclasses), Scenes/ (an EcsScene that spawns entities and
                                   adds systems in run order). TerraForM.Ecs links Assets/ from Examples/TerraForM
   Swarm/                          ECS stress test (no OOP original): Components/, Systems/, Scenes/SwarmScene
+  Launcher/                       game launcher: GameCatalog (menu entries), GameLocator (exe paths), LauncherMenu
+                                  (keys), LauncherScreen (drawing), GameRunner (Process.Start + wait), LauncherTexts
+  Launcher.Tests/                 LauncherMenuTests, GameLocatorTests
   TerraForM/Scenes/               GameScene, MenuScene, InputNameScene
   TerraForM/Commands/             Command, Move, Plant, Wait
   TerraForM/Assets/               Maps/*.txt, Sprites.cs, Texts/HudTexts.cs, Story/ (unused)
@@ -270,7 +283,7 @@ Use [Conventional Commits 1.0.0](https://www.conventionalcommits.org/en/v1.0.0/#
 | `chore` | Anything else |
 
 - **Scopes** (optional): `engine`, `abstractions`, `windows`, `logger`, `xna`, `terraform`, `snake`, `asteroids`,
-  `platformer`, `consolegame`, `docs`, `ci`.
+  `platformer`, `consolegame`, `launcher`, `docs`, `ci`.
 - **Description:** imperative, lower case, no trailing period. For example `fix(terraform): reset score on restart`.
 - **Breaking changes** to the public `ConsoleEngine` API or target framework: `!` after the type/scope and/or a
   `BREAKING CHANGE:` footer. For example `chore!: net8.0` (#10).
