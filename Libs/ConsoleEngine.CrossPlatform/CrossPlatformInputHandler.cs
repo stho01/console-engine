@@ -29,6 +29,7 @@ public class CrossPlatformInputHandler : IInputHandler
     private static readonly long TapTicks = Stopwatch.Frequency * 120 / 1000;
 
     // No OS repeats sooner than this after a key press, so an event before it is the key being pressed again.
+    // Later events are either the first auto repeat or another tap, see ReadLegacyKey.
     private static readonly long MinRepeatDelayTicks = Stopwatch.Frequency * 200 / 1000;
 
     // How far apart a terminal key press and the native key down may be to count as the same key press.
@@ -45,6 +46,8 @@ public class CrossPlatformInputHandler : IInputHandler
     private readonly bool[] _terminalRepeating = new bool[256];
     private readonly bool[] _terminalPressed = new bool[256];
     private readonly bool[] _terminalActive = new bool[256];
+    private readonly long[] _terminalUndecidedAt = new long[256];
+    private int _undecidedCount;
     private readonly long[] _nativeLastDown = new long[256];
     private readonly List<(int Key, long Time)> _pendingCalibration = new();
     private bool _nativeSupported;
@@ -85,7 +88,7 @@ public class CrossPlatformInputHandler : IInputHandler
         var now = Stopwatch.GetTimestamp();
 
         // Always drain the terminal, otherwise key presses pile up in stdin (and get echoed when the game exits).
-        ReadTerminalKeys();
+        ReadTerminalKeys(now);
 
         if (_reader.KittyActive)
         {
@@ -190,7 +193,7 @@ public class CrossPlatformInputHandler : IInputHandler
         }
     }
 
-    private void ReadTerminalKeys()
+    private void ReadTerminalKeys(long now)
     {
         Array.Clear(_terminalPressed);
 
@@ -230,24 +233,60 @@ public class CrossPlatformInputHandler : IInputHandler
                     break;
             }
         }
+
+        // No auto repeat followed an undecided event in time, so it was the key being tapped again.
+        if (_undecidedCount > 0)
+            for (var vk = 0; vk < _terminalUndecidedAt.Length; vk++)
+                if (_terminalUndecidedAt[vk] != 0 && now - _terminalUndecidedAt[vk] >= RepeatHoldTicks)
+                    PressLegacyKey(vk, now);
     }
 
     private void ReadLegacyKey(int vk, long time)
     {
+        // The OS only auto repeats the key pressed last, so another key can't be in the middle of a repeat.
+        if (_undecidedCount > 0)
+            for (var other = 0; other < _terminalUndecidedAt.Length; other++)
+                if (other != vk && _terminalUndecidedAt[other] != 0)
+                    PressLegacyKey(other, time);
+
         var held = _terminalHeldUntil[vk] > time;
-        var isRepeat = held && (_terminalRepeating[vk] || time - _terminalPressedAt[vk] >= MinRepeatDelayTicks);
-        if (isRepeat)
+
+        if (held && (_terminalRepeating[vk] || _terminalUndecidedAt[vk] != 0))
         {
+            // Part of an auto repeat stream: an undecided event followed by this one within the repeat interval
+            // was the first repeat.
+            SetUndecided(vk, 0);
             _terminalRepeating[vk] = true;
+            _terminalHeldUntil[vk] = time + RepeatHoldTicks;
+        }
+        else if (held && time - _terminalPressedAt[vk] >= MinRepeatDelayTicks)
+        {
+            // The first auto repeat and a second tap look the same. A repeat is followed by more repeats within
+            // the repeat interval, a tap isn't, so decide once the next event comes or doesn't.
+            SetUndecided(vk, time);
+            _terminalHeldUntil[vk] = time + RepeatHoldTicks;
         }
         else
         {
-            _terminalPressedAt[vk] = time;
-            _terminalRepeating[vk] = false;
-            _terminalPressed[vk] = true;
+            PressLegacyKey(vk, time);
         }
+    }
 
-        _terminalHeldUntil[vk] = time + (isRepeat ? RepeatHoldTicks : InitialHoldTicks);
+    private void PressLegacyKey(int vk, long time)
+    {
+        SetUndecided(vk, 0);
+        _terminalPressedAt[vk] = time;
+        _terminalRepeating[vk] = false;
+        _terminalPressed[vk] = true;
+        _terminalHeldUntil[vk] = time + InitialHoldTicks;
+    }
+
+    private void SetUndecided(int vk, long time)
+    {
+        if ((_terminalUndecidedAt[vk] != 0) != (time != 0))
+            _undecidedCount += time != 0 ? 1 : -1;
+
+        _terminalUndecidedAt[vk] = time;
     }
 
     private static long ReadInitialHoldMs()
