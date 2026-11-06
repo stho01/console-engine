@@ -1,5 +1,6 @@
 using System;
 using System.Collections.Generic;
+using System.Diagnostics.CodeAnalysis;
 using System.Runtime.CompilerServices;
 
 namespace ConsoleEngine.Ecs;
@@ -8,11 +9,19 @@ namespace ConsoleEngine.Ecs;
 /// Owns entities and their components. Component data lives in native memory (archetype chunks), so a world must
 /// be disposed to free it. Not thread-safe: use it from the game-loop thread only.
 /// </summary>
+/// <remarks>
+/// There is deliberately no finalizer: a <c>ref</c> from <see cref="Get{T}"/> points into native memory and doesn't
+/// keep the world reachable, so a finalizer could free memory that is still being written through such a ref. A
+/// world that is never disposed leaks its chunks instead. <see cref="EcsScene{TGame}"/> disposes its world on unload.
+/// </remarks>
 public sealed unsafe partial class World : IDisposable
 {
     //**********************************************************
     //** fields
     //**********************************************************
+
+    /// <summary>Version of an id that can't be reused: its version would have wrapped back to 1.</summary>
+    private const int RetiredVersion = -1;
 
     private readonly ChunkPool _chunkPool = new();
     private readonly Dictionary<ComponentMask, Archetype> _archetypesByMask = new();
@@ -40,8 +49,6 @@ public sealed unsafe partial class World : IDisposable
         _freeIds = new int[initialCapacity];
         _emptyArchetype = GetOrCreateArchetype(default);
     }
-
-    ~World() => FreeNativeMemory();
 
     //**********************************************************
     //** props
@@ -74,10 +81,18 @@ public sealed unsafe partial class World : IDisposable
         ref var record = ref GetAliveRecord(entity);
         RemoveFromArchetype(ref record);
 
-        record.Version = record.Version == int.MaxValue ? 1 : record.Version + 1;
         record.ArchetypeIndex = -1;
-        _freeIds[_freeCount++] = entity.Id;
         Count--;
+
+        // Wrapping back to version 1 would make a 2^31-destroys-old handle to this id valid again: retire the id.
+        if (record.Version == int.MaxValue)
+        {
+            record.Version = RetiredVersion;
+            return;
+        }
+
+        record.Version++;
+        _freeIds[_freeCount++] = entity.Id;
     }
 
     public bool Has<T>(Entity entity) where T : unmanaged =>
@@ -118,18 +133,25 @@ public sealed unsafe partial class World : IDisposable
     /// <summary>Creates a query. Keep and reuse it: matching is cached inside the query.</summary>
     public Query Query(in QueryDescription description) => new(this, description);
 
-    /// <summary>Frees all component memory. Every entity handle stops being alive.</summary>
+    /// <summary>
+    /// Frees all component memory. Afterwards every handle stops being alive, and every operation on an entity throws
+    /// <see cref="ObjectDisposedException"/>. Queries made from this world yield nothing.
+    /// </summary>
     public void Dispose()
     {
         if (_disposed)
             return;
 
-        FreeNativeMemory();
+        for (var i = 0; i < _archetypeCount; i++)
+            _archetypes[i].FreeChunks();
+        _chunkPool.Dispose();
+
         _disposed = true;
+        _archetypeCount = 0;
+        _archetypesByMask.Clear();
         _recordCount = 0;
         _freeCount = 0;
         Count = 0;
-        GC.SuppressFinalize(this);
     }
 
     //**********************************************************
@@ -154,13 +176,7 @@ public sealed unsafe partial class World : IDisposable
         if (source.Mask.Contains(componentId))
             EcsThrowHelper.ThrowAlreadyHasComponent(entity, ComponentRegistry.TypeOf(componentId));
 
-        if (!source.TryGetAddEdge(componentId, out var target))
-        {
-            target = GetOrCreateArchetype(source.Mask.With(componentId));
-            source.SetAddEdge(componentId, target);
-            target.SetRemoveEdge(componentId, source);
-        }
-
+        var target = GetAddTarget(source, componentId);
         MoveTo(entity, ref record, source, target);
         chunkIndex = record.ChunkIndex;
         row = record.Row;
@@ -175,7 +191,8 @@ public sealed unsafe partial class World : IDisposable
         if (!source.Mask.Contains(componentId))
             EcsThrowHelper.ThrowMissingComponent(entity, ComponentRegistry.TypeOf(componentId));
 
-        if (!source.TryGetRemoveEdge(componentId, out var target))
+        var target = source.GetRemoveEdge(componentId);
+        if (target == null)
         {
             target = GetOrCreateArchetype(source.Mask.Without(componentId));
             source.SetRemoveEdge(componentId, target);
@@ -183,6 +200,22 @@ public sealed unsafe partial class World : IDisposable
         }
 
         MoveTo(entity, ref record, source, target);
+    }
+
+    /// <summary>
+    /// The archetype with one more component, through the cached edge (one array load) or created once. Also how
+    /// <c>Create</c> finds its archetype: it walks add-edges from the empty archetype instead of hashing a mask.
+    /// </summary>
+    internal Archetype GetAddTarget(Archetype source, int componentId)
+    {
+        var target = source.GetAddEdge(componentId);
+        if (target != null)
+            return target;
+
+        target = GetOrCreateArchetype(source.Mask.With(componentId));
+        source.SetAddEdge(componentId, target);
+        target.SetRemoveEdge(componentId, source);
+        return target;
     }
 
     /// <summary>Creates an entity in the archetype for <paramref name="mask"/>. Component data is unwritten.</summary>
@@ -215,13 +248,22 @@ public sealed unsafe partial class World : IDisposable
     private ref EntityRecord GetAliveRecord(Entity entity)
     {
         if ((uint)entity.Id >= (uint)_recordCount)
-            EcsThrowHelper.ThrowNotAlive(entity);
+            ThrowNotAliveOrDisposed(entity);
 
         ref var record = ref _records[entity.Id];
         if (record.Version != entity.Version)
-            EcsThrowHelper.ThrowNotAlive(entity);
+            ThrowNotAliveOrDisposed(entity);
 
         return ref record;
+    }
+
+    /// <summary>Only on the failure path, so the disposed check costs nothing on a successful lookup.</summary>
+    [DoesNotReturn]
+    [MethodImpl(MethodImplOptions.NoInlining)]
+    private void ThrowNotAliveOrDisposed(Entity entity)
+    {
+        ObjectDisposedException.ThrowIf(_disposed, this);
+        EcsThrowHelper.ThrowNotAlive(entity);
     }
 
     private Entity CreateIn(Archetype archetype, out int chunkIndex, out int row)
@@ -309,14 +351,6 @@ public sealed unsafe partial class World : IDisposable
             return;
 
         new Span<T>((T*)(chunk.Memory + archetype.GetOffset(ComponentType<T>.Id)) + firstRow, count).Fill(value);
-    }
-
-    private void FreeNativeMemory()
-    {
-        for (var i = 0; i < _archetypeCount; i++)
-            _archetypes[i].FreeChunks();
-
-        _chunkPool.Dispose();
     }
 
     /// <summary>16 bytes, so four records share a cache line. Read together on every lookup.</summary>

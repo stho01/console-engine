@@ -1,4 +1,5 @@
 using System.Runtime.CompilerServices;
+using System.Runtime.InteropServices;
 
 namespace ConsoleEngine.Tests.Ecs;
 
@@ -39,3 +40,7 @@ internal struct Huge
 {
     private byte _element;
 }
+
+/// <summary>No fields but an explicit size: 16 bytes of data, not a tag.</summary>
+[StructLayout(LayoutKind.Sequential, Size = 16)]
+internal struct Blob;

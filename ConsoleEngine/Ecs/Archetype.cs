@@ -27,8 +27,12 @@ internal sealed unsafe class Archetype
     /// <summary>Byte offset of a component's column in a chunk, indexed by component id. -1 if absent or a tag.</summary>
     private readonly int[] _offsetById;
 
-    private readonly Dictionary<int, Archetype> _addEdges = new();
-    private readonly Dictionary<int, Archetype> _removeEdges = new();
+    /// <summary>
+    /// Archetype with one component more/less, indexed by that component's id (dense, below 256). Grown on demand,
+    /// null where the edge hasn't been used yet.
+    /// </summary>
+    private Archetype[] _addEdges = [];
+    private Archetype[] _removeEdges = [];
     private Chunk[] _chunks = new Chunk[1];
     private int _chunkCount;
 
@@ -81,14 +85,16 @@ internal sealed unsafe class Archetype
     public int GetOffset(int componentId) =>
         (uint)componentId < (uint)_offsetById.Length ? _offsetById[componentId] : -1;
 
-    public bool TryGetAddEdge(int componentId, out Archetype target) =>
-        _addEdges.TryGetValue(componentId, out target);
+    [MethodImpl(MethodImplOptions.AggressiveInlining)]
+    public Archetype GetAddEdge(int componentId) =>
+        (uint)componentId < (uint)_addEdges.Length ? _addEdges[componentId] : null;
 
-    public bool TryGetRemoveEdge(int componentId, out Archetype target) =>
-        _removeEdges.TryGetValue(componentId, out target);
+    [MethodImpl(MethodImplOptions.AggressiveInlining)]
+    public Archetype GetRemoveEdge(int componentId) =>
+        (uint)componentId < (uint)_removeEdges.Length ? _removeEdges[componentId] : null;
 
-    public void SetAddEdge(int componentId, Archetype target) => _addEdges[componentId] = target;
-    public void SetRemoveEdge(int componentId, Archetype target) => _removeEdges[componentId] = target;
+    public void SetAddEdge(int componentId, Archetype target) => SetEdge(ref _addEdges, componentId, target);
+    public void SetRemoveEdge(int componentId, Archetype target) => SetEdge(ref _removeEdges, componentId, target);
 
     /// <summary>Appends a row for the entity. Component data in the row is uninitialized.</summary>
     public void Allocate(Entity entity, ChunkPool pool, out int chunkIndex, out int row)
@@ -187,6 +193,14 @@ internal sealed unsafe class Archetype
     //**********************************************************
     //** internals
     //**********************************************************
+
+    private static void SetEdge(ref Archetype[] edges, int componentId, Archetype target)
+    {
+        if (componentId >= edges.Length)
+            Array.Resize(ref edges, componentId + 1);
+
+        edges[componentId] = target;
+    }
 
     private void AddChunk(ChunkPool pool)
     {

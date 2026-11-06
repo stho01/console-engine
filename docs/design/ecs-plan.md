@@ -305,7 +305,8 @@ Hva tallene sier:
 - `World.Get` per handle er omtrent like dyrt som OOP-lista. Det er forventet: ECS vinner på query-iterasjon
   (fase 2), som skal ligge nær `StructArrays`.
 - Arketype-overganger (34 ns) domineres trolig av `Dictionary`-oppslag for kantene. Kandidat for optimalisering:
-  array indeksert på komponent-id i stedet for `Dictionary<int, Archetype>`. Mål før endring.
+  array indeksert på komponent-id i stedet for `Dictionary<int, Archetype>`. Mål før endring. **Gjort etter
+  review, se «Review-rettinger» nedenfor.**
 
 ### Fase 2: queries (2026-11-05, samme maskin og oppsett)
 
@@ -357,6 +358,29 @@ skriving til konsollet (`WriteConsoleOutput`).
 | 1 000 000 | 14,6 ms | cirka 68 |
 
 Allokering ved stabil drift: cirka 0 B (40 B over 500 frames utenom testharnessens egen reflection).
+
+### Review-rettinger: kanter som array, Create via kanter (2026-11-06)
+
+To endringer fra review av PR #16:
+- Add/remove-kanter er nå `Archetype[]` indeksert på komponent-id i stedet for `Dictionary<int, Archetype>`.
+- `Create` finner arketypen ved å gå langs add-kanter fra den tomme arketypen, i stedet for å bygge og hashe en
+  `ComponentMask` per kall.
+
+`AddThenRemoveTag` legger nå til tagger bakfra, slik at swap-back ikke stokker radene mellom iterasjonene, som
+tidligere gjorde tallene ustabile. Før og etter er målt med de samme rettede benchmarkene, `--job short --inProcess`
+(in-process fordi det auto-genererte prosjektet ikke bygde fra en midlertidig worktree med lang sti).
+
+| Benchmark | Før | Etter |
+|---|---|---|
+| `WorldBenchmarks.CreateThenDestroy_OneByOne` 10 000 | 327 µs | 241 µs |
+| `WorldBenchmarks.CreateThenDestroy_OneByOne` 1 000 000 | 34,8 ms | 27,3 ms |
+| `WorldBenchmarks.CreateThenDestroy_Bulk` 10 000 | 155 µs | 160 µs |
+| `WorldBenchmarks.AddThenRemoveTag` 10 000 | 548 µs | 475 µs |
+| `WorldBenchmarks.AddThenRemoveTag` 100 000 | 5,5 ms | 4,7 ms |
+| `CommandBufferBenchmarks.AddThenRemoveTag_Direct` 10 000 | 820 µs | 481 µs |
+
+Bulk er uendret, som ventet: der skjer arketype-oppslaget én gang per kall, ikke per entitet. Raden for
+`AddThenRemoveTag_Direct` har høy spredning (feilmargin over 100 % før endringen).
 
 ## 8. Relaterte forbedringer (utenfor ECS, men påvirker resultatet)
 

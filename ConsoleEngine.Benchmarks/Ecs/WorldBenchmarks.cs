@@ -78,11 +78,14 @@ public class WorldBenchmarks
     [Benchmark]
     public float Get_Shuffled() => SumX(_shuffled);
 
-    /// <summary>Moves every entity to the tagged archetype and back.</summary>
+    /// <summary>
+    /// Moves every entity to the tagged archetype and back. Adding last-to-first takes each entity from the end of its
+    /// archetype, so swap-back never reorders rows and every invocation sees the same memory layout.
+    /// </summary>
     [Benchmark]
     public void AddThenRemoveTag()
     {
-        for (var i = 0; i < _entities.Length; i++)
+        for (var i = _entities.Length - 1; i >= 0; i--)
             _world.Add<Frozen>(_entities[i]);
         for (var i = 0; i < _entities.Length; i++)
             _world.Remove<Frozen>(_entities[i]);

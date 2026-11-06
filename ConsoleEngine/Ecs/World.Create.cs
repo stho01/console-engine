@@ -209,20 +209,25 @@ public sealed partial class World
     //** internals
     //**********************************************************
 
+    /// <summary>
+    /// Walks add-edges from the empty archetype, one per component: a few array loads once the edges exist, instead of
+    /// building and hashing a mask on every Create. The first walk also creates the intermediate archetypes (e.g.
+    /// {Position} on the way to {Position, Velocity}); they stay empty and queries skip empty archetypes.
+    /// </summary>
     private Archetype GetArchetype(ReadOnlySpan<int> componentIds)
     {
         ThrowIfStructuralChangeNotAllowed();
 
-        var mask = default(ComponentMask);
+        var archetype = _emptyArchetype;
         for (var i = 0; i < componentIds.Length; i++)
         {
-            if (mask.Contains(componentIds[i]))
+            if (archetype.Mask.Contains(componentIds[i]))
                 EcsThrowHelper.ThrowDuplicateComponent(ComponentRegistry.TypeOf(componentIds[i]));
 
-            mask.Add(componentIds[i]);
+            archetype = GetAddTarget(archetype, componentIds[i]);
         }
 
-        return GetOrCreateArchetype(mask);
+        return archetype;
     }
 
     /// <summary>

@@ -76,10 +76,13 @@ public class CommandBufferBenchmarks
         _commands.Playback(_world);
     }
 
+    // Both AddThenRemoveTag variants add last-to-first, so swap-back never reorders rows between invocations (see
+    // WorldBenchmarks.AddThenRemoveTag).
+
     [Benchmark]
     public void AddThenRemoveTag_Direct()
     {
-        for (var i = 0; i < _entities.Length; i++)
+        for (var i = _entities.Length - 1; i >= 0; i--)
             _world.Add<Frozen>(_entities[i]);
         for (var i = 0; i < _entities.Length; i++)
             _world.Remove<Frozen>(_entities[i]);
@@ -88,7 +91,7 @@ public class CommandBufferBenchmarks
     [Benchmark]
     public void AddThenRemoveTag_Buffered()
     {
-        for (var i = 0; i < _entities.Length; i++)
+        for (var i = _entities.Length - 1; i >= 0; i--)
             _commands.Add<Frozen>(_entities[i]);
         _commands.Playback(_world);
         for (var i = 0; i < _entities.Length; i++)

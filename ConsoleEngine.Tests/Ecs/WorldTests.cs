@@ -1,5 +1,6 @@
 using System;
 using System.Collections.Generic;
+using System.Reflection;
 using ConsoleEngine.Ecs;
 using NUnit.Framework;
 
@@ -379,7 +380,7 @@ public class WorldTests
     }
 
     [Test]
-    public void Dispose_ThenUseEntity_ThrowsNotAlive()
+    public void Dispose_ThenUseEntity_ThrowsObjectDisposed()
     {
         var world = new World();
         var entity = world.Create(new Health(1));
@@ -389,14 +390,62 @@ public class WorldTests
         Assert.Multiple(() =>
         {
             Assert.That(world.IsAlive(entity), Is.False);
-            Assert.That(() => world.Get<Health>(entity), Throws.InvalidOperationException);
+            Assert.That(world.ArchetypeCount, Is.Zero);
+            Assert.That(() => world.Get<Health>(entity), Throws.TypeOf<ObjectDisposedException>());
+            Assert.That(() => world.Has<Health>(entity), Throws.TypeOf<ObjectDisposedException>());
+            Assert.That(() => world.Destroy(entity), Throws.TypeOf<ObjectDisposedException>());
+            Assert.That(() => world.Add<Frozen>(entity), Throws.TypeOf<ObjectDisposedException>());
             Assert.That(() => world.Create(), Throws.TypeOf<ObjectDisposedException>());
+        });
+    }
+
+    [Test]
+    public void Destroy_IdAtLastVersion_RetiresIdInsteadOfWrapping()
+    {
+        using var world = new World();
+        var entity = world.Create();
+        SetVersion(world, entity.Id, int.MaxValue);
+        var last = new Entity(entity.Id, int.MaxValue);
+
+        world.Destroy(last);
+        var next = world.Create();
+
+        Assert.Multiple(() =>
+        {
+            Assert.That(next.Id, Is.Not.EqualTo(entity.Id));
+            Assert.That(world.IsAlive(last), Is.False);
+            Assert.That(world.IsAlive(new Entity(entity.Id, 1)), Is.False);
+        });
+    }
+
+    [Test]
+    public void Create_FieldlessStructWithExplicitSize_IsStoredAsData()
+    {
+        using var world = new World();
+
+        var entity = world.Create(new Blob());
+
+        Assert.Multiple(() =>
+        {
+            Assert.That(() => world.Get<Blob>(entity), Throws.Nothing);
+            Assert.That(world.GetArchetype(entity).ColumnIds, Has.Length.EqualTo(1));
         });
     }
 
     //**********************************************************
     //** helpers
     //**********************************************************
+
+    /// <summary>Reaching int.MaxValue by destroying 2^31 times is too slow, so set the version directly.</summary>
+    private static void SetVersion(World world, int id, int version)
+    {
+        var records = (Array)typeof(World)
+            .GetField("_records", BindingFlags.NonPublic | BindingFlags.Instance)!
+            .GetValue(world);
+        var record = records!.GetValue(id);
+        record!.GetType().GetField("Version")!.SetValue(record, version);
+        records.SetValue(record, id);
+    }
 
     private static void CycleComponents(World world, Entity[] entities)
     {

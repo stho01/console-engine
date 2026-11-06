@@ -94,19 +94,29 @@ Gotchas:
 `Examples/Asteroids.Ecs`, plan: `docs/design/ecs-plan.md`). A game can also create a `World` and `SystemGroup`s
 itself.
 
-- Components are `unmanaged` structs. A struct with no instance fields is a **tag** (`ComponentType<T>.IsTag`): it
-  changes the archetype but has no data, so `Get<T>` on a tag throws.
+- Components are `unmanaged` structs. A struct with no instance fields and a size of 1 byte (what the runtime gives an
+  empty struct) is a **tag** (`ComponentType<T>.IsTag`): it changes the archetype but has no data, so `Get<T>` on a
+  tag throws. A field-less struct with an explicit `[StructLayout(Size = n)]` is stored as data.
 - `Add<T>` throws if the entity already has `T`. `Remove<T>`, `Get<T>` and `Set<T>` throw if it doesn't.
   `Set<T>` never adds.
 - `Create(...)` with the same component type twice throws `ArgumentException`.
-- Every operation on a destroyed entity, a stale handle (old `Version`), `Entity.Null`, or any entity after
-  `World.Dispose()` throws "is not alive". `IsAlive` is the non-throwing check. `Create` after `Dispose` throws
-  `ObjectDisposedException`.
-- Destroying an entity bumps its id's `Version` and puts the id on a free list. The next `Create` reuses it.
+- Every operation on a destroyed entity, a stale handle (old `Version`) or `Entity.Null` throws "is not alive".
+  `IsAlive` is the non-throwing check.
+- After `World.Dispose()` every operation (`Create`, `Destroy`, `Get`, `Set`, `Has`, `Add`, `Remove`) throws
+  `ObjectDisposedException`, `IsAlive` is false, `ArchetypeCount` is 0, and existing queries yield nothing. There is
+  **no finalizer**: a world that is never disposed leaks its native chunks (a finalizer could free memory still
+  written through a `Get<T>` ref).
+- Destroying an entity bumps its id's `Version` and puts the id on a free list. The next `Create` reuses it. When the
+  version is already `int.MaxValue`, the id is **retired** instead (version −1, never reused), so old handles can
+  never become valid again through wrap-around.
 - The `ref` from `Get<T>` is only valid until the next structural change (`Create`, `Add`, `Remove`, `Destroy`) in
   that archetype: swap-back removal moves the archetype's last row into the freed row.
-- At most 256 component types per process (`ComponentMask.Capacity`). An archetype whose row (8-byte `Entity` plus
-  every component) doesn't fit in one 16 384-byte chunk throws on first use.
+- At most 256 component types per process (`ComponentMask.Capacity`). A type gets its id the first time **any** ECS
+  API names it, including read-only ones (`Has<T>`, `Get<T>`, `Remove<T>`, `Query.With<T>`), and keeps it. The 257th
+  type throws `TypeInitializationException` and stays unusable for the rest of the process.
+- An archetype whose row (8-byte `Entity` plus every component) doesn't fit in one 16 384-byte chunk throws on first
+  use. `Create` reaches its archetype by walking add-edges from the empty archetype, so the first `Create` of a
+  component set also creates the (empty) archetypes for its prefixes, e.g. {Position} for {Position, Velocity}.
 - `World.Query(description)` matches archetypes with every `With<T>` and no `Without<T>` component. Describe it
   with `Query.With<…>()` or `Query.Without<T>()` and chain `.With`/`.Without` (no `new QueryDescription()`). A query also
   picks up archetypes created after it, on its next use.

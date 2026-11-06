@@ -133,13 +133,13 @@ See [03 § Scenes](03-rules.md#scenes). TerraForM's scene graph:
 | # | Step | Class.method | Stops / skips if | Observable |
 |---|---|---|---|---|
 | 0 | World disposed, or a query on this world is being iterated (`_iterationDepth != 0`) | `World.ThrowIfStructuralChangeNotAllowed` | Either | `ObjectDisposedException` / `InvalidOperationException` "Cannot create, destroy, add or remove while a query is being iterated…" |
-| 1 | Look up the entity's record. Id out of range, or `Version` differs | `World.GetAliveRecord` | Not alive | `InvalidOperationException` "… is not alive." |
+| 1 | Look up the entity's record. Id out of range, or `Version` differs | `World.GetAliveRecord` → `ThrowNotAliveOrDisposed` | Not alive | `ObjectDisposedException` if the world is disposed, otherwise `InvalidOperationException` "… is not alive." |
 | 2 | `Add`: component already in the source mask. `Remove`: not in it | `World.AddComponent` / `RemoveComponent` | Present / missing | `InvalidOperationException` ([06](06-diagnostics.md)) |
-| 3 | Find the target archetype through the cached edge, or create it once (`GetOrCreateArchetype`) | `Archetype.TryGetAddEdge` / `TryGetRemoveEdge` | — | — |
+| 3 | Find the target archetype through the cached edge (array indexed by component id), or create it once (`GetOrCreateArchetype`) | `World.GetAddTarget`, `Archetype.GetAddEdge` / `GetRemoveEdge` | — | — |
 | 4 | Append a row in the target. A new chunk comes from `ChunkPool` (pooled first, otherwise `NativeMemory.AlignedAlloc`) | `Archetype.Allocate` | — | — |
 | 5 | Copy the components both archetypes share | `Archetype.CopyShared` | — | — |
 | 6 | Remove the old row: the archetype's last row is copied into it (swap-back), and the moved entity's record is repointed. An emptied last chunk goes back to the pool | `World.RemoveFromArchetype` → `Archetype.RemoveAt` | — | Earlier `ref`s from `Get<T>` in that archetype now point at other data |
-| 7 | `Add`: write the new value (skipped for tags). `Destroy` instead does step 6 only, then bumps `Version` and frees the id | `World.Write`, `World.Destroy` | — | — |
+| 7 | `Add`: write the new value (skipped for tags). `Destroy` instead does step 6 only, then bumps `Version` and frees the id (or retires it at `int.MaxValue`) | `World.Write`, `World.Destroy` | — | — |
 
 <a id="f9"></a>
 ## F9 — ECS frame in an `EcsScene` (`SceneManager.Update` → `Simulation`, `SceneManager.Render` → `Presentation`)
