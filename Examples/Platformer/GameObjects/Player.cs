@@ -17,6 +17,8 @@ public class Player(PlatformerGame game) : GameObject
     private bool _jump;
 
     private const float JumpSpeed = 45f; // cells/sec
+    private const float MaxFrameTime = 1f / 30f; // sec, so a hitch doesn't move the player a long way at once
+    private const float MaxStep = .5f; // cells, collisions only look at the destination so it can't skip a tile
 
     public bool IsAirborne { get; private set; } = true;
     public float MovementStrength => IsAirborne ? 75f : 150f;
@@ -34,13 +36,17 @@ public class Player(PlatformerGame game) : GameObject
         PerformJumpIfApplicable();
             
         // Velocity is in cells/sec, so movement doesn't depend on the frame rate.
-        var dt = (float) GameTime.Delta.TotalSeconds;
+        var dt = MathF.Min((float) GameTime.Delta.TotalSeconds, MaxFrameTime);
 
         // Drag
         Velocity += new Vector2(-3f, -.1f) * Velocity * dt;
         Velocity += Acceleration * dt;
             
-        Position = CheckCollisions(Position + Velocity * dt);
+        // Move in steps of at most half a cell, so falling fast can't pass through a one tile platform.
+        var distance = Velocity * dt;
+        var steps = Math.Max(1, (int) MathF.Ceiling(MathF.Max(MathF.Abs(distance.X), MathF.Abs(distance.Y)) / MaxStep));
+        for (var i = 0; i < steps; i++)
+            Position = CheckCollisions(Position + Velocity * (dt / steps));
            
         Acceleration = Vector2.Zero;
         if (Velocity.LengthSquared() < 0.000001)
