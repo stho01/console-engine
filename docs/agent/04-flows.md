@@ -1,7 +1,7 @@
 # 04 — Flows, hop by hop
 
 **No engine step writes a log line** ([06](06-diagnostics.md#no-logs)). The exceptions are Lua script errors
-([F9](#f9)), which go to the logger only when `EnableLogger` is on. The "Observable" column is what the user sees
+([F11](#f11)), which go to the logger only when `EnableLogger` is on. The "Observable" column is what the user sees
 instead: an unhandled exception (the process dies), a silent no-op, or a visible screen state. "Silent" means
 the code continues with no signal at all.
 
@@ -155,3 +155,40 @@ Runs inside [F2](#f2) steps "Scenes.Update" and "Scenes.Render". Both are skippe
 | 4 | `Presentation.Update(delta)` runs the render systems into the frame buffer, which `GameBase.Start` cleared at the start of the frame (if `ClearScreenOnEachFrame`) | `EcsScene.OnRender` → `SystemGroup.Update` | `OutlineRenderSystem`: bounding circle off-screen → entity skipped | Drawn cells |
 | 5 | `Presentation` plays back its own `Commands` (normally empty) | `CommandBuffer.Playback` | — | — |
 | 6 | On scene unload: `OnDestroy`, then `World.Dispose()` frees all chunks | `EcsScene.OnUnload` | — | Old entity handles stop being alive |
+
+<a id="f10"></a>
+## F10 — Lua script load and reload (`LuaRuntime.Load` → `LuaScript.Reload`)
+
+| # | Step | Class.method | Stops / skips if | Observable |
+|---|---|---|---|---|
+| 1 | Resolve the path: rooted as is, otherwise `Path.Combine(AppContext.BaseDirectory, path)` | `LuaRuntime.Load` | — | — |
+| 2 | Read the file bytes, drop a UTF-8 BOM | `LuaScript.ReadSource` | `IOException` (missing file, folder, locked) | `LuaScriptException` with the .NET message |
+| 3 | Compile with chunk name `"@" + Name` | `KeraLua.Lua.LoadBuffer` | Syntax error | `LuaScriptException`: `Lua script '<name>': <name>:<line>: <message>` |
+| 4 | Run the chunk, expect one result | `LuaRuntime.Call` | Runtime error in top-level code | `LuaScriptException` with Lua's message |
+| 5 | Result must be a table | `LuaScript.Reload` | Not a table | `LuaScriptException`: `the script must return a table` |
+| 6 | First load: keep the table as the module and build `Metatable` = `{ __index = module, __newindex = guard }`. Reload: copy every field into the existing module | `CreateModule` / `UpdateModule` | — | Running entities use the new functions |
+| 7 | Cache `on_start`, `on_update`, `on_render`. A missing or non-function field becomes "no hook" | `CacheFunction` | — | That hook silently never runs |
+| 8 | `Version++`, `LuaRuntime.ReloadCount++`. `Load` adds the script to the runtime's list (`Id` = its index) | `LuaScript.Reload`, `LuaRuntime.Load` | — | `LuaScriptSystem` retries faulted entities ([F11](#f11) step 1) |
+
+Steps 2–5 throw before anything is replaced, so a failed reload leaves the previous version running.
+`ReloadAll` catches each `LuaScriptException` and returns them as an array. It never throws for script errors.
+
+<a id="f11"></a>
+## F11 — Lua hooks in an ECS frame (`LuaScriptSystem.OnUpdate`, `LuaRenderSystem.OnUpdate`)
+
+Runs inside [F9](#f9): `LuaScriptSystem` wherever the scene added it to `Simulation`, `LuaRenderSystem` in
+`Presentation`.
+
+| # | Step | Class.method | Stops / skips if | Observable |
+|---|---|---|---|---|
+| 1 | `ReloadCount` changed: for each `Script` + `ScriptFaulted` entity whose script `Version` differs from the one it faulted on, clear the error and record `Remove<ScriptFaulted>` | `LuaScriptSystem.RetryReloadedScripts` | Same version → stays faulted | Entity runs again from the next frame |
+| 2 | Query `With<Script>().Without<ScriptFaulted>()`. Per chunk: which of `Position`, `Velocity`, `Glyph` it has | `LuaScriptSystem.Run` | Faulted entities are in other archetypes, never visited | — |
+| 3 | Per entity: find its side-table entry. New entity, reused id (other `Version`) or other script → unref the old `self`, create `{ data = {} }` with the script's metatable. Lost a component → remove its fields | `GetInstance`, `LuaRuntime.CreateSelf` / `ClearFields` | — | Reused id runs `on_start` again |
+| 4 | Simulation only: not started → `on_start`, then `on_update` | `LuaScriptSystem.Run` → `RunHook` | Hook missing → skipped. `on_start` failed → `on_update` skipped | — |
+| 5 | Presentation only: started → `on_render` | `LuaScriptSystem.Render` | Not started, or no `on_render` | Extra drawing |
+| 6 | One native call: the `run` trampoline copies the component fields into `self`, calls the hook, and (steps 4 only) returns the fields | `LuaRuntime.RunHook` | Lua error or stored host exception → step 8 | — |
+| 7 | Check every returned field's type, then write `Position`, `Velocity`, `Glyph` | `LuaRuntime.ReadResults` | Wrong type → nothing written, step 8 | `self.<field> must be …` |
+| 8 | On error: keep the text for `GetError`, `Log.WriteLine("Lua: " + error)`, record `Add<ScriptFaulted>` in the group's `Commands` | `LuaScriptSystem.RunHook` | — | Tag applied at the group's playback. Logger only if `EnableLogger` |
+
+Host functions (`input.*`, `console.*`, `print`) catch every .NET exception, store the first one and return no values.
+They never call `lua_error`.

@@ -13,8 +13,10 @@ Nothing is hosted and nothing is exposed to the internet. Every unit is a local 
 | `Microsoft.Xna.Framework` (`Libs/Microsoft.Xna.Framework`) | Library | Math types (`Vector2`, `Point`, `Rectangle`, `Matrix`…) copied from MonoGame |
 | `TerraForM` (`Examples/TerraForM`) | Exe | Mars-rover puzzle game: scenes, maps in `Assets/Maps/*.txt`, scoring |
 | `TerraForM.Tests` | NUnit test project | One test: `Rover_PowerIsDepletedWhenRemainingPowerIsZeroOrLess` |
-| `ConsoleEngine.Tests` (`ConsoleEngine.Tests/`) | NUnit test project | Engine tests: `RenderConsole`, `Sprite`, `SceneManager`, `GameTime.Interval`, `Deque<T>`, `ArrayExtensions`, ECS (`Ecs/`: `World`, `Query`, `CommandBuffer`, `SystemGroup`, `EcsScene`, `Archetype`, `ComponentMask`, `Systems/`). Uses `Fakes/`, no Win32 |
-| `ConsoleEngine.Benchmarks` (`ConsoleEngine.Benchmarks/`) | **Exe**, BenchmarkDotNet 0.15.8 | `Baseline/OopUpdateBenchmarks` (list of classes vs. struct arrays), `Ecs/WorldBenchmarks`, `Ecs/QueryBenchmarks`. Built by CI, never run by CI |
+| `ConsoleEngine.Tests` (`ConsoleEngine.Tests/`) | NUnit test project | Engine tests: `RenderConsole`, `Sprite`, `SceneManager`, `GameTime.Interval`, `Deque<T>`, `ArrayExtensions`, ECS (`Ecs/`: `World`, `Query`, `CommandBuffer`, `SystemGroup`, `EcsScene`, `Archetype`, `ComponentMask`, `Systems/`), Lua (`Scripting/LuaScriptSystemTests`). Uses `Fakes/`, no Win32 |
+| `ConsoleEngine.Benchmarks` (`ConsoleEngine.Benchmarks/`) | **Exe**, BenchmarkDotNet 0.15.8 | `Baseline/OopUpdateBenchmarks` (list of classes vs. struct arrays), `Ecs/WorldBenchmarks`, `Ecs/QueryBenchmarks`, `Ecs/CommandBufferBenchmarks`, `Ecs/RenderBenchmarks`, `Scripting/LuaScriptBenchmarks` (Lua vs. C# system). Built by CI, never run by CI |
+| `ConsoleEngine.Scripting` (`ConsoleEngine.Scripting/`) | Library (not packed) | Lua 5.4 scripting for ECS entities on KeraLua 1.4.11: components `Script`, `ScriptFaulted`, systems `LuaScriptSystem`, `LuaRenderSystem`, and `LuaRuntime`, `LuaScript`, `LuaScriptException`. Only games that reference it get Lua |
+| `Scripted` (`Examples/Scripted`) | Exe | ECS demo: a player and 30 fireflies, each scripted in `Assets/Scripts/*.lua`. F5 reloads the scripts |
 | `Snake`, `Asteroids`, `Platformer`, `ConsoleGame` and their ECS ports `Snake.Ecs`, `Asteroids.Ecs`, `Platformer.Ecs`, `ConsoleGame.Ecs`, `TerraForM.Ecs` (`Examples/*`) | Exe | Small demo games. Each `*.Ecs` project is the same game rebuilt on the ECS (`ConsoleEngine.Ecs`) for comparison |
 | `Swarm` (`Examples/Swarm`) | Exe | ECS-only stress test: 100 000 particles (first argument) chasing a moving attractor |
 
@@ -24,8 +26,8 @@ implementation exists; macOS support is GitHub issue 7, open.
 
 Games that reference `ConsoleEngine.Scripting` also load the native Lua library `lua54.dll` from
 `runtimes/<rid>/native/` in their output folder (shipped by the KeraLua package for win-x64/x86/arm/arm64, and
-macOS/Linux). Besides KeraLua's own calls, `LuaNative.lua_tolstring` (`ConsoleEngine.Scripting/LowLevel/`) is a direct
-P/Invoke into it.
+macOS/Linux). Besides KeraLua's own calls, `LuaNative.lua_tolstring` and `LuaNative.lua_pushlstring`
+(`ConsoleEngine.Scripting/LowLevel/`) are direct P/Invokes into it.
 
 ## Processes and what talks to what
 

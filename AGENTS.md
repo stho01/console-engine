@@ -6,7 +6,8 @@ for code and commits.
 ## What this is
 
 **console-engine** is a small **game engine** that renders into the Windows console, written in C# / .NET 10. It ships as
-the `ConsoleEngine` library (NuGet package, `PackageVersion` 0.2.0) with example games under `Examples/`.
+the `ConsoleEngine` library (NuGet package, `PackageVersion` 0.2.0) with example games under `Examples/`. ECS
+entities can optionally be scripted in Lua 5.4 through `ConsoleEngine.Scripting`.
 
 The two priorities for every change:
 
@@ -33,6 +34,8 @@ scripting loads the native `lua54.dll` that the KeraLua package ships for each r
 | Vector/matrix math | `Libs/Microsoft.Xna.Framework/` (copied from MonoGame, change only with good reason) |
 | ECS (entities, components, archetypes, chunks) | `ConsoleEngine/Ecs/`, design and phases in [`docs/design/ecs-plan.md`](docs/design/ecs-plan.md) |
 | Performance measurements | `ConsoleEngine.Benchmarks/` (BenchmarkDotNet) |
+| Lua scripting: components, `self` fields, hooks, errors, reload | [`docs/agent/03-rules.md § Lua`](docs/agent/03-rules.md#lua), `ConsoleEngine.Scripting/`, `Examples/Scripted` |
+| Why KeraLua, and what Lua costs per entity | `ConsoleEngine.Benchmarks/README.md` |
 | How to use the engine | `Examples/Snake` (smallest), `Examples/TerraForM` (scenes, assets, tests), `Examples/<Game>.Ecs` (ECS port of each game: components, systems, queries, `EcsScene`; compare with `Examples/<Game>`. `Snake.Ecs` is the smallest, `TerraForM.Ecs` the fullest), `Examples/Swarm` (ECS at scale, system ordering attributes) |
 | Build/test pipeline | `.github/workflows/build-and-test.yml` |
 | Formatting rules | `.editorconfig` + [§ Code style](#code-style) |
@@ -49,10 +52,12 @@ Every name in `docs/agent/` is grep-able. Search for the identifier you are inte
 | `ConsoleEngine.Windows` | `Libs/ConsoleEngine.Windows/` | Library, namespace `ConsoleEngine.Native` | Abstractions |
 | `ConsoleEngine.Logger` | `Libs/ConsoleEngine.Logger/` | Exe: TCP log viewer (port 11000) | — |
 | `Microsoft.Xna.Framework` | `Libs/Microsoft.Xna.Framework/` | Library: math types | — |
+| `ConsoleEngine.Scripting` | `ConsoleEngine.Scripting/` | Library: Lua 5.4 scripting for ECS entities (KeraLua 1.4.11) | ConsoleEngine |
 | `TerraForM`, `Snake`, `Asteroids`, `Platformer`, `ConsoleGame`, their ports `<Game>.Ecs`, and `Swarm` (ECS stress test) | `Examples/*` | Exe | ConsoleEngine |
+| `Scripted` | `Examples/Scripted/` | Exe: Lua-scripted ECS demo | ConsoleEngine, Scripting |
 | `TerraForM.Tests` | `Examples/TerraForM.Tests/` | NUnit 5 + NSubstitute | TerraForM |
-| `ConsoleEngine.Tests` | `ConsoleEngine.Tests/` | NUnit 5, hand-written fakes in `Fakes/` | ConsoleEngine |
-| `ConsoleEngine.Benchmarks` | `ConsoleEngine.Benchmarks/` | Exe: BenchmarkDotNet 0.15.8 | ConsoleEngine |
+| `ConsoleEngine.Tests` | `ConsoleEngine.Tests/` | NUnit 5, hand-written fakes in `Fakes/` | ConsoleEngine, Scripting |
+| `ConsoleEngine.Benchmarks` | `ConsoleEngine.Benchmarks/` | Exe: BenchmarkDotNet 0.15.8 | ConsoleEngine, Scripting |
 
 All projects: `net10.0`, `LangVersion` 14, `TreatWarningsAsErrors` = `True`. Solution: `ConsoleEngine.sln`.
 
@@ -135,8 +140,13 @@ ConsoleEngine/                    the engine
     Rendering/RenderConsole.cs      frame buffer + Draw* API
     Rendering/Sprite.cs             Pixel[,] sprites, FromString/FromStringArray
     Scenery/Scene.cs, SceneManager.cs  scene stack (Push/Pop/Set)
-ConsoleEngine.Tests/              engine unit tests (mirrors ConsoleEngine/ folders), Fakes/ (console handler, scene)
-ConsoleEngine.Benchmarks/         BenchmarkDotNet: Baseline/ (OOP vs. struct arrays), Ecs/ (World, Query)
+ConsoleEngine.Tests/              engine unit tests (mirrors ConsoleEngine/ folders), Fakes/ (console handler, scene),
+                                    Scripting/ (LuaScriptSystemTests)
+ConsoleEngine.Scripting/          Script + ScriptFaulted (components), LuaScriptSystem, LuaRenderSystem,
+                                    LuaRuntime (Lua state, engine API, hook trampoline), LuaScript (module, reload),
+                                    LowLevel/LuaNative.cs (direct lua54 P/Invoke)
+ConsoleEngine.Benchmarks/         BenchmarkDotNet: Baseline/ (OOP vs. struct arrays), Ecs/ (World, Query),
+                                    Scripting/ (Lua vs. C# system, mover.lua)
 ConsoleEngine.Abstractions/
   Inputs/  IInputHandler, Key, KeyState
   Rendering/  IConsoleHandler, Pixel, FontInfo
@@ -157,7 +167,8 @@ Examples/
   TerraForM/Commands/             Command, Move, Plant, Wait
   TerraForM/Assets/               Maps/*.txt, Sprites.cs, Texts/HudTexts.cs, Story/ (unused)
   TerraForM.Tests/                RoverTests.cs
-  Scripted/Assets/Scripts/        player.lua, firefly.lua (copied to output)
+  Scripted/                       Lua demo on ECS: Scenes/ScriptedScene, Systems/ (reload, error line),
+                                  Assets/Scripts/ player.lua, firefly.lua (copied to output)
 .github/workflows/                build-and-test.yml
 ```
 
@@ -177,22 +188,21 @@ Examples/
   `GameBase` and `Input` currently `new` up `ConsoleHandler`/`InputHandler` directly.
 - Win32 return values are currently ignored. When touching `ConsoleHandler`, prefer checking them over adding more
   silent calls.
-- Game objects have one engine format: `GameObject` (`Infrastructure/Objects/`) owns `Position`, `Char`/`Sprite`,
-  `Color`, `Background`, `Visible` and draws itself. What it does is an `IBehaviour` (C# or Lua). Game code holds the
-  objects and calls `Update()`/`Render(Console)` from its own `OnUpdate`/`OnRender`. The examples' own
-  `GameObjects/GameObject` classes predate it and are not related.
-- Lua is a layer on top: `LuaRuntime(game)` → `Load` → `CreateBehaviour()` → `GameObject.Behaviour`. A script sees the
-  object as `self` with fixed fields (`x`, `y`, `char`, `color`, `background`, `visible`) that `LuaRuntime` copies in
-  and out around each hook, plus `self.data` for its own state. Never let C# read script data by field name. Add an
-  engine field to `GameObject` and to `WriteFields`/`ReadFields` instead. The engine itself has no Lua dependency.
+- Lua scripts are ECS behaviour: `LuaRuntime(game)` → `Load` → put `LuaScript.Component` (a `Script` component) on
+  an entity → `LuaScriptSystem` (simulation) runs `on_start`/`on_update`, `LuaRenderSystem` (presentation) runs
+  `on_render`. A script sees the entity as `self`, whose fields are its components: `x`/`y` (`Position`),
+  `vx`/`vy` (`Velocity`), `char`/`color`/`background` (`Glyph`), plus `self.data` for the script's own state. C#
+  systems and scripts work on the same components. Never let C# read script data by field name: give scripts a new
+  component field instead (`LuaRuntime.EngineSource`, `RunHook`, `ReadResults`). The engine itself has no Lua
+  dependency.
 
 <a id="performance"></a>
 ## Performance
 
 **Hot path** = anything reachable from the frame loop: game and scene `OnUpdate`/`OnRender`, `RenderConsole.Draw*`,
 `Sprite` drawing, `InputHandler.Update`, `ConsoleHandler.Render`, and all of `ConsoleEngine/Ecs/` (`World.Get` is
-called per entity). In `Ecs/`, keep throws in `EcsThrowHelper` so checked methods stay inlinable, and run
-`ConsoleEngine.Benchmarks` before and after a change.
+called per entity), and `LuaScriptSystem`/`LuaRuntime` in `ConsoleEngine.Scripting`. In `Ecs/`, keep throws in
+`EcsThrowHelper` so checked methods stay inlinable, and run `ConsoleEngine.Benchmarks` before and after a change.
 
 | Do | Don't |
 |---|---|
@@ -204,12 +214,12 @@ called per entity). In `Ecs/`, keep throws in `EcsThrowHelper` so checked method
 | Scale movement/timers by `GameTime.Delta` | Add per-frame amounts. The loop is uncapped, so behaviour changes with FPS |
 | Measure: `ShowFps = true` + `EnableLogger = true` shows FPS in the logger title, `ConsoleEngine.Benchmarks` for micro-benchmarks | Guess about performance |
 
-Lua: `GameObject.Update`/`Render` with a `LuaBehaviour` allocate nothing (guarded by
-`UpdateAndRender_InSteadyState_DoNotAllocate`). Keep it that way: read and push Lua strings with
-`LuaNative.lua_tolstring`/`lua_pushlstring`, never KeraLua's `ToString`/`PushString`/`SetField(…, string)`, in the
-hot path, and use registry refs for functions and field names instead of looking them up by name. In
-scripts, build constant strings once (`local HELP = "…"`) rather than concatenating every frame, because Lua's own
-heap is invisible to .NET allocation checks.
+Lua: a scripted frame allocates nothing (guarded by `LuaScriptSystemTests.Frame_InSteadyState_DoesNotAllocate`).
+Keep it that way: one native call per hook (the `run` trampoline in `LuaRuntime.EngineSource` copies all fields
+inside Lua), read and push Lua strings with `LuaNative.lua_tolstring`/`lua_pushlstring`, never KeraLua's
+`ToString`/`PushString`/`SetField(…, string)` in the hot path, and use registry refs instead of looking things up by
+name. In scripts, build constant strings once (`local HELP = "…"`) rather than concatenating every frame, because
+Lua's own heap is invisible to .NET allocation checks.
 
 String interpolation in debug overlays (`IsDebugMode`) is acceptable. Known debt, which you should not copy and should
 fix when nearby:
@@ -257,7 +267,6 @@ Tag performance work as `perf:` commits.
 | Games | `<Name>Game : GameBase` | `SnakeGame`, `TerraformGame`, `AsteroidsGame` |
 | Scenes | `<Name>Scene : Scene<TGame>` in `Scenes/` | `GameScene`, `MenuScene`, `InputNameScene` |
 | Game objects | Noun in `GameObjects/` | `Rover`, `Asteroid`, `Player`, `Camera` |
-| Behaviours | `<Noun>Behaviour : IBehaviour` | `LuaBehaviour` |
 | Map tiles | Noun deriving `MapTile`, in `GameObjects/Tiles/` | `Rock`, `PlantSpot`, `FinishPoint` |
 | ECS components | Noun `struct` (data only, `unmanaged`) in `Components/`. Tags have no fields. Reuse the engine's (`ConsoleEngine.Ecs.Components`) before adding a game one | `Position`, `Velocity`, `Collider`, `Asteroid` |
 | ECS systems | `<Name>System : EntitySystem` in `Systems/`. Queries are fields, created in `OnCreate`. Structural changes go through `Commands`. Prefer `Add` order in the scene; use `[UpdateBefore]`/`[UpdateAfter]` when a system must keep its place wherever it is added | `MovementSystem`, `CollisionSystem` |
@@ -321,10 +330,11 @@ Use [Conventional Commits 1.0.0](https://www.conventionalcommits.org/en/v1.0.0/#
 | **ECS memory** | `World` keeps component data in native memory (`NativeMemory.AlignedAlloc`, 16 KiB chunks, 64-byte aligned columns). Always `Dispose` a world (tests: `using var world = new World();`): there is no finalizer, so an undisposed world leaks its chunks. Components must be `unmanaged` structs. Never store a `ref` from `World.Get<T>` across a structural change. Create/Add/Remove/Destroy inside a query loop throws: record them in a `CommandBuffer` (`EntitySystem.Commands`). `Destroy`/`Add`/`Remove` of a dead entity are skipped at playback. Test components are named `Location`/`Speed` so they don't shadow the engine's `Position`/`Velocity` (namespace lookup beats `using`). `Archetype`, `Chunk` and `ComponentMask` are `internal`: tests reach them through `World.GetArchetype` / `World.ChunkPool` (`InternalsVisibleTo`) |
 | **Threading** | Everything runs on the game-loop thread, including `GameTime.SetInterval` callbacks. The only other thread is `Log`'s `"Logger"` thread. There is no locking, so never touch engine state from another thread |
 | **NuGet package** | `ConsoleEngine` has `GeneratePackageOnBuild`, so every build produces a `.nupkg` (gitignored). `PackageVersion` (0.2.0) is bumped by hand, and no pipeline publishes it. Any change to its public API is a breaking change for consumers (`!` commit) |
-| **Dependencies** | `CommunityToolkit.HighPerformance` 8.4.2 supplies `Span2D<T>` (namespace `CommunityToolkit.HighPerformance`). It replaced the deprecated `Microsoft.Toolkit.HighPerformance` |
+| **Dependencies** | `CommunityToolkit.HighPerformance` 8.4.2 supplies `Span2D<T>` (namespace `CommunityToolkit.HighPerformance`). It replaced the deprecated `Microsoft.Toolkit.HighPerformance`. `KeraLua` 1.4.11 (MIT, NuGet) supplies Lua 5.4 for `ConsoleEngine.Scripting`. It was chosen over Lua-CSharp, NLua and MoonSharp by a benchmark (numbers in `ConsoleEngine.Benchmarks/README.md`). That decision is made: don't add other Lua libraries |
 | **Third-party code / licence** | `Libs/Microsoft.Xna.Framework` is copied from MonoGame (see its `README.md`). The repo has **no LICENSE file**. Don't copy in more third-party code, and don't add or change licensing, without asking the owner |
 | **Lua host functions** | Static `LuaFunction` delegates that find their `LuaRuntime` through upvalue 1 (a `GCHandle`). They must **never raise a Lua error** (`lua_error`, `luaL_check*`, `luaL_opt*`): it long-jumps across managed frames and crashes the process. Catch every exception, store it in `_hostError`, return 0 |
-| **Lua scripts in tests** | `LuaRuntime`'s internal ctor takes a `RenderConsole` and a `Func<int, KeyState>`, so tests need neither Win32 nor `Input.Instance` (`InternalsVisibleTo` for `ConsoleEngine.Tests` and `ConsoleEngine.Benchmarks`). Tests write scripts to a temp folder, load them by absolute path and assert on the `GameObject`'s typed fields. `Fakes/RecordingBehaviour` records `IBehaviour` calls |
+| **Lua scripts in tests** | `LuaRuntime`'s internal ctor takes a `RenderConsole` and a `Func<int, KeyState>`, so tests need neither Win32 nor `Input.Instance` (`InternalsVisibleTo` for `ConsoleEngine.Tests` and `ConsoleEngine.Benchmarks`). Tests write scripts to a temp folder, load them by absolute path, run a `World` with two `SystemGroup`s and assert on components. `FakeConsoleHandler.Render` copies the frame, so allocation checks run frames without `Display` |
+| **Lua `self` tables** | Components are unmanaged, so each entity's `self` lives in `LuaScriptSystem._instances`, indexed by `Entity.Id` and checked against `Entity.Version`. A destroyed entity's table is freed when its id is reused (or with the runtime). One `LuaScriptSystem` per `World`. Dispose the `LuaRuntime` with the scene (`EcsScene.OnDestroy`) |
 | **Lua reload** | `Reload` reads the copy in the **output** folder. Editing `Examples/*/Assets/Scripts` changes nothing until the next build |
 | **Running games** | Not possible headless. Verify with `dotnet build` + `dotnet test`, and say plainly that a change was not checked in a real console |
 

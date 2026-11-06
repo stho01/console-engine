@@ -1,8 +1,8 @@
--- The player: arrow keys move it. The engine draws self.char at self.x, self.y.
+-- The player: arrow keys move it. The engine draws its Glyph at self.x, self.y.
 local Player = {}
 
 local SPEED = 20 -- cells per second
-local HELP = "Arrows: move   F5: reload scripts"
+local HELP = "Arrows: move   F5: reload scripts   ESC: quit"
 
 function Player.on_update(self, dt)
     local dx, dy = 0, 0
@@ -16,7 +16,7 @@ function Player.on_update(self, dt)
     self.y = math.max(1, math.min(console.height - 2, self.y + dy * SPEED * dt))
 end
 
--- Extra drawing on top of the object itself.
+-- Extra drawing on top of the entity's Glyph.
 function Player.on_render(self)
     console.text(0, 0, HELP, colors.Gray)
 end

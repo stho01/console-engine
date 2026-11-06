@@ -12,6 +12,7 @@
     <ItemGroup>
       <ProjectReference Include="..\..\ConsoleEngine\ConsoleEngine.csproj" />
       <ProjectReference Include="..\..\ConsoleEngine.Scripting\ConsoleEngine.Scripting.csproj" />
+      <ProjectReference Include="..\..\Libs\Microsoft.Xna.Framework\Microsoft.Xna.Framework.csproj" />
     </ItemGroup>
 
     <ItemGroup>

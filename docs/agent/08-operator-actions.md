@@ -39,7 +39,8 @@ team's process differs.
 | ConsoleGame.Ecs | ESC | Quit (`Stop()`) | `ConsoleEcsGame.OnUpdate` |
 | Swarm | SPACE / BACKSPACE / ESC | +10 000 particles / −10 000 particles / quit | `SpawnControlSystem`, `SwarmGame.OnUpdate` |
 | Scripted | ←→↑↓ | Move the player | `player.lua` |
-| Scripted | `F5` | Reload all Lua scripts from the output folder | `ScriptedGame.OnUpdate` → `LuaRuntime.ReloadAll` |
+| Scripted | `F5` | Reload all Lua scripts from the output folder | `ScriptReloadSystem` → `LuaRuntime.ReloadAll` |
+| Scripted | ESC | Quit (`Stop()`) | `ScriptedGame.OnUpdate` |
 
 There is **no** way to skip a TerraForM level, choose a map, reset the score, or enable TerraForM debug mode without a
 code change.
@@ -55,6 +56,6 @@ code change.
 | Reset score on restart, latch game over, frame-rate-independent power | `GameScene`, `Rover` | `03`, `04`, `05` |
 | Detect and report Win32 failures (size/font) | `ConsoleHandler` (check return values) | `04`, `06` |
 | Logger fixes (port in use, missing exe, truncated lines) | `Log`, `ConsoleEngine.Logger/Program.cs` | `04`, `06` |
-| Change a Lua game object's behaviour | `Assets/Scripts/*.lua` in that game (in a running Scripted demo: edit the output copy, press `F5`) | `03` |
+| Change what a scripted entity does | `Assets/Scripts/*.lua` in that game (in a running Scripted demo: edit the output copy, press `F5`) | `03` |
 | Add a Lua API function | `LuaRuntime.RegisterApi` + a host function that never raises a Lua error | `03`, `04`, `06` |
-| Add an engine field scripts can read/write (e.g. velocity) | `GameObject` + `LuaRuntime` (`_key…` ref, `WriteFields`, `ReadFields`) | `02`, `03`, `06` |
+| Expose another component to scripts | `LuaRuntime.EngineSource` (`COMPONENT`, `run`, `clear`), `RunHook`, `ReadResults`, `LuaScriptSystem.Run` (mask bit + span) | `02`, `03`, `04`, `06` |

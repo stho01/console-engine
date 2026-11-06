@@ -164,42 +164,42 @@ calls `OnDestroy`, then disposes the world. A paused scene (another scene pushed
   `floor(Position - Camera.Position) + SpriteRef.Offset`. Skipped when the whole sprite is off-screen. The optional
   `QueryDescription` filter picks a layer (e.g. `With<Tile>()`): add one instance per layer in drawing order, because
   a query visits archetypes in no defined order.
+
 <a id="lua"></a>
 ### Lua scripting (`ConsoleEngine.Scripting`)
 
-- **Object model.** The engine owns the object: `GameObject` (`ConsoleEngine.Infrastructure.Objects`) has `Position`,
-  `Char`, `Color`, `Background`, `Sprite`, `Visible` and a `Behaviour` (`IBehaviour`). A Lua script is one kind of
-  behaviour: `LuaScript.CreateBehaviour()` returns a `LuaBehaviour`, one per object.
-- `GameObject.Update()` calls `Behaviour.Start` once (before the first update), then `Behaviour.Update` with
-  `GameTime.Delta`. Setting a new `Behaviour` starts it again on the next update. Without a behaviour, `Update` does
-  nothing.
-- `GameObject.Render(console)` does nothing when `Visible` is false. Otherwise it draws `Sprite` (if set) or `Char` in
-  `Color` on `Background` at the **floored** `Position`, then calls `Behaviour.Render`. A hidden object is still
-  updated.
-- Nothing happens unless game code calls `Update()`/`Render(Console)` on its objects each frame. Objects are not
-  attached to scenes automatically.
+- **Scripts are ECS behaviour.** `LuaRuntime.Load(path)` returns a `LuaScript`. Its `Component` (a `Script { Id }`
+  component) on an entity makes that entity run the script. Nothing runs without the systems:
+  `LuaScriptSystem(runtime)` in a simulation group runs `on_start`/`on_update`, `LuaRenderSystem(scriptSystem)` in a
+  presentation group runs `on_render`. Use one `LuaScriptSystem` per `World`.
 - A script file must **return a table** (its module). The module may define `on_start(self)`, `on_update(self, dt)`
-  and `on_render(self)`. Missing hooks are skipped. `self` has metatable `{ __index = module, __newindex = guard }`, so
-  `self:method()` calls module functions.
-- **`self` has a fixed format:**
+  and `on_render(self)`. Missing hooks are skipped. Each entity gets its own `self` with metatable
+  `{ __index = module, __newindex = guard }`, so `self:method()` calls module functions.
+- `on_start` runs **once per entity, the first time `LuaScriptSystem` sees it**, in the same frame and just before its
+  first `on_update`. `on_render` is skipped until then. Entities created through a command buffer start in the next
+  simulation group run.
+- **`self`'s fields are the entity's components.** A field exists only when the entity has the component:
 
-| Field | Type | `GameObject` property |
+| Field | Type | Component |
 |---|---|---|
-| `self.x`, `self.y` | number | `Position` (stored as `float`) |
-| `self.char` | string (first character used) or code point | `Char` |
-| `self.color`, `self.background` | number (`colors.*`, masked to 0–15) | `Color`, `Background` |
-| `self.visible` | boolean (anything but `false`/`nil` is true) | `Visible` |
+| `self.x`, `self.y` | number | `Position.Value` (stored as `float`) |
+| `self.vx`, `self.vy` | number, cells per second | `Velocity.Value` (applied by `MovementSystem` if the scene has it) |
+| `self.char` | string (first character used) or code point | `Glyph.Character` |
+| `self.color`, `self.background` | number (`colors.*`, masked to 0–15) | `Glyph.Foreground`, `Glyph.Background` |
 | `self.data` | table owned by the script, starts empty, kept across reloads | — |
 
-- The engine fields are copied into `self` **before every hook** and back into the `GameObject` **after `on_start` and
-  `on_update`**. Changes made in `on_render` are not copied back. `Sprite` is not visible to Lua.
-- Writing any other field on `self` (`self.X = 1`, `self.speed = 2`) is an error:
-  `unknown field '<key>' on a game object, put script data in self.data`. Reading an unknown field returns the module's
+- The fields are copied into `self` **before every hook** and back into the components **after `on_start` and
+  `on_update`**. Changes made in `on_render` are not copied back. Other components (`Rotation`, `SpriteRef`, game
+  components) are not visible to Lua.
+- When an entity loses a component, its fields are removed from `self` on the next hook.
+- Writing a field of a component the entity lacks is an error: `self.vx needs a Velocity component on the entity`.
+  Writing any other unknown field (`self.X = 1`, `self.speed = 2`) is an error:
+  `unknown field '<key>' on an entity, put script data in self.data`. Reading an unknown field returns the module's
   value or `nil` (no error).
-- If a hook stores the wrong type in an engine field (`self.x = "left"`), nothing is copied back and the behaviour
-  faults with `self.<field> must be a number` or `self.char must be a string or a code point`. The object keeps its
-  last good state.
-- `dt` is `GameTime.Delta` in **seconds** (`TotalSeconds`). Scripts must scale movement by it ([§ FPS](#fps)).
+- If a hook stores the wrong type in a field (`self.x = "left"`), no component is written and the entity faults with
+  `self.<field> must be a number` or `self.char must be a string or a code point`.
+- `dt` is the group's delta, `(float)GameTime.Delta.TotalSeconds` in an `EcsScene`. Scripts must scale movement by it
+  ([§ FPS](#fps)).
 - Lua API (Lua 5.4 standard libraries are all open, including `io` and `os`):
 
 | Lua | Behaviour |
@@ -212,20 +212,25 @@ calls `OnDestroy`, then disposes the world. A paused scene (another scene pushed
 | `console.width`, `console.height` | Set once when the runtime is created |
 | `print(...)` | `Log.WriteLine("Lua: " + args joined by tab)`. Dropped unless `EnableLogger` ([§ Logger](#logger)) |
 
-- **Errors.** A Lua error in a hook, or a .NET exception in a host function, **faults the behaviour**:
-  `LuaBehaviour.Error` is set (Lua's `name:line: message`, or `ExceptionType: message`),
-  `Log.WriteLine("Lua: " + error)` is called, and its hooks stop running. Field changes from the failed hook are not
-  copied back. The `GameObject` is still drawn at its last good state. A host-function exception does not stop the
-  Lua code immediately: the hook runs to its end with the failing call returning nothing, then the behaviour faults.
-- A faulted behaviour runs again after its script's next successful `Reload` (`Version` changed). There is no other
-  way to clear `Error`.
+- **Errors.** A Lua error in a hook, or a .NET exception in a host function, **faults the entity**: the error text
+  (Lua's `name:line: message`, or `ExceptionType: message`) is kept for `LuaScriptSystem.GetError(entity)`,
+  `Log.WriteLine("Lua: " + error)` is called, and the tag `ScriptFaulted` is added through the group's command
+  buffer. The script query excludes `ScriptFaulted`, so none of its hooks run. Its components keep their last good
+  values and C# systems (movement, rendering) still process it. A host-function exception does not stop the Lua code
+  immediately: the hook runs to its end with the failing call returning nothing, then the entity faults.
+- `ScriptFaulted` is removed (and the error cleared) in the first `LuaScriptSystem` update after a successful
+  `Reload` of that entity's script. The entity runs again in the frame after that. Game code may also remove the tag
+  itself (`Remove<ScriptFaulted>`): the entity then runs again and its error is cleared.
 - **Reload.** `LuaScript.Reload` / `LuaRuntime.ReloadAll` re-read the file from `FullPath` (the copy in the output
   folder, not the project source), run it, and copy every field of the new module into the existing module table.
-  Existing behaviours keep their `self.data` and use the new functions. `on_start` does **not** run again. Fields
+  Running entities keep their `self.data` and use the new functions. `on_start` does **not** run again. Fields
   **removed** from the new version stay in the module. A failing reload throws (`ReloadAll` returns the failures) and
   the previous version stays active.
 - Lua shortens chunk names longer than 60 bytes in error messages to `...<end of path>`.
 - A UTF-8 byte order mark at the start of a script is skipped.
+- **Entity lifetime.** `self` is kept per `Entity.Id` and `Entity.Version`. A destroyed entity's `self` is freed when
+  its id is reused; a reused id gets a new `self` and runs `on_start` again. Giving an entity a `Script` for another
+  script also starts fresh. Removing `Script` and adding the same one back keeps the old `self` (no new `on_start`).
 
 <a id="terraform"></a>
 ## TerraForM
@@ -379,5 +384,5 @@ files, so every rule above applies, except:
 | ConsoleGame.Ecs | One entity per cell (4096). Every **500 ms** (timer reset to 0) each gets a random colour of the same five. Cells are black until the first recolour. `ESC` quits | `RecolorSystem`, `ColorGridScene`, `ConsoleEcsGame.OnUpdate` |
 | Swarm | Particles are pulled towards a point moving on a Lissajous curve, each with its own `Agility.Pull` (30–180 cells/s²), drag 0.3/s, and bounce off the screen edges. Colour by speed: dark blue < 15, blue < 30, cyan < 50 cells/s, else white. The HUD on row 0 shows the count | `AttractorSystem`, `BounceSystem`, `ColorBySpeedSystem`, `HudSystem` |
 | Swarm | `SPACE` adds 10 000 particles, `BACKSPACE` removes up to 10 000 (both through the command buffer, applied at the end of the simulation group). `ESC` quits | `SpawnControlSystem`, `SwarmGame.OnUpdate` |
-| Scripted | Arrows move the player (`@`, yellow, starts at `Console.ScreenCenter`) at 20 cells/s, kept inside rows 1 to height−2. 30 fireflies (`•`, positions from `Random(1)`, velocities from `math.randomseed(1)`) bounce and switch `self.color` Green/DarkGreen every 0.3 s. No collisions, no objective, no quit key | `player.lua`, `firefly.lua`, `ScriptedGame.OnInitialize` |
-| Scripted | `F5` (`Pressed`) calls `LuaRuntime.ReloadAll()`. Failures go to `Log.WriteLine`, which is dropped because `EnableLogger` is off. The first faulted `LuaBehaviour.Error` is drawn on the bottom row (white on dark red) | `ScriptedGame.OnUpdate`, `ReloadScripts`, `OnRender` |
+| Scripted | ECS scene. Arrows move the player (`@`, yellow, starts at `Console.ScreenCenter`) at 20 cells/s, kept inside rows 1 to height−2. 30 fireflies (`•`, positions from `Random(1)`): `on_start` gives each a random `Velocity` (`math.randomseed(1)`), `MovementSystem` moves them, the script reverses `vx`/`vy` at the edges and switches `self.color` Green/DarkGreen every 0.3 s. Which glyph wins where player and firefly overlap is not defined (archetype order). No collisions, no objective. `ESC` quits | `player.lua`, `firefly.lua`, `ScriptedScene.OnCreate`, `ScriptedGame.OnUpdate` |
+| Scripted | `F5` (`Pressed`) calls `LuaRuntime.ReloadAll()`. Failures go to `Log.WriteLine`, which is dropped because `EnableLogger` is off. The error of the first `ScriptFaulted` entity found is drawn on the bottom row (white on dark red) | `ScriptReloadSystem`, `ScriptErrorSystem` |

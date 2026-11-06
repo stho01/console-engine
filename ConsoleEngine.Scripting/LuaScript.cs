@@ -6,9 +6,9 @@ namespace ConsoleEngine.Scripting;
 
 /// <summary>
 /// A loaded script file. The file returns a table (the module) with any of <c>on_start(self)</c>,
-/// <c>on_update(self, dt)</c> and <c>on_render(self)</c>. Each <see cref="LuaBehaviour"/> created from it has its own
-/// <c>self</c> table whose metatable falls back to the module, so module functions work as methods
-/// (<c>self:jump()</c>).
+/// <c>on_update(self, dt)</c> and <c>on_render(self)</c>. Put <see cref="Component"/> on an entity to run it there:
+/// each entity gets its own <c>self</c> table whose metatable falls back to the module, so module functions work as
+/// methods (<c>self:jump()</c>).
 /// </summary>
 public sealed class LuaScript
 {
@@ -18,15 +18,15 @@ public sealed class LuaScript
 
     private readonly LuaRuntime _runtime;
     private int _module = LuaRuntime.NoRef;
-    private int _metatable = LuaRuntime.NoRef;
 
     //**********************************************************
     //** ctor:
     //**********************************************************
 
-    internal LuaScript(LuaRuntime runtime, string name, string fullPath)
+    internal LuaScript(LuaRuntime runtime, int id, string name, string fullPath)
     {
         _runtime = runtime;
+        Id = id;
         Name = name;
         FullPath = fullPath;
     }
@@ -35,6 +35,12 @@ public sealed class LuaScript
     //** props:
     //**********************************************************
 
+    /// <summary>Index in the runtime's scripts, stored in <see cref="Script.Id"/>.</summary>
+    public int Id { get; }
+
+    /// <summary>The component that runs this script on an entity.</summary>
+    public Script Component => new(Id);
+
     /// <summary>The path as passed to <see cref="LuaRuntime.Load"/>. Error messages start with it.</summary>
     public string Name { get; }
     public string FullPath { get; }
@@ -42,6 +48,7 @@ public sealed class LuaScript
     /// <summary>Incremented by every successful <see cref="Reload"/>.</summary>
     public int Version { get; private set; }
 
+    internal int Metatable { get; private set; } = LuaRuntime.NoRef;
     internal int OnStart { get; private set; } = LuaRuntime.NoRef;
     internal int OnUpdate { get; private set; } = LuaRuntime.NoRef;
     internal int OnRender { get; private set; } = LuaRuntime.NoRef;
@@ -50,19 +57,9 @@ public sealed class LuaScript
     //** public methods:
     //**********************************************************
 
-    /// <summary>A new behaviour running this script, for <see cref="Infrastructure.Objects.GameObject.Behaviour"/>.
-    /// Use one per game object.</summary>
-    public LuaBehaviour CreateBehaviour()
-    {
-        _runtime.PushNewSelf();
-        _runtime.Push(_metatable);
-        _runtime.State.SetMetaTable(-2);
-        return new LuaBehaviour(_runtime, this, _runtime.Ref());
-    }
-
     /// <summary>
-    /// Runs the file again and copies the new module's fields into the existing module, so objects that are already
-    /// spawned use the new functions. Objects keep their own fields. On failure the previous version stays.
+    /// Runs the file again and copies the new module's fields into the existing module, so entities that already run
+    /// the script use the new functions. Their <c>self</c> tables are kept. On failure the previous version stays.
     /// </summary>
     /// <exception cref="LuaScriptException">The file is missing, has an error or does not return a table.</exception>
     public void Reload()
@@ -96,6 +93,7 @@ public sealed class LuaScript
         OnUpdate = CacheFunction("on_update", OnUpdate);
         OnRender = CacheFunction("on_render", OnRender);
         Version++;
+        _runtime.OnReloaded();
     }
 
     //**********************************************************
@@ -119,7 +117,7 @@ public sealed class LuaScript
     }
 
     /// <summary>
-    /// Stack: [module] → []. Keeps the module and the metatable for its game objects:
+    /// Stack: [module] → []. Keeps the module and the metatable for its entities' <c>self</c>:
     /// <c>{ __index = module, __newindex = unknown-field guard }</c>.
     /// </summary>
     private void CreateModule()
@@ -132,7 +130,7 @@ public sealed class LuaScript
         lua.SetField(-2, "__index");
         _runtime.Push(_runtime.UnknownFieldGuard);
         lua.SetField(-2, "__newindex");
-        _metatable = _runtime.Ref();
+        Metatable = _runtime.Ref();
     }
 
     /// <summary>Stack: [new module] → []. Copies every field of the new module into the existing one.</summary>

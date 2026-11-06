@@ -5,9 +5,9 @@ using System.Runtime.InteropServices;
 using System.Text;
 using System.Text.Unicode;
 using ConsoleEngine.Abstractions.Inputs;
+using ConsoleEngine.Ecs.Components;
 using ConsoleEngine.Infrastructure.Inputs;
 using ConsoleEngine.Infrastructure.Logging;
-using ConsoleEngine.Infrastructure.Objects;
 using ConsoleEngine.Infrastructure.Rendering;
 using ConsoleEngine.Scripting.LowLevel;
 using KeraLua;
@@ -18,8 +18,9 @@ namespace ConsoleEngine.Scripting;
 
 /// <summary>
 /// One native Lua 5.4 state with the engine API registered: <c>input</c>, <c>console</c>, <c>keys</c>, <c>colors</c>
-/// and <c>print</c> (to <see cref="Log"/>). Load scripts with <see cref="Load"/> and attach them to game objects with
-/// <see cref="LuaScript.CreateBehaviour"/>. Not thread-safe: use it from the game-loop thread only.
+/// and <c>print</c> (to <see cref="Log"/>). Load scripts with <see cref="Load"/>, put
+/// <see cref="LuaScript.Component"/> on entities, and run them with <see cref="LuaScriptSystem"/>. Not thread-safe:
+/// use it from the game-loop thread only.
 /// </summary>
 /// <remarks>
 /// Host functions never raise Lua errors: <c>lua_error</c> would long-jump across managed frames. A .NET exception in a
@@ -33,8 +34,17 @@ public sealed class LuaRuntime : IDisposable
 
     internal const int NoRef = -2; // LUA_NOREF
 
+    // Bits of the mask passed to the hook trampoline: which components the entity has, and whether to read back.
+    internal const int HasPosition = 1;
+    internal const int HasVelocity = 2;
+    internal const int HasGlyph = 4;
+    internal const int ReadBack = 8;
+    internal const int ComponentBits = HasPosition | HasVelocity | HasGlyph;
+
     private const int KeyCount = 256; // size of the key tables in InputHandler
     private const int MaxTextLength = 256;
+    private const int HookArguments = 11;
+    private const int HookResults = 7;
 
     // Static so native code always points to a live delegate. Each closure finds its runtime through upvalue 1.
     private static readonly LuaFunction HeldFunction = Held;
@@ -44,26 +54,62 @@ public sealed class LuaRuntime : IDisposable
     private static readonly LuaFunction TextFunction = Text;
     private static readonly LuaFunction PrintFunction = Print;
 
-    // Raised by __newindex on a game object table: only the engine fields below exist, script data goes in self.data.
-    private const string UnknownFieldGuardSource =
-        "return function(self, key) error(\"unknown field '\" .. tostring(key) .. \"' on a game object, " +
-        "put script data in self.data\", 2) end";
+    /// <summary>
+    /// Engine-side Lua, compiled once. <c>guard</c> is the <c>__newindex</c> of every entity's <c>self</c>.
+    /// <c>run</c> copies the component fields into <c>self</c>, calls the hook and returns the fields, so a hook costs
+    /// one native call instead of one per field. It uses plain field access, not <c>rawset</c>/<c>rawget</c> (each a
+    /// C call): a field that already exists never reaches <c>guard</c>, and one that doesn't is let through while
+    /// <c>syncing</c>. <c>clear</c> removes the fields of components the entity lost.
+    /// </summary>
+    private const string EngineSource = """
+        local rawset, error, tostring = rawset, error, tostring
+        local COMPONENT = { x = "Position", y = "Position", vx = "Velocity", vy = "Velocity",
+                            char = "Glyph", color = "Glyph", background = "Glyph" }
+        local syncing = false
+
+        local function guard(self, key, value)
+            if syncing then
+                rawset(self, key, value)
+                return
+            end
+            local component = COMPONENT[key]
+            if component then
+                error("self." .. key .. " needs a " .. component .. " component on the entity", 2)
+            end
+            error("unknown field '" .. tostring(key) .. "' on an entity, put script data in self.data", 2)
+        end
+
+        local function run(hook, self, dt, mask, x, y, vx, vy, char, color, background)
+            syncing = true
+            if mask & 1 ~= 0 then self.x = x; self.y = y end
+            if mask & 2 ~= 0 then self.vx = vx; self.vy = vy end
+            if mask & 4 ~= 0 then self.char = char; self.color = color; self.background = background end
+            syncing = false
+            hook(self, dt)
+            if mask & 8 == 0 then return end
+            return self.x, self.y, self.vx, self.vy, self.char, self.color, self.background
+        end
+
+        local function clear(self, mask)
+            if mask & 1 ~= 0 then rawset(self, "x", nil); rawset(self, "y", nil) end
+            if mask & 2 ~= 0 then rawset(self, "vx", nil); rawset(self, "vy", nil) end
+            if mask & 4 ~= 0 then
+                rawset(self, "char", nil); rawset(self, "color", nil); rawset(self, "background", nil)
+            end
+        end
+
+        return guard, run, clear
+        """;
 
     private readonly LuaState _lua;
     private readonly GCHandle _handle;
     private readonly RenderConsole _console;
     private readonly Func<int, KeyState> _getKey;
     private readonly List<LuaScript> _scripts = new();
-    private Exception _hostError;
-
-    // Registry refs to the engine field names, so syncing a GameObject never marshals a .NET string.
-    private readonly int _keyX;
-    private readonly int _keyY;
-    private readonly int _keyChar;
-    private readonly int _keyColor;
-    private readonly int _keyBackground;
-    private readonly int _keyVisible;
+    private readonly int _run;
+    private readonly int _clear;
     private readonly int _keyData;
+    private Exception _hostError;
 
     //**********************************************************
     //** ctor:
@@ -80,16 +126,13 @@ public sealed class LuaRuntime : IDisposable
         _handle = GCHandle.Alloc(this);
         RegisterApi();
 
-        _keyX = StringRef("x");
-        _keyY = StringRef("y");
-        _keyChar = StringRef("char");
-        _keyColor = StringRef("color");
-        _keyBackground = StringRef("background");
-        _keyVisible = StringRef("visible");
-        _keyData = StringRef("data");
+        _lua.PushString("data");
+        _keyData = Ref();
 
-        _lua.LoadString(UnknownFieldGuardSource, "=engine");
-        Call(0, 1);
+        _lua.LoadString(EngineSource, "=engine");
+        Call(0, 3);
+        _clear = Ref();
+        _run = Ref();
         UnknownFieldGuard = Ref();
     }
 
@@ -97,9 +140,12 @@ public sealed class LuaRuntime : IDisposable
     //** props:
     //**********************************************************
 
+    /// <summary>Incremented by every successful <see cref="LuaScript.Reload"/> of any script.</summary>
+    public int ReloadCount { get; private set; }
+
     internal LuaState State => _lua;
 
-    /// <summary>Registry ref to the <c>__newindex</c> function of every game object table.</summary>
+    /// <summary>Registry ref to the <c>__newindex</c> function of every entity's <c>self</c>.</summary>
     internal int UnknownFieldGuard { get; }
 
     //**********************************************************
@@ -114,7 +160,7 @@ public sealed class LuaRuntime : IDisposable
     public LuaScript Load(string path)
     {
         var fullPath = Path.IsPathRooted(path) ? path : Path.Combine(AppContext.BaseDirectory, path);
-        var script = new LuaScript(this, path, fullPath);
+        var script = new LuaScript(this, _scripts.Count, path, fullPath);
         script.Reload();
         _scripts.Add(script);
         return script;
@@ -151,6 +197,10 @@ public sealed class LuaRuntime : IDisposable
     //** internals:
     //**********************************************************
 
+    internal LuaScript GetScript(int id) => _scripts[id];
+
+    internal void OnReloaded() => ReloadCount++;
+
     internal void Push(int reference) => _lua.RawGetInteger(LuaRegistry.Index, reference);
 
     /// <summary>Pops the top value into the registry and returns its reference.</summary>
@@ -158,7 +208,7 @@ public sealed class LuaRuntime : IDisposable
 
     internal void Unref(int reference)
     {
-        if (reference != NoRef)
+        if (reference > 0)
             _lua.Unref(LuaRegistry.Index, reference);
     }
 
@@ -186,100 +236,118 @@ public sealed class LuaRuntime : IDisposable
         return error;
     }
 
-    /// <summary>Pushes a new game object table: <c>{ data = {} }</c>. The engine fields are written before each hook.
-    /// </summary>
-    internal void PushNewSelf()
+    /// <summary>Creates an entity's <c>self</c>: <c>{ data = {} }</c> with the script's metatable.</summary>
+    /// <returns>Its registry reference.</returns>
+    internal int CreateSelf(LuaScript script)
     {
-        _lua.CreateTable(0, 7);
+        _lua.CreateTable(0, 8);
         Push(_keyData);
         _lua.NewTable();
         _lua.RawSet(-3);
+        Push(script.Metatable);
+        _lua.SetMetaTable(-2);
+        return Ref();
     }
 
-    /// <summary>Copies the engine fields of <paramref name="owner"/> into the Lua table <paramref name="self"/>.</summary>
-    internal void WriteFields(int self, GameObject owner)
+    /// <summary>Removes the fields of the components in <paramref name="mask"/> from <c>self</c>.</summary>
+    internal void ClearFields(int self, int mask)
     {
+        Push(_clear);
         Push(self);
-        SetNumber(_keyX, owner.Position.X);
-        SetNumber(_keyY, owner.Position.Y);
-        SetNumber(_keyColor, (int)owner.Color);
-        SetNumber(_keyBackground, (int)owner.Background);
-
-        Push(_keyVisible);
-        _lua.PushBoolean(owner.Visible);
-        _lua.RawSet(-3);
-
-        Push(_keyChar);
-        PushChar(owner.Char);
-        _lua.RawSet(-3);
-
-        _lua.Pop(1);
+        _lua.PushInteger(mask);
+        Call(2, 0);
     }
 
-    /// <summary>Copies the engine fields back from <paramref name="self"/> into <paramref name="owner"/>.</summary>
-    /// <returns><c>null</c>, or the error when a script stored a value of the wrong type (nothing is copied then).
-    /// </returns>
-    internal string ReadFields(int self, GameObject owner)
+    /// <summary>
+    /// Calls <paramref name="hook"/> with <c>self</c> and <paramref name="deltaSeconds"/>. The fields of the components
+    /// in <paramref name="mask"/> are copied into <c>self</c> first and, with <see cref="ReadBack"/>, back into the
+    /// components afterwards. Components missing from the mask are passed as dummies and never written.
+    /// </summary>
+    /// <returns><c>null</c>, or the error. A failed hook or a field of the wrong type changes no component.</returns>
+    internal string RunHook(int hook, int self, float deltaSeconds, int mask,
+        ref Position position, ref Velocity velocity, ref Glyph glyph)
     {
+        var top = _lua.GetTop();
+        Push(_run);
+        Push(hook);
         Push(self);
-        try
-        {
-            if (!TryGetNumber(_keyX, out var x)) return "self.x must be a number";
-            if (!TryGetNumber(_keyY, out var y)) return "self.y must be a number";
-            if (!TryGetNumber(_keyColor, out var color)) return "self.color must be a number";
-            if (!TryGetNumber(_keyBackground, out var background)) return "self.background must be a number";
-            if (!TryGetChar(out var character)) return "self.char must be a string or a code point";
+        _lua.PushNumber(deltaSeconds);
+        _lua.PushInteger(mask);
+        _lua.PushNumber(position.Value.X);
+        _lua.PushNumber(position.Value.Y);
+        _lua.PushNumber(velocity.Value.X);
+        _lua.PushNumber(velocity.Value.Y);
+        PushChar(glyph.Character);
+        _lua.PushInteger((int)glyph.Foreground);
+        _lua.PushInteger((int)glyph.Background);
 
-            Push(_keyVisible);
-            _lua.RawGet(-2);
-            var visible = _lua.ToBoolean(-1);
-            _lua.Pop(1);
+        var readBack = (mask & ReadBack) != 0;
+        var error = Call(HookArguments, readBack ? HookResults : 0);
+        if (error != null || !readBack)
+            return error;
 
-            owner.Position = new Vector2((float)x, (float)y);
-            owner.Color = (ConsoleColor)((int)color & 0xF);
-            owner.Background = (ConsoleColor)((int)background & 0xF);
-            owner.Char = character;
-            owner.Visible = visible;
-            return null;
-        }
-        finally
-        {
-            _lua.Pop(1);
-        }
+        error = ReadResults(top + 1, mask, ref position, ref velocity, ref glyph);
+        _lua.SetTop(top);
+        return error;
     }
 
-    /// <summary>Stack: [table] → [table]. Sets table[key] without metamethods.</summary>
-    private void SetNumber(int key, double value)
+    /// <summary>Validates every returned field, then writes them. Stack slots: x, y, vx, vy, char, color, background.
+    /// </summary>
+    private string ReadResults(int first, int mask, ref Position position, ref Velocity velocity, ref Glyph glyph)
     {
-        Push(key);
-        _lua.PushNumber(value);
-        _lua.RawSet(-3);
+        double x = 0, y = 0, vx = 0, vy = 0, color = 0, background = 0;
+        var character = '\0';
+
+        if ((mask & HasPosition) != 0)
+        {
+            if (!TryGetNumber(first, out x)) return "self.x must be a number";
+            if (!TryGetNumber(first + 1, out y)) return "self.y must be a number";
+        }
+
+        if ((mask & HasVelocity) != 0)
+        {
+            if (!TryGetNumber(first + 2, out vx)) return "self.vx must be a number";
+            if (!TryGetNumber(first + 3, out vy)) return "self.vy must be a number";
+        }
+
+        if ((mask & HasGlyph) != 0)
+        {
+            if (!TryGetChar(first + 4, out character)) return "self.char must be a string or a code point";
+            if (!TryGetNumber(first + 5, out color)) return "self.color must be a number";
+            if (!TryGetNumber(first + 6, out background)) return "self.background must be a number";
+        }
+
+        if ((mask & HasPosition) != 0)
+            position.Value = new Vector2((float)x, (float)y);
+        if ((mask & HasVelocity) != 0)
+            velocity.Value = new Vector2((float)vx, (float)vy);
+        if ((mask & HasGlyph) != 0)
+        {
+            glyph.Character = character;
+            glyph.Foreground = (ConsoleColor)((int)color & 0xF);
+            glyph.Background = (ConsoleColor)((int)background & 0xF);
+        }
+
+        return null;
     }
 
-    /// <summary>Stack: [table] → [table].</summary>
-    private bool TryGetNumber(int key, out double value)
+    private bool TryGetNumber(int index, out double value)
     {
-        Push(key);
-        _lua.RawGet(-2);
-        var isNumber = _lua.Type(-1) == LuaType.Number;
-        value = isNumber ? _lua.ToNumber(-1) : 0;
-        _lua.Pop(1);
+        var isNumber = _lua.Type(index) == LuaType.Number;
+        value = isNumber ? _lua.ToNumber(index) : 0;
         return isNumber;
     }
 
-    /// <summary>Stack: [table] → [table]. Reads <c>char</c> as a string (first character) or a code point.</summary>
-    private bool TryGetChar(out char value)
+    /// <summary>Reads a string (first character) or a code point.</summary>
+    private bool TryGetChar(int index, out char value)
     {
-        Push(_keyChar);
-        _lua.RawGet(-2);
-        var type = _lua.Type(-1);
+        var type = _lua.Type(index);
         value = type switch
         {
-            LuaType.String => FirstChar(_lua, -1),
-            LuaType.Number => (char)_lua.ToInteger(-1),
+            LuaType.String => FirstChar(_lua, index),
+            LuaType.Number => (char)_lua.ToInteger(index),
             _ => '\0'
         };
-        _lua.Pop(1);
         return type is LuaType.String or LuaType.Number;
     }
 
@@ -291,12 +359,6 @@ public sealed class LuaRuntime : IDisposable
         var bytes = stackalloc byte[4];
         var length = rune.EncodeToUtf8(new Span<byte>(bytes, 4));
         LuaNative.lua_pushlstring(_lua.Handle, bytes, (UIntPtr)length);
-    }
-
-    private int StringRef(string value)
-    {
-        _lua.PushString(value);
-        return Ref();
     }
 
     private void RegisterApi()

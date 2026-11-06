@@ -1,37 +1,46 @@
 # ConsoleEngine.Benchmarks
 
-BenchmarkDotNet micro-benchmarks for the engine. Release only:
+BenchmarkDotNet micro-benchmarks for the engine: `Baseline/` (OOP vs. struct arrays), `Ecs/` (world, queries,
+command buffer, rendering) and `Scripting/` (Lua). Always Release:
 
 ```bash
-dotnet run -c Release --project ConsoleEngine.Benchmarks -- --filter '*'
+dotnet run -c Release --project ConsoleEngine.Benchmarks -- --filter "*"
 ```
 
-## GameObjectFrame
+## Scripting/LuaScriptBenchmarks
 
-One frame (update, then render) of 100 or 1000 moving `GameObject`s on a 200 × 200 console (`AsteroidsGame` size), dt
-1/60 s, deterministic arrow-key pattern (`EngineBindings`):
+One frame (simulation + presentation) of 100 or 1000 moving entities with `Position`, `Velocity` and `Glyph` on a
+200 × 200 console, dt 1/60 s, deterministic arrow-key pattern. `GlyphRenderSystem` draws them in both:
 
-| Method | Behaviour |
+| Method | Steering |
 |---|---|
-| `CSharpBehaviour` (baseline) | `MoverBehaviour`, a C# `IBehaviour` |
-| `LuaBehaviour` | `Scripts/mover.lua` through `LuaBehaviour`: engine fields copied into `self`, `on_update`, copied back |
+| `CSharpSystem` (baseline) | `MoverSystem`, a chunk loop in C# |
+| `LuaScripts` | `Scripting/mover.lua` through `LuaScriptSystem`: one trampoline call per entity copies the seven component fields into `self`, runs `on_update`, and returns them |
 
-The engine draws every object itself in both. The difference is what Lua scripting costs per object.
+### Results (2026-11-06)
 
-## Results (2026-11-03)
+i7-11800H, Windows 11, .NET 10.0.14, BenchmarkDotNet 0.15.8, default job. Mean per frame, 0 B allocated in every
+row.
 
-i7-11800H, Windows 11, .NET 10.0.14, BenchmarkDotNet 0.15.8, default job. Mean per frame, no managed allocations in
-any row.
-
-| Object model | 100 objects | 1000 objects |
+| | 100 entities | 1000 entities |
 |---|---:|---:|
-| Engine `GameObject`, C# behaviour | 0.9 µs | 8.8 µs |
-| Engine `GameObject`, `LuaBehaviour` (current) | 61 µs | 616 µs |
-| Script owns the object and draws itself (first design, removed) | 43 µs | 420 µs |
+| C# system | 0.5 µs | 4.2 µs |
+| Lua, `LuaScriptSystem` (current) | 52 µs | 539 µs |
+| Lua, first ECS trampoline with `rawset`/`rawget` | 102 µs | 1,014 µs |
 
-The engine object model costs about 45 % more per Lua object than the first design. Copying the six engine fields
-into `self` and back is ~50 native calls per object per frame, more than the `on_render` + `console.draw` calls it
-replaced. 1000 Lua objects still take ~0.6 ms of a 16.7 ms (60 FPS) frame.
+History of the same mover logic in earlier designs (2026-11-03, removed, same machine):
+
+| Design | 100 | 1000 |
+|---|---:|---:|
+| Script owns the object and draws itself (`on_update` + `on_render` → `console.draw`) | 43 µs | 420 µs |
+| `GameObject` + `LuaBehaviour`, ~50 native calls per object to copy fields | 61 µs | 616 µs |
+
+Notes:
+- A Lua entity costs about 0.5 µs per frame, ~100× its C# equivalent. 1000 scripted entities take ~0.5 ms of a
+  16.7 ms (60 FPS) frame. Use C# systems for anything numerous (particles, bullets) and Lua for unique behaviour.
+- The trampoline uses plain field access. `rawset`/`rawget` are C function calls from Lua and doubled the cost.
+- The current design syncs seven fields from three components per hook. The first design synced none (the script
+  held all state), which is why it was cheaper per object but gave the engine no typed data.
 
 ## Why KeraLua (decision record, 2026-11-03)
 
