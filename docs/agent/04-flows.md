@@ -166,3 +166,18 @@ Runs inside [F2](#f2) steps "Scenes.Update" and "Scenes.Render". Both are skippe
 | 4 | Enter/Space/digit → `Launch(index)` | `LauncherMenu.HandleKey`, `LauncherApp.Launch` | Exe missing → status `LauncherTexts.NotBuilt`, nothing started | Yellow status line |
 | 5 | Start the exe through `conhost.exe` + `cmd.exe` in a new classic console window, working directory = exe folder, and wait | `GameRunner.Run` | `Process.Start` fails → `Win32Exception` caught | Status `LauncherTexts.StartFailed` |
 | 6 | Window closes → status `Closed`, discard buffered keys, back to step 3. A crashing game first stops at `pause` | `DiscardBufferedKeys` | — | `LauncherTexts.Closed` |
+<a id="f11"></a>
+## F11 — EternalDigger miner frame (`MinerControlSystem` → `InteractionSystem` → `MinerMotionSystem`)
+
+Runs in [F9](#f9) step 1, in this order. The keyboard is read once into a `MinerInput` (`MinerInput.FromKeyboard`).
+
+| # | Step | Class.method | Stops / skips if | Observable |
+|---|---|---|---|---|
+| 1 | Rescue: `R` held adds to `RescueHold`; at 1.5 s the miner jumps to the spawn and the bag empties | `MinerControlSystem.UpdateRescue` | `R` not held → `RescueHold = 0`, continue. Rescue done → rest of the frame's control skipped | HUD rescue bar, pop at the spawn |
+| 2 | — | `MinerControlSystem.Control` | `Miner.IsMoving` → no keys read this frame | — |
+| 3 | Fall one tile if unsupported | same | `Mine.IsSupported` false → fall starts, keys ignored | Miner drops |
+| 4 | `SPACE`: ladder | `PlaceLadder` → `Mine.TryPlaceLadder` | `Ladders == 0`, row ≤ 10, tile not air or already has a ladder → nothing placed (one dust puff) | Ladder drawn, HUD count −1 |
+| 5 | Side key, else down, else up (only on a ladder): walk/climb into air, or dig | `MoveOrDig` | Target unbreakable (grass, bedrock, outside the mine) → nothing. `DigCooldown > 0` → no hit this frame | Debris, cracks, burst on break, ore +1 in the HUD bag |
+| 6 | `E`: deliver or buy | `InteractionSystem.Interact` | `E` not pressed this frame, miner moving, or not on row 9 at columns 3–6 / 8–11 → nothing. Empty bag / gold < 10 → dust puff only | Coins and `+<n>g` / `-10g` |
+| 7 | Slide `Position`, finish the move, landing dust | `MinerMotionSystem.Move` | — | — |
+

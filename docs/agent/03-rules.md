@@ -327,3 +327,37 @@ files, so every rule above applies, except:
 | Games start in their **own classic console window** (`conhost.exe`), working directory = the exe's folder, with no arguments (Asteroids.Ecs and Swarm use their default counts). The launcher blocks until the game exits; keys typed into the launcher meanwhile are discarded | `GameRunner.Run`, `LauncherApp.DiscardBufferedKeys` |
 | `conhost.exe` always exits with 0, so the launcher cannot tell a crash from a normal quit: it always shows `LauncherTexts.Closed`. A game that exits non-zero (crash) leaves its window open on `pause` with the exception text above it. The logger window that a game opens (`Log.Start`, `UseShellExecute`) still follows the default terminal setting | `GameRunner.BuildArguments` |
 | The launcher finds games only from its own build output: it walks up from `AppContext.BaseDirectory` to the folder holding `Launcher.csproj` and uses the same relative output path (configuration + framework) for each game | `GameLocator.FromLauncherOutput` |
+
+<a id="eternal-digger"></a>
+## EternalDigger (`Examples/EternalDigger`)
+
+Full contract: [`docs/design/eternal-digger.md`](../design/eternal-digger.md). Coordinates are tile columns/rows; a
+tile is 4 × 2 cells (`Layout.TileWidth`/`TileHeight`). Row 0 is the top of the sky.
+
+| Rule | Value | Identifier |
+|---|---|---|
+| World | 30 columns (`Mine.Columns`), endless downwards. Rows 0–9 sky, row 10 grass (`Mine.SurfaceRow`, depth 0). Depth = `row - 10` m, HUD shows at least 0 | `Mine`, `Mine.Depth` |
+| Generation | Same seed → same mine. Rows are generated on first touch in blocks of 64 (`Mine.RowsPerBlock`) | `Mine.Generate`, `Mine.Underground` |
+| Unbreakable | Grass (the whole surface row except the shaft), bedrock (columns 0 and 29 below the surface, and everything outside the 30 columns, also beside the sky). Digging them does nothing | `Tiles.IsBreakable`, `Mine.At` |
+| Shaft | Column 21 (`Mine.ShaftColumn`): rows 10 and 11 start dug out with ladders. The only way down | `Mine.Create` |
+| Hits to break | Dirt 2, Stone 4, Copper 4, Silver 6, Granite 7, Gold 8, plus 1 per 25 m of depth (`Tiles.DepthPerExtraHit`) | `Tiles.HitsToBreak` |
+| Where things appear | Copper from 2 m, silver from 12 m, gold from 30 m, caves (air) from 6 m, granite from 40 m. Veins get richer deeper | `Tiles.CopperDepth`…`CaveDepth`, `Mine.Underground` |
+| Ore value | Copper 15g, silver 40g, gold 100g | `Tiles.CopperValue/SilverValue/GoldValue` |
+| Start | 0 gold, 8 ladders, column 15 on row 9 | `Shop.StartGold`, `Shop.StartLadders`, `Layout.SpawnColumn`, `Layout.GroundRow` |
+| Support / falling | The miner stands still if their tile has a ladder, or the tile below is solid or has a ladder. Otherwise they fall one tile at a time (0.06 s per tile) **before any key is read**. No fall damage | `Mine.IsSupported`, `MinerControlSystem.Control` |
+| Moves | One tile per move: walk 0.13 s, climb 0.17 s. **No keys are read while a move plays** (except the rescue key) | `MinerControlSystem` constants, `Miner.IsMoving` |
+| Side keys | Air → walk. Solid and breakable → one hit every 0.16 s (`DigInterval`) while held. Left and right both held cancel out | `MinerControlSystem.MoveOrDig` |
+| Down key | Below solid → dig it. Below air → step down (then the fall rule applies if there's no ladder) | same |
+| Up key | Only works on a ladder tile: above air → climb, above solid → dig. Without a ladder in the miner's own tile, up does nothing | same |
+| Ore | Breaking an ore tile puts one piece in the bag (`CopperOre`/`SilverOre`/`GoldOre`). No bag limit | `Shop.Collect` |
+| Ladders | `SPACE` (pressed) places one in the miner's own tile if: ladders > 0, row > 10 (underground), the tile is air and has no ladder. Ladders can't be picked up again. A shaft of N dug tiles needs a ladder in every one of them to climb out | `Mine.TryPlaceLadder` |
+| Deliver | `E` (pressed), miner idle at columns 3–6 on row 9 (the door): all ore is sold, the bag empties. Empty bag: only a dust puff | `InteractionSystem`, `Shop.Deliver`, `Layout.IsAtDeliverSpot` |
+| Buy | `E` (pressed), miner idle at columns 8–11 on row 9 (the shopfront): one ladder for 10g. Less than 10g: dust puff, nothing bought. The prompt text turns red | `Shop.TryBuyLadder`, `Shop.LadderPrice`, `Layout.IsAtShop` |
+| Rescue | Hold `R` 1.5 s (`RescueDuration`), anywhere, even mid-move: back to column 15, row 9. **The bag (ore) is lost**, gold and ladders are kept. Releasing early resets the timer | `MinerControlSystem.UpdateRescue` |
+| Light | `LightMap` levels `Dark`/`Dim`/`Lit`/`Bright`. Sky and grass rows bright. Daylight: depth 1 lit, depth 2–3 dim, only in dug-out tiles and the tiles touching them. Headlamp: tiles within 1.5 tiles bright (also rock), a cone of ±40° up to 8 tiles: < 4 bright, < 6 lit, else dim. Solid tiles block the lamp. The lamp points along the last move or dig | `LightMap.Compute`, `Miner.LampDirection` |
+| Darkness | Lit tiles are remembered (`TileCell.Seen`) and drawn as faint grey outlines when dark, **without ore colour**. Never-seen dark tiles are black | `TerrainRenderSystem` |
+| Glints | Ore within 9 tiles of the miner and on screen twinkles, also through rock and in the dark (more in the dark). Gold most often, then silver, then copper. Sampled at a fixed rate (every 0.08 s), so not FPS-dependent | `GlintSystem` |
+| Camera | Follows the miner vertically (miner at 40% of the screen height), eased; never above the sky. Always on whole cells. Breaking tiles and falls of 3+ rows shake it | `CameraSystem`, `ScreenShake` |
+| Effects | Debris on hits, bursts and dust on breaks, foot/landing dust, mist in lit caves (max 40), coins + star pop + `+<gold>g` on delivery, pop + `-10g` on buying. All scaled by `Delta` | `EffectSpawner`, `ParticlePhysicsSystem`, `ParticleLifetimeSystem`, `MistSystem` |
+| Quit | `ESC` calls `Stop()`. Nothing is saved | `EternalDiggerGame.OnUpdate` |
+

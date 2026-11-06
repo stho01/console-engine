@@ -5,7 +5,7 @@
 
 | Fact | Why | How to get it |
 |---|---|---|
-| **Which game** (TerraForM, Snake, Asteroids, Platformer, ConsoleGame, their `.Ecs` ports, Swarm, or their own game on `ConsoleEngine`) | Rules differ per game ([03](03-rules.md)) | Ask, or the exe name |
+| **Which game** (TerraForM, Snake, Asteroids, Platformer, ConsoleGame, their `.Ecs` ports, Swarm, EternalDigger, or their own game on `ConsoleEngine`) | Rules differ per game ([03](03-rules.md)) | Ask, or the exe name |
 | **OS and console host** | Windows only. Windows Terminal ignores the sizing/font calls **[external]** | [07 § Q1, Q2](07-checks.md#q1) |
 | **How it was launched and from which folder** (double-click the exe, `dotnet run`, IDE, a shortcut, a terminal in another folder) | Map files and the logger exe are found by **relative path** | [07 § Q3](07-checks.md#q3) |
 | **The exact error text**, if any | There are no log files. The exception printed to the console is the only record | Ask them to start it from an already-open terminal so the text stays ([06 § Capturing a crash](06-diagnostics.md#capture)) |
@@ -91,7 +91,7 @@
 
 **Symptom [inferred]:** "how do I exit?", "ESC doesn't quit", "the logger window stays open after the game closes".
 
-1. Which game? Only `ConsoleGame`, `ConsoleGame.Ecs` and `Swarm` quit on `ESC` (`Stop()`). In TerraForM and TerraForM.Ecs `ESC` opens the menu. Others have no quit key. → **Cause:** no quit path ([04 § F3](04-flows.md#f3)). **Fix:** close the console window. Stop.
+1. Which game? Only `ConsoleGame`, `ConsoleGame.Ecs`, `Swarm` and `EternalDigger` quit on `ESC` (`Stop()`). In TerraForM and TerraForM.Ecs `ESC` opens the menu. Others have no quit key. → **Cause:** no quit path ([04 § F3](04-flows.md#f3)). **Fix:** close the console window. Stop.
 2. Logger stays open after the game exits → **Cause:** `Log.Stop` is never reached, because `RenderConsole.Close` calls `Environment.Exit(0)` first, and the logger only exits on a `SocketException` ([04 § F4](04-flows.md#f4)). How the logger sees the closed connection is **[external]** and unverified. **Fix:** close the logger window. Escalate if it spins CPU.
 
 <a id="p6"></a>
@@ -180,3 +180,25 @@
    listed game. Stop.
 3. Game window stays open on `Press any key to continue . . .` → the game exited non-zero (crashed) and `pause` kept the window open. The exception text is above it. Continue with [P1](#p1) step 1 using that text. Stop.
 4. `Could not start ...` → `Win32Exception` from `Process.Start` (`conhost.exe` missing or blocked). Escalate with the message. Stop.
+<a id="p17"></a>
+## P17 — EternalDigger: stuck, can't dig, can't place or buy ladders, can't find ore
+
+Rules: [03 § EternalDigger](03-rules.md#eternal-digger). Flow: [04 § F11](04-flows.md#f11).
+
+1. Stuck at the bottom of a pit, up does nothing → **Cause:** up only works with a ladder in the miner's own tile
+   (`Mine.IsSupported`, `MinerControlSystem.Control`). **Fix:** place ladders with `SPACE` on the way down; with none
+   left, hold `R` for 1.5 s (rescue, the bag is lost). The HUD shows `NO LADDERS LEFT!` underground at 0 ladders. Stop.
+2. Can't dig down from the grass, or into the side walls → **Cause:** grass and bedrock are unbreakable
+   (`Tiles.IsBreakable`). **Fix:** go down the shaft under the `MINE` frame (column 21). Stop.
+3. `SPACE` places no ladder → **Cause:** one of: 0 ladders, still at the surface (row ≤ 10), the tile already has one,
+   or the miner was mid-move/falling (keys aren't read then). Stop.
+4. `E` does nothing at the house → **Cause:** must stand still right in front of the door (columns 3–6) or the shop
+   (columns 8–11); a prompt appears there. At the door with an empty bag, or at the shop with less than 10g, only a dust
+   puff shows (the shop prompt is red). Stop.
+5. Lost all ore → **Cause:** a rescue (`R` held 1.5 s) empties the bag by design. Stop.
+6. "Ore is invisible", "everything is black" → **Cause:** only lit tiles show colour; remembered tiles are grey outlines
+   without ore (`TerrainRenderSystem`). **Fix:** watch for glints (twinkles near the miner, also through rock) and point
+   the headlamp by moving/digging towards the ore. Stop.
+7. Different mine every time → **Cause:** the seed defaults to `Environment.TickCount`. **Fix:** pass a number as
+   the first argument for a repeatable mine. Stop.
+

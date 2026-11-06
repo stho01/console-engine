@@ -17,8 +17,10 @@ Nothing is hosted and nothing is exposed to the internet. Every unit is a local 
 | `ConsoleEngine.Benchmarks` (`ConsoleEngine.Benchmarks/`) | **Exe**, BenchmarkDotNet 0.15.8 | `Baseline/OopUpdateBenchmarks` (list of classes vs. struct arrays), `Ecs/WorldBenchmarks`, `Ecs/QueryBenchmarks`. Built by CI, never run by CI |
 | `Snake`, `Asteroids`, `Platformer`, `ConsoleGame` and their ECS ports `Snake.Ecs`, `Asteroids.Ecs`, `Platformer.Ecs`, `ConsoleGame.Ecs`, `TerraForM.Ecs` (`Examples/*`) | Exe | Small demo games. Each `*.Ecs` project is the same game rebuilt on the ECS (`ConsoleEngine.Ecs`) for comparison |
 | `Swarm` (`Examples/Swarm`) | Exe | ECS-only stress test: 100 000 particles (first argument) chasing a moving attractor |
-| `Launcher` (`Examples/Launcher`) | **Exe** `Launcher.exe`, no engine dependency (plain `System.Console`) | Text menu that starts the ECS games (`GameCatalog.Games`: Snake.Ecs, Asteroids.Ecs, Platformer.Ecs, TerraForM.Ecs, ConsoleGame.Ecs, Swarm). Build-order `ProjectReference`s (`ReferenceOutputAssembly=false, Private=false as default metadata`) make building it build those games, without copying anything into its output |
+| `Launcher` (`Examples/Launcher`) | **Exe** `Launcher.exe`, no engine dependency (plain `System.Console`) | Text menu that starts the ECS games (`GameCatalog.Games`: Snake.Ecs, Asteroids.Ecs, Platformer.Ecs, TerraForM.Ecs, ConsoleGame.Ecs, Swarm, EternalDigger). Build-order `ProjectReference`s (`ReferenceOutputAssembly=false, Private=false as default metadata`) make building it build those games, without copying anything into its output |
 | `Launcher.Tests` (`Examples/Launcher.Tests`) | NUnit test project | `LauncherMenu` keys, `GameLocator` paths, and that every `GameCatalog` game has a `ProjectReference` in `Launcher.csproj` |
+| `EternalDigger` (`Examples/EternalDigger`) | Exe | ECS-only digging game: dig ore in an endless mine, sell it at the house, buy ladders. Design: `docs/design/eternal-digger.md` |
+| `EternalDigger.Tests` | NUnit test project | `MineTests`, `TilesTests`, `ShopTests`, `LightMapTests`, `MinerControlSystemTests` (plays frames with scripted `MinerInput`, no keyboard) |
 
 Hard dependency: **Windows only.** `ConsoleHandler` and `InputHandler` call `kernel32.dll`/`user32.dll` directly
 (`GetStdHandle`, `WriteConsoleOutputW`, `SetCurrentConsoleFontEx`, `GetAsyncKeyState`…). No other platform
@@ -62,6 +64,7 @@ callbacks that run on the game loop thread ([03 § Intervals](03-rules.md#interv
 | `ConsoleGame.Game` | 64 × 64 | 8×8 Consolas | `ShowFps = true`, `EnableLogger = true` |
 | `ConsoleEcsGame` | 64 × 64 | 8×8 Consolas | `ShowFps = true`, `EnableLogger = true` |
 | `SwarmGame` | 160 × 100 | 6×6 Consolas | `Name = "Swarm (ECS)"`, `EnableLogger = true`, `ShowFps = true`. First command-line argument = starting particle count (default 100 000) |
+| `EternalDiggerGame` | 120 × 48 (`Layout.ScreenWidth` × `Layout.ScreenHeight`) | 8×16 Consolas | `Name = "EternalDigger"`. First command-line argument = mine seed (default `Environment.TickCount`, so a new mine each run). No logger, no FPS |
 
 `GameBase(width, height, fontWidth, fontHeight)` always uses face `"Consolas"`.
 

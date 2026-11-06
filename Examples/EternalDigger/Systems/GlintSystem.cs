@@ -1,0 +1,87 @@
+using System;
+using ConsoleEngine.Ecs;
+using ConsoleEngine.Ecs.Components;
+using ConsoleEngine.Ecs.Rendering;
+using EternalDigger.Components;
+using EternalDigger.Effects;
+using EternalDigger.Mining;
+using EternalDigger.Rendering;
+using Microsoft.Xna.Framework;
+
+namespace EternalDigger.Systems;
+
+/// <summary>
+/// Ore veins near the miner twinkle now and then, also through rock and in the dark: that is how ore is found.
+/// Samples a few random tiles around the miner at a fixed rate, so the glint rate doesn't depend on the FPS. Ore in
+/// the dark glints more, gold more than silver, silver more than copper.
+/// </summary>
+public sealed class GlintSystem(Mine mine, LightMap light, Camera camera, EffectSpawner effects, Random random)
+    : EntitySystem
+{
+    //**********************************************************
+    //** fields
+    //**********************************************************
+
+    private const float Interval = .08f;
+    private const int SamplesPerTick = 6;
+    private const int Radius = 9;
+
+    private Query _miners;
+    private float _elapsed;
+
+    //**********************************************************
+    //** lifecycle
+    //**********************************************************
+
+    protected override void OnCreate() => _miners = World.Query(Query.With<Miner>());
+
+    protected override void OnUpdate(float deltaSeconds)
+    {
+        _elapsed += deltaSeconds;
+        foreach (var chunk in _miners.GetChunks())
+        {
+            var miner = chunk.GetSpan<Miner>()[0];
+            for (; _elapsed >= Interval; _elapsed -= Interval)
+                Sample(miner.Column, miner.Row);
+
+            return;
+        }
+    }
+
+    //**********************************************************
+    //** internals
+    //**********************************************************
+
+    private void Sample(int minerColumn, int minerRow)
+    {
+        var firstRow = (int)MathF.Floor(camera.Position.Y / Layout.TileHeight);
+        var lastRow = firstRow + Layout.ScreenHeight / Layout.TileHeight;
+        for (var i = 0; i < SamplesPerTick; i++)
+        {
+            var column = minerColumn + random.Next(-Radius, Radius + 1);
+            var row = minerRow + random.Next(-Radius, Radius + 1);
+            if (row < firstRow || row > lastRow || !Mine.IsInside(column, row))
+                continue;
+
+            var type = mine.TypeAt(column, row);
+            if (!Tiles.IsOre(type) || random.NextSingle() >= Chance(type, light.Get(column, row)))
+                continue;
+
+            var cell = Layout.TileToWorld(column, row) +
+                       new Vector2(random.Next(Layout.TileWidth), random.Next(Layout.TileHeight));
+            effects.Glint(Commands, cell, type);
+        }
+    }
+
+    private static float Chance(TileType ore, byte lightLevel)
+    {
+        var chance = ore switch
+        {
+            TileType.Gold => .9f,
+            TileType.Silver => .6f,
+            _ => .4f
+        };
+
+        return lightLevel == LightMap.Dark ? chance : chance * .6f;
+    }
+}

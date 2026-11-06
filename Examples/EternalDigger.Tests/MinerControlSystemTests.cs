@@ -1,0 +1,210 @@
+using System;
+using ConsoleEngine.Ecs;
+using ConsoleEngine.Ecs.Components;
+using EternalDigger.Components;
+using EternalDigger.Effects;
+using EternalDigger.Mining;
+using EternalDigger.Systems;
+using NUnit.Framework;
+
+namespace EternalDigger.Tests;
+
+/// <summary>
+/// Plays frames of <see cref="MinerControlSystem.Control"/> followed by <see cref="MinerMotionSystem.Move"/>, like
+/// the scene does, with scripted input instead of the keyboard.
+/// </summary>
+public class MinerControlSystemTests
+{
+    private const float FrameSeconds = 1f / 60f;
+    private const int Seed = 7;
+
+    /// <summary>The first row of the shaft that isn't dug out at the start.</summary>
+    private const int ShaftBottom = Mine.SurfaceRow + 2;
+
+    private Mine _mine;
+    private MinerControlSystem _control;
+    private MinerMotionSystem _motion;
+    private CommandBuffer _commands;
+    private Miner _miner;
+    private Position _position;
+
+    [SetUp]
+    public void SetUp()
+    {
+        _mine = new Mine(Seed);
+        var effects = new EffectSpawner(new Random(Seed), new ScreenShake());
+        _control = new MinerControlSystem(_mine, effects);
+        _motion = new MinerMotionSystem(_mine, effects);
+        _commands = new CommandBuffer();
+        PlaceMiner(Layout.SpawnColumn, Layout.GroundRow);
+        _miner.Ladders = Shop.StartLadders;
+    }
+
+    [Test]
+    public void Control_HoldRight_WalksAlongTheSurface()
+    {
+        Play(new MinerInput { Horizontal = 1 }, seconds: 1f);
+
+        Assert.That(_miner.Column, Is.GreaterThan(Layout.SpawnColumn + 3));
+        Assert.That(_miner.Row, Is.EqualTo(Layout.GroundRow));
+        Assert.That(_miner.FacingX, Is.EqualTo(1));
+    }
+
+    [Test]
+    public void Control_HoldLeftAtTheEdge_StopsAtTheFirstColumn()
+    {
+        Play(new MinerInput { Horizontal = -1 }, seconds: 5f);
+
+        Assert.That(_miner.Column, Is.Zero);
+        Assert.That(_miner.Row, Is.EqualTo(Layout.GroundRow));
+    }
+
+    [Test]
+    public void Control_HoldDownOnGrass_CannotDig()
+    {
+        Play(new MinerInput { Down = true }, seconds: 2f);
+
+        Assert.That(_miner.Row, Is.EqualTo(Layout.GroundRow));
+        Assert.That(_mine.TypeAt(Layout.SpawnColumn, Mine.SurfaceRow), Is.EqualTo(TileType.Grass));
+    }
+
+    [Test]
+    public void Control_HoldDownInTheShaft_ClimbsDownAndDigsDeeper()
+    {
+        FillShaft(TileType.Dirt, ShaftBottom, ShaftBottom + 6);
+        PlaceMiner(Mine.ShaftColumn, Layout.GroundRow);
+
+        Play(new MinerInput { Down = true }, seconds: 4f);
+
+        Assert.That(_miner.Row, Is.GreaterThan(ShaftBottom + 2));
+        Assert.That(_mine.TypeAt(Mine.ShaftColumn, ShaftBottom), Is.EqualTo(TileType.Air));
+        Assert.That(_position.Value, Is.EqualTo(Layout.TileToWorld(_miner.Column, _miner.Row)));
+    }
+
+    [Test]
+    public void Control_UpWithoutALadder_StaysDown()
+    {
+        FillShaft(TileType.Air, ShaftBottom, ShaftBottom + 2);
+        FillShaft(TileType.Stone, ShaftBottom + 3, ShaftBottom + 3);
+        PlaceMiner(Mine.ShaftColumn, ShaftBottom + 2);
+
+        Play(new MinerInput { Up = true }, seconds: 2f);
+
+        Assert.That(_miner.Row, Is.EqualTo(ShaftBottom + 2));
+    }
+
+    [Test]
+    public void Control_LaddersAllTheWay_ClimbsBackToTheSurface()
+    {
+        FillShaft(TileType.Air, ShaftBottom, ShaftBottom + 3);
+        FillShaft(TileType.Stone, ShaftBottom + 4, ShaftBottom + 4);
+        for (var row = ShaftBottom; row < ShaftBottom + 3; row++)
+            _mine.TryPlaceLadder(Mine.ShaftColumn, row);
+        PlaceMiner(Mine.ShaftColumn, ShaftBottom + 3);
+
+        Play(new MinerInput { PlaceLadder = true }, seconds: FrameSeconds);
+        Play(new MinerInput { Up = true }, seconds: 3f);
+
+        Assert.That(_miner.Ladders, Is.EqualTo(Shop.StartLadders - 1));
+        Assert.That(_miner.Row, Is.EqualTo(Layout.GroundRow));
+        Assert.That(_miner.Column, Is.EqualTo(Mine.ShaftColumn));
+    }
+
+    [Test]
+    public void Control_PlaceLadderWithoutLadders_PlacesNothing()
+    {
+        FillShaft(TileType.Air, ShaftBottom, ShaftBottom);
+        FillShaft(TileType.Stone, ShaftBottom + 1, ShaftBottom + 1);
+        PlaceMiner(Mine.ShaftColumn, ShaftBottom);
+        _miner.Ladders = 0;
+
+        Play(new MinerInput { PlaceLadder = true }, seconds: FrameSeconds);
+
+        Assert.That(_mine.HasLadder(Mine.ShaftColumn, ShaftBottom), Is.False);
+    }
+
+    [Test]
+    public void Control_NothingBelow_FallsAndLands()
+    {
+        FillShaft(TileType.Air, ShaftBottom, ShaftBottom + 5);
+        FillShaft(TileType.Stone, ShaftBottom + 6, ShaftBottom + 6);
+        PlaceMiner(Mine.ShaftColumn, ShaftBottom);
+
+        Play(default, seconds: 2f);
+
+        Assert.That(_miner.Row, Is.EqualTo(ShaftBottom + 5));
+        Assert.That(_miner.Motion, Is.EqualTo(MinerMotion.Idle));
+        Assert.That(_miner.FallRows, Is.Zero, "reset when landing");
+    }
+
+    [Test]
+    public void Control_DigOre_PutsItInTheBag()
+    {
+        FillShaft(TileType.Gold, ShaftBottom, ShaftBottom);
+        FillShaft(TileType.Stone, ShaftBottom + 1, ShaftBottom + 1);
+        PlaceMiner(Mine.ShaftColumn, ShaftBottom - 1);
+
+        Play(new MinerInput { Down = true }, seconds: 3f);
+
+        Assert.That(_miner.GoldOre, Is.EqualTo(1));
+    }
+
+    [Test]
+    public void Control_HoldRescue_ReturnsToTheSpawnWithAnEmptyBag()
+    {
+        FillShaft(TileType.Air, ShaftBottom, ShaftBottom);
+        FillShaft(TileType.Stone, ShaftBottom + 1, ShaftBottom + 1);
+        PlaceMiner(Mine.ShaftColumn, ShaftBottom);
+        _miner.CopperOre = 3;
+        _miner.Gold = 50;
+
+        Play(new MinerInput { Rescue = true }, seconds: MinerControlSystem.RescueDuration + .1f);
+
+        Assert.That(_miner.Column, Is.EqualTo(Layout.SpawnColumn));
+        Assert.That(_miner.Row, Is.EqualTo(Layout.GroundRow));
+        Assert.That(_miner.OreCount, Is.Zero);
+        Assert.That(_miner.Gold, Is.EqualTo(50));
+        Assert.That(_position.Value, Is.EqualTo(Layout.TileToWorld(Layout.SpawnColumn, Layout.GroundRow)));
+    }
+
+    [Test]
+    public void Control_ReleaseRescueEarly_StaysAndResetsTheTimer()
+    {
+        FillShaft(TileType.Air, ShaftBottom, ShaftBottom);
+        FillShaft(TileType.Stone, ShaftBottom + 1, ShaftBottom + 1);
+        PlaceMiner(Mine.ShaftColumn, ShaftBottom);
+
+        Play(new MinerInput { Rescue = true }, seconds: MinerControlSystem.RescueDuration / 2f);
+        Play(default, seconds: FrameSeconds);
+
+        Assert.That(_miner.Row, Is.EqualTo(ShaftBottom));
+        Assert.That(_miner.RescueHold, Is.Zero);
+    }
+
+    //**********************************************************
+    //** helpers
+    //**********************************************************
+
+    private void PlaceMiner(int column, int row)
+    {
+        _miner = new Miner { Column = column, Row = row, FacingX = 1, Ladders = _miner.Ladders };
+        _position = new Position(Layout.TileToWorld(column, row));
+    }
+
+    /// <summary>Sets the shaft column's tiles from row <paramref name="from"/> to <paramref name="to"/>.</summary>
+    private void FillShaft(TileType type, int from, int to)
+    {
+        for (var row = from; row <= to; row++)
+            _mine.At(Mine.ShaftColumn, row) = new TileCell { Type = type };
+    }
+
+    private void Play(MinerInput input, float seconds)
+    {
+        for (var elapsed = 0f; elapsed < seconds; elapsed += FrameSeconds)
+        {
+            _control.Control(ref _miner, ref _position, input, FrameSeconds, _commands);
+            _motion.Move(ref _miner, ref _position, FrameSeconds, _commands);
+            _commands.Clear();
+        }
+    }
+}
