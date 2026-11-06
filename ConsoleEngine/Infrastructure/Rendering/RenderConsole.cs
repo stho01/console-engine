@@ -232,4 +232,10 @@ public class RenderConsole
     }
         
     internal void Display() => _consoleHandler.Render(_pixels);
+
+    /// <summary>
+    /// The frame buffer, index <c>y * Width + x</c>. For the engine's ECS render systems, which clip once per entity
+    /// instead of calling <see cref="Draw(int, int, char, ConsoleColor, ConsoleColor)"/> (and its bounds check) per cell.
+    /// </summary>
+    internal Span<Pixel> Pixels => _pixels;
 }

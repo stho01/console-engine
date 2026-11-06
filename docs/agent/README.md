@@ -5,9 +5,8 @@ example games, **without reading the source**. Every identifier, string and file
 repository and can be grepped.
 
 **What this system is:** a Windows-only .NET 10 library that draws games into a console window via Win32 P/Invoke
-(`ConsoleEngine`, `ConsoleEngine.Windows`), an optional out-of-process TCP logger (`ConsoleEngine.Logger`), optional
-Lua 5.4 scripting for game objects (`ConsoleEngine.Scripting`), and six example games (`TerraForM`, `Snake`,
-`Asteroids`, `Platformer`, `ConsoleGame`, `Scripted`). There is **no server, no database, no
+(`ConsoleEngine`, `ConsoleEngine.Windows`), an optional out-of-process TCP logger (`ConsoleEngine.Logger`), and eleven
+example games (`TerraForM`, `Snake`, `Asteroids`, `Platformer`, `ConsoleGame`, an ECS port `*.Ecs` of each, and the ECS stress test `Swarm`). There is **no server, no database, no
 queue, no tenant, no log file**. Each game is a single local process. See [01-system-map](01-system-map.md).
 
 ## How to use these docs

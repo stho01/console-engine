@@ -6,18 +6,17 @@ Nothing is hosted and nothing is exposed to the internet. Every unit is a local 
 
 | Project (path) | Kind | Purpose |
 |---|---|---|
-| `ConsoleEngine` (`ConsoleEngine/ConsoleEngine.csproj`) | Library, NuGet `PackageVersion` 0.1.0, `GeneratePackageOnBuild` | `GameBase` game loop, `RenderConsole`, `Input`, `GameTime`, `SceneManager`, `GameObject`/`IBehaviour`, `Log`, `Deque<T>` |
+| `ConsoleEngine` (`ConsoleEngine/ConsoleEngine.csproj`) | Library, NuGet `PackageVersion` 0.2.0, `GeneratePackageOnBuild` | `GameBase` game loop, `RenderConsole`, `Input`, `GameTime`, `SceneManager`, `Log`, `Deque<T>`, ECS (namespace `ConsoleEngine.Ecs`: `World`, `Query`, `CommandBuffer`, `EntitySystem`, `SystemGroup`, `EcsScene<TGame>`, built-in components and systems). Runs only inside an `EcsScene` or game code that calls it |
 | `ConsoleEngine.Abstractions` | Library | `IConsoleHandler`, `IInputHandler`, `Pixel`, `FontInfo`, `Key`, `KeyState` |
 | `ConsoleEngine.Windows` (`Libs/ConsoleEngine.Windows`, namespace `ConsoleEngine.Native`) | Library | Win32 implementation: `ConsoleHandler`, `InputHandler`, P/Invoke in `LowLevel/Kernel32.cs`, `LowLevel/User32.cs` |
 | `ConsoleEngine.Logger` (`Libs/ConsoleEngine.Logger`) | **Exe** `ConsoleEngine.Logger.exe` | Separate console window that shows `Log.WriteLine` output and FPS. Referenced by `ConsoleEngine.csproj`, so the build copies it next to every game |
 | `Microsoft.Xna.Framework` (`Libs/Microsoft.Xna.Framework`) | Library | Math types (`Vector2`, `Point`, `Rectangle`, `Matrix`…) copied from MonoGame |
 | `TerraForM` (`Examples/TerraForM`) | Exe | Mars-rover puzzle game: scenes, maps in `Assets/Maps/*.txt`, scoring |
 | `TerraForM.Tests` | NUnit test project | One test: `Rover_PowerIsDepletedWhenRemainingPowerIsZeroOrLess` |
-| `ConsoleEngine.Tests` (`ConsoleEngine.Tests/`) | NUnit test project | Engine tests: `RenderConsole`, `Sprite`, `SceneManager`, `GameTime.Interval`, `Deque<T>`, `ArrayExtensions`. Uses `Fakes/`, no Win32 |
-| `ConsoleEngine.Benchmarks` (`ConsoleEngine.Benchmarks/`) | **Exe**, BenchmarkDotNet | `GameObjectFrame`: one frame of 100/1000 `GameObject`s with a `LuaBehaviour` vs the same logic as a C# `IBehaviour`. Not referenced by anything |
-| `ConsoleEngine.Scripting` (`ConsoleEngine.Scripting/`) | Library (not packed) | Lua 5.4 scripting for game objects on KeraLua 1.4.11: `LuaRuntime`, `LuaScript`, `LuaBehaviour` (an `IBehaviour` for the engine's `GameObject`), `LuaScriptException`. Only games that reference it get Lua |
-| `Scripted` (`Examples/Scripted`) | Exe | Demo: a player and 30 fireflies, all Lua scripts in `Assets/Scripts/*.lua`. F5 reloads them |
-| `Snake`, `Asteroids`, `Platformer`, `ConsoleGame` (`Examples/*`) | Exe | Small demo games |
+| `ConsoleEngine.Tests` (`ConsoleEngine.Tests/`) | NUnit test project | Engine tests: `RenderConsole`, `Sprite`, `SceneManager`, `GameTime.Interval`, `Deque<T>`, `ArrayExtensions`, ECS (`Ecs/`: `World`, `Query`, `CommandBuffer`, `SystemGroup`, `EcsScene`, `Archetype`, `ComponentMask`, `Systems/`). Uses `Fakes/`, no Win32 |
+| `ConsoleEngine.Benchmarks` (`ConsoleEngine.Benchmarks/`) | **Exe**, BenchmarkDotNet 0.15.8 | `Baseline/OopUpdateBenchmarks` (list of classes vs. struct arrays), `Ecs/WorldBenchmarks`, `Ecs/QueryBenchmarks`. Built by CI, never run by CI |
+| `Snake`, `Asteroids`, `Platformer`, `ConsoleGame` and their ECS ports `Snake.Ecs`, `Asteroids.Ecs`, `Platformer.Ecs`, `ConsoleGame.Ecs`, `TerraForM.Ecs` (`Examples/*`) | Exe | Small demo games. Each `*.Ecs` project is the same game rebuilt on the ECS (`ConsoleEngine.Ecs`) for comparison |
+| `Swarm` (`Examples/Swarm`) | Exe | ECS-only stress test: 100 000 particles (first argument) chasing a moving attractor |
 
 Hard dependency: **Windows only.** `ConsoleHandler` and `InputHandler` call `kernel32.dll`/`user32.dll` directly
 (`GetStdHandle`, `WriteConsoleOutputW`, `SetCurrentConsoleFontEx`, `GetAsyncKeyState`…). No other platform
@@ -55,10 +54,16 @@ callbacks that run on the game loop thread ([03 § Intervals](03-rules.md#interv
 | Game | Width × Height (cells) | Font (W×H px, face) | Flags set in `Program.cs` / ctor |
 |---|---|---|---|
 | `TerraformGame` | 72 × 50 | 15×15 Consolas | `Console.ClearColor = Black` |
+| `TerraformEcsGame` | 72 × 50 | 15×15 Consolas | `Name = "TerraForM (ECS)"`, `Console.ClearColor = Black` |
 | `SnakeGame` | 30 × 30 | 14×14 Consolas | `ShowFps = true`, `ClearScreenOnEachFrame = false` (in `OnInitialize`) |
+| `SnakeEcsGame` | 30 × 30 | 14×14 Consolas | `Name = "Snake (ECS)"`, `ShowFps = true` (no logger, so the FPS is shown nowhere) |
 | `AsteroidsGame` | 200 × 200 | 4×4 Consolas | `EnableLogger = true` |
+| `AsteroidsEcsGame` | 200 × 200 | 4×4 Consolas | `Name = "Asteroids (ECS)"`, `EnableLogger = true`, `ShowFps = true`. First command-line argument = asteroid count (default 50) |
 | `PlatformerGame` | 70 × 35 | 10×10 Consolas | `IsDebugMode = true`, `ShowFps = true` (in `OnInitialize`), `Name = "Platformer game"` |
+| `PlatformerEcsGame` | 70 × 35 | 10×10 Consolas | `Name = "Platformer (ECS)"`, `IsDebugMode = true`, `ShowFps = true` (in `Program.cs`) |
 | `ConsoleGame.Game` | 64 × 64 | 8×8 Consolas | `ShowFps = true`, `EnableLogger = true` |
+| `ConsoleEcsGame` | 64 × 64 | 8×8 Consolas | `ShowFps = true`, `EnableLogger = true` |
+| `SwarmGame` | 160 × 100 | 6×6 Consolas | `Name = "Swarm (ECS)"`, `EnableLogger = true`, `ShowFps = true`. First command-line argument = starting particle count (default 100 000) |
 | `ScriptedGame` | 80 × 40 | 12×12 Consolas | `ShowFps = true` |
 
 `GameBase(width, height, fontWidth, fontHeight)` always uses face `"Consolas"`.

@@ -22,7 +22,8 @@ Every frame, in this order: `GameTime.Update()` → `Input.Instance.Update()` �
 - `GameTime.Delta` = wall time since the previous frame. `GameTime.Fps = (int)(1f / Delta.TotalSeconds)`, which is
   instantaneous rather than averaged, so it jumps around.
 - Anything that adds per frame without multiplying by `Delta` runs faster on faster machines. In this repo that is
-  **TerraForM `Rover`** (`Position += Velocity`, and power cost per `ApplyForce` call) and **Asteroids `Player`**
+  **TerraForM `Rover`** (`Position += Velocity`, and power cost per `ApplyForce` call; TerraForM.Ecs scales by `Delta`, see
+  [§ TerraForM.Ecs](#terraform-ecs)) and **Asteroids `Player`**
   (`Position += Velocity`). Snake uses a time threshold and does not depend on FPS.
 
 <a id="intervals"></a>
@@ -87,6 +88,82 @@ Gotchas:
 - FPS is shown **only in the logger window's title** (`Game FPS: n`), never in the game window.
 - Port 11000 and the exe name `ConsoleEngine.Logger.exe` are hard-coded.
 
+<a id="ecs"></a>
+### ECS (`ConsoleEngine.Ecs.World`)
+
+`GameBase` and plain `Scene`s don't use it. An `EcsScene<TGame>` owns a `World` and runs it (example:
+`Examples/Asteroids.Ecs`, plan: `docs/design/ecs-plan.md`). A game can also create a `World` and `SystemGroup`s
+itself.
+
+- Components are `unmanaged` structs. A struct with no instance fields and a size of 1 byte (what the runtime gives an
+  empty struct) is a **tag** (`ComponentType<T>.IsTag`): it changes the archetype but has no data, so `Get<T>` on a
+  tag throws. A field-less struct with an explicit `[StructLayout(Size = n)]` is stored as data.
+- `Add<T>` throws if the entity already has `T`. `Remove<T>`, `Get<T>` and `Set<T>` throw if it doesn't.
+  `Set<T>` never adds.
+- `Create(...)` with the same component type twice throws `ArgumentException`.
+- Every operation on a destroyed entity, a stale handle (old `Version`) or `Entity.Null` throws "is not alive".
+  `IsAlive` is the non-throwing check.
+- After `World.Dispose()` every operation (`Create`, `Destroy`, `Get`, `Set`, `Has`, `Add`, `Remove`) throws
+  `ObjectDisposedException`, `IsAlive` is false, `ArchetypeCount` is 0, and existing queries yield nothing. There is
+  **no finalizer**: a world that is never disposed leaks its native chunks (a finalizer could free memory still
+  written through a `Get<T>` ref).
+- Destroying an entity bumps its id's `Version` and puts the id on a free list. The next `Create` reuses it. When the
+  version is already `int.MaxValue`, the id is **retired** instead (version −1, never reused), so old handles can
+  never become valid again through wrap-around.
+- The `ref` from `Get<T>` is only valid until the next structural change (`Create`, `Add`, `Remove`, `Destroy`) in
+  that archetype: swap-back removal moves the archetype's last row into the freed row.
+- At most 256 component types per process (`ComponentMask.Capacity`). A type gets its id the first time **any** ECS
+  API names it, including read-only ones (`Has<T>`, `Get<T>`, `Remove<T>`, `Query.With<T>`), and keeps it. The 257th
+  type throws `TypeInitializationException` and stays unusable for the rest of the process.
+- An archetype whose row (8-byte `Entity` plus every component) doesn't fit in one 16 384-byte chunk throws on first
+  use. `Create` reaches its archetype by walking add-edges from the empty archetype, so the first `Create` of a
+  component set also creates the (empty) archetypes for its prefixes, e.g. {Position} for {Position, Velocity}.
+- `World.Query(description)` matches archetypes with every `With<T>` and no `Without<T>` component. Describe it
+  with `Query.With<…>()` or `Query.Without<T>()` and chain `.With`/`.Without` (no `new QueryDescription()`). A query also
+  picks up archetypes created after it, on its next use.
+- **No structural change while a query is iterated** (`GetChunks` or `ForEach`, any query on that world). From the
+  start of the `foreach` until it ends (also on `break`, `return` or an exception), `World.Create`/`Destroy`/`Add`/
+  `Remove` and `CommandBuffer.Playback` throw `InvalidOperationException`. `Get`/`Set` are allowed. Record changes
+  in a `CommandBuffer` instead.
+- `EntityChunk.GetSpan<T>()` throws if `T` is not in that chunk. Use `EntityChunk.Has<T>()` for optional components.
+
+**Command buffer** (`CommandBuffer`):
+- Commands are applied in recording order by `Playback(world)`, which then clears the buffer (also when it throws).
+- At playback, `Destroy`/`Add`/`Remove` for an entity that is **no longer alive are skipped silently**: destroying
+  twice is safe. `Add` of a component the entity already has, or `Remove` of one it lacks, still throws.
+- `Create(...)` returns a **deferred handle**: an `Entity` with a negative `Id` and the buffer's current generation
+  as `Version`. The entity exists only after playback, and the world treats the handle as not alive. Later
+  `Add`/`Remove`/`Destroy` calls on the **same** buffer accept it, and playback swaps it for the created entity. A
+  deferred handle from another buffer, or from before this buffer's last `Playback`/`Clear`, throws at playback.
+- Duplicate component types in `Create` throw `ArgumentException` when recorded.
+- Deferring costs roughly 2× a direct create+destroy and 1.25× a direct add/remove (`CommandBufferBenchmarks`).
+
+**Systems** (`EntitySystem`, `SystemGroup`):
+- `SystemGroup.Add` calls the system's `OnCreate` (where it builds its queries) with `World` and the group's
+  `Commands` already set.
+- `SystemGroup.Update(delta)` runs enabled systems in `RunOrder`, then plays back `Commands`. That playback is the
+  only sync point: entities created by a system become visible to the **next** group, not to later systems in the
+  same group.
+- `RunOrder` is `Add` order, except where `[UpdateBefore(typeof(X))]` / `[UpdateAfter(typeof(X))]` on a system's class
+  says otherwise. Among systems that are free to run, the one added first goes first. A constraint naming a type
+  not in the group is ignored. Constraints that form a cycle throw `InvalidOperationException` on the first
+  `Update` (or `RunOrder` read) after the systems were added.
+
+**`EcsScene<TGame>`**: `OnLoad` creates `World`, `Simulation` and `Presentation`, then calls `OnCreate`. The scene's
+`OnUpdate` runs `Simulation`, `OnRender` runs `Presentation`, both with `(float)GameTime.Delta.TotalSeconds`. `OnUnload`
+calls `OnDestroy`, then disposes the world. A paused scene (another scene pushed on top) runs neither group.
+
+**Built-in systems** (namespace `ConsoleEngine.Ecs.Systems`, components in `ConsoleEngine.Ecs.Components`):
+- `MovementSystem`: `Position += Velocity * delta`. No wrapping, no bounds.
+- `GlyphRenderSystem`: draws `Glyph.Character` at `floor(Position - Camera.Position)`. Off-screen cells are clipped
+  by `RenderConsole.Draw`.
+- `OutlineRenderSystem`: draws the `OutlineLibrary` polygon for `Outline.Id` around the position, rotated clockwise
+  by `Rotation.Radians` if the entity has a `Rotation`. Skipped when its bounding circle (`OutlineLibrary.GetRadius`)
+  is entirely off-screen.
+- `SpriteRenderSystem`: draws the `SpriteLibrary` sprite for `SpriteRef.Id` with its top-left cell at
+  `floor(Position - Camera.Position) + SpriteRef.Offset`. Skipped when the whole sprite is off-screen. The optional
+  `QueryDescription` filter picks a layer (e.g. `With<Tile>()`): add one instance per layer in drawing order, because
+  a query visits archetypes in no defined order.
 <a id="lua"></a>
 ### Lua scripting (`ConsoleEngine.Scripting`)
 
@@ -253,6 +330,30 @@ Gotchas:
   the level.
 - There is **no quit key**. Close the window.
 
+<a id="terraform-ecs"></a>
+### TerraForM.Ecs (`Examples/TerraForM.Ecs`)
+
+The same game on the ECS. It shares the map files, `Sprites` and `HudTexts` with `Examples/TerraForM` through linked
+files, so every rule above applies, except:
+
+- **Movement and power are scaled by `Delta`.** The port plays like the original at 300 FPS
+  (`CommandSystem.ReferenceFrameRate`):
+  - Thrust is 240 cells/s². Drag is unchanged at 5/s.
+  - Power drops by 192 per second of thrust (`PowerPerThrustSecond`). A move (100 ms) costs about **19.2** at any
+    FPS, and the rover travels about 5 cells (one tile).
+  - Map1's 3500 power is therefore about 176 moves.
+- Unchanged and still applied per frame: the north-move nudge, +10 damage per overlapping rock, a crater setting
+  power to 0, and the finish bonus.
+- Debug mode (WASD free move, overlay), `TerraformGame.GameOver` and the `Wait` command are removed (unreachable in
+  the original).
+- Sprites are drawn by the engine's `SpriteRenderSystem`, which floors screen positions. The original truncates, so a
+  sprite partly left of or above the screen edge is drawn one cell further left/up than in TerraForM.
+- Window title is `"TerraForM (ECS)"`. A map without `S` throws `InvalidOperationException` instead of
+  `NullReferenceException`.
+- Systems run in the original order: `LevelInputSystem` → `CommandSystem` → `RoverPhysicsSystem` → `MovementSystem` →
+  `RoverCollisionSystem` → `PlantEmitterSystem` → `RestartSystem` → `CameraFollowSystem`. Drawing: tiles → grass →
+  rover → `HudSystem`.
+
 ## Other examples
 
 | Game | Rule | Identifier |
@@ -261,9 +362,22 @@ Gotchas:
 | Snake | Reversing direction is ignored. **No wall or self collision**: the snake leaves the screen and is clipped forever | `SnakeGame.OnUpdate` |
 | Snake | Food x and y both use `Random.Next(0, Console.Width - 1)`, so never the last column/row. It retries while the cell is not `' '`, up to `Area` times. Never-drawn cells hold `'\0'`, so the retry rarely succeeds and food can land on the snake | `SnakeGame.SpawnFood` |
 | Snake | `ClearScreenOnEachFrame = false`. The tail cell is blanked manually | `SnakeGame.OnInitialize`, `OnRender` |
+| Snake.Ecs | Same steering, 150 ms step (timer reset to 0 on each step) and **no wall or self collision** as Snake | `SteeringSystem`, `SnakeMovementSystem` |
+| Snake.Ecs | Each step leaves a new `SnakeSegment` where the head was and destroys the oldest one (lowest `Order`), unless the head landed on food: then the food is destroyed and the snake grows by one | `SnakeMovementSystem.Step` |
+| Snake.Ecs | Differs from Snake: when no food exists, new food is placed on a uniformly random **free** on-screen cell (never on the snake, any column/row). It appears after the simulation group's playback. The whole screen is redrawn each frame | `FoodSpawnSystem` |
 | Platformer | `F1` toggles `IsDebugMode`, which **starts true** (`Program.cs`). Draws the player **before** the world, so tiles overwrite the player | `PlatformerGame.OnUpdate`, `OnRender` |
 | Platformer | `ShowFps = true` but no `EnableLogger`, so no FPS anywhere | `PlatformerGame.OnInitialize` |
+| Platformer.Ecs | Same keys, start state (debug on) and draw order (debug text, player, then tiles on top) as Platformer. Velocity is in cells/s and scaled by `Delta`: gravity 200, run 150, air 75 cells/s², drag (3, 0.1)/s, jump speed 50 cells/s (about 6 cells high at any FPS) | `PlayerControlSystem`, `PlayerPhysicsSystem`, `PlatformerScene` |
+| Platformer.Ecs | Differs from Platformer: horizontal speed under 1 cell/s is zeroed only when A/D is not held; moves are split into steps of at most 0.5 cells; vertical and horizontal collisions are checked one after the other; moving left/right checks the corners on that side; screen positions are floored. Kept from the original: walking off a ledge does not make the player airborne, and a jump pressed in the air happens on landing | `PlayerPhysicsSystem.ResolveCollisions` |
 | Asteroids | Steer `A`/`D`, thrust `W`. No collisions, no objective. Logger enabled but nothing is logged | `AsteroidsGame` |
+| Asteroids.Ecs | Steer `A`/`D` (`Ship.SteeringSpeed` 2π rad/s), thrust `W` (`Ship.Thrust` 60 cells/s²), drag `Ship.Drag` 1.5/s. All movement is scaled by `Delta` | `ShipControlSystem` |
+| Asteroids.Ecs | `SPACE` (Pressed) fires one bullet: 80 cells/s plus the ship's velocity, lives 1.5 s | `ShipControlSystem`, `Spawner.CreateBullet`, `LifetimeSystem` |
+| Asteroids.Ecs | A bullet whose `Collider` touches an asteroid's destroys both. The ship never collides. No score, no objective | `CollisionSystem` |
+| Asteroids.Ecs | Asteroids drift up to 6 cells/s. Everything wraps around a playfield three screens wide and high, so the camera jumps when the ship crosses an edge | `MovementSystem` (engine), `WrapSystem`, `Playfield.Wrap`, `CameraSystem` |
+| Asteroids.Ecs | Ship and asteroids are outlines, bullets are `*` glyphs. Hits and expired bullets disappear at the end of the simulation group (command buffer playback), so they are never drawn in the frame they die | `AsteroidsScene.OnCreate`, `OutlineRenderSystem`, `GlyphRenderSystem` |
 | ConsoleGame | Recolours all cells every **500 ms**. `ESC` calls `Stop()`, which exits | `Game.OnInitialize`, `OnUpdate` |
+| ConsoleGame.Ecs | One entity per cell (4096). Every **500 ms** (timer reset to 0) each gets a random colour of the same five. Cells are black until the first recolour. `ESC` quits | `RecolorSystem`, `ColorGridScene`, `ConsoleEcsGame.OnUpdate` |
+| Swarm | Particles are pulled towards a point moving on a Lissajous curve, each with its own `Agility.Pull` (30–180 cells/s²), drag 0.3/s, and bounce off the screen edges. Colour by speed: dark blue < 15, blue < 30, cyan < 50 cells/s, else white. The HUD on row 0 shows the count | `AttractorSystem`, `BounceSystem`, `ColorBySpeedSystem`, `HudSystem` |
+| Swarm | `SPACE` adds 10 000 particles, `BACKSPACE` removes up to 10 000 (both through the command buffer, applied at the end of the simulation group). `ESC` quits | `SpawnControlSystem`, `SwarmGame.OnUpdate` |
 | Scripted | Arrows move the player (`@`, yellow, starts at `Console.ScreenCenter`) at 20 cells/s, kept inside rows 1 to height−2. 30 fireflies (`•`, positions from `Random(1)`, velocities from `math.randomseed(1)`) bounce and switch `self.color` Green/DarkGreen every 0.3 s. No collisions, no objective, no quit key | `player.lua`, `firefly.lua`, `ScriptedGame.OnInitialize` |
 | Scripted | `F5` (`Pressed`) calls `LuaRuntime.ReloadAll()`. Failures go to `Log.WriteLine`, which is dropped because `EnableLogger` is off. The first faulted `LuaBehaviour.Error` is drawn on the bottom row (white on dark red) | `ScriptedGame.OnUpdate`, `ReloadScripts`, `OnRender` |

@@ -129,44 +129,29 @@ See [03 § Scenes](03-rules.md#scenes). TerraForM's scene graph:
 `StandingOnPlantingSpot && World.Intersects(...)`, otherwise nothing. `Rover.MoveNorth`: `if (!_scene.World.Intersects(this, out var with)) return;`.
 
 <a id="f8"></a>
-## F8 — Lua script load and reload (`LuaRuntime.Load` → `LuaScript.Reload`)
+## F8 — ECS structural change (`World.Add<T>` / `Remove<T>` / `Destroy`)
 
 | # | Step | Class.method | Stops / skips if | Observable |
 |---|---|---|---|---|
-| 1 | Resolve the path: rooted as is, otherwise `Path.Combine(AppContext.BaseDirectory, path)` | `LuaRuntime.Load` | — | — |
-| 2 | Read the file bytes, drop a UTF-8 BOM | `LuaScript.ReadSource` | `IOException` (missing file, folder, locked) | `LuaScriptException` with the .NET message |
-| 3 | Compile with chunk name `"@" + Name` | `KeraLua.Lua.LoadBuffer` | Syntax error | `LuaScriptException`: `Lua script '<name>': <name>:<line>: <message>` |
-| 4 | Run the chunk, expect one result | `LuaRuntime.Call` | Runtime error in top-level code | `LuaScriptException` with Lua's message |
-| 5 | Result must be a table | `LuaScript.Reload` | Not a table | `LuaScriptException`: `the script must return a table` |
-| 6 | First load: keep the table as the module and build `{ __index = module, __newindex = guard }`. Reload: copy every field into the existing module | `CreateModule` / `UpdateModule` | — | Existing behaviours use the new functions |
-| 7 | Cache `on_start`, `on_update`, `on_render`. A missing or non-function field becomes "no hook" | `CacheFunction` | — | That hook silently never runs |
-| 8 | `Version++`. `Load` adds the script to the runtime's list for `ReloadAll` | `LuaScript.Reload`, `LuaRuntime.Load` | — | — |
-
-Steps 2–5 throw before anything is replaced, so a failed reload leaves the previous version running.
-`ReloadAll` catches each `LuaScriptException` and returns them as an array. It never throws for script errors.
+| 0 | World disposed, or a query on this world is being iterated (`_iterationDepth != 0`) | `World.ThrowIfStructuralChangeNotAllowed` | Either | `ObjectDisposedException` / `InvalidOperationException` "Cannot create, destroy, add or remove while a query is being iterated…" |
+| 1 | Look up the entity's record. Id out of range, or `Version` differs | `World.GetAliveRecord` → `ThrowNotAliveOrDisposed` | Not alive | `ObjectDisposedException` if the world is disposed, otherwise `InvalidOperationException` "… is not alive." |
+| 2 | `Add`: component already in the source mask. `Remove`: not in it | `World.AddComponent` / `RemoveComponent` | Present / missing | `InvalidOperationException` ([06](06-diagnostics.md)) |
+| 3 | Find the target archetype through the cached edge (array indexed by component id), or create it once (`GetOrCreateArchetype`) | `World.GetAddTarget`, `Archetype.GetAddEdge` / `GetRemoveEdge` | — | — |
+| 4 | Append a row in the target. A new chunk comes from `ChunkPool` (pooled first, otherwise `NativeMemory.AlignedAlloc`) | `Archetype.Allocate` | — | — |
+| 5 | Copy the components both archetypes share | `Archetype.CopyShared` | — | — |
+| 6 | Remove the old row: the archetype's last row is copied into it (swap-back), and the moved entity's record is repointed. An emptied last chunk goes back to the pool | `World.RemoveFromArchetype` → `Archetype.RemoveAt` | — | Earlier `ref`s from `Get<T>` in that archetype now point at other data |
+| 7 | `Add`: write the new value (skipped for tags). `Destroy` instead does step 6 only, then bumps `Version` and frees the id (or retires it at `int.MaxValue`) | `World.Write`, `World.Destroy` | — | — |
 
 <a id="f9"></a>
-## F9 — Game object frame (`GameObject.Update`, then `GameObject.Render`)
+## F9 — ECS frame in an `EcsScene` (`SceneManager.Update` → `Simulation`, `SceneManager.Render` → `Presentation`)
+
+Runs inside [F2](#f2) steps "Scenes.Update" and "Scenes.Render". Both are skipped while the scene is paused.
 
 | # | Step | Class.method | Stops / skips if | Observable |
 |---|---|---|---|---|
-| 1 | No behaviour → return | `GameObject.Update` | `Behaviour == null` | Object never changes |
-| 2 | First update after the behaviour was set: `Behaviour.Start(this)` | `GameObject.Update` | — | — |
-| 3 | `Behaviour.Update(this, GameTime.Delta)` | `GameObject.Update` | — | — |
-| 4 | Hidden → return | `GameObject.Render` | `Visible == false` | Nothing drawn, `Behaviour.Render` not called |
-| 5 | Draw `Sprite` or `Char`/`Color`/`Background` at the floored `Position` | `GameObject.Render` → `RenderConsole.Draw` | Off-screen → clipped | The object |
-| 6 | `Behaviour.Render(this, console)` | `GameObject.Render` | — | Extra drawing |
-
-For a `LuaBehaviour`, each of steps 2, 3 and 6 is:
-
-| # | Step | Class.method | Stops / skips if | Observable |
-|---|---|---|---|---|
-| a | Disposed, or faulted for the current script `Version` → return. Faulted for an older version → clear `Error` | `LuaBehaviour.CanRun` | `_self == NoRef`, or still faulted | Object frozen (still drawn), `IsFaulted` true |
-| b | Hook missing → return | `LuaBehaviour.Start`/`Update`/`Render` | `on_start`/`on_update`/`on_render` not a function | Hook silently never runs |
-| c | Copy engine fields into `self` | `LuaRuntime.WriteFields` | — | — |
-| d | Call the hook (`on_update` gets `dt` in seconds) | `LuaRuntime.Call` | Lua error or stored host exception | Fault (step f) |
-| e | `on_start`/`on_update` only: copy engine fields back | `LuaRuntime.ReadFields` | A field has the wrong type → nothing copied | Fault: `self.<field> must be …` |
-| f | On error: `Error` set, `Log.WriteLine("Lua: " + error)` | `LuaBehaviour.Fault` | — | Logger only (dropped unless `EnableLogger`) |
-
-Host functions (`input.*`, `console.*`, `print`) catch every .NET exception, store the first one and return no values.
-They never call `lua_error`.
+| 1 | `Simulation.Update((float)GameTime.Delta.TotalSeconds)`: each enabled system's `OnUpdate`, in `SystemGroup.RunOrder` (`Add` order adjusted by `UpdateBefore`/`UpdateAfter`) | `EcsScene.OnUpdate` → `SystemGroup.Update` | `EntitySystem.Enabled == false` → that system is skipped | — |
+| 2 | Systems iterate queries and record structural changes in `Commands` | game systems, `MovementSystem` | Direct `World.Create/Destroy/Add/Remove` inside the loop | `InvalidOperationException` ([F8](#f8) step 0) |
+| 3 | Sync point: `Commands.Playback(World)` applies the recorded changes in order (deferred handles from `Create` are swapped for the created entities), then clears the buffer | `CommandBuffer.Playback` | Target entity no longer alive → that `Destroy`/`Add`/`Remove` is **skipped silently**. Foreign or stale deferred handle → `InvalidOperationException` | Entities created/destroyed this frame show up in the render below |
+| 4 | `Presentation.Update(delta)` runs the render systems into the frame buffer, which `GameBase.Start` cleared at the start of the frame (if `ClearScreenOnEachFrame`) | `EcsScene.OnRender` → `SystemGroup.Update` | `OutlineRenderSystem`: bounding circle off-screen → entity skipped | Drawn cells |
+| 5 | `Presentation` plays back its own `Commands` (normally empty) | `CommandBuffer.Playback` | — | — |
+| 6 | On scene unload: `OnDestroy`, then `World.Dispose()` frees all chunks | `EcsScene.OnUnload` | — | Old entity handles stop being alive |
