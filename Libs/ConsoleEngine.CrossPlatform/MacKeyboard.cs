@@ -32,7 +32,8 @@ internal static class MacKeyboard
     [DllImport(Carbon)]
     private static extern byte LMGetKbdType();
 
-    [DllImport(Carbon)]
+    // UniChar is UTF-16, so the buffer must not be marshalled as ANSI.
+    [DllImport(Carbon, CharSet = CharSet.Unicode)]
     private static extern int UCKeyTranslate(IntPtr keyLayout, ushort virtualKeyCode, ushort keyAction, uint modifierKeyState,
         uint keyboardType, uint keyTranslateOptions, ref uint deadKeyState, nuint maxStringLength, out nuint actualStringLength,
         [Out] char[] unicodeString);
