@@ -7,4 +7,3 @@ var game = new PlatformerGame {
             
 game.Initialize();
 game.Start();
-Console.ReadKey();
