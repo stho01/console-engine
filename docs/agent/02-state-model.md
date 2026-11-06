@@ -37,6 +37,19 @@ no high scores, settings or save games. The only persistent inputs are the Terra
 | `Hud` | `_commandSequence`, `_sequenceReadyToShip` | Commands typed but not yet sent with SPACE | Cleared by `GetCommands()` on SPACE |
 | `Sprites.Story` (static) | sprite pixels | Player name is stamped into it in place by `MenuScene.OnLoad` | Never. It mutates a shared static sprite |
 
+## EternalDigger state
+
+| Owner | Field | Meaning | Reset when |
+|---|---|---|---|
+| `Mine` (one per `MineScene`) | `_cells` (`TileCell[]`, row-major, 30 per row), `_generatedRows` | The world. `TileCell`: `Type` (`TileType`), `Damage` (hits taken), `HasLadder`, `Seen` (ever lit). Generated from the seed, then changed only by digging, ladders and `Seen` | New process (each run starts a new `Mine`) |
+| `Miner` component (one entity) | `Column`, `Row`, `MoveFrom`, `MoveElapsed`, `MoveDuration`, `Motion`, `FallRows`, `FacingX`, `LampDirection`, `DigCooldown`, `SwingTime`, `SwingDirection`, `RescueHold` | Where the miner is and what they are doing. While moving, `Column`/`Row` are already the target tile and the engine's `Position` slides there | Rescue resets the position and motion |
+| `Miner` component | `Gold`, `Ladders`, `CopperOre`, `SilverOre`, `GoldOre` | Inventory. The three ore counts are "the bag" | Ore: delivery or rescue. Gold/ladders: never |
+| `LightMap` | `_levels` (byte per tile on screen), `FirstRow`, `Rows` | This frame's light | Recomputed every frame |
+| Particles | `Particle` (`Age`, `Lifetime`, `Style`, `Variant`), `Physics`, `TileCollider`/`Mist` tags, `FloatingNumber` + engine `Position`/`Velocity`/`Glyph` | Effects only, no game state | Destroyed when `Age >= Lifetime` |
+
+Nothing is saved: gold, ladders and the dug mine are gone when the game closes. The seed (first argument) is the only
+way to get the same mine again.
+
 <a id="map-format"></a>
 ## Map file format (`Examples/TerraForM/Assets/Maps/mapN.txt`)
 

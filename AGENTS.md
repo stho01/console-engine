@@ -32,7 +32,7 @@ Platform: **Windows only.** Rendering and input go through Win32 P/Invoke (`kern
 | Vector/matrix math | `Libs/Microsoft.Xna.Framework/` (copied from MonoGame, change only with good reason) |
 | ECS (entities, components, archetypes, chunks) | `ConsoleEngine/Ecs/`, design and phases in [`docs/design/ecs-plan.md`](docs/design/ecs-plan.md) |
 | Performance measurements | `ConsoleEngine.Benchmarks/` (BenchmarkDotNet) |
-| How to use the engine | `Examples/Snake` (smallest), `Examples/TerraForM` (scenes, assets, tests), `Examples/<Game>.Ecs` (ECS port of each game: components, systems, queries, `EcsScene`; compare with `Examples/<Game>`. `Snake.Ecs` is the smallest, `TerraForM.Ecs` the fullest), `Examples/Swarm` (ECS at scale, system ordering attributes) |
+| How to use the engine | `Examples/Snake` (smallest), `Examples/TerraForM` (scenes, assets, tests), `Examples/<Game>.Ecs` (ECS port of each game: components, systems, queries, `EcsScene`; compare with `Examples/<Game>`. `Snake.Ecs` is the smallest, `TerraForM.Ecs` the fullest), `Examples/Swarm` (ECS at scale, system ordering attributes), `Examples/EternalDigger` (a full original ECS game: endless grid world, particle effects, lighting; design in [`docs/design/eternal-digger.md`](docs/design/eternal-digger.md)) |
 | Build/test pipeline | `.github/workflows/build-and-test.yml` |
 | Formatting rules | `.editorconfig` + [§ Code style](#code-style) |
 | Open feature requests | GitHub issues: mouse input (8), macOS (7), more colours (6) |
@@ -48,8 +48,9 @@ Every name in `docs/agent/` is grep-able. Search for the identifier you are inte
 | `ConsoleEngine.Windows` | `Libs/ConsoleEngine.Windows/` | Library, namespace `ConsoleEngine.Native` | Abstractions |
 | `ConsoleEngine.Logger` | `Libs/ConsoleEngine.Logger/` | Exe: TCP log viewer (port 11000) | — |
 | `Microsoft.Xna.Framework` | `Libs/Microsoft.Xna.Framework/` | Library: math types | — |
-| `TerraForM`, `Snake`, `Asteroids`, `Platformer`, `ConsoleGame`, their ports `<Game>.Ecs`, and `Swarm` (ECS stress test) | `Examples/*` | Exe | ConsoleEngine |
+| `TerraForM`, `Snake`, `Asteroids`, `Platformer`, `ConsoleGame`, their ports `<Game>.Ecs`, `Swarm` (ECS stress test) and `EternalDigger` (ECS game) | `Examples/*` | Exe | ConsoleEngine |
 | `TerraForM.Tests` | `Examples/TerraForM.Tests/` | NUnit 5 + NSubstitute | TerraForM |
+| `EternalDigger.Tests` | `Examples/EternalDigger.Tests/` | NUnit 5 | EternalDigger |
 | `ConsoleEngine.Tests` | `ConsoleEngine.Tests/` | NUnit 5, hand-written fakes in `Fakes/` | ConsoleEngine |
 | `ConsoleEngine.Benchmarks` | `ConsoleEngine.Benchmarks/` | Exe: BenchmarkDotNet 0.15.8 | ConsoleEngine |
 
@@ -101,7 +102,7 @@ coverage.runsettings              coverlet settings for `dotnet test` coverage
 dotnet-tools.json                 local tools (ReportGenerator)
 AGENTS.md / CLAUDE.md             agent instructions (CLAUDE.md imports AGENTS.md)
 docs/agent/                       support/triage docs for agents (01–09 + README)
-docs/design/                      design plans (ecs-plan.md)
+docs/design/                      design plans (ecs-plan.md, eternal-digger.md)
 ConsoleEngine/                    the engine
   GameBase.cs                       abstract game: Initialize/Start/Stop, frame loop
   Collections/Deque.cs              double-ended queue (used by Snake)
@@ -139,6 +140,10 @@ Examples/
                                   Systems/ (EntitySystem subclasses), Scenes/ (an EcsScene that spawns entities and
                                   adds systems in run order). TerraForM.Ecs links Assets/ from Examples/TerraForM
   Swarm/                          ECS stress test (no OOP original): Components/, Systems/, Scenes/SwarmScene
+  EternalDigger/                  original ECS digging game (no OOP original): Mining/ (Mine grid, Tiles rules),
+                                  Components/, Systems/, Effects/ (EffectSpawner, ParticleLooks), Rendering/
+                                  (Canvas, LightMap, TileLooks), Scenes/MineScene, Layout, Shop, MinerInput
+  EternalDigger.Tests/            Mine, Tiles, Shop, LightMap and frame-by-frame MinerControlSystem tests
   TerraForM/Scenes/               GameScene, MenuScene, InputNameScene
   TerraForM/Commands/             Command, Move, Plant, Wait
   TerraForM/Assets/               Maps/*.txt, Sprites.cs, Texts/HudTexts.cs, Story/ (unused)
