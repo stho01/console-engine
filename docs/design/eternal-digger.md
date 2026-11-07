@@ -146,3 +146,13 @@ over an existing save asks `NO` / `YES, START OVER`). One slot, `SaveFile.Defaul
 seed, the miner's tile, facing and inventory, and the tiles that differ from the generated mine
 (`Mine.CollectChanges`), never the whole grid. Saves on a sale or purchase, every 60 s underground and on `ESC`;
 never per frame. An unreadable or unknown-version file is moved to `save.dat.bad` and the title offers only NEW MINE.
+
+## Lift (Tier 1)
+
+Not in the original document. `Elevator` (`Mining/Elevator.cs`) runs down `Mine.ShaftColumn`. `E` at the `LIFT` sign
+(columns 23–24) buys a 10 m segment (200g, +100g each) that digs out that stretch of the shaft (ore into the bag,
+ladders kept). Landings: the surface (row 9) and the bottom. `E` on a landing gets in or calls the car; in the stopped
+car Up/Down ride to the top/bottom at 0.04 s per tile; Left/Right (or Down at the bottom) get out. `ElevatorSystem`
+runs after `MinerMotionSystem`; `ElevatorRenderSystem` after `HouseRenderSystem`. The car is drawn as a roof above and
+a floor below the miner's tile so his cells stay visible. Saved from format version 2 (segments, car landing).
+

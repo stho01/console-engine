@@ -46,7 +46,7 @@ public class MinerVisibilityTests
         var light = new LightMap(Mine.Columns, Layout.ScreenHeight / Layout.TileHeight + 2);
         var random = new Random(Seed);
         var effects = new EffectSpawner(random, new ScreenShake());
-        _control = new MinerControlSystem(_mine, effects);
+        _control = new MinerControlSystem(_mine, new Elevator(), effects);
         _motion = new MinerMotionSystem(_mine, effects);
 
         _simulation = new SystemGroup(_world);

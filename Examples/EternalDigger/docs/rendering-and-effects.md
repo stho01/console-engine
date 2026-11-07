@@ -11,12 +11,13 @@ The Presentation group draws in `Add` order, each layer over the last:
 |---|---|---|---|
 | 1 | `SkyRenderSystem` | Sky gradient, sun, clouds, hills | Every screen cell above the grass |
 | 2 | `TerrainRenderSystem` | Every tile from the grass row down, by light level | Every screen cell from the grass down (the mine's 30 columns) |
-| 3 | `HouseRenderSystem` | House, sign, chimney smoke, ladder shop, `MINE` frame | Fixed spots on the surface |
-| 4 | `ParticleRenderSystem` | Every particle glyph, except on the miner's cells | Over the world, keeping its background |
-| 5 | `MinerRenderSystem` | The 4 × 2 miner and the lamp glow | Over the world and the particles |
-| 6 | `FloatingTextRenderSystem` | `+150g` / `-10g` | Over everything so far |
-| 7 | `PromptRenderSystem` | `DELIVER [E]` / `BUY LADDERS [E] 10g` | Above the miner |
-| 8 | `HudSystem` | The two top rows | Screen rows 0–1 |
+| 3 | `HouseRenderSystem` | House, sign, chimney smoke, ladder shop, `MINE` frame, `LIFT` sign | Fixed spots on the surface |
+| 4 | `ElevatorRenderSystem` | Shaft walls and braces, cable, car, speed lines | The shaft column (and the cells beside it), over terrain |
+| 5 | `ParticleRenderSystem` | Every particle glyph, except on the miner's cells | Over the world, keeping its background |
+| 6 | `MinerRenderSystem` | The 4 × 2 miner and the lamp glow | Over the world and the particles |
+| 7 | `FloatingTextRenderSystem` | `+150g` / `-10g` / `ELEVATOR +10m` | Over everything so far |
+| 8 | `PromptRenderSystem` | The door, shop, lift sign and landing prompts | Above the miner |
+| 9 | `HudSystem` | The two top rows | Screen rows 0–1 |
 
 Layers 1 and 2 together paint every cell of the screen each frame. That matters for the `Canvas`.
 
@@ -110,6 +111,18 @@ string, colours for full and dim light, and for ores a speck character (`◆`) a
 | Door | Over the deliver columns (x 18–21) | `║` boards and a yellow `•` knob |
 | Shop | x 32–47 | Red/white striped awning, black window with `╟─╢` ladders on display, counter, `LADDERS` |
 | Mine frame | Around the shaft (x 83–88) | `╔════╗` beam on `║` posts, a `MINE` plank |
+| Lift sign | x 93–98 (`Layout.LiftSignFirstColumn`) | ` LIFT ` white on dark yellow, on two `│` posts |
+
+## The lift
+
+`ElevatorRenderSystem` draws only once a segment is built, and only the rows on screen:
+
+| Part | Where | Look |
+|---|---|---|
+| Shaft walls | Cells 0 and 3 of the shaft column, from the row under the grass to the bottom landing | Dark grey `║`; `╪` on the top row of every 5th metre (`BraceEvery`) |
+| Cable | Cell 1 of the shaft, from under the `MINE` beam down to the car roof | Grey `│` |
+| Car | Its tile at `Elevator.CarRow` (smooth while moving) | `╔══╗` roof one row **above** the tile and `╚══╝` floor one row **below** (dark yellow, yellow corners), `║` sides on cells 0 and 3. The miner's own cells stay his, so the Tier 0 visibility rule holds |
+| Speed lines | One cell outside each wall, ±8 rows around the car, while it moves | Grey `¦` every 3 rows, moving against the ride at 40 cells/s, drawn from the time (no entities) |
 
 ## The miner
 
@@ -206,11 +219,12 @@ a random amount up to the strength in both directions and decays it by 6 per sec
 
 ## Text: numbers, prompts, HUD
 
-- **`FloatingTextRenderSystem`** formats `+123g` or `-10g` into a reused `char[24]` with `int.TryFormat`, so a
-  number allocates nothing per frame. Positive yellow, negative red, darker for the last 30% of its life.
+- **`FloatingTextRenderSystem`** formats `+123g`, `-10g` or `ELEVATOR +10m` into a reused `char[24]` with
+  `int.TryFormat`, so a text allocates nothing per frame. Positive gold and lift texts yellow, negative red, darker for
+  the last 30% of its life.
 - **`PromptRenderSystem`** draws a three-row box (`┌─┐ │ │ └─┘`, yellow on dark blue) with the text, a `▼` pointer
-  just above the miner's head, and a small bob. `[E]` is yellow. The text strings are `PromptRenderSystem.DeliverText`
-  and `BuyText`.
+  just above the miner's head, and a small bob. `[E]` is yellow. The text strings are `PromptRenderSystem.DeliverText`,
+  `BuyText`, `CallLiftText`, `BoardLiftText`, `RideText`, and the lift sign's text, rebuilt only when the price changes.
 - **`HudSystem`** fills rows 0–1. The status line is a string rebuilt **only when a shown value changes** (gold,
   ladders, depth, the three ore counts); the `◆` icons are coloured by position. Row 1 is the key help, the rescue
   bar (24 cells) or the blinking no-ladders warning.

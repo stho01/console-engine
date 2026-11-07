@@ -48,7 +48,8 @@ public class SaveFileTests
 
         var status = SaveFile.Load(_path, out var loaded);
         var restored = new Mine(loaded.Seed);
-        loaded.ApplyTo(restored);
+        var elevator = new Elevator();
+        loaded.ApplyTo(restored, elevator);
         var miner = loaded.ToMiner();
 
         Assert.That(status, Is.EqualTo(SaveStatus.Loaded));
@@ -60,6 +61,8 @@ public class SaveFileTests
         Assert.That(miner.Ladders, Is.EqualTo(saved.Ladders));
         Assert.That(miner.GoldOre, Is.EqualTo(saved.GoldOre));
         Assert.That(miner.IsMoving, Is.False);
+        Assert.That(elevator.Segments, Is.EqualTo(2));
+        Assert.That(elevator.IsCarAt(elevator.BottomRow), Is.True);
     }
 
     [Test]
@@ -119,7 +122,7 @@ public class SaveFileTests
         Assert.That(SaveFile.Read(stream, out _), Is.EqualTo(SaveStatus.Corrupt));
     }
 
-    [TestCase(0)]
+    [TestCase(SaveFile.OldestVersion - 1)]
     [TestCase(SaveFile.Version + 1)]
     public void Read_OtherVersion_ReturnsUnsupported(int version)
     {
@@ -128,6 +131,46 @@ public class SaveFileTests
 
         Assert.That(SaveFile.Read(new MemoryStream(bytes), out var data), Is.EqualTo(SaveStatus.Unsupported));
         Assert.That(data, Is.Null);
+    }
+
+    [Test]
+    public void Read_Version1Save_LoadsWithoutALift()
+    {
+        var stream = new MemoryStream();
+        using (var writer = new BinaryWriter(stream, System.Text.Encoding.UTF8, leaveOpen: true))
+        {
+            writer.Write(0x56534445);
+            writer.Write(1);
+            foreach (var value in new[] { Seed, 7, Layout.GroundRow })
+                writer.Write(value);
+            writer.Write((sbyte)1);
+            foreach (var value in new[] { 55, 4, 1, 2, 3, 1 })
+                writer.Write(value);
+            writer.Write(13);
+            writer.Write((byte)7);
+            writer.Write((byte)TileType.Air);
+            writer.Write((byte)0);
+            writer.Write((byte)3);
+        }
+
+        stream.Position = 0;
+
+        var status = SaveFile.Read(stream, out var loaded);
+
+        Assert.That(status, Is.EqualTo(SaveStatus.Loaded));
+        Assert.That(loaded.Gold, Is.EqualTo(55));
+        Assert.That(loaded.Changes, Has.Count.EqualTo(1));
+        Assert.That(loaded.Changes[0].Cell.HasLadder, Is.True);
+        Assert.That(loaded.ElevatorSegments, Is.Zero);
+        Assert.That(loaded.ElevatorCarRow, Is.EqualTo(Elevator.TopRow));
+    }
+
+    [Test]
+    public void Read_CarOffItsLandings_ReturnsCorrupt()
+    {
+        var data = new SaveData { Seed = Seed, Column = 1, Row = 9, ElevatorSegments = 2, ElevatorCarRow = 15 };
+
+        Assert.That(SaveFile.Read(Written(data), out _), Is.EqualTo(SaveStatus.Corrupt));
     }
 
     [Test]
@@ -172,7 +215,7 @@ public class SaveFileTests
     {
         var mine = new Mine(Seed);
         mine.Hit(Mine.ShaftColumn, Mine.SurfaceRow + 2);
-        var saver = new GameSaver(_path, Seed, mine);
+        var saver = new GameSaver(_path, Seed, mine, new Elevator());
         var miner = new Miner { Column = Mine.ShaftColumn, Row = Mine.SurfaceRow + 1, FacingX = 1, Gold = 70 };
 
         var written = saver.Save(miner);
@@ -190,7 +233,7 @@ public class SaveFileTests
     {
         // A directory where the file should be: the final move fails.
         Directory.CreateDirectory(_path);
-        var saver = new GameSaver(_path, Seed, new Mine(Seed));
+        var saver = new GameSaver(_path, Seed, new Mine(Seed), new Elevator());
 
         var written = saver.Save(new Miner { FacingX = 1 });
 
@@ -223,7 +266,13 @@ public class SaveFileTests
             SilverOre = 5,
             GoldOre = 6
         };
-        return SaveData.Capture(Seed, miner, mine, new List<TileChange>());
+        var elevator = new Elevator();
+        var rich = new Miner { Gold = 10_000 };
+        elevator.TryBuild(mine, ref rich);
+        elevator.TryBuild(mine, ref rich);
+        elevator.Send(elevator.BottomRow);
+        elevator.Update(10f);
+        return SaveData.Capture(Seed, miner, mine, elevator, new List<TileChange>());
     }
 
     private static MemoryStream Written(SaveData data)
@@ -245,6 +294,8 @@ public class SaveFileTests
         Assert.That(actual.CopperOre, Is.EqualTo(expected.CopperOre));
         Assert.That(actual.SilverOre, Is.EqualTo(expected.SilverOre));
         Assert.That(actual.GoldOre, Is.EqualTo(expected.GoldOre));
+        Assert.That(actual.ElevatorSegments, Is.EqualTo(expected.ElevatorSegments));
+        Assert.That(actual.ElevatorCarRow, Is.EqualTo(expected.ElevatorCarRow));
         Assert.That(actual.Changes, Is.EqualTo(expected.Changes));
     }
 

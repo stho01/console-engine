@@ -205,6 +205,12 @@ Rules: [03 § EternalDigger](03-rules.md#eternal-digger). Flow: [04 § F11](04-f
    last sale, purchase or 60 s underground autosave is lost); NEW MINE was confirmed (replaces the slot); the save was
    unreadable (the title said so; the file is now `save.dat.bad`, [Q11](07-checks.md#q11)); or ` SAVE FAILED` showed
    (the folder isn't writable). Stop.
-9. "Debris or sparks disappear right next to the miner" → **Cause:** by design. No particle is drawn on his 4 × 2
+9. "Can't build the lift", "E does nothing at the lift" → **Cause:** building needs standing still at columns 23–24 on
+   row 9 and 200g (+100g per segment built; the prompt price is red when short). Calling needs standing still on a
+   landing in column 21: row 9 or the bottom row; mid-shaft, `E` does nothing. In the car, `E` does nothing: use ↑/↓.
+   Stop.
+10. "Fell all the way down the shaft" → **Cause:** a built lift digs out the shaft; without ladders there a step into it
+    falls to the bottom landing. No damage. Stop.
+11. "Debris or sparks disappear right next to the miner" → **Cause:** by design. No particle is drawn on his 4 × 2
    cells, and at most 6 (dimmed) are drawn in the tile around him, so he stays readable (`ParticleRenderSystem`). Stop.
 

@@ -174,12 +174,13 @@ Runs in [F9](#f9) step 1, in this order. The keyboard is read once into a `Miner
 | # | Step | Class.method | Stops / skips if | Observable |
 |---|---|---|---|---|
 | 1 | Rescue: `R` held adds to `RescueHold`; at 1.5 s the miner jumps to the spawn and the bag empties | `MinerControlSystem.UpdateRescue` | `R` not held → `RescueHold = 0`, continue. Rescue done → rest of the frame's control skipped | HUD rescue bar, pop at the spawn |
-| 2 | — | `MinerControlSystem.Control` | `Miner.IsMoving` → no keys read this frame | — |
+| 2 | — | `MinerControlSystem.Control` | `Miner.IsMoving` → no keys read this frame. Riding: car moving → nothing; Up (not at top) / Down (at top) → send the car, rest skipped; Left/Right or Down at the bottom → get out and go on; anything else → rest skipped | — |
 | 3 | Fall one tile if unsupported | same | `Mine.IsSupported` false → fall starts, keys ignored | Miner drops |
 | 4 | `SPACE`: ladder | `PlaceLadder` → `Mine.TryPlaceLadder` | `Ladders == 0`, row ≤ 10, tile not air or already has a ladder → nothing placed (one dust puff) | Ladder drawn, HUD count −1 |
 | 5 | Side key, else down, else up (only on a ladder): walk/climb into air, or dig | `MoveOrDig` | Target unbreakable (grass, bedrock, outside the mine) → nothing. `DigCooldown > 0` → no hit this frame | Debris, cracks, burst on break, ore +1 in the HUD bag |
-| 6 | `E`: deliver or buy | `InteractionSystem.Interact` | `E` not pressed this frame, miner moving, or not on row 9 at columns 3–6 / 8–11 → nothing. Empty bag / gold < 10 → dust puff only | Coins and `+<n>g` / `-10g` |
+| 6 | `E`: deliver, buy a ladder, build a lift segment, or get in / call the lift | `InteractionSystem.Interact` | `E` not pressed this frame, miner moving or riding, or not on a spot (row 9 at columns 3–6 / 8–11 / 23–24) or a landing in column 21 → nothing. Empty bag / not enough gold → dust puff only | Coins, `+<n>g` / `-10g` / `ELEVATOR +10m` |
 | 7 | Slide `Position`, finish the move, landing dust | `MinerMotionSystem.Move` | — | — |
+| 8 | Move the car; carry the rider; a called car picks up the miner waiting on its landing | `ElevatorSystem` → `Elevator.Update`, `Carry` | Not riding and (car didn't arrive this frame, not called, or the miner isn't idle on that landing) → nothing | Car and miner move together |
 
 <a id="f11"></a>
 ## F11 — EternalDigger start, save and load (`TitleScene` → `MineScene` → `SaveSystem`)

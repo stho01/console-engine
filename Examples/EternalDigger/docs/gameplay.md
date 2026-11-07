@@ -148,6 +148,8 @@ works on a ladder tile, and the tile you arrive in must be a ladder tile too if 
 > **Rule of thumb:** a straight shaft down to depth *d* needs *d* − 1 ladders (the shaft's top two tiles come with
 > ladders). The 8 starting ladders get you back from 9 m. Side tunnels need no ladders.
 
+Holding `↑` on a long ladder speeds the climb up after 4 tiles (see [the miner](#the-miner)).
+
 A good habit: place a ladder, then dig the tile below. You stay on the ladder while you dig, step down into the new
 hole, and repeat.
 
@@ -163,6 +165,24 @@ The house stands on the surface over columns 2–11. Stand still on the right sp
 
 You start with 0 gold and 8 ladders (`Shop.StartGold`, `Shop.StartLadders`), standing at column 15 on the surface
 (`Layout.SpawnColumn`).
+
+<a id="the-lift"></a>
+## The lift
+
+A lift (`Mining/Elevator.cs`) runs down the mine shaft (column 21), bought 10 m at a time at the `LIFT` sign beside
+the mine entrance.
+
+| What | Rule | Identifier |
+|---|---|---|
+| Buying | Stand at columns 23–24 on row 9 and press `E`. The first segment costs 200g, each next one 100g more (300g, 400g…). It digs out the next 10 shaft tiles; ore found there goes into the bag, ladders stay. Not enough gold: a dust puff, the prompt price is red | `Elevator.TryBuild`, `FirstSegmentPrice`, `SegmentPriceStep`, `SegmentMetres`, `Layout.IsAtLiftSign` |
+| Landings | Two: the surface (row 9, above the shaft) and the bottom of the last segment (depth = 10 m × segments) | `Elevator.TopRow`, `BottomRow`, `IsLanding` |
+| Calling / getting in | On a landing, `E` gets in if the car is there; otherwise it calls the car, and the miner gets in when it arrives | `InteractionSystem.Interact`, `ElevatorSystem.Carry` |
+| Riding | In the stopped car: `↑` rides to the top, `↓` to the bottom, at 0.04 s per tile (100 m in about 4 s). No other key is read while it moves | `Elevator.RideDuration`, `MinerControlSystem.Control` |
+| Getting out | `←`/`→` walks (or digs) off the car; `↓` at the bottom steps off and digs or climbs down. Deeper than the lift, ladders are needed as before | same |
+| Feedback | `ELEVATOR +10m` floats up and stars pop over the sign on a purchase, which also saves. The HUD shows `LIFT <n>m` once built | `FloatingTextKind.Elevator`, `HudSystem` |
+
+The shaft below the surface is open once the lift is built: stepping into it without a ladder or the car means a
+fall to the bottom landing (no fall damage).
 
 ## The rescue
 
@@ -205,11 +225,11 @@ twinkles and dig towards them.
 
 | Part | Shows | Identifier |
 |---|---|---|
-| HUD, row 0 | ` ETERNAL DIGGER ` title, gold, ladders, depth, the bag (copper/silver/gold counts with coloured `◆` icons) and what the bag is worth | `HudSystem` |
+| HUD, row 0 | ` ETERNAL DIGGER ` title, gold, ladders, `LIFT <n>m` once a lift is built, depth, the bag (copper/silver/gold counts with coloured `◆` icons) and what the bag is worth | `HudSystem` |
 | HUD, row 1 | The key help; the rescue bar while `R` is held; the no-ladders warning. After a save, ` SAVED ` at the right end for 1.5 s (grey, then dark grey), or ` SAVE FAILED` in red | `HudSystem` |
 | Title screen | `ETERNAL DIGGER` logo, `CONTINUE` / `NEW MINE` (selected item black on yellow with `►`), the confirmation, a red message for an unreadable save, `↑↓ choose   E select   ESC quit` | `TitleScene`, `TitleMenu` |
 | Camera | Keeps the miner at 40% of the screen height, eased. Never scrolls above the sky. Shakes on breaks and long falls | `CameraSystem` |
-| Prompts | ` DELIVER [E] ` / ` BUY LADDERS [E] 10g ` in a small bobbing frame above the miner | `PromptRenderSystem` |
+| Prompts | ` DELIVER [E] ` / ` BUY LADDERS [E] 10g ` / ` BUILD LIFT +10m [E] <price>g ` / ` CALL LIFT [E] ` / ` GET IN [E] ` / ` ↑↓ RIDE   ←→ GET OUT ` in a small bobbing frame above the miner | `PromptRenderSystem` |
 
 ## Tuning cheat sheet
 
@@ -218,6 +238,7 @@ twinkles and dig towards them.
 | Ore values, depths, toughness | `Mining/Tiles.cs` |
 | How common ore, caves and rock are | `Mine.Underground` in `Mining/Mine.cs` |
 | Ladder price, starting gold and ladders | `Shop.cs` |
+| Lift prices, segment length, ride speed | constants at the top of `Mining/Elevator.cs` |
 | Move speeds, the climb ramp, dig speed, rescue time | constants at the top of `Systems/MinerControlSystem.cs` |
 | Lamp range and cone | constants at the top of `Rendering/LightMap.cs` |
 | Glint and mist rates | `Systems/GlintSystem.cs`, `Systems/MistSystem.cs` |
@@ -236,7 +257,8 @@ The game saves itself; there is no save key.
 
 - **When:** after every sale at the door (when it earned gold) and every ladder bought, every 60 s spent underground
   (`GameSaver.AutosaveInterval`), and on `ESC`, which saves and quits. A NEW MINE is saved as soon as it starts.
-- **What:** the seed, the miner's tile and facing, gold, ladders and the bag, and every tile that differs from what
+- **What:** the seed, the miner's tile and facing, gold, ladders and the bag, the lift (segments and the car's
+  landing), and every tile that differs from what
   the seed generates (dug, half-dug, ladder placed, seen). The mine itself is regenerated from the seed.
 - **Not saved:** anything mid-action. A continued game starts with the miner standing still on the saved tile (if
   that tile has no support, they fall), no particles, and the rescue timer at zero.

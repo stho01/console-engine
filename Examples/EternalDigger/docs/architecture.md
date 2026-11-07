@@ -11,10 +11,10 @@ Program.cs                       parses the seed, creates the game, Initialize()
 └── EternalDiggerGame : GameBase  120 × 48 cells, 8 × 16 font; ESC → MineScene.Save(), Stop()
     ├── TitleScene : Scene<EternalDiggerGame>   loads the save; CONTINUE / NEW MINE (TitleMenu)
     └── MineScene : EcsScene<EternalDiggerGame>  started from a SaveData (loaded, or SaveData.NewMine)
-        ├── shared services       Mine, Random, EffectSpawner (+ ScreenShake), LightMap, Canvas, GameSaver
-        ├── World                 the miner, particles, floating numbers
-        ├── Simulation group      11 systems: rules, motion, camera, light, effects, saving
-        └── Presentation group    8 systems: sky, terrain, house, particles, miner, numbers, prompts, HUD
+        ├── shared services       Mine, Elevator, Random, EffectSpawner (+ ScreenShake), LightMap, Canvas, GameSaver
+        ├── World                 the miner, particles, floating texts
+        ├── Simulation group      12 systems: rules, motion, lift, camera, light, effects, saving
+        └── Presentation group    9 systems: sky, terrain, house, lift, particles, miner, texts, prompts, HUD
 ```
 
 | Engine piece | Used for | Where |
@@ -57,6 +57,7 @@ sequenceDiagram
 1. **Shared services**, plain objects (not ECS data) handed to the systems through their constructors:
    - `Mine(seed)`, the world grid ([below](#the-mine-is-not-made-of-entities)), with the save's changed tiles put back
      (`SaveData.ApplyTo`).
+   - `Elevator`, the lift in the shaft: segments, the car and its landings, restored from the save.
    - `Random(seed)`, one random source for every effect.
    - `EffectSpawner(random, new ScreenShake())`, which creates particles ([rendering-and-effects.md](rendering-and-effects.md)).
    - `LightMap(30, 26)`, the light for the tile rows on screen.
@@ -89,6 +90,7 @@ Why a grid and not one entity per tile:
 | Particles | Entities: `Position`, `Velocity`, `Glyph`, `Particle`, `Physics` (+ `TileCollider` or `Mist`) | Hundreds at a time, short-lived, iterated in bulk |
 | Floating texts | Entities: `Position`, `Velocity`, `FloatingText` | Short-lived |
 | Rules (prices, hits, depths) | `const`s on static classes: `Tiles`, `Shop`, `Layout` | Shared, testable, no state |
+| The lift | `Elevator` service (segments, car row, call) | One of it; rules testable without a `World` |
 
 ### Archetypes in play
 
@@ -113,10 +115,11 @@ EternalDigger that becomes:
 
 ```text
 Scenes.Update → MineScene.OnUpdate → Simulation.Update(dt)
-  MinerControlSystem      MinerInput.FromKeyboard(); rescue, fall, ladder, walk or dig
-                            → Mine.Hit / TryPlaceLadder, effects recorded in Commands
-  InteractionSystem       E at the door/shop → Shop.Deliver / TryBuyLadder, coins and numbers
+  MinerControlSystem      MinerInput.FromKeyboard(); rescue, ride keys in the lift, fall, ladder, walk or dig
+                            → Mine.Hit / TryPlaceLadder / Elevator.Send, effects recorded in Commands
+  InteractionSystem       E at the door/shop/lift sign/landing → Deliver / TryBuyLadder / Elevator.TryBuild / call
   MinerMotionSystem       slide Position one tile, finish moves, foot and landing dust
+  ElevatorSystem          move the car; carry the rider; a called car picks up the caller
   CameraSystem            follow the miner, add shake, round to whole cells → Camera.Position
   LightingSystem          LightMap.Compute for the rows on screen (marks tiles Seen)
   GlintSystem             sample ore near the miner → glints
@@ -128,7 +131,7 @@ Scenes.Update → MineScene.OnUpdate → Simulation.Update(dt)
   ── Commands.Playback: the particles recorded above are created, expired ones destroyed
 OnUpdate (game)           ESC → MineScene.Save(), Stop()
 Scenes.Render → MineScene.OnRender → Presentation.Update(dt)
-  SkyRenderSystem → TerrainRenderSystem → HouseRenderSystem → ParticleRenderSystem
+  SkyRenderSystem → TerrainRenderSystem → HouseRenderSystem → ElevatorRenderSystem → ParticleRenderSystem
   → MinerRenderSystem → FloatingTextRenderSystem → PromptRenderSystem → HudSystem
 Display                   the frame goes to the console in one write
 ```
@@ -202,8 +205,8 @@ Saving lives in `Saving/` and never runs per frame:
 
 | Piece | Does |
 |---|---|
-| `SaveData` | What a save holds: seed, miner tile and facing, gold, ladders, bag, `List<TileChange>`. `NewMine(seed)`, `Capture(seed, miner, mine, changes)`, `ToMiner()`, `ApplyTo(mine)` |
-| `SaveFile` | The binary, versioned file (`Version` = 1, magic `EDSV`). `Save` (temp file, then move), `Load` (never throws; returns `SaveStatus` `Missing`/`Loaded`/`Corrupt`/`Unsupported`, moves an unreadable file to `save.dat.bad`), `Write`/`Read` on a stream, `DefaultPath` |
+| `SaveData` | What a save holds: seed, miner tile and facing, gold, ladders, bag, lift segments and car row, `List<TileChange>`. `NewMine(seed)`, `Capture(seed, miner, mine, changes)`, `ToMiner()`, `ApplyTo(mine)` |
+| `SaveFile` | The binary, versioned file (`Version` = 2, reads back to `OldestVersion` = 1, magic `EDSV`). `Save` (temp file, then move), `Load` (never throws; returns `SaveStatus` `Missing`/`Loaded`/`Corrupt`/`Unsupported`, moves an unreadable file to `save.dat.bad`), `Write`/`Read` on a stream, `DefaultPath` |
 | `GameSaver` | The running mine's slot: `Request()` from gameplay, `Save(miner)` builds the data and writes it, catching I/O errors (`LastSaveFailed`); `Saves` counts attempts for the HUD |
 | `SaveSystem` | Last in Simulation: saves when requested (`InteractionSystem` after a sale or purchase) or after `AutosaveInterval` s underground |
 | `Mine.CollectChanges` / `Apply` | The mine as seed + changes: at save time every generated tile is compared with a freshly generated one, so nothing is tracked while playing |

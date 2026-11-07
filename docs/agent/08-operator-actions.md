@@ -43,6 +43,7 @@ team's process differs.
 | EternalDigger | ↓ / S (held), ↑ / W (held, on a ladder) | Dig/step down; climb or dig up | same |
 | EternalDigger | SPACE / E | Place a ladder / deliver at the door or buy a ladder at the shop | `MinerControlSystem`, `InteractionSystem` |
 | EternalDigger | R (hold 1.5 s) / ESC | Rescue to the surface (the bag is lost) / save and quit | `MinerControlSystem`, `EternalDiggerGame.OnUpdate` |
+| EternalDigger (lift) | E at the `LIFT` sign / E on a landing / ↑↓ in the car / ←→ | Build 10 m / get in or call / ride to the top or bottom / get out | `InteractionSystem`, `MinerControlSystem` |
 | EternalDigger (title) | ↑↓ (or W S) / E / ESC | Choose / pick CONTINUE, NEW MINE or the confirmation / quit without saving | `TitleScene`, `TitleMenu` |
 | EternalDigger (no code) | Delete `<LocalApplicationData>/EternalDigger/save.dat` | Start fresh without the confirmation | `SaveFile.DefaultPath` |
 | EternalDigger | first command-line argument | Mine seed: the same number gives the same mine | `Program.cs` |

@@ -37,6 +37,10 @@ public struct Miner
     /// <summary>Rows fallen in the current fall, for the landing dust.</summary>
     public int FallRows;
 
+    /// <summary>In the lift car, which carries the miner. Up/Down ride; Left/Right (or Down at the bottom) step off.
+    /// </summary>
+    public bool IsRiding;
+
     /// <summary>-1 left, 1 right. Which way the sprite looks.</summary>
     public int FacingX;
 
