@@ -1,11 +1,11 @@
-﻿using System.Threading;
+﻿using System;
+using System.Threading;
 using ConsoleEngine.Abstractions.Rendering;
 using ConsoleEngine.Infrastructure;
 using ConsoleEngine.Infrastructure.Inputs;
 using ConsoleEngine.Infrastructure.Logging;
 using ConsoleEngine.Infrastructure.Rendering;
 using ConsoleEngine.Infrastructure.Scenery;
-using ConsoleEngine.Native;
 
 namespace ConsoleEngine;
 
@@ -16,7 +16,8 @@ public abstract class GameBase
     //**********************************************************
 
     private readonly RenderConsole _console;
-    private bool _running;
+    private volatile bool _running;
+    private int _cancelRequests;
 
     //**********************************************************
     //** ctor
@@ -32,7 +33,7 @@ public abstract class GameBase
         
     protected GameBase(int width, int height, FontInfo fontInfo) 
     {
-        _console = new RenderConsole(new ConsoleHandler(width, height, fontInfo));
+        _console = new RenderConsole(Platform.CreateConsoleHandler(width, height, fontInfo));
         Name = "Game";
         Scenes = new SceneManager(this);
     }
@@ -64,7 +65,7 @@ public abstract class GameBase
     public void Initialize()
     {
         if (EnableLogger) {
-            Log.Start(this);
+            Log.Start();
         }
 
         OnInitialize();
@@ -80,27 +81,59 @@ public abstract class GameBase
         Thread.Sleep(100); // lazy way to wait for the console to load and initialize xD. 
             
         _running = true;
-        while (_running)
+        System.Console.CancelKeyPress += OnCancelKeyPress;
+        try
         {
-            GameTime.Update();
-            Input.Instance.Update();
-                
-            if (ClearScreenOnEachFrame)
-                _console.Clear();
-                
-                
-            Scenes.Update();
-            OnUpdate();
-                
-            Scenes.Render();
-            OnRender();
-                
-            _console.Display();
-                
-            Scenes.Cleanup();
+            while (_running)
+            {
+                GameTime.Update();
+                Input.Instance.Update();
+
+                if (ClearScreenOnEachFrame)
+                    _console.Clear();
+
+                Scenes.Update();
+                OnUpdate();
+
+                Scenes.Render();
+                OnRender();
+
+                _console.Display();
+
+                Scenes.Cleanup();
+            }
         }
+        catch
+        {
+            // Give the terminal back before the exception is printed, otherwise it ends up in the alternate screen.
+            _console.Restore();
+            throw;
+        }
+        finally
+        {
+            System.Console.CancelKeyPress -= OnCancelKeyPress;
+        }
+
+        // Stopped by Ctrl+C
+        if (EnableLogger)
+            Log.Stop();
     }
         
+    /// <summary>
+    /// The first Ctrl+C lets the current frame finish and returns from <see cref="Start"/>, the second one
+    /// terminates the process right away in case the game hangs.
+    /// </summary>
+    private void OnCancelKeyPress(object sender, ConsoleCancelEventArgs e)
+    {
+        if (Interlocked.Increment(ref _cancelRequests) > 1)
+            return;
+
+        e.Cancel = true;
+        _running = false;
+        _console.Restore();
+        System.Console.WriteLine($"Shutting down {Name}... press Ctrl+C again to force quit.");
+    }
+
     public void Stop()
     {
         _running = false;
