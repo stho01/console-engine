@@ -1,6 +1,6 @@
 using Microsoft.Xna.Framework;
 
-namespace ConsoleEngine.Ecs.Physics;
+namespace ConsoleEngine.Physics;
 
 public enum ShapeType : byte
 {

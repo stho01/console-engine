@@ -31,7 +31,7 @@ Platform: **Windows only.** Rendering and input go through Win32 P/Invoke (`kern
 | Win32 signatures and structs | `Libs/ConsoleEngine.Windows/LowLevel/` (`Kernel32.cs`, `User32.cs`) |
 | Vector/matrix math | `Libs/Microsoft.Xna.Framework/` (copied from MonoGame, change only with good reason) |
 | ECS (entities, components, archetypes, chunks) | `ConsoleEngine/Ecs/`, design and phases in [`docs/design/ecs-plan.md`](docs/design/ecs-plan.md) |
-| 2D physics (bodies, colliders, broadphase, Soft Step contact solver, contact/sensor events) | `ConsoleEngine/Ecs/Physics/`, rules in [`docs/agent/03-rules.md` § Physics](docs/agent/03-rules.md#physics), design and phases in [`docs/design/physics-plan.md`](docs/design/physics-plan.md). Examples: `Examples/PhysicsSandbox` (solver), `Examples/Asteroids.Ecs` (sensors, layers) |
+| 2D physics (bodies, colliders, broadphase, Soft Step contact solver, contact/sensor events) | `ConsoleEngine.Physics/` (own assembly and NuGet package, optional), rules in [`docs/agent/03-rules.md` § Physics](docs/agent/03-rules.md#physics), design and phases in [`docs/design/physics-plan.md`](docs/design/physics-plan.md). Examples: `Examples/PhysicsSandbox` (solver), `Examples/Asteroids.Ecs` (sensors, layers) |
 | Performance measurements | `ConsoleEngine.Benchmarks/` (BenchmarkDotNet) |
 | How to use the engine | `Examples/Snake` (smallest), `Examples/TerraForM` (scenes, assets, tests), `Examples/<Game>.Ecs` (ECS port of each game: components, systems, queries, `EcsScene`; compare with `Examples/<Game>`. `Snake.Ecs` is the smallest, `TerraForM.Ecs` the fullest), `Examples/Swarm` (ECS at scale, system ordering attributes), `Examples/PhysicsSandbox` (physics: bodies, colliders, fixed step, kinematic platform) |
 | Build/test pipeline | `.github/workflows/build-and-test.yml` |
@@ -46,6 +46,7 @@ Every name in `docs/agent/` is grep-able. Search for the identifier you are inte
 |---|---|---|---|
 | `ConsoleEngine` | `ConsoleEngine/` | Library (NuGet) | Abstractions, Windows, Logger, Xna |
 | `ConsoleEngine.Abstractions` | `ConsoleEngine.Abstractions/` | Library: interfaces + value types | — |
+| `ConsoleEngine.Physics` | `ConsoleEngine.Physics/` | Library (NuGet): 2D physics on the ECS. Optional: games without physics don't reference it | ConsoleEngine, Xna |
 | `ConsoleEngine.Windows` | `Libs/ConsoleEngine.Windows/` | Library, namespace `ConsoleEngine.Native` | Abstractions |
 | `ConsoleEngine.Logger` | `Libs/ConsoleEngine.Logger/` | Exe: TCP log viewer (port 11000) | — |
 | `Microsoft.Xna.Framework` | `Libs/Microsoft.Xna.Framework/` | Library: math types | — |
@@ -54,6 +55,7 @@ Every name in `docs/agent/` is grep-able. Search for the identifier you are inte
 | `TerraForM.Tests` | `Examples/TerraForM.Tests/` | NUnit 5 + NSubstitute | TerraForM |
 | `Launcher.Tests` | `Examples/Launcher.Tests/` | NUnit 5 | Launcher |
 | `ConsoleEngine.Tests` | `ConsoleEngine.Tests/` | NUnit 5, hand-written fakes in `Fakes/` | ConsoleEngine |
+| `ConsoleEngine.Physics.Tests` | `ConsoleEngine.Physics.Tests/` | NUnit 5 | ConsoleEngine.Physics |
 | `ConsoleEngine.Benchmarks` | `ConsoleEngine.Benchmarks/` | Exe: BenchmarkDotNet 0.15.8 | ConsoleEngine |
 
 All projects: `net10.0`, `LangVersion` 14, `TreatWarningsAsErrors` = `True`. Solution: `ConsoleEngine.sln`.
@@ -123,9 +125,6 @@ ConsoleEngine/                    the engine
                                     attributes (UpdateOrderAttributes.cs), EcsScene<TGame>, FixedTimestep
     Components/                     built-in components: Position, Velocity, Rotation, Glyph, Outline, SpriteRef
     Rendering/                      Camera, OutlineLibrary, SpriteLibrary (namespace ConsoleEngine.Ecs.Rendering)
-    Physics/                        RigidBody, Collider, PhysicsSystem, ContactEvent/SensorEvent; internal:
-                                    BodyProxy, Collision (narrowphase), SpatialHashGrid (broadphase), PairCache,
-                                    ContactSolver (+ SolverBody, ContactConstraint, Softness), ArrayBuffer
     Systems/                        built-in systems: MovementSystem, GlyphRenderSystem, OutlineRenderSystem,
                                     SpriteRenderSystem
   Extensions/ArrayExtensions.cs     To1D for 2D arrays
@@ -136,6 +135,11 @@ ConsoleEngine/                    the engine
     Rendering/RenderConsole.cs      frame buffer + Draw* API
     Rendering/Sprite.cs             Pixel[,] sprites, FromString/FromStringArray
     Scenery/Scene.cs, SceneManager.cs  scene stack (Push/Pop/Set)
+ConsoleEngine.Physics/            2D physics (namespace ConsoleEngine.Physics): RigidBody, Collider, PhysicsSystem,
+                                  IPhysicsEvents, ContactEvent/SensorEvent; internal: BodyProxy, Collision
+                                  (narrowphase), SpatialHashGrid (broadphase), PairCache, ContactSolver (+ SolverBody,
+                                  ContactConstraint, Softness), ArrayBuffer
+ConsoleEngine.Physics.Tests/      physics tests (Collision, SpatialHashGrid, PhysicsSystem, PhysicsSolverTests)
 ConsoleEngine.Tests/              engine unit tests (mirrors ConsoleEngine/ folders), Fakes/ (console handler, scene)
 ConsoleEngine.Benchmarks/         BenchmarkDotNet: Baseline/ (OOP vs. struct arrays), Ecs/ (World, Query),
                                   Physics/ (brute-force baseline, whole PhysicsSystem step)
@@ -187,9 +191,9 @@ Examples/
 ## Performance
 
 **Hot path** = anything reachable from the frame loop: game and scene `OnUpdate`/`OnRender`, `RenderConsole.Draw*`,
-`Sprite` drawing, `InputHandler.Update`, `ConsoleHandler.Render`, and all of `ConsoleEngine/Ecs/` (`World.Get` is
-called per entity). In `Ecs/`, keep throws in `EcsThrowHelper` so checked methods stay inlinable, and run
-`ConsoleEngine.Benchmarks` before and after a change.
+`Sprite` drawing, `InputHandler.Update`, `ConsoleHandler.Render`, all of `ConsoleEngine/Ecs/` (`World.Get` is called per
+entity) and all of `ConsoleEngine.Physics/`. In `Ecs/`, keep throws in `EcsThrowHelper` so checked methods stay
+inlinable, and run `ConsoleEngine.Benchmarks` before and after a change.
 
 | Do | Don't |
 |---|---|
@@ -290,7 +294,7 @@ Use [Conventional Commits 1.0.0](https://www.conventionalcommits.org/en/v1.0.0/#
 | `chore` | Anything else |
 
 - **Scopes** (optional): `engine`, `abstractions`, `windows`, `logger`, `xna`, `terraform`, `snake`, `asteroids`,
-  `platformer`, `consolegame`, `swarm`, `physicssandbox`, `launcher`, `docs`, `ci`.
+  `physics`, `platformer`, `consolegame`, `swarm`, `physicssandbox`, `launcher`, `docs`, `ci`.
 - **Description:** imperative, lower case, no trailing period. For example `fix(terraform): reset score on restart`.
 - **Breaking changes** to the public `ConsoleEngine` API or target framework: `!` after the type/scope and/or a
   `BREAKING CHANGE:` footer. For example `chore!: net8.0` (#10).

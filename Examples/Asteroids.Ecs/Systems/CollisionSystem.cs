@@ -1,5 +1,5 @@
 using ConsoleEngine.Ecs;
-using ConsoleEngine.Ecs.Physics;
+using ConsoleEngine.Physics;
 
 namespace Asteroids.Ecs.Systems;
 
@@ -7,7 +7,7 @@ namespace Asteroids.Ecs.Systems;
 /// A bullet that touches an asteroid destroys both. Bullets are sensors, so every hit is a sensor begin event from
 /// the engine's <see cref="PhysicsSystem"/>. Runs after it in the fixed-step group.
 /// </summary>
-public sealed class CollisionSystem(PhysicsSystem physics) : EntitySystem
+public sealed class CollisionSystem(IPhysicsEvents physics) : EntitySystem
 {
     protected override void OnUpdate(float deltaSeconds)
     {

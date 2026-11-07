@@ -1,6 +1,5 @@
 using ConsoleEngine.Ecs;
 using ConsoleEngine.Ecs.Components;
-using ConsoleEngine.Ecs.Physics;
 using ConsoleEngine.Ecs.Systems;
 using Microsoft.Xna.Framework;
 using NUnit.Framework;
@@ -28,15 +27,20 @@ public class MovementSystemTests
     }
 
     [Test]
-    public void Update_RigidBody_LeftToPhysics()
+    public void Update_Filter_SkipsExcludedEntities()
     {
         using var world = new World();
         var group = new SystemGroup(world);
-        group.Add(new MovementSystem());
-        var body = world.Create(new Position(Vector2.Zero), new Velocity(Vector2.One), RigidBody.Dynamic());
+        group.Add(new MovementSystem(Query.Without<Frozen>()));
+        var frozen = world.Create(new Position(Vector2.Zero), new Velocity(Vector2.One), new Frozen());
+        var mover = world.Create(new Position(Vector2.Zero), new Velocity(Vector2.One));
 
         group.Update(1f);
 
-        Assert.That(world.Get<Position>(body).Value, Is.EqualTo(Vector2.Zero));
+        Assert.Multiple(() =>
+        {
+            Assert.That(world.Get<Position>(frozen).Value, Is.EqualTo(Vector2.Zero));
+            Assert.That(world.Get<Position>(mover).Value, Is.EqualTo(Vector2.One));
+        });
     }
 }

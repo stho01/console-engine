@@ -1,10 +1,10 @@
 using System;
 using BenchmarkDotNet.Attributes;
 using ConsoleEngine.Ecs;
-using ConsoleEngine.Ecs.Physics;
-using Microsoft.Xna.Framework;
+using ConsoleEngine.Physics;
 using EnginePosition = ConsoleEngine.Ecs.Components.Position;
 using EngineVelocity = ConsoleEngine.Ecs.Components.Velocity;
+using Microsoft.Xna.Framework;
 
 namespace ConsoleEngine.Benchmarks.Physics;
 

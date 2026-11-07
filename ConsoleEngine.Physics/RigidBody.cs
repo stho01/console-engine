@@ -1,6 +1,6 @@
 using System;
 
-namespace ConsoleEngine.Ecs.Physics;
+namespace ConsoleEngine.Physics;
 
 /// <summary>How a body moves. The same three types as Box2D, Unity and Godot.</summary>
 public enum BodyType : byte

@@ -163,14 +163,17 @@ fixed steps, so a system in `FixedSimulation` that reads a key's `Pressed` edge 
 input in `Simulation`, consume it in `FixedSimulation`. Asteroids.Ecs runs its physics there.
 
 <a id="physics"></a>
-**Physics** (namespace `ConsoleEngine.Ecs.Physics`, plan `docs/design/physics-plan.md`, phases 0–3 done: detection,
-events and the Soft Step contact solver of Box2D v3, without rotation). Units are console cells on both axes (a circle
-looks twice as tall as wide on screen unless the font is square, as in PhysicsSandbox).
+**Physics** (assembly and namespace `ConsoleEngine.Physics`, optional: a game references it only if it needs physics;
+plan `docs/design/physics-plan.md`, phases 0–3 done: detection, events and the Soft Step contact solver of Box2D v3,
+without rotation). Units are console cells on both axes (a circle looks twice as tall as wide on screen unless the font
+is square, as in PhysicsSandbox).
 - `RigidBody` (`RigidBody.Dynamic(mass, gravityScale, linearDamping)`, `.Kinematic()`, `.Static()`; `default` is
   static). `Collider` (`Collider.Circle(radius, offset)`, `Collider.Box(halfExtents, offset)`, then `with { … }`):
   shape, `Category`/`Mask` bits (factory default: category 1, collides with all), `IsSensor`, `Friction` (factory
   default `DefaultFriction` 0.6), `Restitution` (default 0). A `Collider` without a `RigidBody` is a static body.
   `default(Collider)` has `Mask` 0 and collides with nothing.
+- Game systems read the events through `IPhysicsEvents` (`PhysicsSystem` implements it), so another physics engine
+  could stand in behind the same components and events.
 - A dynamic or kinematic body needs a `Velocity`; without one it is handled as **static** (never moves, never pushed).
 - `PhysicsSystem` (add it to `FixedSimulation`; `DefaultCellSize` 8 cells; `Gravity` default 0; `SubstepCount` 4;
   `ContactHertz` 30, capped at a quarter of the substep rate, doubled for contacts with a static or kinematic body;
@@ -195,8 +198,10 @@ looks twice as tall as wide on screen unless the font is square, as in PhysicsSa
   the same events again in frames without a fixed step.
 
 **Built-in systems** (namespace `ConsoleEngine.Ecs.Systems`, components in `ConsoleEngine.Ecs.Components`):
-- `MovementSystem`: `Position += Velocity * delta` for entities **without** a `RigidBody` (those are moved by
-  `PhysicsSystem`). No wrapping, no bounds.
+- `MovementSystem`: `Position += Velocity * delta` for every entity with both, or only those that also match the
+  filter passed to its constructor (`new MovementSystem(Query.Without<X>())`). No wrapping, no bounds. The engine knows
+  nothing about physics: a game that uses `PhysicsSystem` must add `new MovementSystem(Query.Without<RigidBody>())`,
+  otherwise rigid bodies are moved twice (once per frame here, once per fixed step there).
 - `GlyphRenderSystem`: draws `Glyph.Character` at `floor(Position - Camera.Position)`. Off-screen cells are clipped
   by `RenderConsole.Draw`.
 - `OutlineRenderSystem`: draws the `OutlineLibrary` polygon for `Outline.Id` around the position, rotated clockwise

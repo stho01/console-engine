@@ -1,6 +1,6 @@
 using Microsoft.Xna.Framework;
 
-namespace ConsoleEngine.Ecs.Physics;
+namespace ConsoleEngine.Physics;
 
 /// <summary>
 /// One collider as the physics step sees it, copied out of the chunks at the start of the step. Everything the

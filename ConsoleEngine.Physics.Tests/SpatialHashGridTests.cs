@@ -1,10 +1,10 @@
 using System;
 using System.Collections.Generic;
-using ConsoleEngine.Ecs.Physics;
+using ConsoleEngine.Physics;
 using Microsoft.Xna.Framework;
 using NUnit.Framework;
 
-namespace ConsoleEngine.Tests.Ecs.Physics;
+namespace ConsoleEngine.Physics.Tests;
 
 public class SpatialHashGridTests
 {

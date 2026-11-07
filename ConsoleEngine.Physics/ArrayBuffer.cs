@@ -1,6 +1,6 @@
 using System;
 
-namespace ConsoleEngine.Ecs.Physics;
+namespace ConsoleEngine.Physics;
 
 /// <summary>
 /// A list over one array that is reused every step: <see cref="Clear"/> keeps the array, and it only grows (by

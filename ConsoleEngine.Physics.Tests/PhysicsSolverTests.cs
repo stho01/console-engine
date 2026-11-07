@@ -1,11 +1,11 @@
 using System;
 using ConsoleEngine.Ecs;
 using ConsoleEngine.Ecs.Components;
-using ConsoleEngine.Ecs.Physics;
+using ConsoleEngine.Physics;
 using Microsoft.Xna.Framework;
 using NUnit.Framework;
 
-namespace ConsoleEngine.Tests.Ecs.Physics;
+namespace ConsoleEngine.Physics.Tests;
 
 /// <summary>Contact response through whole steps at 60 Hz, as a game runs it. y points down.</summary>
 public class PhysicsSolverTests

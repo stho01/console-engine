@@ -35,6 +35,7 @@ Support/user words are **[inferred]**. The team may also use Norwegian terms. Ad
 | substep | One of the slices a physics step is cut into for the solver (default 4) | `PhysicsSystem.SubstepCount` |
 | soft contact / soft step | Contacts act as stiff, damped springs instead of hard corrections (Box2D v3) | `Softness`, `PhysicsSystem.ContactHertz`, `ContactDampingRatio`, `ContactPushMaxSpeed` |
 | warm starting | Starting the solver with the previous step's impulses, so stacks rest instead of jitter | `PairCache.Add` / `StoreImpulses`, `ContactConstraint.NormalImpulse` |
+| physics events interface | What game code depends on instead of the concrete physics system | `IPhysicsEvents` |
 | speculative contact | A contact created before two bodies touch, because they can close the gap this step; stops tunnelling | `BodyProxy.Margin`, `PhysicsSystem.CreateContacts` |
 | moving platform | A kinematic body moved by its velocity; never pushed, carries what stands on it by friction | `BodyType.Kinematic`, PhysicsSandbox `Patrol` / `PatrolSystem` |
 | fixed step / fixed timestep | A simulation step of constant length (default 1/60 s), run 0 or more times per frame so physics doesn't depend on the frame rate | `FixedTimestep`, `EcsScene.FixedSimulation` |

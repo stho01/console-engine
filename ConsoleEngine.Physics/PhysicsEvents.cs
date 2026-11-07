@@ -1,4 +1,6 @@
-namespace ConsoleEngine.Ecs.Physics;
+using ConsoleEngine.Ecs;
+
+namespace ConsoleEngine.Physics;
 
 /// <summary>
 /// Two non-sensor colliders started or stopped touching. <see cref="A"/> has the lower entity id. In an end event

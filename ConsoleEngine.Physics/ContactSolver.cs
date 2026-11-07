@@ -1,7 +1,7 @@
 using System;
 using Microsoft.Xna.Framework;
 
-namespace ConsoleEngine.Ecs.Physics;
+namespace ConsoleEngine.Physics;
 
 /// <summary>
 /// Soft Step contact solver, as in Box2D v3 (Erin Catto, "Solver2D", 2024), without rotation. A step is split into

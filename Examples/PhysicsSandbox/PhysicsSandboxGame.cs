@@ -6,7 +6,7 @@ using PhysicsSandbox.Scenes;
 namespace PhysicsSandbox;
 
 /// <summary>
-/// Demo of the engine's physics (<c>ConsoleEngine.Ecs.Physics</c>): balls and boxes fall, bounce, slide and stack on
+/// Demo of the engine's physics (<c>ConsoleEngine.Physics</c>): balls and boxes fall, bounce, slide and stack on
 /// fixed ledges and a moving platform. Square font cells, so circles look round. Everything is set up in
 /// <see cref="SandboxScene"/>.
 /// </summary>

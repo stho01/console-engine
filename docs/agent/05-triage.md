@@ -184,7 +184,7 @@
 <a id="p17"></a>
 ## P17 — Physics: bodies pass through each other / sink / no hit / hit reported twice or late
 
-Applies to PhysicsSandbox, Asteroids.Ecs and any game on `ConsoleEngine.Ecs.Physics`. Rules: [03 § Physics](03-rules.md#physics),
+Applies to PhysicsSandbox, Asteroids.Ecs and any game on `ConsoleEngine.Physics`. Rules: [03 § Physics](03-rules.md#physics),
 flow: [04 § F11](04-flows.md#f11).
 
 1. Bodies overlap and keep going → check, in order: a filter or pair rule excludes the pair (step 2 below; in Asteroids.Ecs
@@ -201,5 +201,7 @@ flow: [04 § F11](04-flows.md#f11).
    at all instead of `FixedSimulation`. Stop.
 5. The same hit handled several times, or hits missed → the reacting system reads the events from `Simulation` instead of
    after `PhysicsSystem` in `FixedSimulation` ([03 § Physics](03-rules.md#physics)). Stop.
-6. Asteroids.Ecs: one bullet removed two asteroids → by design when it touches both in the same step ([03 § Asteroids.Ecs
+6. Rigid bodies move too fast, or faster at a higher FPS → the scene adds `new MovementSystem()` without the filter, so they are
+   moved twice. Use `new MovementSystem(Query.Without<RigidBody>())` ([03 § Physics](03-rules.md#physics)). Stop.
+7. Asteroids.Ecs: one bullet removed two asteroids → by design when it touches both in the same step ([03 § Asteroids.Ecs
    row](03-rules.md)). Stop.

@@ -1,6 +1,6 @@
 using System;
 
-namespace ConsoleEngine.Ecs.Physics;
+namespace ConsoleEngine.Physics;
 
 /// <summary>
 /// Broadphase: a uniform grid over an unbounded world, rebuilt every step. Each body is put in every cell its bounding

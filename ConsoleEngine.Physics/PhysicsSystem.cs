@@ -1,8 +1,9 @@
 using System;
+using ConsoleEngine.Ecs;
 using ConsoleEngine.Ecs.Components;
 using Microsoft.Xna.Framework;
 
-namespace ConsoleEngine.Ecs.Physics;
+namespace ConsoleEngine.Physics;
 
 /// <summary>
 /// One physics step. Add it first to <c>EcsScene.FixedSimulation</c>, and the systems that react to its events after
@@ -22,7 +23,7 @@ namespace ConsoleEngine.Ecs.Physics;
 /// (<see cref="Collider.Category"/>/<see cref="Collider.Mask"/>), two static bodies are never tested, two sensors never
 /// detect each other, and a non-sensor pair needs a dynamic body.
 /// </summary>
-public sealed class PhysicsSystem : EntitySystem
+public sealed class PhysicsSystem : EntitySystem, IPhysicsEvents
 {
     //**********************************************************
     //** fields

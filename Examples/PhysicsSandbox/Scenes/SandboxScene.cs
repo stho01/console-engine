@@ -1,8 +1,8 @@
 using System;
 using ConsoleEngine.Ecs;
 using ConsoleEngine.Ecs.Components;
-using ConsoleEngine.Ecs.Physics;
 using ConsoleEngine.Ecs.Systems;
+using ConsoleEngine.Physics;
 using Microsoft.Xna.Framework;
 using PhysicsSandbox.Components;
 using PhysicsSandbox.Systems;

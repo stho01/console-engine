@@ -1,6 +1,6 @@
 using ConsoleEngine.Ecs;
 using ConsoleEngine.Ecs.Components;
-using ConsoleEngine.Ecs.Physics;
+using ConsoleEngine.Physics;
 using PhysicsSandbox.Components;
 
 namespace PhysicsSandbox.Systems;

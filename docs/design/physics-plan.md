@@ -10,7 +10,7 @@ begrunnet i § 10.
 
 **Mål**
 
-- En egen, liten 2D-fysikkmodul i `ConsoleEngine/Ecs/Physics/` (namespace `ConsoleEngine.Ecs.Physics`), **uten
+- En egen, liten 2D-fysikkmodul i en egen assembly, `ConsoleEngine.Physics` (se § 4b), **uten
   tredjepartsbiblioteker**. Vi følger publiserte design (Box2D v3 først), men skriver koden selv.
 - **Ytelse er prioritet 1.** 0 bytes allokert per fysikksteg i steady state. Lineær lesing av chunk-data, tette arrays
   i løseren, ingen `World.Get` per kontakt.
@@ -72,7 +72,7 @@ Standard: Fiedler, «Fix Your Timestep».
 
 ## 4. Komponenter
 
-Alle er `unmanaged` structs i `ConsoleEngine.Ecs.Physics`. Posisjon og hastighet gjenbruker motorens `Position` og
+Alle er `unmanaged` structs i `ConsoleEngine.Physics`. Posisjon og hastighet gjenbruker motorens `Position` og
 `Velocity`.
 
 | Komponent | Felter | Standard |
@@ -94,9 +94,24 @@ uansett sammen med formen. En `Collider` uten `RigidBody` er en statisk kropp, s
 - **Blandingsregler** for et par: friksjon = √(a·b), restitusjon = max(a, b) (Box2D-standard).
 - **Navnekollisjon:** `Examples/Asteroids.Ecs/Components/Collider.cs` finnes allerede. Den må få nytt navn eller
   erstattes før piloten, ellers skygger den motorens type (se Gotchas i `AGENTS.md`).
-- **`MovementSystem`** får `Without<RigidBody>`, slik at fysikkropper ikke flyttes to ganger (samme regel som Unity:
-  ikke flytt en rigidbody direkte). Ingen eksisterende entitet har `RigidBody`, så dette er **ikke** en breaking
-  change. Det dokumenteres, men trenger ingen `!`-commit.
+- **`MovementSystem`** flytter ikke fysikkropper. Spill med fysikk legger til
+  `new MovementSystem(Query.Without<RigidBody>())` (samme regel som Unity: ikke flytt en rigidbody direkte). Se § 4b.
+
+## 4b. Egen assembly og grensesnitt (2026-11-07)
+
+Fysikken ligger i `ConsoleEngine.Physics` (egen DLL og NuGet-pakke), ikke i `ConsoleEngine`. Et spill uten fysikk
+refererer ikke til den. Avhengigheten går bare én vei: fysikken bruker motorens offentlige ECS-API (`EntitySystem`,
+`Query`, `EntityChunk`, `Position`, `Velocity`), og motoren vet ingenting om fysikken.
+
+- **`MovementSystem` blir i motoren.** Før flyttingen hadde den `Without<RigidBody>`. Nå tar den et valgfritt filter i
+  konstruktøren (`Position` og `Velocity` kreves alltid), og spill med fysikk sender `Query.Without<RigidBody>()`.
+  Glemmer et spill filteret, flyttes rigid bodies to ganger. Det står i `05-triage.md` P17.
+- **Grensen mot andre fysikkmotorer er dataene, som i Unity DOTS** (Unity Physics og Havok bruker samme komponenter):
+  `RigidBody`, `Collider`, `Position`, `Velocity` og hendelsene. En adapter er et annet system som leser de samme
+  komponentene og skriver tilbake posisjon, fart og hendelser. Spillkoden leser hendelsene gjennom `IPhysicsEvents`,
+  ett virtuelt kall per steg, ikke per kropp. Et objekt-API i Godot-stil (`IPhysicsWorld.CreateBody` …) er valgt bort:
+  virtuelle kall per kropp og synkronisering av håndtak går imot ytelseskravet.
+- `IPhysicsQueries` (`Raycast`, `Overlap*`, `CastBox`) kommer i fase 4, når spørringene finnes.
 
 ## 5. Ett fysikksteg
 
@@ -240,7 +255,7 @@ ristende kontroll.
 - `RigidBody`, `Collider` (med filter), `PhysicsSystem`, gather, `SpatialHashGrid`, `Collision`, `PairCache`,
   begin/end-hendelser, sensorer. Ingen kontaktrespons ennå. Scatter trengs først når løseren endrer hastigheter
   (fase 3); i fase 2 skriver integrasjonen rett i chunkene med en `IForEach`-jobb.
-- `MovementSystem` har `Without<RigidBody>`.
+- `MovementSystem` har `Without<RigidBody>` (etter § 4b: et filter spillet sender inn).
 - **Pilot: Asteroids.Ecs.** Spillets `Collider` er erstattet av motorens. Kuler er kinematiske sensorer, asteroider
   dynamiske, og `CollisionLayers` gjør at bare kule og asteroide testes mot hverandre. `CollisionSystem` leser
   `SensorBeginEvents` i `FixedSimulation`. `Bullet`-taggen er fjernet (sensoren er kula). Endret oppførsel: én kule

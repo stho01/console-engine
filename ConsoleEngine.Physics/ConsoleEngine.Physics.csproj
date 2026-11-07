@@ -1,0 +1,18 @@
+<Project Sdk="Microsoft.NET.Sdk">
+    <PropertyGroup>
+        <TargetFramework>net10.0</TargetFramework>
+        <LangVersion>14</LangVersion>
+        <Configurations>Release;Debug</Configurations>
+        <Platforms>AnyCPU</Platforms>
+        <GeneratePackageOnBuild>true</GeneratePackageOnBuild>
+        <PackageVersion>0.2.0</PackageVersion>
+        <TreatWarningsAsErrors>True</TreatWarningsAsErrors>
+    </PropertyGroup>
+    <ItemGroup>
+      <InternalsVisibleTo Include="ConsoleEngine.Physics.Tests" />
+    </ItemGroup>
+    <ItemGroup>
+      <ProjectReference Include="..\ConsoleEngine\ConsoleEngine.csproj" />
+      <ProjectReference Include="..\Libs\Microsoft.Xna.Framework\Microsoft.Xna.Framework.csproj" />
+    </ItemGroup>
+</Project>

@@ -1,11 +1,12 @@
 using System;
 using ConsoleEngine.Ecs;
 using ConsoleEngine.Ecs.Components;
-using ConsoleEngine.Ecs.Physics;
+using ConsoleEngine.Ecs.Systems;
+using ConsoleEngine.Physics;
 using Microsoft.Xna.Framework;
 using NUnit.Framework;
 
-namespace ConsoleEngine.Tests.Ecs.Physics;
+namespace ConsoleEngine.Physics.Tests;
 
 public class PhysicsSystemTests
 {
@@ -339,6 +340,22 @@ public class PhysicsSystemTests
 
     [Test]
     public void RigidBodyDefault_IsStatic() => Assert.That(default(RigidBody).Type, Is.EqualTo(BodyType.Static));
+
+    [Test]
+    public void Update_MovementSystemWithoutRigidBodies_EachEntityMovedOnce()
+    {
+        _group.Add(new MovementSystem(Query.Without<RigidBody>()));
+        var body = _world.Create(new Position(Vector2.Zero), new Velocity(new Vector2(2, 0)), RigidBody.Kinematic());
+        var plain = _world.Create(new Position(Vector2.Zero), new Velocity(new Vector2(2, 0)));
+
+        _group.Update(Step);
+
+        Assert.Multiple(() =>
+        {
+            Assert.That(_world.Get<Position>(body).Value, Is.EqualTo(new Vector2(1, 0)), "moved by physics only");
+            Assert.That(_world.Get<Position>(plain).Value, Is.EqualTo(new Vector2(1, 0)), "moved by MovementSystem");
+        });
+    }
 
     //**********************************************************
     //** helpers

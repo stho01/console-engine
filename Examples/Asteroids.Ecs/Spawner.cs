@@ -2,8 +2,8 @@ using System;
 using Asteroids.Ecs.Components;
 using ConsoleEngine.Ecs;
 using ConsoleEngine.Ecs.Components;
-using ConsoleEngine.Ecs.Physics;
 using ConsoleEngine.Ecs.Rendering;
+using ConsoleEngine.Physics;
 using Microsoft.Xna.Framework;
 
 namespace Asteroids.Ecs;

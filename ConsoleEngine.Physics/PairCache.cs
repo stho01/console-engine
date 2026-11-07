@@ -1,6 +1,7 @@
 using System;
+using ConsoleEngine.Ecs;
 
-namespace ConsoleEngine.Ecs.Physics;
+namespace ConsoleEngine.Physics;
 
 /// <summary>What kind of overlap a cached pair is.</summary>
 internal enum PairKind : byte

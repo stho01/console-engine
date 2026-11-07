@@ -1,9 +1,9 @@
 using System;
 using Asteroids.Ecs.Systems;
 using ConsoleEngine.Ecs;
-using ConsoleEngine.Ecs.Physics;
 using ConsoleEngine.Ecs.Rendering;
 using ConsoleEngine.Ecs.Systems;
+using ConsoleEngine.Physics;
 using Microsoft.Xna.Framework;
 
 namespace Asteroids.Ecs.Scenes;
@@ -35,7 +35,7 @@ public sealed class AsteroidsScene(int asteroidCount) : EcsScene<AsteroidsEcsGam
         FixedSimulation.Add(new CollisionSystem(physics));
 
         Simulation.Add(new ShipControlSystem());
-        Simulation.Add(new MovementSystem());
+        Simulation.Add(new MovementSystem(Query.Without<RigidBody>()));
         Simulation.Add(new WrapSystem(playfield));
         Simulation.Add(new LifetimeSystem());
         Simulation.Add(new CameraSystem(Camera, Console));
