@@ -181,8 +181,9 @@ Runs in [F9](#f9) step 1, in this order. The keyboard is read once into a `Miner
 | 5 | Side key, else down, else up (only on a ladder): walk/climb into air, or dig | `MoveOrDig` | Target unbreakable (grass, bedrock, outside the mine) → nothing. `DigCooldown > 0` → no hit this frame | Debris, cracks, burst on break, ore +1 in the HUD bag |
 | 6 | At the counter `↑`/`↓` move the selection; `E` (pressed): deliver, buy the selected item, build a lift segment, or get in / call the lift | `InteractionSystem.Interact` | `E` not pressed this frame, miner moving or riding, or not on a spot (row 9 at columns 3–6 / 8–11 / 23–24) or a landing in column 21 → nothing. Empty bag / not enough gold → dust puff only | Coins, `+<n>g` / `-10g` / `ELEVATOR +10m` |
 | 7 | Slide `Position`, finish the move, landing dust | `MinerMotionSystem.Move` | — | — |
-| 9 | Burn fuses; at 0 blast the 3 × 3, push the miner, chain | `DynamiteSystem` | Fuse > 0 → only sparks. No miner entity → nothing burns | Flash, rubble, shake |
 | 8 | Move the car; carry the rider; a called car picks up the miner waiting on its landing | `ElevatorSystem` → `Elevator.Update`, `Carry` | Not riding and (car didn't arrive this frame, not called, or the miner isn't idle on that landing) → nothing | Car and miner move together |
+| 9 | Burn fuses; at 0 blast the 3 × 3, push the miner, chain | `DynamiteSystem` | Fuse > 0 → only sparks. No miner entity → nothing burns | Flash, rubble, shake |
+| 10 | Burn oil underground; set the headlamp's reach, flicker and low/empty state; smoke when low | `LampSystem` | On the surface → no burn | HUD oil gauge, shorter / flickering cone |
 
 <a id="f11"></a>
 ## F11 — EternalDigger start, save and load (`TitleScene` → `MineScene` → `SaveSystem`)

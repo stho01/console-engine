@@ -70,10 +70,15 @@ public sealed class LightMap
     /// <paramref name="lampOrigin"/> is in tile coordinates (the miner's tile centre is column + .5, row + .5).
     /// </summary>
     public void Compute(Mine mine, int firstRow, int rows, Vector2 lampOrigin, Vector2 lampDirection) =>
-        Compute(mine, firstRow, rows, lampOrigin, lampDirection, LampRange);
+        Compute(mine, firstRow, rows, lampOrigin, lampDirection, LampRange, false);
 
-    /// <summary>The same, with the cone reaching <paramref name="reach"/> tiles (0: only the close radius).</summary>
-    public void Compute(Mine mine, int firstRow, int rows, Vector2 lampOrigin, Vector2 lampDirection, float reach)
+    /// <summary>
+    /// The same, with the cone reaching <paramref name="reach"/> tiles. A reach of 0 (an empty lamp) leaves only the
+    /// close radius, one level darker. <paramref name="dimmed"/> (a flicker frame) makes all lamp light one level
+    /// darker. Daylight is never affected.
+    /// </summary>
+    public void Compute(Mine mine, int firstRow, int rows, Vector2 lampOrigin, Vector2 lampDirection, float reach,
+        bool dimmed)
     {
         FirstRow = Math.Max(0, firstRow);
         Rows = Math.Clamp(rows, 0, _maxRows);
@@ -84,7 +89,11 @@ public sealed class LightMap
         for (var column = 0; column < _columns; column++)
         {
             var row = FirstRow + r;
-            var level = Math.Max(Daylight(mine, column, row), Lamp(mine, column, row, lampOrigin, direction, reach));
+            var lamp = Lamp(mine, column, row, lampOrigin, direction, reach);
+            if (lamp > Dim && (dimmed || reach <= 0f))
+                lamp--;
+
+            var level = Math.Max(Daylight(mine, column, row), lamp);
             _levels[r * _columns + column] = level;
             if (level > Dark)
                 mine.At(column, row).Seen = true;

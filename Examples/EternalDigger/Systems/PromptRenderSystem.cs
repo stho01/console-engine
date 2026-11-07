@@ -29,6 +29,7 @@ public sealed class PromptRenderSystem(
     public const string KitUnlocksText = "UNLOCKS DYNAMITE";
     public const string SoldOutText = "SOLD OUT";
     public const string MaxTierText = "MAX";
+    public const string FullText = "FULL";
     public const char TierOn = '●';
     public const char TierOff = '○';
 
@@ -112,8 +113,12 @@ public sealed class PromptRenderSystem(
             _shownKit = miner.HasBlastingKit;
             _panelName = $" ↑ {ShopCounter.Name(item, miner)} ↓ ";
             var upgrade = ShopCounter.IsUpgrade(item);
-            _panelOwned = upgrade ? Pips(owned) : owned >= 0 ? $"HAVE {owned}" : KitUnlocksText;
-            _panelPrice = price != Shop.SoldOut ? $"{price}g {KeyHint}" : upgrade ? MaxTierText : SoldOutText;
+            _panelOwned = upgrade ? Pips(owned)
+                : item == ShopItem.LampOil ? $"OIL {owned}%"
+                : owned >= 0 ? $"HAVE {owned}" : KitUnlocksText;
+            _panelPrice = price != Shop.SoldOut ? $"{price}g {KeyHint}"
+                : upgrade ? MaxTierText
+                : item == ShopItem.LampOil ? FullText : SoldOutText;
         }
 
         var priceColor = price == Shop.SoldOut ? ConsoleColor.DarkGray : PriceColor(miner.Gold, price);

@@ -74,6 +74,9 @@ public struct Miner
     /// <summary>Sticks planted whose fuse still burns. A save puts them back into <see cref="Dynamite"/>.</summary>
     public int LitDynamite;
 
+    /// <summary>Lamp oil, 0 to <see cref="LampOil.TankSize"/>. Burns underground only.</summary>
+    public float Oil;
+
     // Upgrades (0 to Upgrades.MaxTier)
     public int ShovelTier;
     public int LampTier;

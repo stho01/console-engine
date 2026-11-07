@@ -4,7 +4,7 @@ A side-view, tile-by-tile digging game built on the ConsoleEngine ECS. Dig down 
 and gold back to the house on the surface, sell it, and buy ladders so you can climb out of ever deeper shafts.
 
 ```text
- ETERNAL DIGGER   GOLD 0g   LADDERS 8   DEPTH 0m   BAG ◆0 ◆0 ◆0 = 0g
+ ETERNAL DIGGER   GOLD 0g  ╟╢8  OIL ▮▮▮▮▮▮▮▮  DEPTH 0m  BAG ◆0 ◆0 ◆0 ◆0 = 0g
  ←→ walk/dig   ↓ dig   ↑ climb   SPACE ladder   E use/buy   hold E dynamite   hold R rescue   ESC save & quit
         ▄▄▀▄▀▄▀▄▀▄▀▄▀▄▀▄▀▄▀▄▀▄▀▄
          ─── EternalDigger ─────
@@ -60,7 +60,7 @@ On Windows the game sets a 120 × 48 console with an 8 × 16 font. In a macOS or
 | `↓` or `S` (hold) | Dig down, or step down a ladder |
 | `↑` or `W` (hold) | Climb up. Only works while standing on a ladder |
 | `SPACE` | Place a ladder in the tile you stand in |
-| `E` | At the house door: sell your ore. At the shop counter: buy the selected item (ladders 10g, the blasting kit 2500g, then dynamite 100g a stick). At the `LIFT` sign: build 10 m of lift. On the lift's top or bottom landing: call the car, or get in |
+| `E` | At the house door: sell your ore. At the shop counter: buy the selected item (ladders, lamp oil, upgrades, the blasting kit, then dynamite). At the `LIFT` sign: build 10 m of lift. On the lift's top or bottom landing: call the car, or get in |
 | `E` (hold 0.5 s) underground | Plant a lit stick of dynamite in the rock you face. The fuse burns 2 s: walk away. The blast clears 3 × 3 tiles of any rock, obsidian too, and bags the ore |
 | `↑` / `↓` at the shop counter | Choose what to buy. The panel above the miner shows the item, what you have and the price |
 | `↑` / `↓` in the lift car | Ride to the top / the bottom. `←` `→` (or `↓` at the bottom) gets out |
@@ -89,5 +89,5 @@ The original design contract the game was built from is in
   `Position`/`Velocity`/`Glyph` components, `Camera`, `RenderConsole`, `Input`.
 - **Not entities:** the terrain. The mine is a plain grid (`Mining/Mine.cs`) that is drawn from the rows the camera
   can see, so an endless mine costs nothing per frame. Entities are the miner, particles and floating numbers.
-- **Status:** builds with 0 warnings, 192 tests pass. It has been run in a macOS terminal, but has not been played with
+- **Status:** builds with 0 warnings, 202 tests pass. It has been run in a macOS terminal, but has not been played with
   a real keyboard or checked in the Windows console. See [Known limitations](docs/gameplay.md#known-limitations).

@@ -52,14 +52,14 @@ public class MinerVisibilityTests
         _motion = new MinerMotionSystem(_mine, effects);
 
         _simulation = new SystemGroup(_world);
-        _simulation.Add(new LightingSystem(_mine, light, _camera));
+        _simulation.Add(new LightingSystem(_mine, light, _camera, new Headlamp()));
         _simulation.Add(new DynamiteSystem(_mine, effects));
         _simulation.Add(new ParticlePhysicsSystem(_mine));
         _simulation.Add(new ParticleLifetimeSystem());
 
         _presentation = new SystemGroup(_world);
         _presentation.Add(new ParticleRenderSystem(canvas, _camera, light));
-        _presentation.Add(new MinerRenderSystem(canvas, _camera));
+        _presentation.Add(new MinerRenderSystem(canvas, _camera, new Headlamp()));
 
         _mine.At(Column, Row) = new TileCell { Type = TileType.Air };
         _mine.At(Column, Row + 1) = new TileCell { Type = TileType.Granite };

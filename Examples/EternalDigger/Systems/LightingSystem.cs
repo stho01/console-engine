@@ -10,10 +10,11 @@ using Microsoft.Xna.Framework;
 namespace EternalDigger.Systems;
 
 /// <summary>
-/// Computes the <see cref="LightMap"/> for the rows on screen from the miner's headlamp. Uses the sliding
+/// Computes the <see cref="LightMap"/> for the rows on screen from the miner's headlamp (its reach and flicker from
+/// the <see cref="Headlamp"/>). Uses the sliding
 /// <c>Position</c>, so the light moves smoothly with the miner.
 /// </summary>
-public sealed class LightingSystem(Mine mine, LightMap light, Camera camera) : EntitySystem
+public sealed class LightingSystem(Mine mine, LightMap light, Camera camera, Headlamp headlamp) : EntitySystem
 {
     //**********************************************************
     //** fields
@@ -37,7 +38,7 @@ public sealed class LightingSystem(Mine mine, LightMap light, Camera camera) : E
             var position = chunk.GetSpan<Position>()[0].Value;
             var lamp = new Vector2(position.X / Layout.TileWidth + .5f, position.Y / Layout.TileHeight + .5f);
             var miner = chunk.GetSpan<Miner>()[0];
-            light.Compute(mine, firstRow, VisibleRows, lamp, miner.LampDirection, Upgrades.LampReach(miner.LampTier));
+            light.Compute(mine, firstRow, VisibleRows, lamp, miner.LampDirection, headlamp.Reach, headlamp.IsDimmed);
             return;
         }
     }

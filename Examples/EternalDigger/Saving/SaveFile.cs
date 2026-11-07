@@ -20,9 +20,9 @@ public enum SaveStatus : byte
 /// <summary>
 /// The save file: one slot, binary, versioned, little-endian. Fields in order, each from the version in brackets:
 /// magic <c>EDSV</c>, format version, seed, miner column, row and facing, gold, ladders, copper, silver and gold ore
-/// (1); lift segments and car row (2); gem ore (3); blasting kit and dynamite (4); the four upgrade tiers (5); then
-/// the changed tiles (count, then row, column, type, damage, flags each). Older versions are still read: missing
-/// fields get their defaults. Writing goes to a temp file first, so a crash never leaves half a save.
+/// (1); lift segments and car row (2); gem ore (3); blasting kit and dynamite (4); the four upgrade tiers (5); lamp
+/// oil (6); then the changed tiles (count, then row, column, type, damage, flags each). Older versions are still read:
+/// missing fields get their defaults. Writing goes to a temp file first, so a crash never leaves half a save.
 /// </summary>
 public static class SaveFile
 {
@@ -31,7 +31,7 @@ public static class SaveFile
     //**********************************************************
 
     /// <summary>The save-format version written. Bump it whenever the layout changes, and keep reading older ones.</summary>
-    public const int Version = 5;
+    public const int Version = 6;
 
     /// <summary>The oldest save-format version this build still reads.</summary>
     public const int OldestVersion = 1;
@@ -127,6 +127,7 @@ public static class SaveFile
         writer.Write((byte)data.LampTier);
         writer.Write((byte)data.BagTier);
         writer.Write((byte)data.DetectorTier);
+        writer.Write(data.Oil);
 
         writer.Write(data.Changes.Count);
         for (var i = 0; i < data.Changes.Count; i++)
@@ -210,6 +211,10 @@ public static class SaveFile
         if (Math.Max(Math.Max(shovel, lamp), Math.Max(bag, detector)) > Upgrades.MaxTier)
             return SaveStatus.Corrupt;
 
+        var oil = version >= 6 ? reader.ReadSingle() : LampOil.TankSize;
+        if (!(oil >= 0f && oil <= LampOil.TankSize))
+            return SaveStatus.Corrupt;
+
         var count = reader.ReadInt32();
         if ((uint)count > (MaxRow + 1L) * Mine.Columns)
             return SaveStatus.Corrupt;
@@ -256,6 +261,7 @@ public static class SaveFile
             LampTier = lamp,
             BagTier = bag,
             DetectorTier = detector,
+            Oil = oil,
             ElevatorSegments = segments,
             ElevatorCarRow = carRow,
             Changes = changes

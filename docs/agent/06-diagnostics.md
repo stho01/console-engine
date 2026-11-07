@@ -84,7 +84,7 @@ using [04](04-flows.md).
 | Text | Where | Meaning |
 |---|---|---|
 | ` ETERNAL DIGGER ` | `HudSystem.Title`, row 0 | Title |
-| `  GOLD <n>g   LADDERS <n>[   LIFT <n>m][   DYNAMITE <n>]   DEPTH <n>m   BAG ◆<copper> ◆<silver> ◆<gold> ◆<gem> = <value>g` (gem `◆` magenta) | `HudSystem.DrawStatus`, row 0. `N0` formatting in the user's culture | Inventory and depth |
+| `  GOLD <n>g  ╟╢<ladders>[  LIFT <n>m][  ¡<dynamite>]  OIL ▮▮▮▮▮▯▯▯  DEPTH <n>m  BAG ◆<copper> ◆<silver> ◆<gold> ◆<gem> = <value>g` (gem `◆` magenta, `╟╢` yellow, `¡` red; the gauge white, yellow below half, blinking red when low) | `HudSystem.DrawStatus`, row 0. `N0` formatting in the user's culture | Inventory and depth |
 | ` ←→ walk/dig   ↓ dig   ↑ climb   SPACE ladder   E use/buy   hold E dynamite   hold R rescue   ESC save & quit` | `HudSystem.KeyHelp`, row 1 | Default help line |
 | ` SAVED ` (grey, then dark grey, 1.5 s) | `HudSystem.SavedText`, right end of row 1 | The game was just saved |
 | ` SAVE FAILED` (red, 1.5 s) | `HudSystem.SaveFailedText`, right end of row 1 | The save file couldn't be written (`GameSaver.LastSaveFailed`); play goes on |
@@ -98,16 +98,16 @@ using [04](04-flows.md).
 | ` NO LADDERS LEFT!  Hold R to be rescued (the bag is lost) ` (blinking) | `HudSystem.NoLaddersWarning` | 0 ladders and below the surface |
 | ` DELIVER [E] ` | `PromptRenderSystem.DeliverText` | Standing at the door |
 | ` BUILD LIFT +10m [E] <price>g ` (red when short) | `PromptRenderSystem.BuildLiftText` | Standing at the lift sign |
-| ` ↑ LADDER ↓ ` / ` ↑ BLASTING KIT ↓ ` / ` ↑ DYNAMITE ↓ `, (or ` ↑ SHOVEL ↓ ` / `LAMP` / `BAG` / `DETECTOR`), then `HAVE <n>`, `UNLOCKS DYNAMITE` or tier pips `●●○`, then `<price>g [E]` (red when short), `MAX` or `SOLD OUT` | `PromptRenderSystem.DrawCounterPanel`, `Shop.LadderName`/`BlastingKitName`/`DynamiteName`, `KitUnlocksText`, `SoldOutText` | At the shop counter |
+| ` ↑ LADDER ↓ ` / ` ↑ BLASTING KIT ↓ ` / ` ↑ DYNAMITE ↓ `, (or ` ↑ FILL LAMP ↓ `, ` ↑ SHOVEL ↓ ` / `LAMP` / `BAG` / `DETECTOR`), then `HAVE <n>`, `OIL <n>%`, `UNLOCKS DYNAMITE` or tier pips `●●○`, then `<price>g [E]` (red when short), `FULL`, `MAX` or `SOLD OUT` | `PromptRenderSystem.DrawCounterPanel`, `Shop.LadderName`/`BlastingKitName`/`DynamiteName`, `KitUnlocksText`, `SoldOutText` | At the shop counter |
 | ` LIGHTING FUSE ` + bar | `HudSystem.PlantLabel`, row 1 | `E` held underground to plant |
-| `   DYNAMITE <n>` | `HudSystem.DrawStatus`, row 0, after the lift | Once the kit is bought |
+| `  ¡<n>` (red `¡`) | `HudSystem.DrawStatus`, row 0, after the lift | Dynamite, once the kit is bought |
 | `BLASTING`, ` ¡ ¡ ¡ ` | `HouseRenderSystem.BlastingText`, `BlastingDisplay` (shed) | Scenery |
 | ` LIFT BLOCKED BY OBSIDIAN ` (red) | `PromptRenderSystem.LiftBlockedText` | At the lift sign while the next segment has obsidian in the shaft |
 | `TOO HARD` (red, floating) | `FloatingTextRenderSystem.TooHardText` | The shovel hit obsidian (at most once a second) |
 | ` CALL LIFT [E] ` / ` GET IN [E] ` | `PromptRenderSystem.CallLiftText`, `BoardLiftText` | On a lift landing, car away / there |
 | ` ↑↓ RIDE   ←→ GET OUT ` | `PromptRenderSystem.RideText` | In the stopped car |
 | `ELEVATOR +10m` (floating) | `FloatingTextRenderSystem.ElevatorLabel` | A lift segment was built |
-| `   LIFT <n>m` | `HudSystem.DrawStatus`, row 0, after the ladders | Once a lift is built |
+| `  LIFT <n>m` | `HudSystem.DrawStatus`, row 0, after the ladders | Once a lift is built |
 | ` LIFT ` | `HouseRenderSystem.LiftText` (sign beside the mine entrance) | Scenery |
 | `+<n>g` / `-10g` (floating) | `FloatingTextRenderSystem` | Delivery / purchase |
 | ` EternalDigger `, `SHOP`, `MINE` | `HouseRenderSystem` (house sign, shop, shaft frame) | Scenery |

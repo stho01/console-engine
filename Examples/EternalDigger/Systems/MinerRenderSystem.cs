@@ -10,11 +10,12 @@ namespace EternalDigger.Systems;
 
 /// <summary>
 /// The miner, 4 x 2 cells, drawn for facing right and mirrored for left. Top row: backpack, head and headlamp.
+/// The lamp dims to dark yellow when the oil is low and to dark grey (without its glow) when it is empty.
 /// Bottom row: body, legs (animated by motion) and the shovel, which swings towards the tile being dug, plus a red
 /// <c>¡</c> on the belt while carrying dynamite. Underground
 /// the lamp leaves a short glow in the direction it points.
 /// </summary>
-public sealed class MinerRenderSystem(Canvas canvas, Camera camera) : EntitySystem
+public sealed class MinerRenderSystem(Canvas canvas, Camera camera, Headlamp headlamp) : EntitySystem
 {
     //**********************************************************
     //** fields
@@ -70,7 +71,10 @@ public sealed class MinerRenderSystem(Canvas canvas, Camera camera) : EntitySyst
         var lamp = miner.LampDirection.Y < -.5f ? '▲' : miner.LampDirection.Y > .5f ? '▼' : '•';
         DrawCell(x, y, facingRight, 1, '▄', Pack);
         DrawCell(x, y, facingRight, 2, '☻', Skin);
-        DrawCell(x, y, facingRight, 3, lamp, LampColors[Math.Clamp(miner.LampTier, 0, LampColors.Length - 1)]);
+        var lampColor = headlamp.IsEmpty ? ConsoleColor.DarkGray
+            : headlamp.IsLow ? ConsoleColor.DarkYellow
+            : LampColors[Math.Clamp(miner.LampTier, 0, LampColors.Length - 1)];
+        DrawCell(x, y, facingRight, 3, lamp, lampColor);
 
         if (miner.Dynamite > 0)
             DrawCell(x, y + 1, facingRight, 0, '¡', ConsoleColor.Red);
@@ -79,7 +83,7 @@ public sealed class MinerRenderSystem(Canvas canvas, Camera camera) : EntitySyst
         DrawCell(x, y + 1, facingRight, 3, swinging ? SwingTool(miner, facingRight) : facingRight ? '/' : '\\',
             ToolColors[Math.Clamp(miner.ShovelTier, 0, ToolColors.Length - 1)]);
 
-        if (Mine.Depth((int)MathF.Floor(position.Value.Y / Layout.TileHeight)) > 0)
+        if (!headlamp.IsEmpty && Mine.Depth((int)MathF.Floor(position.Value.Y / Layout.TileHeight)) > 0)
             DrawGlow(miner, x, y);
     }
 

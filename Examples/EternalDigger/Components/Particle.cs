@@ -31,7 +31,9 @@ public enum ParticleStyle : byte
     /// <summary>Hot rubble flung out by a blast.</summary>
     Blast,
     /// <summary>Grey smoke rising from a burning fuse.</summary>
-    Smoke
+    Smoke,
+    /// <summary>A puff rising from a lamp low on oil.</summary>
+    LampSmoke
 }
 
 /// <summary>

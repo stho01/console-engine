@@ -185,6 +185,15 @@ public class SaveFileTests
         Assert.That(loaded.HasBlastingKit, Is.True);
         Assert.That(loaded.Dynamite, Is.EqualTo(5));
         Assert.That(loaded.ShovelTier + loaded.LampTier + loaded.BagTier + loaded.DetectorTier, Is.Zero);
+        Assert.That(loaded.Oil, Is.EqualTo(LampOil.TankSize), "saves from before lamp oil start full");
+    }
+
+    [Test]
+    public void Read_OilOverTheTank_ReturnsCorrupt()
+    {
+        var data = new SaveData { Seed = Seed, Column = 1, Row = 9, Oil = LampOil.TankSize + 1f };
+
+        Assert.That(SaveFile.Read(Written(data), out _), Is.EqualTo(SaveStatus.Corrupt));
     }
 
     [Test]
@@ -302,7 +311,8 @@ public class SaveFileTests
             ShovelTier = 1,
             LampTier = 2,
             BagTier = 3,
-            DetectorTier = 1
+            DetectorTier = 1,
+            Oil = 42.5f
         };
         var elevator = new Elevator();
         var rich = new Miner { Gold = 10_000 };
@@ -313,7 +323,7 @@ public class SaveFileTests
         return SaveData.Capture(Seed, miner, mine, elevator, new List<TileChange>());
     }
 
-    /// <summary>A hand-written old save: gold 55, one tile; v2 adds a 30 m lift, v3 9 gems, v4 the kit and 5 sticks.</summary>
+    /// <summary>A hand-written old save: gold 55, one tile; v2 a 30 m lift, v3 9 gems, v4 the kit and 5 sticks.</summary>
     private static MemoryStream OldSave(int version)
     {
         var stream = new MemoryStream();
@@ -379,6 +389,7 @@ public class SaveFileTests
         Assert.That(actual.LampTier, Is.EqualTo(expected.LampTier));
         Assert.That(actual.BagTier, Is.EqualTo(expected.BagTier));
         Assert.That(actual.DetectorTier, Is.EqualTo(expected.DetectorTier));
+        Assert.That(actual.Oil, Is.EqualTo(expected.Oil));
         Assert.That(actual.ElevatorSegments, Is.EqualTo(expected.ElevatorSegments));
         Assert.That(actual.ElevatorCarRow, Is.EqualTo(expected.ElevatorCarRow));
         Assert.That(actual.Changes, Is.EqualTo(expected.Changes));

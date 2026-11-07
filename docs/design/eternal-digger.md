@@ -188,3 +188,10 @@ the miner (`PromptRenderSystem.DrawCounterPanel`) shows the item, what the miner
 glint radius, ×0.8 glint interval), three tiers each at the handover's prices, bought at the counter. Tiers are on
 the `Miner` and saved from format version 5. The shovel and lamp glyph colours follow the tiers.
 
+## Lamp oil (Tier 2)
+
+`LampOil.cs`, `Miner.Oil`: a 100-unit tank burning 1 unit per 3 s underground (×0.8 per lamp tier). `LampSystem`
+(before `LightingSystem`) sets the `Headlamp`: full reach above 30%, then shrinking to 3 tiles, timed flicker frames
+one light level darker, `°` smoke and a dark-yellow lamp glyph; empty, only the close radius one level darker.
+Refilled at the counter (`FILL LAMP`, 2g a unit). The HUD shows an 8-cell gauge. Saved from format version 6.
+

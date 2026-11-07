@@ -6,6 +6,7 @@ namespace EternalDigger;
 public enum ShopItem : byte
 {
     Ladder,
+    LampOil,
     Shovel,
     Lamp,
     Bag,
@@ -26,7 +27,10 @@ public sealed class ShopCounter
 
     /// <summary>The counter's items, top to bottom.</summary>
     public static readonly ShopItem[] Items =
-        [ShopItem.Ladder, ShopItem.Shovel, ShopItem.Lamp, ShopItem.Bag, ShopItem.Detector, ShopItem.Blasting];
+    [
+        ShopItem.Ladder, ShopItem.LampOil, ShopItem.Shovel, ShopItem.Lamp, ShopItem.Bag, ShopItem.Detector,
+        ShopItem.Blasting
+    ];
 
     private int _selected;
 
@@ -63,6 +67,7 @@ public sealed class ShopCounter
     public static string Name(ShopItem item, in Miner miner) => item switch
     {
         _ when IsUpgrade(item) => Upgrades.Name(Line(item)),
+        ShopItem.LampOil => LampOil.FillName,
         ShopItem.Blasting => miner.HasBlastingKit ? Shop.DynamiteName : Shop.BlastingKitName,
         _ => Shop.LadderName
     };

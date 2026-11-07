@@ -54,10 +54,14 @@ for each tile on screen
 daylight: depth ≤ 0 → Bright
           depth 1–3 and dug out (or touching a dug-out tile) → Lit at 1 m, Dim at 2–3 m
 lamp:     distance ≤ 1.5 tiles → Bright (walls included)
-          outside ±40° of the lamp direction, or beyond 8 tiles → Dark
+          outside ±40° of the lamp direction, or beyond the reach → Dark
           a solid tile on the line between lamp and tile → Dark
-          distance < 4 → Bright, < 6 → Lit, else Dim
+          distance < reach × ½ → Bright, < reach × ¾ → Lit, else Dim
+          a flicker frame, or an empty lamp (reach 0): one level darker, never below Dim
 ```
+
+The reach comes from the `Headlamp`, which `LampSystem` sets each frame: 8 tiles + 2 per lamp tier, shrinking to 3
+tiles as the oil runs low, 0 when it is empty (`LampOil.Reach`).
 
 The "solid tile on the line" test samples the ray 4 times per tile (`RaySamplesPerTile`) and skips the lamp's own
 tile and the target. It runs only for tiles inside the cone and range, so a frame costs a few thousand tile lookups.
@@ -149,7 +153,8 @@ Legs: `█` standing, `▙`/`▟` alternating while walking, `╫`/`║` alterna
 left) at rest; mid-swing it is `│` for up/down digs, or `─` then a tilt for side digs. Underground, two dots (`∙`
 `·`) glow in front of the lamp. All miner cells use `DrawOver`, so the sky or the tunnel shows around the sprite. While he carries dynamite a red `¡`
 sits in the back cell of the bottom row (his belt). Upgrades colour him: the shovel by shovel tier (grey, white,
-cyan, yellow: `ToolColors`), the lamp glyph by lamp tier (yellow, then white from tier 2: `LampColors`).
+cyan, yellow: `ToolColors`), the lamp glyph by lamp tier (yellow, then white from tier 2: `LampColors`). Low on oil the lamp glyph is dark yellow;
+empty it is dark grey and the glow dots are gone (`Headlamp`).
 
 **Keeping him readable.** Digging throws debris, dust and sparks straight at the miner, so three rules keep his face
 `☻` and lamp visible on every frame:
@@ -212,6 +217,7 @@ flowchart LR
 | `Flash` | `█` | White or yellow by variant |
 | `Blast` | `▓ ▒ ░ ·` | Yellow, dark yellow, then dark grey |
 | `Smoke` | `· ˙` | Grey, then dark grey |
+| `LampSmoke` | `° ° ·` | Grey, then dark grey |
 
 ### Effects catalogue
 
@@ -221,6 +227,7 @@ flowchart LR
 | `TileBreak` | The hit that breaks a tile | 14–22 chunks bursting out, 6–10 dust puffs drifting up, screen shake 0.6 (rock) or 0.9 (ore). Ore adds 6–10 glitter sparks |
 | `ClimbTrail` | Every tile of a top-speed climb (instead of `FootDust`) | 1–2 specks dropping below the feet |
 | `PlantDynamite` | A stick is planted | No particles: a `Dynamite` entity with `Position` at the tile centre |
+| `LampSmoke` | Every 0.45 s while the lamp is low (`LampSystem`) | One `°` puff rising from the lamp |
 | `FuseSpark` | Every 0.07 s while a fuse burns | A yellow spark off the stick top, and one time in three a grey `·˙` smoke wisp rising |
 | `Blast` | A stick goes off | One frame (0.05 s) of `█` white/yellow over all 3 × 3 tiles (72 cells), 150 `▓▒░·` hot rubble flung out in a ring (`TileCollider`), 40 stone chunks, 40 dust puffs living 1–2 s, a full screen shake (`ScreenShake.MaxStrength`). About 300 particles |
 | `Clank` | The shovel on obsidian | 3–5 sparks from the face, a 0.15 shake, no chunks |

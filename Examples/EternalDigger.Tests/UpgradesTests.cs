@@ -82,9 +82,9 @@ public class UpgradesTests
         var light = new LightMap(Mine.Columns, 30);
         var origin = new Vector2(1.5f, row + .5f);
 
-        light.Compute(mine, row - 10, 20, origin, Vector2.UnitX, Upgrades.LampReach(0));
+        light.Compute(mine, row - 10, 20, origin, Vector2.UnitX, Upgrades.LampReach(0), false);
         var startLamp = light.Get(11, row);
-        light.Compute(mine, row - 10, 20, origin, Vector2.UnitX, Upgrades.LampReach(3));
+        light.Compute(mine, row - 10, 20, origin, Vector2.UnitX, Upgrades.LampReach(3), false);
 
         Assert.That(startLamp, Is.EqualTo(LightMap.Dark));
         Assert.That(light.Get(11, row), Is.Not.EqualTo(LightMap.Dark));

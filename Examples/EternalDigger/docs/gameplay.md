@@ -189,8 +189,9 @@ The counter sells (`ShopCounter.Items`, prices in `Shop`):
 | Item | Price | Notes |
 |---|---|---|
 | Ladder | 10g | One per press |
+| Fill lamp | 2g per missing unit | Fills the tank; `FULL` when it is ([Lamp oil](#lamp-oil)) |
 | Shovel | 300 / 900 / 2500g | Each tier digs 15% faster ([Upgrades](#upgrades)) |
-| Lamp | 250 / 750 / 2000g | Each tier: +2 tiles of reach (and −20% oil burn, with lamp oil) |
+| Lamp | 250 / 750 / 2000g | Each tier: +2 tiles of reach and −20% oil burn |
 | Bag | 200 / 600 / 1500g | Each tier: +10 weight carried before the climb slows (with bag weight) |
 | Detector | 400 / 1200 / 3000g | Each tier: +3 tiles of glint radius, glints 20% more often |
 | Blasting kit, then dynamite | 2500g once, then 100g a stick | The same slot: it sells the kit until you own it |
@@ -201,6 +202,20 @@ The panel above the miner shows ` ↑ <ITEM> ↓ `, what you have (`HAVE <n>`, o
 You start with 0 gold and 8 ladders (`Shop.StartGold`, `Shop.StartLadders`), standing at column 15 on the surface
 (`Layout.SpawnColumn`).
 
+<a id="lamp-oil"></a>
+## Lamp oil
+
+The headlamp burns oil (`LampOil.cs`, `Miner.Oil`, `LampSystem`). It never hurts the miner.
+
+| What | Rule | Identifier |
+|---|---|---|
+| Tank | 100 units, full in a new mine (and in saves from before lamp oil) | `LampOil.TankSize` |
+| Burning | 1 unit per 3 s, only underground (riding the lift too); ×0.8 per lamp tier. 100 units last 5 minutes with the starting lamp | `SecondsPerUnit`, `BurnRate`, `Upgrades.LampBurnPerTier` |
+| Low (below 30 units) | The cone shortens with the oil, from the full reach down to 3 tiles; the lamp flickers (some 0.04–0.12 s stretches are one light level darker, more of them the emptier it gets); the lamp glyph turns dark yellow and grey `°` smoke rises from it every 0.45 s | `LowShare`, `LowReach`, `LampOil.Reach`, `Headlamp` |
+| Empty | No cone: only the close radius, one level darker. The lamp glyph is dark grey, no glow dots. Remembered outlines and glints still show, so the way home can be found, or hold `R` | `LampOil.IsEmpty` |
+| Refill | `FILL LAMP` at the counter: 2g per missing unit (`OIL <n>%` on the panel) | `LampOil.FillPrice`, `TryFill` |
+| HUD | `OIL ▮▮▮▮▮▯▯▯` on row 0: white, yellow below half, blinking red when low | `HudSystem.OilCells` |
+
 <a id="upgrades"></a>
 ## Upgrades
 
@@ -210,7 +225,7 @@ Four lines, three tiers each, bought at the counter (`Upgrades.cs`, tiers on the
 | Line | Per tier | At tier 3 | Identifier |
 |---|---|---|---|
 | Shovel | 15% less time between hits | 0.088 s instead of 0.16 s | `Upgrades.DigInterval`, `ShovelSpeedPerTier` |
-| Lamp | +2 tiles of cone reach (the bright and lit bands scale with it: half and three quarters of the reach) | 14 tiles | `Upgrades.LampReach`, `LampReachPerTier` |
+| Lamp | +2 tiles of cone reach (the bright and lit bands scale with it: half and three quarters of the reach), oil burn ×0.8 | 14 tiles, ×0.51 burn | `Upgrades.LampReach`, `LampReachPerTier` |
 | Bag | +10 weight before the climb slows | +30 | `BagCapacityPerTier` |
 | Detector | +3 tiles of glint radius; samples 20% more often | 18 tiles, every 0.041 s | `Upgrades.GlintRadius`, `GlintInterval` |
 
@@ -292,7 +307,7 @@ twinkles and dig towards them.
 
 | Part | Shows | Identifier |
 |---|---|---|
-| HUD, row 0 | ` ETERNAL DIGGER ` title, gold, ladders, `LIFT <n>m` once a lift is built, `DYNAMITE <n>` once the kit is bought, depth, the bag (copper/silver/gold/gem counts with coloured `◆` icons) and what the bag is worth | `HudSystem` |
+| HUD, row 0 | ` ETERNAL DIGGER ` title, gold, ladders (`╟╢<n>`), `LIFT <n>m` once a lift is built, dynamite (`¡<n>`) once the kit is bought, the oil gauge, depth, the bag (copper/silver/gold/gem counts with coloured `◆` icons) and what the bag is worth | `HudSystem` |
 | HUD, row 1 | The key help; the rescue bar while `R` is held; the ` LIGHTING FUSE ` bar while `E` is held to plant; the no-ladders warning. After a save, ` SAVED ` at the right end for 1.5 s (grey, then dark grey), or ` SAVE FAILED` in red | `HudSystem` |
 | Title screen | `ETERNAL DIGGER` logo, `CONTINUE` / `NEW MINE` (selected item black on yellow with `►`), the confirmation, a red message for an unreadable save, `↑↓ choose   E select   ESC quit` | `TitleScene`, `TitleMenu` |
 | Camera | Keeps the miner at 40% of the screen height, eased. Never scrolls above the sky. Shakes on breaks and long falls | `CameraSystem` |
@@ -307,6 +322,7 @@ twinkles and dig towards them.
 | Ladder price, starting gold and ladders | `Shop.cs` |
 | Lift prices, segment length, ride speed | constants at the top of `Mining/Elevator.cs` |
 | Kit and dynamite prices | `Shop.cs` |
+| Tank, burn rate, low point, refill price | `LampOil.cs` |
 | Upgrade prices and effects | `Upgrades.cs` |
 | Plant time, fuse length | `MinerControlSystem.PlantDuration`, `FuseDuration` |
 | Blast size, chain delay, push | constants at the top of `Systems/DynamiteSystem.cs` |
@@ -329,7 +345,7 @@ The game saves itself; there is no save key.
 - **When:** after every sale at the door (when it earned gold) and every ladder bought, every 60 s spent underground
   (`GameSaver.AutosaveInterval`), and on `ESC`, which saves and quits. A NEW MINE is saved as soon as it starts.
 - **What:** the seed, the miner's tile and facing, gold, ladders and the bag, the lift (segments and the car's
-  landing), the blasting kit and the dynamite stock (lit sticks counted back in), the upgrade tiers, and every tile that differs from what
+  landing), the blasting kit and the dynamite stock (lit sticks counted back in), the upgrade tiers, the lamp oil, and every tile that differs from what
   the seed generates (dug, half-dug, ladder placed, seen). The mine itself is regenerated from the seed.
 - **Not saved:** anything mid-action. A continued game starts with the miner standing still on the saved tile (if
   that tile has no support, they fall), no particles, and the rescue timer at zero.

@@ -56,6 +56,7 @@ public sealed class MineScene(SaveData start, string savePath) : EcsScene<Eterna
         var effects = new EffectSpawner(random, new ScreenShake());
         var light = new LightMap(Mine.Columns, Layout.ScreenHeight / Layout.TileHeight + 2);
         var canvas = new Canvas(Console);
+        var headlamp = new Headlamp();
         _saver = new GameSaver(savePath, start.Seed, mine, elevator);
         _miners = World.Query(Query.With<Miner>());
 
@@ -68,7 +69,8 @@ public sealed class MineScene(SaveData start, string savePath) : EcsScene<Eterna
         Simulation.Add(new ElevatorSystem(elevator));
         Simulation.Add(new DynamiteSystem(mine, effects));
         Simulation.Add(new CameraSystem(Camera, Console, effects.Shake, random));
-        Simulation.Add(new LightingSystem(mine, light, Camera));
+        Simulation.Add(new LampSystem(headlamp, effects, random));
+        Simulation.Add(new LightingSystem(mine, light, Camera, headlamp));
         Simulation.Add(new GlintSystem(mine, light, Camera, effects, random));
         Simulation.Add(new MistSystem(mine, light, Camera, effects, random));
         Simulation.Add(new ParticlePhysicsSystem(mine));
@@ -83,7 +85,7 @@ public sealed class MineScene(SaveData start, string savePath) : EcsScene<Eterna
         Presentation.Add(new DynamiteRenderSystem(canvas, Camera));
         Presentation.Add(new ParticleRenderSystem(canvas, Camera, light));
         // After the particles, so debris, dust and sparks never cover the miner.
-        Presentation.Add(new MinerRenderSystem(canvas, Camera));
+        Presentation.Add(new MinerRenderSystem(canvas, Camera, headlamp));
         Presentation.Add(new FloatingTextRenderSystem(canvas, Camera));
         Presentation.Add(new PromptRenderSystem(canvas, Camera, mine, elevator, counter));
         Presentation.Add(new HudSystem(canvas, _saver, elevator));

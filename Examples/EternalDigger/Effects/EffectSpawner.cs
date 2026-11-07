@@ -115,6 +115,11 @@ public sealed class EffectSpawner(Random random, ScreenShake shake)
     public void PlantDynamite(CommandBuffer commands, int column, int row, float fuse) =>
         commands.Create(new Position(Layout.TileCenter(column, row)), new Dynamite(column, row, fuse));
 
+    /// <summary>A puff of smoke rising from a lamp low on oil.</summary>
+    public void LampSmoke(CommandBuffer commands, Vector2 lamp) =>
+        Spawn(commands, lamp, new Vector2(Range(-1f, 1f), -Range(1.5f, 3f)), ParticleStyle.LampSmoke, Range(.6f, 1f),
+            0f, 1f);
+
     /// <summary>A spark off a burning fuse, and now and then a wisp of smoke.</summary>
     public void FuseSpark(CommandBuffer commands, Vector2 stick)
     {

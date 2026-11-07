@@ -37,6 +37,9 @@ public sealed class SaveData
     public int BagTier { get; init; }
     public int DetectorTier { get; init; }
 
+    /// <summary>Lamp oil. Saves from before lamp oil load with a full tank.</summary>
+    public float Oil { get; init; } = LampOil.TankSize;
+
     /// <summary>Sticks carried. Sticks whose fuse was burning when the game saved are counted back in.</summary>
     public int Dynamite { get; init; }
 
@@ -60,7 +63,8 @@ public sealed class SaveData
         Column = Layout.SpawnColumn,
         Row = Layout.GroundRow,
         Gold = Shop.StartGold,
-        Ladders = Shop.StartLadders
+        Ladders = Shop.StartLadders,
+        Oil = LampOil.TankSize
     };
 
     /// <summary>Takes the miner and the mine as they are now. <paramref name="changes"/> is filled and kept.</summary>
@@ -86,6 +90,7 @@ public sealed class SaveData
             LampTier = miner.LampTier,
             BagTier = miner.BagTier,
             DetectorTier = miner.DetectorTier,
+            Oil = miner.Oil,
             Dynamite = miner.Dynamite + miner.LitDynamite,
             ElevatorSegments = elevator.Segments,
             ElevatorCarRow = elevator.CarTargetRow,
@@ -112,7 +117,8 @@ public sealed class SaveData
         ShovelTier = ShovelTier,
         LampTier = LampTier,
         BagTier = BagTier,
-        DetectorTier = DetectorTier
+        DetectorTier = DetectorTier,
+        Oil = Oil
     };
 
     /// <summary>Puts the saved tiles back into a mine made from <see cref="Seed"/>, and the lift back.</summary>

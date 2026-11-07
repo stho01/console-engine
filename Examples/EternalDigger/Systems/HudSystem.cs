@@ -8,11 +8,11 @@ using EternalDigger.Saving;
 namespace EternalDigger.Systems;
 
 /// <summary>
-/// The top two screen rows. Row 0: the title, gold, ladders, the lift's depth (once built), depth and the bag (ore
-/// counts and what they are worth), and the dynamite count once the kit is bought. Row 1: the keys, the rescue
-/// progress bar while <c>R</c> is held, the fuse bar while <c>E</c> is held to plant dynamite, or a blinking
-/// warning when the miner is underground without ladders. After each save, a fading <c>SAVED</c> (or a red
-/// <c>SAVE FAILED</c>) at the right end of row 1. The status text is rebuilt only when a shown value changes.
+/// The top two screen rows. Row 0: the title, gold, ladders, the lift's depth (once built), dynamite (once the kit is
+/// bought), the oil gauge, depth and the bag (ore counts and what they are worth). Row 1: the keys, the rescue progress
+/// bar while <c>R</c> is held, the fuse bar while <c>E</c> is held to plant dynamite, or a blinking warning when the
+/// miner is underground without ladders. After each save, a fading <c>SAVED</c> (or a red <c>SAVE FAILED</c>) at the
+/// right end of row 1. The status text is rebuilt only when a shown value changes.
 /// </summary>
 public sealed class HudSystem(Canvas canvas, GameSaver saver, Elevator elevator) : EntitySystem
 {
@@ -34,6 +34,14 @@ public sealed class HudSystem(Canvas canvas, GameSaver saver, Elevator elevator)
     public const float SavedHintSeconds = 1.5f;
 
     private const char OreIcon = '◆';
+    private const char LadderIcon = '╟';
+    private const char LadderIconEnd = '╢';
+    private const char DynamiteIcon = '¡';
+    private const char OilFull = '▮';
+    private const char OilEmpty = '▯';
+
+    /// <summary>Cells in the oil gauge.</summary>
+    public const int OilGaugeCells = 8;
     private const int RescueBarWidth = 24;
     private const float BlinkSpeed = 4f;
     private const ConsoleColor Bar = ConsoleColor.DarkBlue;
@@ -44,7 +52,7 @@ public sealed class HudSystem(Canvas canvas, GameSaver saver, Elevator elevator)
     private Query _miners;
     private string _status = string.Empty;
     private int _shownGold = -1, _shownLadders = -1, _shownDepth = -1, _shownCopper = -1, _shownSilver = -1,
-        _shownGoldOre = -1, _shownGems = -1, _shownLift = -1, _shownDynamite = -1;
+        _shownGoldOre = -1, _shownGems = -1, _shownLift = -1, _shownDynamite = -1, _shownOilCells = -1;
     private float _time;
     private int _shownSaves;
     private float _savedHint;
@@ -77,8 +85,10 @@ public sealed class HudSystem(Canvas canvas, GameSaver saver, Elevator elevator)
         var depth = Math.Max(0, Mine.Depth(miner.Row));
         if (miner.Gold != _shownGold || miner.Ladders != _shownLadders || depth != _shownDepth ||
             miner.CopperOre != _shownCopper || miner.SilverOre != _shownSilver || miner.GoldOre != _shownGoldOre ||
-            miner.GemOre != _shownGems || elevator.Depth != _shownLift || DynamiteShown(miner) != _shownDynamite)
+            miner.GemOre != _shownGems || elevator.Depth != _shownLift || DynamiteShown(miner) != _shownDynamite ||
+            OilCells(miner.Oil) != _shownOilCells)
         {
+            _shownOilCells = OilCells(miner.Oil);
             _shownDynamite = DynamiteShown(miner);
             _shownGems = miner.GemOre;
             _shownLift = elevator.Depth;
@@ -89,21 +99,30 @@ public sealed class HudSystem(Canvas canvas, GameSaver saver, Elevator elevator)
             _shownSilver = miner.SilverOre;
             _shownGoldOre = miner.GoldOre;
             var bagValue = Shop.BagValue(miner);
-            var lift = elevator.IsBuilt ? $"   LIFT {elevator.Depth}m" : string.Empty;
-            var dynamite = miner.HasBlastingKit ? $"   DYNAMITE {miner.Dynamite}" : string.Empty;
-            _status = $"  GOLD {miner.Gold:N0}g   LADDERS {miner.Ladders}{lift}{dynamite}   DEPTH {depth}m   BAG " +
-                      $"{OreIcon}{miner.CopperOre} {OreIcon}{miner.SilverOre} {OreIcon}{miner.GoldOre} " +
-                      $"{OreIcon}{miner.GemOre} = {bagValue:N0}g";
+            var lift = elevator.IsBuilt ? $"  LIFT {elevator.Depth}m" : string.Empty;
+            var dynamite = miner.HasBlastingKit ? $"  {DynamiteIcon}{miner.Dynamite}" : string.Empty;
+            var gauge = new string(OilFull, _shownOilCells) + new string(OilEmpty, OilGaugeCells - _shownOilCells);
+            _status = $"  GOLD {miner.Gold:N0}g  {LadderIcon}{LadderIconEnd}{miner.Ladders}{lift}{dynamite}  OIL {gauge}" +
+                      $"  DEPTH {depth}m  BAG {OreIcon}{miner.CopperOre} {OreIcon}{miner.SilverOre} " +
+                      $"{OreIcon}{miner.GoldOre} {OreIcon}{miner.GemOre} = {bagValue:N0}g";
         }
 
         Fill(0, Bar);
         canvas.Draw(0, 0, Title, ConsoleColor.Black, ConsoleColor.Yellow);
         var ore = 0;
+        var oilColor = OilColor(miner.Oil);
         for (var i = 0; i < _status.Length; i++)
         {
-            var isIcon = _status[i] == OreIcon;
-            var color = isIcon ? OreColors[Math.Min(ore++, OreColors.Length - 1)] : ConsoleColor.White;
-            canvas.Draw(Title.Length + i, 0, _status[i], color, Bar);
+            var character = _status[i];
+            var color = character switch
+            {
+                OreIcon => OreColors[Math.Min(ore++, OreColors.Length - 1)],
+                LadderIcon or LadderIconEnd => ConsoleColor.Yellow,
+                DynamiteIcon => ConsoleColor.Red,
+                OilFull or OilEmpty => oilColor,
+                _ => ConsoleColor.White
+            };
+            canvas.Draw(Title.Length + i, 0, character, color, Bar);
         }
     }
 
@@ -143,6 +162,19 @@ public sealed class HudSystem(Canvas canvas, GameSaver saver, Elevator elevator)
         var filled = (int)(progress * RescueBarWidth);
         for (var i = 0; i < RescueBarWidth; i++)
             canvas.Draw(label.Length + i, 1, i < filled ? '█' : '░', barColor, ConsoleColor.Black);
+    }
+
+    /// <summary>Filled cells of the oil gauge: any oil left shows at least one.</summary>
+    public static int OilCells(float oil) =>
+        oil <= 0f ? 0 : Math.Clamp((int)MathF.Ceiling(oil / LampOil.TankSize * OilGaugeCells), 1, OilGaugeCells);
+
+    /// <summary>White when there is plenty, yellow from half, blinking red when low.</summary>
+    private ConsoleColor OilColor(float oil)
+    {
+        if (LampOil.IsLow(oil))
+            return MathF.Sin(_time * BlinkSpeed) > 0f ? ConsoleColor.Red : ConsoleColor.DarkRed;
+
+        return oil < LampOil.TankSize / 2f ? ConsoleColor.Yellow : ConsoleColor.White;
     }
 
     /// <summary>The dynamite count the HUD shows, -1 before the kit is bought.</summary>

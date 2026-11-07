@@ -197,6 +197,10 @@ Rules: [03 § EternalDigger](03-rules.md#eternal-digger). Flow: [04 § F11](04-f
    enough gold for the selected item, only a dust puff shows (the price is red). `↑`/`↓` at the counter change what
    `E` buys. The `BLASTING` shed sells nothing itself. Stop.
 5. Lost all ore → **Cause:** a rescue (`R` held 1.5 s) empties the bag by design. Stop.
+6a. "The light keeps shrinking", "the lamp flickers", "it's all dark now" → **Cause:** lamp oil. It burns underground
+    (1 unit per 3 s of 100); below 30 the cone shrinks and flickers, at 0 only the close radius is lit. **Fix:** fill
+    the lamp at the shop counter (`FILL LAMP`, 2g per unit); a better lamp burns less. Outlines and glints still show
+    the way, or hold `R`. Stop.
 6. "Ore is invisible", "everything is black" → **Cause:** only lit tiles show colour; remembered tiles are grey outlines
    without ore (`TerrainRenderSystem`). **Fix:** watch for glints (twinkles near the miner, also through rock) and point
    the headlamp by moving/digging towards the ore. Stop.
