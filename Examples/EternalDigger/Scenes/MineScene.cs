@@ -50,6 +50,7 @@ public sealed class MineScene(SaveData start, string savePath) : EcsScene<Eterna
     {
         var mine = new Mine(start.Seed);
         var elevator = new Elevator();
+        var counter = new ShopCounter();
         start.ApplyTo(mine, elevator);
         var random = new Random(start.Seed);
         var effects = new EffectSpawner(random, new ScreenShake());
@@ -62,7 +63,7 @@ public sealed class MineScene(SaveData start, string savePath) : EcsScene<Eterna
         World.Create(new Position(Layout.TileToWorld(miner.Column, miner.Row)), miner);
 
         Simulation.Add(new MinerControlSystem(mine, elevator, effects));
-        Simulation.Add(new InteractionSystem(mine, elevator, effects, _saver));
+        Simulation.Add(new InteractionSystem(mine, elevator, counter, effects, _saver));
         Simulation.Add(new MinerMotionSystem(mine, effects));
         Simulation.Add(new ElevatorSystem(elevator));
         Simulation.Add(new DynamiteSystem(mine, effects));
@@ -84,7 +85,7 @@ public sealed class MineScene(SaveData start, string savePath) : EcsScene<Eterna
         // After the particles, so debris, dust and sparks never cover the miner.
         Presentation.Add(new MinerRenderSystem(canvas, Camera));
         Presentation.Add(new FloatingTextRenderSystem(canvas, Camera));
-        Presentation.Add(new PromptRenderSystem(canvas, Camera, mine, elevator));
+        Presentation.Add(new PromptRenderSystem(canvas, Camera, mine, elevator, counter));
         Presentation.Add(new HudSystem(canvas, _saver, elevator));
     }
 }

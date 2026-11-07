@@ -40,7 +40,7 @@ public class ElevatorTests
         _control = new MinerControlSystem(_mine, _elevator, effects);
         _motion = new MinerMotionSystem(_mine, effects);
         _carry = new ElevatorSystem(_elevator);
-        _interaction = new InteractionSystem(_mine, _elevator, effects, saver);
+        _interaction = new InteractionSystem(_mine, _elevator, new ShopCounter(), effects, saver);
         _commands = new CommandBuffer();
         PlaceMiner(Elevator.Column, Elevator.TopRow);
     }
@@ -242,7 +242,7 @@ public class ElevatorTests
 
     private void Press()
     {
-        _interaction.Interact(ref _miner, _commands);
+        _interaction.Interact(ref _miner, new MinerInput { UsePressed = true }, _commands);
         _commands.Clear();
     }
 

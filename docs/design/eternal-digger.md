@@ -35,7 +35,7 @@ and its `docs/` folder.
 | `DOWN`/`S` (held) | Below solid → dig it. Below air → step down (climbing if a ladder is there, otherwise the fall rule takes over) |
 | `UP`/`W` (held) | Only on a ladder tile: above air → climb up; above solid → dig it |
 | `SPACE` (pressed) | Place a ladder in the miner's tile (uses one from the inventory) |
-| `E` (pressed) | At the door: deliver all ore. At the shopfront: buy one ladder |
+| `E` (pressed) | At the door: deliver all ore. At the shop counter: buy the selected item (Up/Down choose; Tier 2) |
 | `R` (held 1.5 s) | Rescue: back to the spawn tile, the bag is lost (ore only, not gold or ladders). The way out of a pit without ladders |
 | `ESC` | Save and quit (on the title screen: quit) |
 
@@ -128,8 +128,8 @@ box behind them (the engine has no public way to read a cell back):
 5. `MinerRenderSystem(Canvas, Camera)`: 4 x 2 sprite, facing, swing animation, headlamp. Drawn after the particles
    so the miner is readable on every frame.
 6. `FloatingTextRenderSystem(Canvas, Camera)`: `+150g` / `-10g`, formatted without allocating.
-7. `PromptRenderSystem(Canvas, Camera)`: small framed `DELIVER [E]` over the door / `BUY LADDERS [E] 10g`
-   over the shopfront while the miner stands there.
+7. `PromptRenderSystem(Canvas, Camera, …)`: small framed `DELIVER [E]` over the door, the three-line counter
+   panel at the shop, and the lift prompts, while the miner stands there.
 8. `HudSystem(Canvas, GameSaver)`: top 2 rows (plus a fading ` SAVED ` after each save): `ETERNAL DIGGER`, gold, ladders, depth, bag; key help or the rescue
    progress bar. Strings rebuilt only when a value changes.
 
@@ -167,11 +167,18 @@ version 3.
 
 ## Dynamite (Tier 1)
 
-Not in the original document. The `BLASTING` shed (columns 26–28) sells the kit once (2500g), then sticks (100g)
+Not in the original document. The shop counter's blasting slot sells the kit once (2500g), then sticks (100g)
 (`Shop.TryBuyBlasting`). Holding `E` 0.5 s underground, off the lift landings, plants a lit stick in the faced rock
 (`MinerControlSystem.UpdatePlanting`; a `Dynamite` entity with a 2 s fuse). `DynamiteSystem` runs after
 `ElevatorSystem`: the blast clears 3 x 3 of any rock including obsidian (not bedrock, grass or sky), bags ore,
 destroys ladders, chains to nearby sticks and pushes the miner one tile away; he is never hurt.
 `DynamiteRenderSystem` runs before the particles. The miner is drawn after all effects, so the Tier 0 acceptance test
 now covers a blast too (`MinerVisibilityTests`). Saved from format version 4 (kit, sticks; lit sticks are refunded).
+
+## Shop counter (Tier 2)
+
+The shopfront (columns 8–11) is one counter for everything sold: `ShopCounter` holds the selection, Up/Down move it
+(`MinerInput.UpPressed`/`DownPressed`), `E` buys through `Shop.TryBuy`. Ladders are selected first. The panel above
+the miner (`PromptRenderSystem.DrawCounterPanel`) shows the item, what the miner has of it, and the price. The
+`BLASTING` shed is scenery.
 

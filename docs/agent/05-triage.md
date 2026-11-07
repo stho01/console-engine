@@ -193,8 +193,9 @@ Rules: [03 § EternalDigger](03-rules.md#eternal-digger). Flow: [04 § F11](04-f
 3. `SPACE` places no ladder → **Cause:** one of: 0 ladders, still at the surface (row ≤ 10), the tile already has one,
    or the miner was mid-move/falling (keys aren't read then). Stop.
 4. `E` does nothing at the house → **Cause:** must stand still right in front of the door (columns 3–6) or the shop
-   (columns 8–11); a prompt appears there. At the door with an empty bag, or at the shop with less than 10g, only a dust
-   puff shows (the shop prompt is red). Stop.
+   counter (columns 8–11); a prompt or panel appears there. At the door with an empty bag, or at the counter without
+   enough gold for the selected item, only a dust puff shows (the price is red). `↑`/`↓` at the counter change what
+   `E` buys. The `BLASTING` shed sells nothing itself. Stop.
 5. Lost all ore → **Cause:** a rescue (`R` held 1.5 s) empties the bag by design. Stop.
 6. "Ore is invisible", "everything is black" → **Cause:** only lit tiles show colour; remembered tiles are grey outlines
    without ore (`TerrainRenderSystem`). **Fix:** watch for glints (twinkles near the miner, also through rock) and point
@@ -210,7 +211,7 @@ Rules: [03 § EternalDigger](03-rules.md#eternal-digger). Flow: [04 § F11](04-f
    landing in column 21: row 9 or the bottom row; mid-shaft, `E` does nothing. In the car, `E` does nothing: use ↑/↓.
    Stop.
 10. "Can't dig at 110 m", "TOO HARD" → **Cause:** the obsidian wall (`Tiles.WallDepth`, 3–5 tiles); the shovel can't
-    break it by design. **Fix:** buy the blasting kit (2500g) and sticks (100g) at the `BLASTING` shed, hold `E` 0.5 s
+    break it by design. **Fix:** select the blasting slot at the shop counter (`↓`), buy the kit (2500g) and sticks (100g), hold `E` 0.5 s
     facing the wall, walk away. Same reason the lift stops at 100 m (blast column 21 to go deeper). Stop.
 11. "Holding E does nothing", "can't plant dynamite" → **Cause:** one of: no kit or no sticks (HUD `DYNAMITE <n>`), on
     the surface, on a lift landing (there `E` is the lift), facing air instead of rock (the lamp points the way you last

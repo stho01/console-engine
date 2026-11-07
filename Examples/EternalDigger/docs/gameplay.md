@@ -24,7 +24,7 @@ ladders to get back up. If you get stuck anyway, the rescue brings you home at t
 ```text
 row 0   ┐
  …      │ sky (air)                      house & shop: columns 2–11
-row 9   ┘ ← the surface walk row         door: 3–6, shopfront: 8–11, spawn: 15
+row 9   ┘ ← the surface walk row         door: 3–6, shop counter: 8–11, spawn: 15
 row 10    grass, unbreakable ─────────── except the shaft, column 21
 row 11    first underground row          shaft rows 10–11 start dug out, with ladders
  …        act 1: dirt, stone, granite, copper, silver, gold, caves
@@ -182,7 +182,17 @@ The house stands on the surface over columns 2–11. Stand still on the right sp
 | Spot | Columns (row 9) | `E` does | Feedback |
 |---|---|---|---|
 | Door | 3–6 (`Layout.DeliverFirstColumn`…`DeliverLastColumn`) | Sells **everything** in the bag: copper 15g, silver 40g, gold 100g each (`Shop.Deliver`) | Coins burst and cascade onto the grass (one per 10g, 3 to 30 coins), a ring of stars, a floating `+<gold>g`. Empty bag: a small dust puff |
-| Shopfront | 8–11 (`Layout.ShopFirstColumn`…`ShopLastColumn`) | Buys **one** ladder for 10g (`Shop.TryBuyLadder`, `Shop.LadderPrice`) | A ring of stars and a floating `-10g`. Not enough gold: a dust puff, and the prompt text is red |
+| Shop counter | 8–11 (`Layout.ShopFirstColumn`…`ShopLastColumn`) | Buys **one** of the selected item. `↑`/`↓` there choose the item (it wraps); ladders are selected first, so `E` alone buys a ladder (`ShopCounter`, `Shop.TryBuy`) | A ring of stars and a floating `-<price>g`. Not enough gold: a dust puff, and the price is red |
+
+The counter sells (`ShopCounter.Items`, prices in `Shop`):
+
+| Item | Price | Notes |
+|---|---|---|
+| Ladder | 10g | One per press |
+| Blasting kit, then dynamite | 2500g once, then 100g a stick | The same slot: it sells the kit until you own it |
+
+The panel above the miner shows ` ↑ <ITEM> ↓ `, what you have (`HAVE <n>`, or `UNLOCKS DYNAMITE` for the kit) and
+`<price>g [E]` (`SOLD OUT` when it can't be bought any more). The `BLASTING` shed further right is scenery.
 
 You start with 0 gold and 8 ladders (`Shop.StartGold`, `Shop.StartLadders`), standing at column 15 on the surface
 (`Layout.SpawnColumn`).
@@ -212,7 +222,7 @@ The way through the obsidian wall, and a fast but costly way to dig anywhere.
 
 | What | Rule | Identifier |
 |---|---|---|
-| Buying | The `BLASTING` shed at columns 26–28 on row 9: `E` buys the blasting kit once (2500g), then one stick per press (100g). Not enough gold: a dust puff, the prompt price is red. Every purchase saves | `Shop.TryBuyBlasting`, `BlastingKitPrice`, `DynamitePrice`, `Layout.IsAtBlastingShed` |
+| Buying | At the shop counter, the blasting slot: the kit once (2500g), then one stick per press (100g). Every purchase saves | `Shop.TryBuyBlasting`, `BlastingKitPrice`, `DynamitePrice` |
 | Planting | Hold `E` for 0.5 s underground, standing still and not on a lift landing: a lit stick goes into the tile the lamp faces (the last move or dig direction). Needs the kit, a stick, and rock there (any breakable rock or obsidian). Otherwise a dust puff. While `E` is held the miner does nothing else; let go to plant the next one. The HUD shows a ` LIGHTING FUSE ` bar | `MinerControlSystem.UpdatePlanting`, `PlantDuration` |
 | The fuse | 2 s, with yellow/red `*` sparks and grey `·` smoke | `FuseDuration`, `DynamiteSystem` |
 | The blast | Clears the 3 × 3 tiles around the stick: any rock, obsidian included. Bedrock, the grass and the sky stay. Ore in it goes into the bag; ladders in it are destroyed; other sticks in it go off 0.12 s later | `DynamiteSystem.Blast`, `BlastRadius`, `ChainDelay` |
@@ -267,7 +277,7 @@ twinkles and dig towards them.
 | HUD, row 1 | The key help; the rescue bar while `R` is held; the ` LIGHTING FUSE ` bar while `E` is held to plant; the no-ladders warning. After a save, ` SAVED ` at the right end for 1.5 s (grey, then dark grey), or ` SAVE FAILED` in red | `HudSystem` |
 | Title screen | `ETERNAL DIGGER` logo, `CONTINUE` / `NEW MINE` (selected item black on yellow with `►`), the confirmation, a red message for an unreadable save, `↑↓ choose   E select   ESC quit` | `TitleScene`, `TitleMenu` |
 | Camera | Keeps the miner at 40% of the screen height, eased. Never scrolls above the sky. Shakes on breaks and long falls | `CameraSystem` |
-| Prompts | ` DELIVER [E] ` / ` BUY LADDERS [E] 10g ` / ` BUILD LIFT +10m [E] <price>g ` / ` CALL LIFT [E] ` / ` GET IN [E] ` / ` ↑↓ RIDE   ←→ GET OUT ` / ` BLASTING KIT [E] 2500g ` / ` DYNAMITE [E] 100g ` / ` LIFT BLOCKED BY OBSIDIAN ` in a small bobbing frame above the miner | `PromptRenderSystem` |
+| Prompts | ` DELIVER [E] ` / the shop counter's three-line panel / ` BUILD LIFT +10m [E] <price>g ` / ` CALL LIFT [E] ` / ` GET IN [E] ` / ` ↑↓ RIDE   ←→ GET OUT ` / ` LIFT BLOCKED BY OBSIDIAN ` in a small bobbing frame above the miner | `PromptRenderSystem` |
 
 ## Tuning cheat sheet
 

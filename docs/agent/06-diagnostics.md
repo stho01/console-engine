@@ -98,7 +98,7 @@ using [04](04-flows.md).
 | ` NO LADDERS LEFT!  Hold R to be rescued (the bag is lost) ` (blinking) | `HudSystem.NoLaddersWarning` | 0 ladders and below the surface |
 | ` DELIVER [E] ` | `PromptRenderSystem.DeliverText` | Standing at the door |
 | ` BUILD LIFT +10m [E] <price>g ` (red when short) | `PromptRenderSystem.BuildLiftText` | Standing at the lift sign |
-| ` BLASTING KIT [E] 2500g ` / ` DYNAMITE [E] 100g ` (red when short) | `PromptRenderSystem.BlastingKitText`, `DynamiteText` | At the blasting shed, without / with the kit |
+| ` ↑ LADDER ↓ ` / ` ↑ BLASTING KIT ↓ ` / ` ↑ DYNAMITE ↓ `, then `HAVE <n>` or `UNLOCKS DYNAMITE`, then `<price>g [E]` (red when short) or `SOLD OUT` | `PromptRenderSystem.DrawCounterPanel`, `Shop.LadderName`/`BlastingKitName`/`DynamiteName`, `KitUnlocksText`, `SoldOutText` | At the shop counter |
 | ` LIGHTING FUSE ` + bar | `HudSystem.PlantLabel`, row 1 | `E` held underground to plant |
 | `   DYNAMITE <n>` | `HudSystem.DrawStatus`, row 0, after the lift | Once the kit is bought |
 | `BLASTING`, ` ¡ ¡ ¡ ` | `HouseRenderSystem.BlastingText`, `BlastingDisplay` (shed) | Scenery |
@@ -109,9 +109,8 @@ using [04](04-flows.md).
 | `ELEVATOR +10m` (floating) | `FloatingTextRenderSystem.ElevatorLabel` | A lift segment was built |
 | `   LIFT <n>m` | `HudSystem.DrawStatus`, row 0, after the ladders | Once a lift is built |
 | ` LIFT ` | `HouseRenderSystem.LiftText` (sign beside the mine entrance) | Scenery |
-| ` BUY LADDERS [E] 10g ` (red when gold < 10) | `PromptRenderSystem.BuyText` | Standing at the shopfront |
 | `+<n>g` / `-10g` (floating) | `FloatingTextRenderSystem` | Delivery / purchase |
-| ` EternalDigger `, `LADDERS`, `MINE` | `HouseRenderSystem` (house sign, shop, shaft frame) | Scenery |
+| ` EternalDigger `, `SHOP`, `MINE` | `HouseRenderSystem` (house sign, shop, shaft frame) | Scenery |
 
 ### TerraForM screen text (`HudTexts`, `Sprites`)
 

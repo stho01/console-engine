@@ -26,6 +26,7 @@ CI (`.github/workflows/build-and-test.yml`) runs it with the rest of the solutio
 | `TitleMenuTests` | 6 | CONTINUE first with a save; NEW MINE at once without one; NEW MINE with a save asks to confirm with NO selected; YES starts over; NO goes back; Up/Down wrap |
 | `ElevatorTests` | 12 | Obsidian in the next segment blocks it (nothing charged); the lift stops at 100 m above the wall; building charges 200g then 300g and digs out the shaft (rock stays under the bottom landing); ore in the way goes into the bag, ladders stay; too poor changes nothing; the car takes 0.04 s per tile; frames of boarding at the top and riding down, riding up and stepping off onto the surface, calling the car from the bottom (the caller gets in), Down at the bottom steps off and digs, a rescue leaves the car; `E` at the lift sign builds a segment |
 | `DynamiteTests` | 10 | With a `World` and the real `DynamiteSystem`: holding `E` 0.5 s plants a lit stick in the faced tile (stock −1, lit +1); releasing early plants nothing; holding on plants only one; no kit, facing air or on the surface plants nothing; after the fuse the 3 × 3 is cleared (obsidian too), ore bagged, the ladder gone, the miner pushed one tile away; bedrock and the grass survive a blast; a blast sets off a stick next to it |
+| `ShopCounterTests` | 7 | Ladders are selected first; the selection wraps; `E` buys the selected item; Down then `E` buys the kit; Up/Down away from the counter do nothing; too poor buys nothing; the blasting slot's name and price follow the kit |
 | `ShopTests` | 8 | Delivering pays every ore and empties the bag; an empty bag pays 0; buying a ladder with and without enough gold; the shed sells the kit, then sticks; too poor for the kit changes nothing; collecting each ore; non-ore isn't collected |
 
 Names follow the repository's `Method_State_Expected` style, for example
@@ -86,7 +87,7 @@ ramp.
 | Not tested | Why | How it was checked |
 |---|---|---|
 | Render systems other than particles and miner | Not written yet; `MinerVisibilityTests` shows how (`Fakes/FakeConsoleHandler`) | Frames captured from a real run in a macOS terminal and inspected |
-| `InteractionSystem` | Reads `Input.Instance` directly (`E`), which needs a console | `Shop.Deliver`/`TryBuyLadder` are tested; the spot checks are `Layout` one-liners. That it calls `GameSaver.Request` is checked by reading |
+| `InteractionSystem.OnUpdate` | Reads the keyboard (`MinerInput.FromKeyboard`), which needs a console; `Interact(...)` is tested with scripted input | `Shop.Deliver`/`TryBuyLadder` are tested; the spot checks are `Layout` one-liners. That it calls `GameSaver.Request` is checked by reading |
 | `TitleScene`, Esc save | Read `Input.Instance` and switch scenes on a `GameBase` | The rules are in `TitleMenu` (tested); not run in a real console yet |
 | `EffectSpawner` and particle systems | Visual; their output is entities in a `World`. The looks (`ParticleLooks`) are tested; `MinerVisibilityTests` runs physics and lifetime, but only checks the miner's cells | Reading and running the game |
 | `CameraSystem`, `GlintSystem`, `MistSystem` | Need a `World`, a `Camera` and randomness | Reading and running the game |

@@ -3,7 +3,10 @@ using EternalDigger.Mining;
 
 namespace EternalDigger;
 
-/// <summary>The surface trade: buys the ore in the miner's bag, sells ladders, the blasting kit and dynamite.</summary>
+/// <summary>
+/// The surface trade: buys the ore in the miner's bag at the door, and sells what the counter offers
+/// (<see cref="ShopItem"/>): ladders, the blasting kit and dynamite.
+/// </summary>
 public static class Shop
 {
     public const int LadderPrice = 10;
@@ -13,8 +16,15 @@ public static class Shop
     /// <summary>The blasting kit, bought once at the shed. Unlocks buying and planting dynamite.</summary>
     public const int BlastingKitPrice = 2500;
 
-    /// <summary>One stick of dynamite at the shed, once the kit is owned.</summary>
+    /// <summary>One stick of dynamite, once the kit is owned.</summary>
     public const int DynamitePrice = 100;
+
+    public const string LadderName = "LADDER";
+    public const string BlastingKitName = "BLASTING KIT";
+    public const string DynamiteName = "DYNAMITE";
+
+    /// <summary>The price shown for an item that can't be bought any more (a maxed upgrade, a full tank).</summary>
+    public const int SoldOut = -1;
 
     /// <summary>What the ore in the bag sells for.</summary>
     public static int BagValue(in Miner miner) =>
@@ -50,7 +60,28 @@ public static class Shop
         return true;
     }
 
-    /// <summary>The price of what the blasting shed sells next: the kit, then sticks.</summary>
+    /// <summary>What an item at the counter costs the miner now, or <see cref="SoldOut"/>.</summary>
+    public static int Price(ShopItem item, in Miner miner) => item switch
+    {
+        ShopItem.Blasting => BlastingPrice(miner),
+        _ => LadderPrice
+    };
+
+    /// <summary>How many of an item the miner has, for the panel. -1 when a count makes no sense (the kit).</summary>
+    public static int Owned(ShopItem item, in Miner miner) => item switch
+    {
+        ShopItem.Blasting => miner.HasBlastingKit ? miner.Dynamite : -1,
+        _ => miner.Ladders
+    };
+
+    /// <summary>Buys one of the item. False if it is sold out or the miner can't afford it.</summary>
+    public static bool TryBuy(ShopItem item, ref Miner miner) => item switch
+    {
+        ShopItem.Blasting => TryBuyBlasting(ref miner),
+        _ => TryBuyLadder(ref miner)
+    };
+
+    /// <summary>The price of the blasting slot: the kit, then sticks.</summary>
     public static int BlastingPrice(in Miner miner) => miner.HasBlastingKit ? DynamitePrice : BlastingKitPrice;
 
     /// <summary>Buys the blasting kit, or one stick once the kit is owned. False if the miner can't afford it.</summary>

@@ -17,7 +17,7 @@ The Presentation group draws in `Add` order, each layer over the last:
 | 6 | `ParticleRenderSystem` | Every particle glyph, except on the miner's cells | Over the world, keeping its background |
 | 7 | `MinerRenderSystem` | The 4 × 2 miner and the lamp glow | Over the world and the particles |
 | 8 | `FloatingTextRenderSystem` | `+150g` / `-10g` / `ELEVATOR +10m` | Over everything so far |
-| 9 | `PromptRenderSystem` | The door, shop, shed, lift sign and landing prompts | Above the miner |
+| 9 | `PromptRenderSystem` | The door prompt, the counter panel, the lift sign and landing prompts | Above the miner |
 | 10 | `HudSystem` | The two top rows | Screen rows 0–1 |
 
 Layers 1 and 2 together paint every cell of the screen each frame. That matters for the `Canvas`.
@@ -119,10 +119,10 @@ string, colours for full and dim light, and for ores a speck character (`◆`) a
 | Sign | Centred under the eaves | ` EternalDigger ` in yellow on dark red |
 | Windows | Left and right of the door | `┌┬┐` / `└┴┘` on cyan |
 | Door | Over the deliver columns (x 18–21) | `║` boards and a yellow `•` knob |
-| Shop | x 32–47 | Red/white striped awning, black window with `╟─╢` ladders on display, counter, `LADDERS` |
+| Shop | x 32–47 | Red/white striped awning, black window with `╟─╢` ladders on display, counter, `SHOP` |
 | Mine frame | Around the shaft (x 83–88) | `╔════╗` beam on `║` posts, a `MINE` plank |
 | Lift sign | x 93–98 (`Layout.LiftSignFirstColumn`) | ` LIFT ` white on dark yellow, on two `│` posts |
-| Blasting shed | x 104–115 (`Layout.BlastingFirstColumn`…`BlastingLastColumn`), 7 rows | Red `▄▀` roof, `▒` plank walls between `│` posts, a yellow-on-dark-red `BLASTING` board, ` ¡ ¡ ¡ ` red sticks in the window |
+| Blasting shed (scenery) | x 104–115 (`Layout.BlastingFirstColumn`…`BlastingLastColumn`), 7 rows | Red `▄▀` roof, `▒` plank walls between `│` posts, a yellow-on-dark-red `BLASTING` board, ` ¡ ¡ ¡ ` red sticks in the window |
 
 ## The lift
 
@@ -243,7 +243,9 @@ a random amount up to the strength in both directions and decays it by 6 per sec
   the last 30% of its life.
 - **`PromptRenderSystem`** draws a three-row box (`┌─┐ │ │ └─┘`, yellow on dark blue) with the text, a `▼` pointer
   just above the miner's head, and a small bob. `[E]` is yellow. The text strings are `PromptRenderSystem.DeliverText`,
-  `BuyText`, `CallLiftText`, `BoardLiftText`, `RideText`, and the lift sign's text, rebuilt only when the price changes.
+  `CallLiftText`, `BoardLiftText`, `RideText`, and the lift sign's text, rebuilt only when the price changes. At the
+  counter the box has three lines (`DrawCounterPanel`): the item with `↑ ↓`, what the miner has, and the price; its
+  strings are rebuilt only when one of them changes.
 - **`HudSystem`** fills rows 0–1. The status line is a string rebuilt **only when a shown value changes** (gold,
   ladders, depth, the three ore counts); the `◆` icons are coloured by position. Row 1 is the key help, the rescue
   bar (24 cells) or the blinking no-ladders warning.

@@ -42,7 +42,7 @@ public static class Layout
     public const int DeliverFirstColumn = 3;
     public const int DeliverLastColumn = 6;
 
-    /// <summary>Standing on these columns at <see cref="GroundRow"/> lets the miner buy ladders (the shopfront).</summary>
+    /// <summary>Standing on these columns at <see cref="GroundRow"/> puts the miner at the shop counter.</summary>
     public const int ShopFirstColumn = 8;
     public const int ShopLastColumn = 11;
 
@@ -50,7 +50,7 @@ public static class Layout
     public const int LiftSignFirstColumn = 23;
     public const int LiftSignLastColumn = 24;
 
-    /// <summary>Standing on these columns at <see cref="GroundRow"/> lets the miner buy the kit and dynamite.</summary>
+    /// <summary>The blasting shed's columns. Scenery: dynamite is sold at the shop counter.</summary>
     public const int BlastingFirstColumn = 26;
     public const int BlastingLastColumn = 28;
 
@@ -70,9 +70,6 @@ public static class Layout
 
     public static bool IsAtDeliverSpot(int column, int row) =>
         row == GroundRow && column >= DeliverFirstColumn && column <= DeliverLastColumn;
-
-    public static bool IsAtBlastingShed(int column, int row) =>
-        row == GroundRow && column >= BlastingFirstColumn && column <= BlastingLastColumn;
 
     public static bool IsAtLiftSign(int column, int row) =>
         row == GroundRow && column >= LiftSignFirstColumn && column <= LiftSignLastColumn;

@@ -32,7 +32,7 @@ public sealed class HouseRenderSystem(Canvas canvas, Camera camera) : EntitySyst
 
     /// <summary>The house name on its wooden sign, with a plank of padding on both sides.</summary>
     private const string SignBoard = " EternalDigger ";
-    private const string ShopText = "LADDERS";
+    private const string ShopText = "SHOP";
     private const string MineText = "MINE";
     private const string LiftText = " LIFT ";
     private const string BlastingText = "BLASTING";

@@ -15,6 +15,11 @@ public readonly struct MinerInput
     public bool Down { get; init; }
     public bool Up { get; init; }
 
+    /// <summary>Up / Down went down this frame: they move the selection at the shop counter.</summary>
+    public bool UpPressed { get; init; }
+
+    public bool DownPressed { get; init; }
+
     /// <summary>The ladder key went down this frame.</summary>
     public bool PlaceLadder { get; init; }
 
@@ -40,6 +45,8 @@ public readonly struct MinerInput
             Horizontal = horizontal,
             Down = input.GetKey(Key.DOWN).Held || input.GetKey(Key.S).Held,
             Up = input.GetKey(Key.UP).Held || input.GetKey(Key.W).Held,
+            UpPressed = input.GetKey(Key.UP).Pressed || input.GetKey(Key.W).Pressed,
+            DownPressed = input.GetKey(Key.DOWN).Pressed || input.GetKey(Key.S).Pressed,
             PlaceLadder = input.GetKey(Key.SPACE).Pressed,
             Rescue = input.GetKey(Key.R).Held,
             Use = input.GetKey(Key.E).Held,
