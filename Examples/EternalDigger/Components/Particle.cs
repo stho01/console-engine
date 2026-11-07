@@ -77,7 +77,7 @@ public enum FloatingTextKind : byte
     Elevator,
     /// <summary><c>TOO HARD</c> (red): the shovel hit obsidian. No amount.</summary>
     TooHard,
-    /// <summary><c>FOSSIL!</c> or <c>RELIC!</c>: a rare find was dug up. <see cref="FloatingText.Amount"/> is its type.</summary>
+    /// <summary><c>FOSSIL!</c> or <c>RELIC!</c>: a find was dug up. <see cref="FloatingText.Amount"/> is its type.</summary>
     RareFind
 }
 

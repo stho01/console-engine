@@ -1,3 +1,4 @@
+using System;
 using EternalDigger.Components;
 using EternalDigger.Mining;
 
@@ -23,6 +24,28 @@ public static class Shop
     public const string BlastingKitName = "BLASTING KIT";
     public const string DynamiteName = "DYNAMITE";
 
+    /// <summary>Bag weight of one piece of each ore, and of a rare find.</summary>
+    public const int CopperWeight = 1;
+    public const int SilverWeight = 1;
+    public const int GoldWeight = 2;
+    public const int GemWeight = 2;
+    public const int RareFindWeight = 3;
+
+    /// <summary>
+    /// Weight the starting bag carries before climbing slows (+<see cref="Upgrades.BagCapacityPerTier"/> per tier).
+    /// </summary>
+    public const int BaseBagCapacity = 20;
+
+    /// <summary>Every this much weight over the capacity (or part of it) is one step of slowdown.</summary>
+    public const int WeightStep = 10;
+
+    /// <summary>Each weight step makes climbing up this much slower, up to <see cref="MaxClimbSlowdown"/> times.</summary>
+    public const float ClimbSlowdownPerStep = .2f;
+    public const float MaxClimbSlowdown = 3f;
+
+    /// <summary>Each weight step makes the lamp burn this much more oil while climbing up.</summary>
+    public const float OilPerStep = .5f;
+
     /// <summary>The price shown for an item that can't be bought any more (a maxed upgrade, a full tank).</summary>
     public const int SoldOut = -1;
 
@@ -30,6 +53,31 @@ public static class Shop
     public static int BagValue(in Miner miner) =>
         miner.CopperOre * Tiles.CopperValue + miner.SilverOre * Tiles.SilverValue + miner.GoldOre * Tiles.GoldValue +
         miner.GemOre * Tiles.GemValue + miner.Fossils * Tiles.FossilValue + miner.Relics * Tiles.RelicValue;
+
+    /// <summary>What the bag weighs.</summary>
+    public static int BagWeight(in Miner miner) =>
+        miner.CopperOre * CopperWeight + miner.SilverOre * SilverWeight + miner.GoldOre * GoldWeight +
+        miner.GemOre * GemWeight + miner.RareFinds * RareFindWeight;
+
+    /// <summary>The weight the bag carries before climbing slows, by bag tier.</summary>
+    public static int BagCapacity(in Miner miner) =>
+        BaseBagCapacity + Upgrades.BagCapacityPerTier * Math.Clamp(miner.BagTier, 0, Upgrades.MaxTier);
+
+    /// <summary>Steps of slowdown: one per <see cref="WeightStep"/> (or part of it) over the capacity.</summary>
+    public static int WeightSteps(in Miner miner)
+    {
+        var over = BagWeight(miner) - BagCapacity(miner);
+        return over <= 0 ? 0 : (over + WeightStep - 1) / WeightStep;
+    }
+
+    public static bool IsHeavy(in Miner miner) => WeightSteps(miner) > 0;
+
+    /// <summary>How much longer a tile of climbing up takes with this bag: 1 when light.</summary>
+    public static float ClimbLoad(in Miner miner) =>
+        Math.Min(MaxClimbSlowdown, 1f + ClimbSlowdownPerStep * WeightSteps(miner));
+
+    /// <summary>How much more oil the lamp burns while climbing up with this bag: 1 when light.</summary>
+    public static float OilLoad(in Miner miner) => 1f + OilPerStep * WeightSteps(miner);
 
     /// <summary>Empties the bag into gold. Returns the gold earned (0 for an empty bag).</summary>
     public static int Deliver(ref Miner miner)

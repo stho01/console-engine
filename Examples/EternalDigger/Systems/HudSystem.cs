@@ -9,10 +9,11 @@ namespace EternalDigger.Systems;
 
 /// <summary>
 /// The top two screen rows. Row 0: the title, gold, ladders, the lift's depth (once built), dynamite (once the kit is
-/// bought), the oil gauge, depth and the bag (ore counts and what they are worth). Row 1: the keys, the rescue progress
-/// bar while <c>R</c> is held, the fuse bar while <c>E</c> is held to plant dynamite, or a blinking warning when the
-/// miner is underground without ladders. After each save, a fading <c>SAVED</c> (or a red <c>SAVE FAILED</c>) at the
-/// right end of row 1. The status text is rebuilt only when a shown value changes.
+/// bought), the oil gauge, depth and the bag (ore and find counts and what they are worth, in yellow when the bag is
+/// heavy). Row 1: the keys, the rescue progress bar while <c>R</c> is held, the fuse bar while <c>E</c> is held to
+/// plant dynamite, or a blinking warning when the miner is underground without ladders. After each save, a fading
+/// <c>SAVED</c> (or a red <c>SAVE FAILED</c>) at the right end of row 1. The status text is rebuilt only when a shown
+/// value changes.
 /// </summary>
 public sealed class HudSystem(Canvas canvas, GameSaver saver, Elevator elevator) : EntitySystem
 {
@@ -54,6 +55,7 @@ public sealed class HudSystem(Canvas canvas, GameSaver saver, Elevator elevator)
     private string _status = string.Empty;
     private int _shownGold = -1, _shownLadders = -1, _shownDepth = -1, _shownCopper = -1, _shownSilver = -1,
         _shownGoldOre = -1, _shownGems = -1, _shownLift = -1, _shownDynamite = -1, _shownOilCells = -1, _shownFinds = -1;
+    private bool _shownHeavy;
     private float _time;
     private int _shownSaves;
     private float _savedHint;
@@ -87,8 +89,10 @@ public sealed class HudSystem(Canvas canvas, GameSaver saver, Elevator elevator)
         if (miner.Gold != _shownGold || miner.Ladders != _shownLadders || depth != _shownDepth ||
             miner.CopperOre != _shownCopper || miner.SilverOre != _shownSilver || miner.GoldOre != _shownGoldOre ||
             miner.GemOre != _shownGems || elevator.Depth != _shownLift || DynamiteShown(miner) != _shownDynamite ||
-            OilCells(miner.Oil) != _shownOilCells || miner.RareFinds != _shownFinds)
+            OilCells(miner.Oil) != _shownOilCells || miner.RareFinds != _shownFinds ||
+            Shop.IsHeavy(miner) != _shownHeavy)
         {
+            _shownHeavy = Shop.IsHeavy(miner);
             _shownFinds = miner.RareFinds;
             _shownOilCells = OilCells(miner.Oil);
             _shownDynamite = DynamiteShown(miner);
@@ -113,9 +117,12 @@ public sealed class HudSystem(Canvas canvas, GameSaver saver, Elevator elevator)
         canvas.Draw(0, 0, Title, ConsoleColor.Black, ConsoleColor.Yellow);
         var ore = 0;
         var oilColor = OilColor(miner.Oil);
+        var valueColor = _shownHeavy ? ConsoleColor.Yellow : ConsoleColor.White;
+        var inValue = false;
         for (var i = 0; i < _status.Length; i++)
         {
             var character = _status[i];
+            inValue |= character == '=';
             var color = character switch
             {
                 OreIcon => OreColors[Math.Min(ore++, OreColors.Length - 1)],
@@ -123,7 +130,7 @@ public sealed class HudSystem(Canvas canvas, GameSaver saver, Elevator elevator)
                 DynamiteIcon => ConsoleColor.Red,
                 FindIcon => ConsoleColor.Yellow,
                 OilFull or OilEmpty => oilColor,
-                _ => ConsoleColor.White
+                _ => inValue ? valueColor : ConsoleColor.White
             };
             canvas.Draw(Title.Length + i, 0, character, color, Bar);
         }

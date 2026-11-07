@@ -201,7 +201,7 @@ The counter sells (`ShopCounter.Items`, prices in `Shop`):
 | Fill lamp | 2g per missing unit | Fills the tank; `FULL` when it is ([Lamp oil](#lamp-oil)) |
 | Shovel | 300 / 900 / 2500g | Each tier digs 15% faster ([Upgrades](#upgrades)) |
 | Lamp | 250 / 750 / 2000g | Each tier: +2 tiles of reach and −20% oil burn |
-| Bag | 200 / 600 / 1500g | Each tier: +10 weight carried before the climb slows (with bag weight) |
+| Bag | 200 / 600 / 1500g | Each tier: +10 weight carried before the climb slows ([Bag weight](#bag-weight)) |
 | Detector | 400 / 1200 / 3000g | Each tier: +3 tiles of glint radius, glints 20% more often |
 | Blasting kit, then dynamite | 2500g once, then 100g a stick | The same slot: it sells the kit until you own it |
 
@@ -219,11 +219,26 @@ The headlamp burns oil (`LampOil.cs`, `Miner.Oil`, `LampSystem`). It never hurts
 | What | Rule | Identifier |
 |---|---|---|
 | Tank | 100 units, full in a new mine (and in saves from before lamp oil) | `LampOil.TankSize` |
-| Burning | 1 unit per 3 s, only underground (riding the lift too); ×0.8 per lamp tier. 100 units last 5 minutes with the starting lamp | `SecondsPerUnit`, `BurnRate`, `Upgrades.LampBurnPerTier` |
+| Burning | 1 unit per 3 s, only underground (riding the lift too); ×0.8 per lamp tier; ×1.5 per bag weight step while climbing up. 100 units last 5 minutes with the starting lamp | `SecondsPerUnit`, `BurnRate`, `Upgrades.LampBurnPerTier` |
 | Low (below 30 units) | The cone shortens with the oil, from the full reach down to 3 tiles; the lamp flickers (some 0.04–0.12 s stretches are one light level darker, more of them the emptier it gets); the lamp glyph turns dark yellow and grey `°` smoke rises from it every 0.45 s | `LowShare`, `LowReach`, `LampOil.Reach`, `Headlamp` |
 | Empty | No cone: only the close radius, one level darker. The lamp glyph is dark grey, no glow dots. Remembered outlines and glints still show, so the way home can be found, or hold `R` | `LampOil.IsEmpty` |
 | Refill | `FILL LAMP` at the counter: 2g per missing unit (`OIL <n>%` on the panel) | `LampOil.FillPrice`, `TryFill` |
 | HUD | `OIL ▮▮▮▮▮▯▯▯` on row 0: white, yellow below half, blinking red when low | `HudSystem.OilCells` |
+
+<a id="bag-weight"></a>
+## Bag weight
+
+A heavy bag slows the climb home, so big hauls cost time (`Shop.BagWeight`). There is no hard cap.
+
+| What | Rule | Identifier |
+|---|---|---|
+| Weight | Copper 1, silver 1, gold 2, gem 2, each rare find 3 | `Shop.CopperWeight`…`RareFindWeight` |
+| Capacity | 20, +10 per bag tier | `Shop.BaseBagCapacity`, `Upgrades.BagCapacityPerTier`, `Shop.BagCapacity` |
+| Slowdown | Each 10 over the capacity (or part of 10) is a step; each step makes climbing **up** 20% slower, at most 3× (the accelerating climb is scaled too). Walking, climbing down, falling and the lift are unaffected | `Shop.WeightSteps`, `ClimbLoad`, `ClimbSlowdownPerStep`, `MaxClimbSlowdown` |
+| Oil | Each step burns 50% more oil while climbing up | `Shop.OilLoad`, `LampSystem.LoadFactor` |
+| Looks | The bag value in the HUD turns yellow, and the backpack `▄` bulges to `▓` | `HudSystem`, `MinerRenderSystem` |
+
+The rescue still empties the bag, so greed costs more the heavier it gets.
 
 <a id="upgrades"></a>
 ## Upgrades
@@ -235,7 +250,7 @@ Four lines, three tiers each, bought at the counter (`Upgrades.cs`, tiers on the
 |---|---|---|---|
 | Shovel | 15% less time between hits | 0.088 s instead of 0.16 s | `Upgrades.DigInterval`, `ShovelSpeedPerTier` |
 | Lamp | +2 tiles of cone reach (the bright and lit bands scale with it: half and three quarters of the reach), oil burn ×0.8 | 14 tiles, ×0.51 burn | `Upgrades.LampReach`, `LampReachPerTier` |
-| Bag | +10 weight before the climb slows | +30 | `BagCapacityPerTier` |
+| Bag | +10 weight before the climb slows | +30 (capacity 50) | `BagCapacityPerTier` |
 | Detector | +3 tiles of glint radius; samples 20% more often | 18 tiles, every 0.041 s | `Upgrades.GlintRadius`, `GlintInterval` |
 
 On the miner: the shovel turns white, cyan, then yellow per tier; the lamp glyph turns white from lamp tier 2.
@@ -332,6 +347,7 @@ twinkles and dig towards them.
 | Lift prices, segment length, ride speed | constants at the top of `Mining/Elevator.cs` |
 | Kit and dynamite prices | `Shop.cs` |
 | Tank, burn rate, low point, refill price | `LampOil.cs` |
+| Ore weights, bag capacity, climb slowdown | `Shop.cs` |
 | Upgrade prices and effects | `Upgrades.cs` |
 | Plant time, fuse length | `MinerControlSystem.PlantDuration`, `FuseDuration` |
 | Blast size, chain delay, push | constants at the top of `Systems/DynamiteSystem.cs` |

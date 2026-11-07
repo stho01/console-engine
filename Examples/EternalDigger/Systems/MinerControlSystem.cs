@@ -114,7 +114,8 @@ public sealed class MinerControlSystem(Mine mine, Elevator elevator, EffectSpawn
         if (input.Up && mine.HasLadder(miner.Column, miner.Row))
         {
             var climbing = !mine.IsSolid(miner.Column, miner.Row - 1);
-            MoveOrDig(ref miner, 0, -1, ClimbUpDuration(miner.ClimbStreak), MinerMotion.Climbing, commands);
+            MoveOrDig(ref miner, 0, -1, ClimbUpDuration(miner.ClimbStreak) * Shop.ClimbLoad(miner),
+                MinerMotion.Climbing, commands);
             miner.ClimbStreak = climbing ? miner.ClimbStreak + 1 : 0;
             return;
         }

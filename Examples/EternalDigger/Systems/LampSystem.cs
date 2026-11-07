@@ -40,7 +40,7 @@ public sealed class LampSystem(Headlamp headlamp, EffectSpawner effects, Random 
         foreach (var chunk in _miners.GetChunks())
         {
             ref var miner = ref chunk.GetSpan<Miner>()[0];
-            Burn(ref miner, deltaSeconds);
+            Burn(ref miner, deltaSeconds, LoadFactor(miner));
             Update(miner, chunk.GetSpan<Position>()[0].Value, deltaSeconds);
             return;
         }
@@ -60,6 +60,10 @@ public sealed class LampSystem(Headlamp headlamp, EffectSpawner effects, Random 
 
         miner.Oil = Math.Max(0f, miner.Oil - LampOil.BurnRate(miner.LampTier, loadFactor) * deltaSeconds);
     }
+
+    /// <summary>A heavy bag burns more oil while climbing up (<see cref="Shop.OilLoad"/>); 1 otherwise.</summary>
+    public static float LoadFactor(in Miner miner) =>
+        miner.Motion == MinerMotion.Climbing && miner.Row < miner.MoveFrom.Y ? Shop.OilLoad(miner) : 1f;
 
     //**********************************************************
     //** internals

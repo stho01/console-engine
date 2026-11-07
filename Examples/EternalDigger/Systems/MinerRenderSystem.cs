@@ -31,6 +31,10 @@ public sealed class MinerRenderSystem(Canvas canvas, Camera camera, Headlamp hea
     private static readonly ConsoleColor[] LampColors =
         [ConsoleColor.Yellow, ConsoleColor.Yellow, ConsoleColor.White, ConsoleColor.White];
 
+    /// <summary>The backpack, and its bulging look when the bag is heavy.</summary>
+    private const char LightPack = '▄';
+    private const char HeavyPack = '▓';
+
     /// <summary>Leg frames while walking, switched twice per step.</summary>
     private const string WalkLegs = "▙▟";
 
@@ -69,7 +73,7 @@ public sealed class MinerRenderSystem(Canvas canvas, Camera camera, Headlamp hea
         // Cells counted from the back of the miner (0) to the front (3).
         var swinging = miner.SwingTime > 0f;
         var lamp = miner.LampDirection.Y < -.5f ? '▲' : miner.LampDirection.Y > .5f ? '▼' : '•';
-        DrawCell(x, y, facingRight, 1, '▄', Pack);
+        DrawCell(x, y, facingRight, 1, Shop.IsHeavy(miner) ? HeavyPack : LightPack, Pack);
         DrawCell(x, y, facingRight, 2, '☻', Skin);
         var lampColor = headlamp.IsEmpty ? ConsoleColor.DarkGray
             : headlamp.IsLow ? ConsoleColor.DarkYellow

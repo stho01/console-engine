@@ -197,6 +197,9 @@ Rules: [03 § EternalDigger](03-rules.md#eternal-digger). Flow: [04 § F11](04-f
    enough gold for the selected item, only a dust puff shows (the price is red). `↑`/`↓` at the counter change what
    `E` buys. The `BLASTING` shed sells nothing itself. Stop.
 5. Lost all ore → **Cause:** a rescue (`R` held 1.5 s) empties the bag by design. Stop.
+5a. "Climbing got slow", "the miner crawls up the ladder" → **Cause:** a heavy bag (HUD bag value yellow, backpack
+    `▓`): each 10 weight over the capacity (20, +10 per bag tier) makes climbing up 20% slower. **Fix:** sell at the
+    door, or buy the bag upgrade. Stop.
 6a. "The light keeps shrinking", "the lamp flickers", "it's all dark now" → **Cause:** lamp oil. It burns underground
     (1 unit per 3 s of 100); below 30 the cone shrinks and flickers, at 0 only the close radius is lit. **Fix:** fill
     the lamp at the shop counter (`FILL LAMP`, 2g per unit); a better lamp burns less. Outlines and glints still show

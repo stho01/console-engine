@@ -57,6 +57,7 @@ Support/user words are **[inferred]**. The team may also use Norwegian terms. Ad
 | dynamite / stick / kit / blast (EternalDigger) | The tool through the wall: the kit unlocks buying sticks; a planted stick blows up 3 × 3 | `Miner.HasBlastingKit`, `Miner.Dynamite`, `Dynamite`, `DynamiteSystem` |
 | oil / lamp oil / tank (EternalDigger) | What the headlamp burns underground; low oil shrinks the light | `LampOil`, `Miner.Oil`, `Headlamp` |
 | rare find / fossil / relic / trophy (EternalDigger) | Very rare single tiles that sell high: `§` fossils in act 1, `¥` relics below the wall | `TileType.Fossil`/`Relic`, `Tiles.IsRareFind`, `Miner.FossilsFound` |
+| bag weight / heavy bag (EternalDigger) | What the ore and finds weigh; over the capacity the climb up slows | `Shop.BagWeight`, `Shop.WeightSteps` |
 | upgrade / tier (EternalDigger) | Shovel, lamp, bag and detector improvements, three tiers each, bought at the counter | `Upgrades`, `UpgradeLine`, `Miner.ShovelTier`… |
 | save / slot / continue (EternalDigger) | The one save file and loading it | `SaveFile`, `SaveData`, `GameSaver`, `TitleMenu.ContinueText` |
 | changed tiles (EternalDigger) | Tiles that differ from what the seed generates; what a save stores of the mine | `TileChange`, `Mine.CollectChanges` |

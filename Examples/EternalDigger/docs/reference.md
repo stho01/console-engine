@@ -10,7 +10,8 @@ Examples/EternalDigger/
 ├── Program.cs                  seed from the first argument, creates and starts the game
 ├── EternalDiggerGame.cs        GameBase: 120 × 48, 8 × 16 font, ESC saves and quits, starts on TitleScene
 ├── Layout.cs                   screen and tile sizes, surface spots, tile ↔ world helpers
-├── Shop.cs                     prices and start inventory; BagValue, Deliver, EmptyBag, TryBuyLadder,
+├── Shop.cs                     prices, weights and start inventory; BagValue, BagWeight, BagCapacity, WeightSteps,
+│                               IsHeavy, ClimbLoad, OilLoad, Deliver, EmptyBag, TryBuyLadder,
 │                               BlastingPrice, TryBuyBlasting, Price, Owned, TryBuy, Collect
 ├── MinerInput.cs               one frame of miner keys (also Use / UsePressed for E, Up/DownPressed); FromKeyboard
 ├── ShopCounter.cs              the counter's selection (Previous, Next, Select, Name, IsUpgrade, Line); ShopItem
@@ -148,6 +149,9 @@ Static rule classes: `Tiles`, `Shop`, `Upgrades`, `Layout`, `TileLooks`, `Partic
 | `Tiles.DepthPerExtraHit` | 25 | Metres per extra hit |
 | `Shop.LadderPrice` | 10 | Gold per ladder |
 | `Shop.BlastingKitPrice` / `DynamitePrice` | 2500 / 100 | The kit (once), one stick |
+| `Shop.CopperWeight` / `SilverWeight` / `GoldWeight` / `GemWeight` / `RareFindWeight` | 1 / 1 / 2 / 2 / 3 | Bag weight per piece |
+| `Shop.BaseBagCapacity` / `WeightStep` | 20 / 10 | Weight before the climb slows; weight per slowdown step |
+| `Shop.ClimbSlowdownPerStep` / `MaxClimbSlowdown` / `OilPerStep` | 20% / 3× / +50% | Per step: slower climb up (capped), more oil while climbing up |
 | `Upgrades` prices (shovel / lamp / bag / detector) | 300-900-2500 / 250-750-2000 / 200-600-1500 / 400-1200-3000 | Per tier |
 | `Upgrades.ShovelSpeedPerTier` / `LampReachPerTier` / `LampBurnPerTier` / `BagCapacityPerTier` / `DetectorRadiusPerTier` / `DetectorIntervalPerTier` | 15% / 2 tiles / ×0.8 / 10 / 3 tiles / ×0.8 | Effect per tier |
 | `GlintSystem.Interval` / `Radius` | 0.08 s / 9 tiles | Starting detector |

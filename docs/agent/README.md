@@ -44,7 +44,7 @@ Tags used throughout:
 | Platformer: "debug text everywhere", "FPS not shown", "player vanishes into walls" | [P14](05-triage.md#p14) |
 | TerraForM: "the story is in English, where's the Norwegian version?" | [P15](05-triage.md#p15) |
 | Launcher: "game says (not built)", "launcher won't start a game", "game window stops at Press any key" | [P16](05-triage.md#p16) |
-| EternalDigger: "I'm stuck in a hole", "can't dig the grass", "SPACE/E does nothing", "lost my ore", "can't see any ore", "my save is gone", "no CONTINUE", "can't build the lift", "fell down the shaft", "can't dig at 110 m", "TOO HARD", "can't plant dynamite", "the lamp keeps getting darker" | [P17](05-triage.md#p17) |
+| EternalDigger: "I'm stuck in a hole", "can't dig the grass", "SPACE/E does nothing", "lost my ore", "can't see any ore", "my save is gone", "no CONTINUE", "can't build the lift", "fell down the shaft", "can't dig at 110 m", "TOO HARD", "can't plant dynamite", "the lamp keeps getting darker", "climbing got slow" | [P17](05-triage.md#p17) |
 
 ## File index
 

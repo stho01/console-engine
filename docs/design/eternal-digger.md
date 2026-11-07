@@ -202,3 +202,9 @@ The Tier 1 gem already matched the handover (250g, magenta glint, a bag slot). R
 double star burst and a floating name when dug out, sold at the door, counted in the HUD as `✦n` and for good in
 `Miner.FossilsFound`/`RelicsFound` for the Tier 3 trophy shelf. Saved from format version 7.
 
+## Bag weight (Tier 2)
+
+`Shop.BagWeight`: copper 1, silver 1, gold 2, gem 2, rare finds 3. Over the capacity (20 + 10 per bag tier) every 10
+weight, rounded up, is a step: +20% time per tile climbing up (max 3×) and +50% oil while climbing up. No hard cap;
+walking, falls and the lift are unaffected. Heavy shows as a yellow bag value and a `▓` backpack.
+

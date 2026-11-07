@@ -19,7 +19,7 @@ public static class Tiles
     /// <summary>Fossils appear from this depth down to the wall.</summary>
     public const int FossilDepth = 15;
 
-    /// <summary>Share of act 1 tiles (from <see cref="FossilDepth"/>) holding a fossil, and of act 2 tiles a relic.</summary>
+    /// <summary>Share of act 1 tiles (from <see cref="FossilDepth"/>) with a fossil, and of act 2 tiles a relic.</summary>
     public const float FossilChance = .0015f;
     public const float RelicChance = .001f;
 

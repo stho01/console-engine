@@ -156,12 +156,13 @@ Examples/
   EternalDigger/                  original ECS digging game (no OOP original): Mining/ (Mine grid, Tiles rules, Elevator),
                                   Components/, Systems/, Effects/ (EffectSpawner, ParticleLooks), Rendering/
                                   (Canvas, LightMap, TileLooks), Saving/ (SaveData, SaveFile, GameSaver),
-                                  Scenes/ (TitleScene + TitleMenu, MineScene), Layout, Shop, MinerInput.
+                                  Scenes/ (TitleScene + TitleMenu, MineScene), Layout, Shop, ShopCounter, Upgrades,
+                                  LampOil, MinerInput.
                                   README.md + docs/ (gameplay, architecture, rendering-and-effects,
                                   working-with-the-code, testing, reference)
   EternalDigger.Tests/            Mine, Tiles, Shop, LightMap, ParticleLooks, frame-by-frame MinerControlSystem,
-                                  MinerVisibility (render), Elevator, Dynamite, SaveFile, SaveSystem and TitleMenu
-                                  tests, Fakes/ (console handler)
+                                  MinerVisibility (render), Elevator, Dynamite, ShopCounter, Upgrades, LampOil,
+                                  BagWeight, SaveFile, SaveSystem and TitleMenu tests, Fakes/ (console handler)
   TerraForM/Scenes/               GameScene, MenuScene, InputNameScene
   TerraForM/Commands/             Command, Move, Plant, Wait
   TerraForM/Assets/               Maps/*.txt, Sprites.cs, Texts/HudTexts.cs, Story/ (unused)

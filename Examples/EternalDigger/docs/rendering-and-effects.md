@@ -148,7 +148,7 @@ miner's back:
 
 | Row | Back → front |
 |---|---|
-| Top | (empty), `▄` backpack, `☻` head, the lamp: `•`, or `▲`/`▼` when it points up/down |
+| Top | (empty), `▄` backpack (`▓` when the bag is heavy), `☻` head, the lamp: `•`, or `▲`/`▼` when it points up/down |
 | Bottom | (empty), `▐` overalls, legs, shovel |
 
 Legs: `█` standing, `▙`/`▟` alternating while walking, `╫`/`║` alternating while climbing (twice per tile, so a fast climb moves them faster), `╨` falling. The shovel is `/` (or `\` facing
