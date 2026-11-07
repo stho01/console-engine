@@ -148,9 +148,20 @@ itself.
   not in the group is ignored. Constraints that form a cycle throw `InvalidOperationException` on the first
   `Update` (or `RunOrder` read) after the systems were added.
 
-**`EcsScene<TGame>`**: `OnLoad` creates `World`, `Simulation` and `Presentation`, then calls `OnCreate`. The scene's
-`OnUpdate` runs `Simulation`, `OnRender` runs `Presentation`, both with `(float)GameTime.Delta.TotalSeconds`. `OnUnload`
-calls `OnDestroy`, then disposes the world. A paused scene (another scene pushed on top) runs neither group.
+**`EcsScene<TGame>`**: `OnLoad` creates `World`, `FixedSimulation`, a default `FixedTimestep`, `Simulation` and
+`Presentation`, then calls `OnCreate` (which may replace `FixedTimestep`). The scene's `OnUpdate` first runs
+`FixedSimulation` as many times as `FixedTimestep.Advance(delta)` returns, each time with `FixedTimestep.StepSeconds`,
+then `Simulation` once. `OnRender` runs `Presentation`. `Simulation` and `Presentation` get
+`(float)GameTime.Delta.TotalSeconds`. `OnUnload` calls `OnDestroy`, then disposes the world. A paused scene (another
+scene pushed on top) runs no group, and its paused time is not added to the fixed-step accumulator.
+
+**`FixedTimestep`** (default `DefaultStepSeconds` = 1/60 s, `DefaultMaxStepsPerFrame` = 4): `Advance` adds the delta
+and returns the whole steps that fit; the rest carries over to the next frame (`Alpha` = carried time / step). If more
+than `MaxStepsPerFrame` steps are due, it returns `MaxStepsPerFrame` and **drops** the backlog, so after a long stall
+the game slows down instead of catching up. A delta ≤ 0 or NaN adds nothing. At a high frame rate most frames run 0
+fixed steps, so a system in `FixedSimulation` that reads a key's `Pressed` edge directly misses most presses: latch
+input in `Simulation`, consume it in `FixedSimulation`. No example game uses `FixedSimulation` yet (it is phase 1 of
+`docs/design/physics-plan.md`).
 
 **Built-in systems** (namespace `ConsoleEngine.Ecs.Systems`, components in `ConsoleEngine.Ecs.Components`):
 - `MovementSystem`: `Position += Velocity * delta`. No wrapping, no bounds.

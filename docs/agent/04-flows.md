@@ -142,12 +142,13 @@ See [03 § Scenes](03-rules.md#scenes). TerraForM's scene graph:
 | 7 | `Add`: write the new value (skipped for tags). `Destroy` instead does step 6 only, then bumps `Version` and frees the id (or retires it at `int.MaxValue`) | `World.Write`, `World.Destroy` | — | — |
 
 <a id="f9"></a>
-## F9 — ECS frame in an `EcsScene` (`SceneManager.Update` → `Simulation`, `SceneManager.Render` → `Presentation`)
+## F9 — ECS frame in an `EcsScene` (`SceneManager.Update` → `FixedSimulation` + `Simulation`, `SceneManager.Render` → `Presentation`)
 
 Runs inside [F2](#f2) steps "Scenes.Update" and "Scenes.Render". Both are skipped while the scene is paused.
 
 | # | Step | Class.method | Stops / skips if | Observable |
 |---|---|---|---|---|
+| 0 | `FixedTimestep.Advance(delta)` → `steps`; `FixedSimulation.Update(FixedTimestep.StepSeconds)` runs `steps` times, each run doing steps 1–3 below for that group (its own `Commands` played back after every run) | `EcsScene.OnUpdate` → `EcsScene.RunSimulation` | Less than one step of time collected → 0 runs. More than `MaxStepsPerFrame` due → only `MaxStepsPerFrame` runs, the rest of the time is dropped | Fixed-step systems run 0, 1 or several times per frame |
 | 1 | `Simulation.Update((float)GameTime.Delta.TotalSeconds)`: each enabled system's `OnUpdate`, in `SystemGroup.RunOrder` (`Add` order adjusted by `UpdateBefore`/`UpdateAfter`) | `EcsScene.OnUpdate` → `SystemGroup.Update` | `EntitySystem.Enabled == false` → that system is skipped | — |
 | 2 | Systems iterate queries and record structural changes in `Commands` | game systems, `MovementSystem` | Direct `World.Create/Destroy/Add/Remove` inside the loop | `InvalidOperationException` ([F8](#f8) step 0) |
 | 3 | Sync point: `Commands.Playback(World)` applies the recorded changes in order (deferred handles from `Create` are swapped for the created entities), then clears the buffer | `CommandBuffer.Playback` | Target entity no longer alive → that `Destroy`/`Add`/`Remove` is **skipped silently**. Foreign or stale deferred handle → `InvalidOperationException` | Entities created/destroyed this frame show up in the render below |

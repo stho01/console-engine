@@ -1,6 +1,7 @@
 # Plan: 2D-fysikk i ConsoleEngine
 
-Status (2026-11-07): plan, ingen kode ennå. Planen er gjennomgått mot industristandard (Box2D v3, «Fix Your Timestep»,
+Status (2026-11-07): fase 0 og 1 er ferdige (baseline-benchmark, `FixedTimestep` og `EcsScene.FixedSimulation`).
+Målingene står i § 12b. Planen er gjennomgått mot industristandard (Box2D v3, «Fix Your Timestep»,
 Ericson, Godot/Unity 2D). Avvik fra standarden er markert og begrunnet i § 10.
 
 ## 1. Mål og ikke-mål
@@ -250,6 +251,28 @@ ristende kontroll.
 - Sleeping/øyer, render-interpolering, flere former, multithreading av narrowphase og løser.
 
 Hver fase oppdaterer `docs/agent/` og `AGENTS.md` i samme PR, og legger målingene inn i denne filen.
+
+## 12b. Målinger
+
+### Fase 0: baseline, alle par (2026-11-07)
+
+`ConsoleEngine.Benchmarks/Physics/BruteForceCollisionBenchmarks.AllPairs`: sirkel mot sirkel for alle n·(n−1)/2 par
+på rene arrays, som Asteroids `CollisionSystem` men uten ECS-overhead. Verdenen vokser med antallet (16 celler per
+kropp). Release, `--job short`, utviklerens maskin.
+
+| Kropper | Tid per kjøring | Allokert |
+|---|---|---|
+| 100 | 3,0 µs | 0 B |
+| 1 000 | 314 µs | 0 B |
+| 10 000 | 31,0 ms | 0 B |
+
+Kvadratisk som ventet: ti ganger flere kropper gir hundre ganger tiden. Ved 10 000 kropper bruker brute force alene
+nesten to fysikksteg à 16,7 ms. Gridet i fase 2 skal måles mot disse tallene med samme oppsett.
+
+### Fase 1: fast tidssteg
+
+Ingen egen benchmark. `EcsScene.RunSimulation` legger til ett `FixedTimestep.Advance`-kall per frame (noen få
+flyttallsoperasjoner, ingen allokering). En tom `FixedSimulation` koster ett tomt `SystemGroup.Update` per fast steg.
 
 ## 13. Åpne spørsmål til eier
 

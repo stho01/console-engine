@@ -120,7 +120,7 @@ ConsoleEngine/                    the engine
                                     ComponentMask, ComponentType<T>/ComponentRegistry, EcsThrowHelper,
                                     Query, QueryDescription, EntityChunk, IForEach<…>, CommandBuffer
                                     (+ .Create.cs), EntitySystem, SystemGroup, UpdateBefore/UpdateAfter
-                                    attributes (UpdateOrderAttributes.cs), EcsScene<TGame>
+                                    attributes (UpdateOrderAttributes.cs), EcsScene<TGame>, FixedTimestep
     Components/                     built-in components: Position, Velocity, Rotation, Glyph, Outline, SpriteRef
     Rendering/                      Camera, OutlineLibrary, SpriteLibrary (namespace ConsoleEngine.Ecs.Rendering)
     Systems/                        built-in systems: MovementSystem, GlyphRenderSystem, OutlineRenderSystem,
@@ -134,7 +134,8 @@ ConsoleEngine/                    the engine
     Rendering/Sprite.cs             Pixel[,] sprites, FromString/FromStringArray
     Scenery/Scene.cs, SceneManager.cs  scene stack (Push/Pop/Set)
 ConsoleEngine.Tests/              engine unit tests (mirrors ConsoleEngine/ folders), Fakes/ (console handler, scene)
-ConsoleEngine.Benchmarks/         BenchmarkDotNet: Baseline/ (OOP vs. struct arrays), Ecs/ (World, Query)
+ConsoleEngine.Benchmarks/         BenchmarkDotNet: Baseline/ (OOP vs. struct arrays), Ecs/ (World, Query),
+                                  Physics/ (brute-force collision baseline)
 ConsoleEngine.Abstractions/
   Inputs/  IInputHandler, Key, KeyState
   Rendering/  IConsoleHandler, Pixel, FontInfo
