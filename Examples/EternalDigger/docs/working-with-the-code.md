@@ -30,7 +30,7 @@ These come from the repository's `AGENTS.md`; they apply here in full.
 
 | Rule | In this game |
 |---|---|
-| **No allocations per frame** | No `new` of classes or arrays, no LINQ, no lambdas, no string building in `OnUpdate`. Build art and strings once as `static readonly`/`const`; rebuild HUD text only when a shown value changes (see `HudSystem`); format numbers into a reused buffer (see `FloatingNumberRenderSystem`). The mine allocates only when it grows by a 64-row block |
+| **No allocations per frame** | No `new` of classes or arrays, no LINQ, no lambdas, no string building in `OnUpdate`. Build art and strings once as `static readonly`/`const`; rebuild HUD text only when a shown value changes (see `HudSystem`); format numbers into a reused buffer (see `FloatingTextRenderSystem`). The mine allocates only when it grows by a 64-row block |
 | **Scale by time** | Every speed, timer and rate uses `deltaSeconds`. Things that happen "every so often" use an accumulated timer (`GlintSystem._elapsed`) or a budget (`MistSystem._budget`), never "per frame" |
 | **Structural changes through `Commands`** | Never `World.Create`/`Destroy` inside a query loop. Effects go through `EffectSpawner` with the system's `Commands` |
 | **Components are `unmanaged` structs** | Data only, in `Components/`. Tags have no fields |

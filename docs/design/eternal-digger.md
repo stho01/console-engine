@@ -50,7 +50,7 @@ Timings (`MinerControlSystem` constants, seconds): walk 0.13 per tile, climb 0.1
 ## Components (`Components/`)
 
 - `Miner` (one entity, with the engine's `Position` = top-left cell of the sprite in world cells).
-- `Particle(style, lifetime)`, `Physics(gravity, drag)`, tags `TileCollider` and `Mist`, `FloatingNumber`.
+- `Particle(style, lifetime)`, `Physics(gravity, drag)`, tags `TileCollider` and `Mist`, `FloatingText`.
   Particles also have the engine's `Position`, `Velocity`, `Glyph`.
 
 ## Shared services (constructed in `MineScene`)
@@ -109,7 +109,7 @@ Simulation:
 8. `ParticlePhysicsSystem(Mine)`: `Velocity.Y += Gravity * dt`, drag, `Position += Velocity * dt`; `TileCollider`
    particles that enter a solid tile are put back on top of it and stop (velocity zero; coins bounce once).
 9. `ParticleLifetimeSystem`: ages particles, writes `Glyph` from `Style`, `Variant` and `Progress`, destroys expired.
-10. `FloatingNumberSystem`: moves numbers up, ages and destroys them.
+10. `FloatingTextSystem`: moves floating texts up, ages and destroys them.
 11. `SaveSystem(GameSaver)`: writes the save when requested this frame, or every `GameSaver.AutosaveInterval` (60) s
     underground.
 
@@ -127,7 +127,7 @@ box behind them (the engine has no public way to read a cell back):
    ring around him.
 5. `MinerRenderSystem(Canvas, Camera)`: 4 x 2 sprite, facing, swing animation, headlamp. Drawn after the particles
    so the miner is readable on every frame.
-6. `FloatingNumberRenderSystem(Canvas, Camera)`: `+150g` / `-10g`, formatted without allocating.
+6. `FloatingTextRenderSystem(Canvas, Camera)`: `+150g` / `-10g`, formatted without allocating.
 7. `PromptRenderSystem(Canvas, Camera)`: small framed `DELIVER [E]` over the door / `BUY LADDERS [E] 10g`
    over the shopfront while the miner stands there.
 8. `HudSystem(Canvas, GameSaver)`: top 2 rows (plus a fading ` SAVED ` after each save): `ETERNAL DIGGER`, gold, ladders, depth, bag; key help or the rescue

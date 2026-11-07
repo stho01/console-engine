@@ -52,12 +52,20 @@ public struct TileCollider;
 /// <summary>Tag: an ambient mist particle, counted to keep the mist population steady.</summary>
 public struct Mist;
 
-/// <summary>
-/// Floating "+150g" / "-10g" text that drifts up and fades. Uses <c>Position</c> and <c>Velocity</c>; the text is
-/// formatted when drawn, without allocating.
-/// </summary>
-public struct FloatingNumber(int amount, float lifetime)
+/// <summary>What a <see cref="FloatingText"/> says.</summary>
+public enum FloatingTextKind : byte
 {
+    /// <summary><c>+150g</c> (yellow) or <c>-10g</c> (red): <see cref="FloatingText.Amount"/> in gold.</summary>
+    Gold
+}
+
+/// <summary>
+/// Floating text such as "+150g" or "-10g" that drifts up and fades. Uses <c>Position</c> and <c>Velocity</c>; the
+/// text is built from <see cref="Kind"/> and <see cref="Amount"/> when drawn, without allocating.
+/// </summary>
+public struct FloatingText(FloatingTextKind kind, int amount, float lifetime)
+{
+    public FloatingTextKind Kind = kind;
     public int Amount = amount;
     public float Age;
     public float Lifetime = lifetime;

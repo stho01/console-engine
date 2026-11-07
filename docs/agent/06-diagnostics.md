@@ -98,7 +98,7 @@ using [04](04-flows.md).
 | ` NO LADDERS LEFT!  Hold R to be rescued (the bag is lost) ` (blinking) | `HudSystem.NoLaddersWarning` | 0 ladders and below the surface |
 | ` DELIVER [E] ` | `PromptRenderSystem.DeliverText` | Standing at the door |
 | ` BUY LADDERS [E] 10g ` (red when gold < 10) | `PromptRenderSystem.BuyText` | Standing at the shopfront |
-| `+<n>g` / `-10g` (floating) | `FloatingNumberRenderSystem` | Delivery / purchase |
+| `+<n>g` / `-10g` (floating) | `FloatingTextRenderSystem` | Delivery / purchase |
 | ` EternalDigger `, `LADDERS`, `MINE` | `HouseRenderSystem` (house sign, shop, shaft frame) | Scenery |
 
 ### TerraForM screen text (`HudTexts`, `Sprites`)
