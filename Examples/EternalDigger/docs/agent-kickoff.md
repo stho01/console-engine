@@ -22,20 +22,21 @@ You are working on **EternalDigger**, a text-mode ECS mining game built on the c
 
 1. Read `AGENTS.md`, the game README, `game-brief.md`, `feature-handover.md`, `architecture.md` and `working-with-the-code.md`. Skim the rest as you need them.
 2. Run `dotnet build` and `dotnet test Examples/EternalDigger.Tests` and confirm both pass **before** you change anything.
-3. Find where each feature of this round touches the code: the climb timing and motion (for the accelerating climb); the mine shaft, the surface spots, interaction, prompts, the HUD and the save file (for the elevator); the mine generation, tiles and their looks, digging, glints, input, effects and the save file (for dynamite and the new layer).
+3. Find where each feature of this round touches the code: the surface shops, interaction, prompts and input (for the upgrade counter); digging, the light map and the lamp, glints, the bag and the HUD (for the upgrades); the lighting, the miner render, the HUD and time underground (for lamp oil); mine generation, tiles, glints, effects and the save file (for gems and rare finds); climbing and the bag (for bag weight).
 4. Send me a short plan for this round: the files and systems you'll touch, new components or systems, any engine changes you think you need, and anything in the handover that conflicts with the code or the repo rules. Wait for my go-ahead before building.
 
-## This round: Tier 1 only
+## This round: Tier 2 only
 
-Tier 0 (miner visibility, saving) is done and approved. Build the three Tier 1 features from `feature-handover.md`, in this order:
+Tiers 0 and 1 are done and approved (miner visibility, saving, accelerating climb, lift, obsidian wall, act 2 layer, dynamite). Build the four Tier 2 features from `feature-handover.md`, in this order:
 
-1. **Accelerating climb.** Holding Up on a ladder starts at the current 0.17 s per tile and ramps towards ~0.06 s per tile after ~4 tiles of continuous climbing; releasing Up or leaving the ladder resets it. At top speed, a dust trail below the miner and faster legs. A 100 m climb should take about 7–8 s; cover the timing with a frame-by-frame test.
-2. **Elevator.** Bought in 10 m segments at a new sign by the mine entrance (200g, +100g per segment), running down the mine shaft. E on the column calls the car or boards it, Up/Down rides at ~0.04 s per tile, stopping at the top and bottom. Shaft, car, cable and speed-line visuals, "ELEVATOR +10m" feedback, and the elevator depth in the HUD. Save the elevator depth (bump the save-format version and keep reading version 1 saves).
-3. **Dynamite wall + first new layer.** A 3–5 tile obsidian band at ~110 m that the shovel can't break ("TOO HARD"); the blasting kit (~2500g) and dynamite sticks (~100g each) at the surface shop; hold E 0.5 s underground to plant a stick in the faced tile, a 2 s fuse, a 3 × 3 blast that clears any rock, pushes the miner back, destroys ladders and bags the ore. Below the wall, the act 2 layer: new rock and one new ore, in its own palette, with glints hinting at it from ~95 m. The miner stays visible during a blast (this finishes the Tier 0 acceptance test). Save the kit and the dynamite stock.
+1. **Upgrade shop.** One counter where Up/Down cycles the items (ladders, oil, the upgrades, the blasting kit, dynamite) and E buys the selected one, with a small panel above it showing the item, tier pips `●●○` and the price (red when unaffordable). It replaces today's single-item prompts. Four upgrade lines with three tiers each: shovel, lamp, bag and detector, with the handover's effects and prices. Upgrades show on the miner where the handover suggests (shovel and lamp colour per tier). Save the upgrade tiers.
+2. **Lamp oil.** A tank (e.g. 100 units) that burns only underground; below 30% the cone shortens and flickers, empty leaves only the dimmed close radius (outlines and glints still show). Refill at the counter. An oil gauge in the HUD, smoke and a dim lamp glyph when low. It never kills. Save the oil level.
+3. **Gem ore below the wall, and rare finds.** Gems already exist from Tier 1: check them against the handover's spec and adjust where they differ. Add rare finds (e.g. fossil `§`, relic `¥`): very rare single tiles with a slow pulsing glint, a big star burst and a floating name when broken, sold high, and a `✦` counter in the HUD. Leave the trophy shelf for Tier 3. Save the rare finds.
+4. **Bag weight.** Ore weights (copper 1, silver 1, gold 2, gem 2, rare finds as you propose); above the threshold climbing slows a step per 10 weight; walking unaffected; no hard cap. With oil, a heavy bag burns more while climbing. The bag value turns yellow and the backpack glyph bulges when heavy. The bag upgrade from the shop works with this.
 
-The handover's Up/Down item-cycling shop counter belongs to Tier 2. For buying the kit and sticks in this round, pick the simplest scheme that reuses E and the existing keys, and propose it in your plan.
+Bump the save-format version for each change to the save and keep reading every older version.
 
-Don't start on Tier 2 or later, even where it looks easy. I'll playtest each tier before we move on.
+Don't start on Tier 3 or later, even where it looks easy. I'll playtest each tier before we move on.
 
 ## Working rules
 
