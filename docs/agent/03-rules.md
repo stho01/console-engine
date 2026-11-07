@@ -358,6 +358,7 @@ tile is 4 × 2 cells (`Layout.TileWidth`/`TileHeight`). Row 0 is the top of the 
 | Darkness | Lit tiles are remembered (`TileCell.Seen`) and drawn as faint grey outlines when dark, **without ore colour**. Never-seen dark tiles are black | `TerrainRenderSystem` |
 | Glints | Ore within 9 tiles of the miner and on screen twinkles, also through rock and in the dark (more in the dark). Gold most often, then silver, then copper. Sampled at a fixed rate (every 0.08 s), so not FPS-dependent | `GlintSystem` |
 | Camera | Follows the miner vertically (miner at 40% of the screen height), eased; never above the sky. Always on whole cells. Breaking tiles and falls of 3+ rows shake it | `CameraSystem`, `ScreenShake` |
+| Miner visibility | The miner is drawn after particles. No particle is drawn on his 4 × 2 cells; in the one-tile ring around him at most 6 particles per frame (`NearMinerCap`) are drawn, in their darker colour | `ParticleRenderSystem`, `MineScene` (Presentation order) |
 | Effects | Debris on hits, bursts and dust on breaks, foot/landing dust, mist in lit caves (max 40), coins + star pop + `+<gold>g` on delivery, pop + `-10g` on buying. All scaled by `Delta` | `EffectSpawner`, `ParticlePhysicsSystem`, `ParticleLifetimeSystem`, `MistSystem` |
 | Quit | `ESC` calls `Stop()`. Nothing is saved | `EternalDiggerGame.OnUpdate` |
 

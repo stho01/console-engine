@@ -121,8 +121,8 @@ Scenes.Update → MineScene.OnUpdate → Simulation.Update(dt)
   ── Commands.Playback: the particles recorded above are created, expired ones destroyed
 OnUpdate (game)           ESC → Stop()
 Scenes.Render → MineScene.OnRender → Presentation.Update(dt)
-  SkyRenderSystem → TerrainRenderSystem → HouseRenderSystem → MinerRenderSystem
-  → ParticleRenderSystem → FloatingNumberRenderSystem → PromptRenderSystem → HudSystem
+  SkyRenderSystem → TerrainRenderSystem → HouseRenderSystem → ParticleRenderSystem
+  → MinerRenderSystem → FloatingNumberRenderSystem → PromptRenderSystem → HudSystem
 Display                   the frame goes to the console in one write
 ```
 
@@ -135,7 +135,8 @@ Order matters in a few places:
 - **Effects appear in the frame they are made.** Particles are recorded in the Simulation group's `CommandBuffer` and
   created at its playback, before Presentation draws. Their first frame skips physics and the lifetime step, so
   `EffectSpawner` gives each one its first look (`ParticleLooks.GlyphAt` at progress 0) when it is created.
-- **Draw order is the `Add` order** of the Presentation group: background first, HUD last.
+- **Draw order is the `Add` order** of the Presentation group: background first, HUD last. The miner is drawn
+  after the particles, so effects never cover him.
 
 The Presentation group never makes structural changes, so its command buffer stays empty.
 

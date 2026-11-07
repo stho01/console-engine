@@ -59,8 +59,8 @@ Examples/EternalDigger/
 | 1 | `SkyRenderSystem` | `Canvas`, `Camera` | — | Sky, sun, clouds, hills |
 | 2 | `TerrainRenderSystem` | `Canvas`, `Camera`, `Mine`, `LightMap` | — | Tiles by light, ladders, cracks, grass |
 | 3 | `HouseRenderSystem` | `Canvas`, `Camera` | — | House, sign, smoke, shop, mine frame |
-| 4 | `MinerRenderSystem` | `Canvas`, `Camera` | `Miner, Position` | The miner and lamp glow |
-| 5 | `ParticleRenderSystem` | `Canvas`, `Camera`, `LightMap` | `Particle, Position, Glyph` | Particles (dust and mist only where lit) |
+| 4 | `ParticleRenderSystem` | `Canvas`, `Camera`, `LightMap` | `Particle, Position, Glyph`; `Miner, Position` | Particles (dust and mist only where lit; none on the miner, capped and dimmed around him) |
+| 5 | `MinerRenderSystem` | `Canvas`, `Camera` | `Miner, Position` | The miner and lamp glow, over the particles |
 | 6 | `FloatingNumberRenderSystem` | `Canvas`, `Camera` | `FloatingNumber, Position` | `+150g` / `-10g` |
 | 7 | `PromptRenderSystem` | `Canvas`, `Camera` | `Miner, Position` | Door and shop prompts |
 | 8 | `HudSystem` | `Canvas` | `Miner` | Rows 0–1 |
@@ -119,6 +119,7 @@ Static rule classes: `Tiles`, `Shop`, `Layout`, `TileLooks`, `ParticleLooks`.
 | `LightMap.LampRange` / `BrightRange` / `LitRange` | 8 / 4 / 6 tiles | Lamp reach and fall-off |
 | `LightMap.ConeHalfAngle` | 40° | Half the lamp cone |
 | `MistSystem.MaxMist` | 40 | Mist particles at most |
+| `ParticleRenderSystem.NearMinerCap` | 6 | Particles drawn per frame in the one-tile ring around the miner |
 | `ScreenShake.MaxStrength` / `Decay` | 2 cells / 6 per s | Shake cap and fade |
 
 ## User-visible text

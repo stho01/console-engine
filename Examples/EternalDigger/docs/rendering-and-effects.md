@@ -12,8 +12,8 @@ The Presentation group draws in `Add` order, each layer over the last:
 | 1 | `SkyRenderSystem` | Sky gradient, sun, clouds, hills | Every screen cell above the grass |
 | 2 | `TerrainRenderSystem` | Every tile from the grass row down, by light level | Every screen cell from the grass down (the mine's 30 columns) |
 | 3 | `HouseRenderSystem` | House, sign, chimney smoke, ladder shop, `MINE` frame | Fixed spots on the surface |
-| 4 | `MinerRenderSystem` | The 4 × 2 miner and the lamp glow | Over the world |
-| 5 | `ParticleRenderSystem` | Every particle glyph | Over the world, keeping its background |
+| 4 | `ParticleRenderSystem` | Every particle glyph, except on the miner's cells | Over the world, keeping its background |
+| 5 | `MinerRenderSystem` | The 4 × 2 miner and the lamp glow | Over the world and the particles |
 | 6 | `FloatingNumberRenderSystem` | `+150g` / `-10g` | Over everything so far |
 | 7 | `PromptRenderSystem` | `DELIVER [E]` / `BUY LADDERS [E] 10g` | Above the miner |
 | 8 | `HudSystem` | The two top rows | Screen rows 0–1 |
@@ -125,6 +125,19 @@ Legs: `█` standing, `▙`/`▟` alternating while walking, `╫` climbing, `�
 left) at rest; mid-swing it is `│` for up/down digs, or `─` then a tilt for side digs. Underground, two dots (`∙`
 `·`) glow in front of the lamp. All miner cells use `DrawOver`, so the sky or the tunnel shows around the sprite.
 
+**Keeping him readable.** Digging throws debris, dust and sparks straight at the miner, so three rules keep his face
+`☻` and lamp visible on every frame:
+
+- He is drawn **after** the particles.
+- `ParticleRenderSystem` draws **no particle on his 4 × 2 cells**, including the empty back column
+  (`ParticleRenderSystem.IsOnMiner`).
+- In the **one-tile ring around him** (`IsNearMiner`, 12 × 6 cells) at most `NearMinerCap` (6) particles are drawn
+  per frame, each in its darker colour (`ParticleRenderSystem.Dim`: White → Gray, Yellow → DarkYellow…), so the face
+  and lamp stay the brightest characters there. Particles past the cap are skipped for that frame, not moved.
+
+Debris still flies towards him: it starts in his front cell and passes through his tile, hidden while it is on his
+cells, then lands behind him.
+
 ## Particles
 
 All effects are entities with the engine's `Position`, `Velocity` and `Glyph`, plus:
@@ -155,7 +168,8 @@ flowchart LR
 - **`ParticleLifetimeSystem`:** ages each particle and rewrites its `Glyph` from `ParticleLooks.Character` and
   `ParticleLooks.Color` for its `Progress` (age / lifetime); destroys it at the end of its life.
 - **`ParticleRenderSystem`:** draws each glyph with `Canvas.DrawOver`. Dust and mist are skipped on `Dark` tiles;
-  debris, sparks, coins and glints show everywhere.
+  debris, sparks, coins and glints show everywhere. Nothing is drawn on the miner's cells, and the ring around him
+  is capped and dimmed ([Keeping him readable](#the-miner)).
 
 ### Looks over a lifetime (`Effects/ParticleLooks.cs`)
 
