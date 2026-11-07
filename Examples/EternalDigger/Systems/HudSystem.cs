@@ -8,12 +8,12 @@ using EternalDigger.Saving;
 namespace EternalDigger.Systems;
 
 /// <summary>
-/// The top two screen rows. Row 0: the title, gold, ladders, depth and the bag (ore counts and what they are worth).
-/// Row 1: the keys, the rescue progress bar while <c>R</c> is held, or a blinking warning when the miner is
-/// underground without ladders. After each save, a fading <c>SAVED</c> (or a red <c>SAVE FAILED</c>) at the right end
-/// of row 1. The status text is rebuilt only when a shown value changes.
+/// The top two screen rows. Row 0: the title, gold, ladders, the lift's depth (once built), depth and the bag (ore
+/// counts and what they are worth). Row 1: the keys, the rescue progress bar while <c>R</c> is held, or a blinking
+/// warning when the miner is underground without ladders. After each save, a fading <c>SAVED</c> (or a red
+/// <c>SAVE FAILED</c>) at the right end of row 1. The status text is rebuilt only when a shown value changes.
 /// </summary>
-public sealed class HudSystem(Canvas canvas, GameSaver saver) : EntitySystem
+public sealed class HudSystem(Canvas canvas, GameSaver saver, Elevator elevator) : EntitySystem
 {
     //**********************************************************
     //** fields
@@ -41,7 +41,7 @@ public sealed class HudSystem(Canvas canvas, GameSaver saver) : EntitySystem
     private Query _miners;
     private string _status = string.Empty;
     private int _shownGold = -1, _shownLadders = -1, _shownDepth = -1, _shownCopper = -1, _shownSilver = -1,
-        _shownGoldOre = -1;
+        _shownGoldOre = -1, _shownLift = -1;
     private float _time;
     private int _shownSaves;
     private float _savedHint;
@@ -73,8 +73,10 @@ public sealed class HudSystem(Canvas canvas, GameSaver saver) : EntitySystem
     {
         var depth = Math.Max(0, Mine.Depth(miner.Row));
         if (miner.Gold != _shownGold || miner.Ladders != _shownLadders || depth != _shownDepth ||
-            miner.CopperOre != _shownCopper || miner.SilverOre != _shownSilver || miner.GoldOre != _shownGoldOre)
+            miner.CopperOre != _shownCopper || miner.SilverOre != _shownSilver || miner.GoldOre != _shownGoldOre ||
+            elevator.Depth != _shownLift)
         {
+            _shownLift = elevator.Depth;
             _shownGold = miner.Gold;
             _shownLadders = miner.Ladders;
             _shownDepth = depth;
@@ -83,7 +85,8 @@ public sealed class HudSystem(Canvas canvas, GameSaver saver) : EntitySystem
             _shownGoldOre = miner.GoldOre;
             var bagValue = miner.CopperOre * Tiles.CopperValue + miner.SilverOre * Tiles.SilverValue +
                            miner.GoldOre * Tiles.GoldValue;
-            _status = $"  GOLD {miner.Gold:N0}g   LADDERS {miner.Ladders}   DEPTH {depth}m   BAG " +
+            var lift = elevator.IsBuilt ? $"   LIFT {elevator.Depth}m" : string.Empty;
+            _status = $"  GOLD {miner.Gold:N0}g   LADDERS {miner.Ladders}{lift}   DEPTH {depth}m   BAG " +
                       $"{OreIcon}{miner.CopperOre} {OreIcon}{miner.SilverOre} {OreIcon}{miner.GoldOre} = {bagValue:N0}g";
         }
 

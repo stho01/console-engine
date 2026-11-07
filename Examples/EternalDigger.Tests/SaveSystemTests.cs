@@ -25,7 +25,7 @@ public class SaveSystemTests
     {
         _directory = Path.Combine(Path.GetTempPath(), "EternalDiggerTests", Guid.NewGuid().ToString("N"));
         _world = new World();
-        _saver = new GameSaver(Path.Combine(_directory, "save.dat"), Seed, new Mine(Seed));
+        _saver = new GameSaver(Path.Combine(_directory, "save.dat"), Seed, new Mine(Seed), new Elevator());
         _simulation = new SystemGroup(_world);
         _simulation.Add(new SaveSystem(_saver));
         _miner = _world.Create(new Miner { Column = 5, Row = Layout.GroundRow, FacingX = 1 });

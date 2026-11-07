@@ -26,11 +26,12 @@ Examples/EternalDigger/
 │   ├── TileType.cs             Air, Grass, Dirt, Stone, Granite, Copper, Silver, Gold, Bedrock
 │   ├── TileCell.cs             one tile: Type, Damage, HasLadder, Seen
 │   ├── TileChange.cs           a saved tile: Column, Row, Cell
-│   └── DigResult.cs            what a hit did: DigOutcome (Nothing, Damaged, Broken), Type, Hits
+│   └── Elevator.cs             the lift: TryBuild, Send, Update, landings, car, Restore; ElevatorBuild
+│   ├── DigResult.cs            what a hit did: DigOutcome (Nothing, Damaged, Broken), Type, Hits
 ├── Components/
 │   ├── Miner.cs                the player: grid position, motion, lamp, dig timers, inventory
 │   └── Particle.cs             Particle, ParticleStyle, Physics, TileCollider, Mist, FloatingText
-├── Systems/                    19 systems, listed below
+├── Systems/                    21 systems, listed below
 ├── Effects/
 │   ├── EffectSpawner.cs        creates every particle and floating number
 │   ├── ParticleLooks.cs        characters and colours per style over a lifetime; GlyphAt
@@ -49,17 +50,18 @@ Examples/EternalDigger/
 
 | # | System | Constructor | Queries | Does |
 |---|---|---|---|---|
-| 1 | `MinerControlSystem` | `Mine`, `EffectSpawner` | `Miner, Position` | Reads `MinerInput`; rescue, fall, ladder, walk/dig; `Mine.Hit`, `Shop.Collect`, dig effects. Public `Control(...)` |
-| 2 | `InteractionSystem` | `EffectSpawner`, `GameSaver` | `Miner` | `E` at the door or shop: `Shop.Deliver`/`TryBuyLadder`, coins, pops, numbers; asks for a save |
+| 1 | `MinerControlSystem` | `Mine`, `Elevator`, `EffectSpawner` | `Miner, Position` | Reads `MinerInput`; rescue, ride keys, fall, ladder, walk/dig; `Mine.Hit`, `Shop.Collect`, dig effects. Public `Control(...)` |
+| 2 | `InteractionSystem` | `Mine`, `Elevator`, `EffectSpawner`, `GameSaver` | `Miner` | `E` at the door, shop, lift sign or a landing: `Shop.Deliver`/`TryBuyLadder`, `Elevator.TryBuild`, call/get in; coins, pops, texts; asks for a save. Public `Interact(...)` |
 | 3 | `MinerMotionSystem` | `Mine`, `EffectSpawner` | `Miner, Position` | Slides `Position`, ends moves, foot and landing dust, counts down `DigCooldown`/`SwingTime`. Public `Move(...)` |
-| 4 | `CameraSystem` | `Camera`, `RenderConsole`, `ScreenShake`, `Random` | `Miner, Position` | Vertical follow, shake, whole-cell `Camera.Position` |
-| 5 | `LightingSystem` | `Mine`, `LightMap`, `Camera` | `Miner, Position` | `LightMap.Compute` for the rows on screen |
-| 6 | `GlintSystem` | `Mine`, `LightMap`, `Camera`, `EffectSpawner`, `Random` | `Miner` | Ore glints near the miner, at a fixed rate |
-| 7 | `MistSystem` | `Mine`, `LightMap`, `Camera`, `EffectSpawner`, `Random` | `Mist` | Keeps up to 40 mist particles in lit caves |
-| 8 | `ParticlePhysicsSystem` | `Mine` | `Particle, Position, Velocity, Physics` | Gravity, drag, movement, landing on rock (`TileCollider`) |
-| 9 | `ParticleLifetimeSystem` | — | `Particle, Glyph` | Ages particles, sets their glyph, destroys expired ones |
-| 10 | `FloatingTextSystem` | — | `FloatingText, Position, Velocity` | Moves floating texts up, destroys expired ones |
-| 11 | `SaveSystem` | `GameSaver` | `Miner` | Saves on request, or after `GameSaver.AutosaveInterval` s underground |
+| 4 | `ElevatorSystem` | `Elevator` | `Miner, Position` | `Elevator.Update`; carries the rider, picks up a caller. Public `Carry(...)` |
+| 5 | `CameraSystem` | `Camera`, `RenderConsole`, `ScreenShake`, `Random` | `Miner, Position` | Vertical follow, shake, whole-cell `Camera.Position` |
+| 6 | `LightingSystem` | `Mine`, `LightMap`, `Camera` | `Miner, Position` | `LightMap.Compute` for the rows on screen |
+| 7 | `GlintSystem` | `Mine`, `LightMap`, `Camera`, `EffectSpawner`, `Random` | `Miner` | Ore glints near the miner, at a fixed rate |
+| 8 | `MistSystem` | `Mine`, `LightMap`, `Camera`, `EffectSpawner`, `Random` | `Mist` | Keeps up to 40 mist particles in lit caves |
+| 9 | `ParticlePhysicsSystem` | `Mine` | `Particle, Position, Velocity, Physics` | Gravity, drag, movement, landing on rock (`TileCollider`) |
+| 10 | `ParticleLifetimeSystem` | — | `Particle, Glyph` | Ages particles, sets their glyph, destroys expired ones |
+| 11 | `FloatingTextSystem` | — | `FloatingText, Position, Velocity` | Moves floating texts up, destroys expired ones |
+| 12 | `SaveSystem` | `GameSaver` | `Miner` | Saves on request, or after `GameSaver.AutosaveInterval` s underground |
 
 ### Presentation (`MineScene.Presentation`)
 
@@ -67,23 +69,24 @@ Examples/EternalDigger/
 |---|---|---|---|---|
 | 1 | `SkyRenderSystem` | `Canvas`, `Camera` | — | Sky, sun, clouds, hills |
 | 2 | `TerrainRenderSystem` | `Canvas`, `Camera`, `Mine`, `LightMap` | — | Tiles by light, ladders, cracks, grass |
-| 3 | `HouseRenderSystem` | `Canvas`, `Camera` | — | House, sign, smoke, shop, mine frame |
-| 4 | `ParticleRenderSystem` | `Canvas`, `Camera`, `LightMap` | `Particle, Position, Glyph`; `Miner, Position` | Particles (dust and mist only where lit; none on the miner, capped and dimmed around him) |
-| 5 | `MinerRenderSystem` | `Canvas`, `Camera` | `Miner, Position` | The miner and lamp glow, over the particles |
-| 6 | `FloatingTextRenderSystem` | `Canvas`, `Camera` | `FloatingText, Position` | `+150g` / `-10g` |
-| 7 | `PromptRenderSystem` | `Canvas`, `Camera` | `Miner, Position` | Door and shop prompts |
-| 8 | `HudSystem` | `Canvas`, `GameSaver` | `Miner` | Rows 0–1, the save hint |
+| 3 | `HouseRenderSystem` | `Canvas`, `Camera` | — | House, sign, smoke, shop, mine frame, `LIFT` sign |
+| 4 | `ElevatorRenderSystem` | `Canvas`, `Camera`, `Elevator` | — | Shaft walls and braces, cable, car, speed lines |
+| 5 | `ParticleRenderSystem` | `Canvas`, `Camera`, `LightMap` | `Particle, Position, Glyph`; `Miner, Position` | Particles (dust and mist only where lit; none on the miner, capped and dimmed around him) |
+| 6 | `MinerRenderSystem` | `Canvas`, `Camera` | `Miner, Position` | The miner and lamp glow, over the particles |
+| 7 | `FloatingTextRenderSystem` | `Canvas`, `Camera` | `FloatingText, Position` | `+150g` / `-10g` |
+| 8 | `PromptRenderSystem` | `Canvas`, `Camera`, `Elevator` | `Miner, Position` | Door, shop, lift sign and landing prompts |
+| 9 | `HudSystem` | `Canvas`, `GameSaver`, `Elevator` | `Miner` | Rows 0–1, the save hint |
 
 ## Components
 
 | Component | Fields | On |
 |---|---|---|
-| `Miner` | `Column`, `Row` (tile; the target while moving), `MoveFrom` (tile, `Vector2`), `MoveElapsed`, `MoveDuration` (0 = idle), `Motion` (`Idle`, `Walking`, `Climbing`, `Falling`), `ClimbStreak`, `FallRows`, `FacingX` (−1/1), `LampDirection`, `DigCooldown`, `SwingTime`, `SwingDirection` (`Point`), `RescueHold`, `Gold`, `Ladders`, `CopperOre`, `SilverOre`, `GoldOre`. Read-only: `IsMoving`, `OreCount` | The miner |
+| `Miner` | `Column`, `Row` (tile; the target while moving), `MoveFrom` (tile, `Vector2`), `MoveElapsed`, `MoveDuration` (0 = idle), `Motion` (`Idle`, `Walking`, `Climbing`, `Falling`), `ClimbStreak`, `IsRiding`, `FallRows`, `FacingX` (−1/1), `LampDirection`, `DigCooldown`, `SwingTime`, `SwingDirection` (`Point`), `RescueHold`, `Gold`, `Ladders`, `CopperOre`, `SilverOre`, `GoldOre`. Read-only: `IsMoving`, `OreCount` | The miner |
 | `Particle` | `Age`, `Lifetime`, `Style` (`ParticleStyle`), `Variant` (random byte). Read-only: `Progress` | Every particle |
 | `Physics` | `Gravity` (cells/s²), `Drag` (per second) | Every particle |
 | `TileCollider` | tag | Debris, coins |
 | `Mist` | tag | Mist |
-| `FloatingText` | `Kind` (`FloatingTextKind`: `Gold`), `Amount`, `Age`, `Lifetime` | Floating texts |
+| `FloatingText` | `Kind` (`FloatingTextKind`: `Gold`, `Elevator`), `Amount`, `Age`, `Lifetime` | Floating texts |
 | `Position`, `Velocity`, `Glyph` | engine components (`ConsoleEngine.Ecs.Components`) | Miner (`Position` only), particles, numbers (no `Glyph`) |
 
 ## Services
@@ -96,6 +99,7 @@ Examples/EternalDigger/
 | `LightMap` | `MineScene` | lighting, glints, mist, terrain, particles | `Compute`, `Get`, `FirstRow`, `Rows`; `Dark`, `Dim`, `Lit`, `Bright` |
 | `Canvas` | `MineScene` | all Presentation systems | `Draw`, `DrawOver`, `BackgroundAt`, `Width`, `Height` |
 | `Random(seed)` | `MineScene` | `EffectSpawner`, camera, glints, mist | — |
+| `Elevator` | `MineScene` | control, interaction, `ElevatorSystem`, lift and prompt rendering, HUD, saving | `TryBuild`, `Send`, `PickedUp`, `Update`, `Restore`, `IsLanding`, `IsCarAt`, `Segments`, `Depth`, `BottomRow`, `NextSegmentPrice`, `CarRow`, `CarTargetRow`, `IsCarMoving`, `IsCalled`; consts `Column`, `TopRow` |
 | `GameSaver` | `MineScene` | interaction, `SaveSystem`, HUD, `MineScene.Save` | `Request`, `Save`, `IsRequested`, `Saves`, `LastSaveFailed`, `Path`, `Seed` |
 
 Static rule classes: `Tiles`, `Shop`, `Layout`, `TileLooks`, `ParticleLooks`, `SaveFile`.
@@ -134,7 +138,12 @@ Static rule classes: `Tiles`, `Shop`, `Layout`, `TileLooks`, `ParticleLooks`, `S
 | `ScreenShake.MaxStrength` / `Decay` | 2 cells / 6 per s | Shake cap and fade |
 | `GameSaver.AutosaveInterval` | 60 s | Time underground between autosaves (0 = off) |
 | `HudSystem.SavedHintSeconds` | 1.5 s | How long ` SAVED ` shows |
-| `SaveFile.Version` | 1 | Save-format version written |
+| `SaveFile.Version` / `OldestVersion` | 2 / 1 | Save-format version written / oldest still read |
+| `Elevator.SegmentMetres` | 10 m | Lift length per purchase |
+| `Elevator.FirstSegmentPrice` / `SegmentPriceStep` | 200g / 100g | First segment price, increase per segment |
+| `Elevator.RideDuration` | 0.04 s | Car time per tile |
+| `Layout.LiftSignFirstColumn`…`LiftSignLastColumn` | 23–24 | Lift sign spot |
+| `ElevatorRenderSystem.BraceEvery` | 5 m | Shaft brace spacing |
 
 ## User-visible text
 
@@ -150,6 +159,11 @@ Static rule classes: `Tiles`, `Shop`, `Layout`, `TileLooks`, `ParticleLooks`, `S
 | ` RESCUE ` … ` the bag is lost` | `HudSystem.RescueLabel`, `RescueNote` |
 | ` NO LADDERS LEFT!  Hold R to be rescued (the bag is lost) ` | `HudSystem.NoLaddersWarning` |
 | ` DELIVER [E] ` | `PromptRenderSystem.DeliverText` |
+| ` BUILD LIFT +10m [E] <price>g ` | `PromptRenderSystem.BuildLiftText` |
+| ` CALL LIFT [E] ` / ` GET IN [E] ` / ` ↑↓ RIDE   ←→ GET OUT ` | `PromptRenderSystem.CallLiftText`, `BoardLiftText`, `RideText` |
+| `ELEVATOR +10m` (floating) | `FloatingTextRenderSystem.ElevatorLabel` + metres |
+| `   LIFT <n>m` (HUD row 0) | `HudSystem.DrawStatus` |
+| ` LIFT ` (sign) | `HouseRenderSystem.LiftText` |
 | ` BUY LADDERS [E] 10g ` | `PromptRenderSystem.BuyText` |
 | ` EternalDigger `, `LADDERS`, `MINE` | `HouseRenderSystem` (`SignBoard`, `ShopText`, `MineText`) |
 | `EternalDigger` (window title) | `Program.cs` (`Name`) |

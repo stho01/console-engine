@@ -6,8 +6,8 @@ using Microsoft.Xna.Framework;
 namespace EternalDigger.Saving;
 
 /// <summary>
-/// Everything a save holds: the seed, the miner's tile, facing and inventory, and the tiles that differ from what the
-/// seed generates. The mine itself is never stored, it is regenerated from the seed. Built only when saving or
+/// Everything a save holds: the seed, the miner's tile, facing and inventory, the lift, and the tiles that differ
+/// from what the seed generates. The mine itself is never stored, it is regenerated from the seed. Built only when saving or
 /// loading, never per frame.
 /// </summary>
 public sealed class SaveData
@@ -29,6 +29,12 @@ public sealed class SaveData
     public int SilverOre { get; init; }
     public int GoldOre { get; init; }
 
+    /// <summary>Lift segments built (<see cref="Elevator.SegmentMetres"/> m each). 0 = no lift.</summary>
+    public int ElevatorSegments { get; init; }
+
+    /// <summary>The landing the lift car stands at (or was heading for).</summary>
+    public int ElevatorCarRow { get; init; } = Elevator.TopRow;
+
     /// <summary>Tiles that differ from the generated mine, top row first.</summary>
     public List<TileChange> Changes { get; init; } = [];
 
@@ -47,7 +53,8 @@ public sealed class SaveData
     };
 
     /// <summary>Takes the miner and the mine as they are now. <paramref name="changes"/> is filled and kept.</summary>
-    public static SaveData Capture(int seed, in Miner miner, Mine mine, List<TileChange> changes)
+    /// <remarks>A miner riding the lift is saved standing at the landing the car is heading for.</remarks>
+    public static SaveData Capture(int seed, in Miner miner, Mine mine, Elevator elevator, List<TileChange> changes)
     {
         changes.Clear();
         mine.CollectChanges(changes);
@@ -55,13 +62,15 @@ public sealed class SaveData
         {
             Seed = seed,
             Column = miner.Column,
-            Row = miner.Row,
+            Row = miner.IsRiding ? elevator.CarTargetRow : miner.Row,
             FacingX = miner.FacingX < 0 ? -1 : 1,
             Gold = miner.Gold,
             Ladders = miner.Ladders,
             CopperOre = miner.CopperOre,
             SilverOre = miner.SilverOre,
             GoldOre = miner.GoldOre,
+            ElevatorSegments = elevator.Segments,
+            ElevatorCarRow = elevator.CarTargetRow,
             Changes = changes
         };
     }
@@ -81,10 +90,12 @@ public sealed class SaveData
         GoldOre = GoldOre
     };
 
-    /// <summary>Puts the saved tiles back into a mine made from <see cref="Seed"/>.</summary>
-    public void ApplyTo(Mine mine)
+    /// <summary>Puts the saved tiles back into a mine made from <see cref="Seed"/>, and the lift back.</summary>
+    public void ApplyTo(Mine mine, Elevator elevator)
     {
         for (var i = 0; i < Changes.Count; i++)
             mine.Apply(Changes[i]);
+
+        elevator.Restore(ElevatorSegments, ElevatorCarRow);
     }
 }

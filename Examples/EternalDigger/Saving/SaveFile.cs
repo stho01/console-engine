@@ -19,8 +19,9 @@ public enum SaveStatus : byte
 
 /// <summary>
 /// The save file: one slot, binary, versioned. Layout (little-endian): magic <c>EDSV</c>, format version, seed,
-/// miner column, row and facing, gold, ladders, copper, silver and gold ore, then the changed tiles (count, then row,
-/// column, type, damage, flags each). Writing goes to a temp file first, so a crash never leaves half a save.
+/// miner column, row and facing, gold, ladders, copper, silver and gold ore, (version 2+) lift segments and car row,
+/// then the changed tiles (count, then row, column, type, damage, flags each). Older versions are still read. Writing
+/// goes to a temp file first, so a crash never leaves half a save.
 /// </summary>
 public static class SaveFile
 {
@@ -29,7 +30,10 @@ public static class SaveFile
     //**********************************************************
 
     /// <summary>The save-format version written. Bump it whenever the layout changes, and keep reading older ones.</summary>
-    public const int Version = 1;
+    public const int Version = 2;
+
+    /// <summary>The oldest save-format version this build still reads.</summary>
+    public const int OldestVersion = 1;
 
     /// <summary>"EDSV" as a little-endian int.</summary>
     private const int Magic = 0x56534445;
@@ -113,6 +117,8 @@ public static class SaveFile
         writer.Write(data.CopperOre);
         writer.Write(data.SilverOre);
         writer.Write(data.GoldOre);
+        writer.Write(data.ElevatorSegments);
+        writer.Write(data.ElevatorCarRow);
 
         writer.Write(data.Changes.Count);
         for (var i = 0; i < data.Changes.Count; i++)
@@ -138,10 +144,10 @@ public static class SaveFile
                 return SaveStatus.Corrupt;
 
             var version = reader.ReadInt32();
-            if (version != Version)
+            if (version is < OldestVersion or > Version)
                 return SaveStatus.Unsupported;
 
-            return ReadVersion1(reader, out data);
+            return ReadFields(reader, version, out data);
         }
         catch (EndOfStreamException)
         {
@@ -154,7 +160,8 @@ public static class SaveFile
     //** internals
     //**********************************************************
 
-    private static SaveStatus ReadVersion1(BinaryReader reader, out SaveData data)
+    /// <summary>The fields after the version. Fields added in later versions get their defaults in older files.</summary>
+    private static SaveStatus ReadFields(BinaryReader reader, int version, out SaveData data)
     {
         data = null;
         var seed = reader.ReadInt32();
@@ -169,6 +176,18 @@ public static class SaveFile
         if ((uint)column >= Mine.Columns || (uint)row > MaxRow || facing is not (-1 or 1) ||
             (gold | ladders | copper | silver | goldOre) < 0)
             return SaveStatus.Corrupt;
+
+        var segments = 0;
+        var carRow = Elevator.TopRow;
+        if (version >= 2)
+        {
+            segments = reader.ReadInt32();
+            carRow = reader.ReadInt32();
+            var bottomRow = Mine.SurfaceRow + segments * Elevator.SegmentMetres;
+            if ((uint)segments > MaxRow / Elevator.SegmentMetres ||
+                carRow != Elevator.TopRow && (segments == 0 || carRow != bottomRow))
+                return SaveStatus.Corrupt;
+        }
 
         var count = reader.ReadInt32();
         if ((uint)count > (MaxRow + 1L) * Mine.Columns)
@@ -209,6 +228,8 @@ public static class SaveFile
             CopperOre = copper,
             SilverOre = silver,
             GoldOre = goldOre,
+            ElevatorSegments = segments,
+            ElevatorCarRow = carRow,
             Changes = changes
         };
         return SaveStatus.Loaded;

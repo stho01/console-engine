@@ -12,7 +12,7 @@ namespace EternalDigger.Saving;
 /// through <c>MineScene.Save</c>. Writing happens only on those triggers, never per frame. A new mine's first save is
 /// written by <c>TitleScene</c>.
 /// </summary>
-public sealed class GameSaver(string path, int seed, Mine mine)
+public sealed class GameSaver(string path, int seed, Mine mine, Elevator elevator)
 {
     //**********************************************************
     //** fields
@@ -52,7 +52,7 @@ public sealed class GameSaver(string path, int seed, Mine mine)
         IsRequested = false;
         try
         {
-            SaveFile.Save(Path, SaveData.Capture(Seed, miner, mine, _changes));
+            SaveFile.Save(Path, SaveData.Capture(Seed, miner, mine, elevator, _changes));
             LastSaveFailed = false;
         }
         catch (Exception exception) when (exception is IOException or UnauthorizedAccessException)

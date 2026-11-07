@@ -33,7 +33,7 @@ public class MinerControlSystemTests
     {
         _mine = new Mine(Seed);
         var effects = new EffectSpawner(new Random(Seed), new ScreenShake());
-        _control = new MinerControlSystem(_mine, effects);
+        _control = new MinerControlSystem(_mine, new Elevator(), effects);
         _motion = new MinerMotionSystem(_mine, effects);
         _commands = new CommandBuffer();
         PlaceMiner(Layout.SpawnColumn, Layout.GroundRow);

@@ -58,7 +58,9 @@ public struct Mist;
 public enum FloatingTextKind : byte
 {
     /// <summary><c>+150g</c> (yellow) or <c>-10g</c> (red): <see cref="FloatingText.Amount"/> in gold.</summary>
-    Gold
+    Gold,
+    /// <summary><c>ELEVATOR +10m</c>: a lift segment was built, <see cref="FloatingText.Amount"/> in metres.</summary>
+    Elevator
 }
 
 /// <summary>

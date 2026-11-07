@@ -34,6 +34,8 @@ public sealed class HouseRenderSystem(Canvas canvas, Camera camera) : EntitySyst
     private const string SignBoard = " EternalDigger ";
     private const string ShopText = "LADDERS";
     private const string MineText = "MINE";
+    private const string LiftText = " LIFT ";
+    private const int LiftSignLeft = Layout.LiftSignFirstColumn * Layout.TileWidth + 1;
 
     private const float SmokeRise = 1.5f;
     private const int SmokePuffs = 4;
@@ -58,6 +60,7 @@ public sealed class HouseRenderSystem(Canvas canvas, Camera camera) : EntitySyst
         DrawHouse();
         DrawShop();
         DrawMineEntrance();
+        DrawLiftSign();
     }
 
     //**********************************************************
@@ -144,6 +147,16 @@ public sealed class HouseRenderSystem(Canvas canvas, Camera camera) : EntitySyst
         Fill(right, top + 1, right, Ground, '║', ConsoleColor.DarkYellow, Backdrop(right, Ground));
         Draw(left, top, "╔════╗", ConsoleColor.DarkYellow, Backdrop(left, top));
         Draw(left + 1, top - 1, MineText, ConsoleColor.Yellow, ConsoleColor.DarkRed);
+    }
+
+    /// <summary>A plank on two posts beside the mine entrance, where lift segments are bought.</summary>
+    private void DrawLiftSign()
+    {
+        Draw(LiftSignLeft, Ground - 3, LiftText, ConsoleColor.White, ConsoleColor.DarkYellow);
+        Fill(LiftSignLeft + 1, Ground - 2, LiftSignLeft + 1, Ground, '│', ConsoleColor.DarkYellow,
+            Backdrop(LiftSignLeft + 1, Ground));
+        Fill(LiftSignLeft + LiftText.Length - 2, Ground - 2, LiftSignLeft + LiftText.Length - 2, Ground, '│',
+            ConsoleColor.DarkYellow, Backdrop(LiftSignLeft + LiftText.Length - 2, Ground));
     }
 
     private void Fill(int left, int top, int right, int bottom, char character, ConsoleColor foreground,

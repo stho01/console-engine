@@ -46,6 +46,10 @@ public static class Layout
     public const int ShopFirstColumn = 8;
     public const int ShopLastColumn = 11;
 
+    /// <summary>Standing on these columns at <see cref="GroundRow"/> lets the miner build lift segments.</summary>
+    public const int LiftSignFirstColumn = 23;
+    public const int LiftSignLastColumn = 24;
+
     /// <summary>Where the miner starts and where a rescue brings them back.</summary>
     public const int SpawnColumn = 15;
 
@@ -62,6 +66,9 @@ public static class Layout
 
     public static bool IsAtDeliverSpot(int column, int row) =>
         row == GroundRow && column >= DeliverFirstColumn && column <= DeliverLastColumn;
+
+    public static bool IsAtLiftSign(int column, int row) =>
+        row == GroundRow && column >= LiftSignFirstColumn && column <= LiftSignLastColumn;
 
     public static bool IsAtShop(int column, int row) =>
         row == GroundRow && column >= ShopFirstColumn && column <= ShopLastColumn;

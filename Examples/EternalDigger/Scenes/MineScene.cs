@@ -49,20 +49,22 @@ public sealed class MineScene(SaveData start, string savePath) : EcsScene<Eterna
     protected override void OnCreate()
     {
         var mine = new Mine(start.Seed);
-        start.ApplyTo(mine);
+        var elevator = new Elevator();
+        start.ApplyTo(mine, elevator);
         var random = new Random(start.Seed);
         var effects = new EffectSpawner(random, new ScreenShake());
         var light = new LightMap(Mine.Columns, Layout.ScreenHeight / Layout.TileHeight + 2);
         var canvas = new Canvas(Console);
-        _saver = new GameSaver(savePath, start.Seed, mine);
+        _saver = new GameSaver(savePath, start.Seed, mine, elevator);
         _miners = World.Query(Query.With<Miner>());
 
         var miner = start.ToMiner();
         World.Create(new Position(Layout.TileToWorld(miner.Column, miner.Row)), miner);
 
-        Simulation.Add(new MinerControlSystem(mine, effects));
-        Simulation.Add(new InteractionSystem(effects, _saver));
+        Simulation.Add(new MinerControlSystem(mine, elevator, effects));
+        Simulation.Add(new InteractionSystem(mine, elevator, effects, _saver));
         Simulation.Add(new MinerMotionSystem(mine, effects));
+        Simulation.Add(new ElevatorSystem(elevator));
         Simulation.Add(new CameraSystem(Camera, Console, effects.Shake, random));
         Simulation.Add(new LightingSystem(mine, light, Camera));
         Simulation.Add(new GlintSystem(mine, light, Camera, effects, random));
@@ -75,11 +77,12 @@ public sealed class MineScene(SaveData start, string savePath) : EcsScene<Eterna
         Presentation.Add(new SkyRenderSystem(canvas, Camera));
         Presentation.Add(new TerrainRenderSystem(canvas, Camera, mine, light));
         Presentation.Add(new HouseRenderSystem(canvas, Camera));
+        Presentation.Add(new ElevatorRenderSystem(canvas, Camera, elevator));
         Presentation.Add(new ParticleRenderSystem(canvas, Camera, light));
         // After the particles, so debris, dust and sparks never cover the miner.
         Presentation.Add(new MinerRenderSystem(canvas, Camera));
         Presentation.Add(new FloatingTextRenderSystem(canvas, Camera));
-        Presentation.Add(new PromptRenderSystem(canvas, Camera));
-        Presentation.Add(new HudSystem(canvas, _saver));
+        Presentation.Add(new PromptRenderSystem(canvas, Camera, elevator));
+        Presentation.Add(new HudSystem(canvas, _saver, elevator));
     }
 }

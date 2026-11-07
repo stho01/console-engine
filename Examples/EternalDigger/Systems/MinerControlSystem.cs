@@ -10,10 +10,10 @@ namespace EternalDigger.Systems;
 
 /// <summary>
 /// Turns input into moves, digs, ladders and rescues while the miner is idle. Falling comes first: an unsupported
-/// miner always falls one tile before any key is read. <see cref="MinerMotionSystem"/> plays the moves this starts.
-/// The keyboard is read once per frame into a <see cref="MinerInput"/>; <see cref="Control"/> holds the rules.
+/// miner always falls one tile before any key is read. A miner riding the lift only reads the ride keys.
+/// <see cref="MinerMotionSystem"/> plays the moves this starts. The keyboard is read once per frame into a <see cref="MinerInput"/>; <see cref="Control"/> holds the rules.
 /// </summary>
-public sealed class MinerControlSystem(Mine mine, EffectSpawner effects) : EntitySystem
+public sealed class MinerControlSystem(Mine mine, Elevator elevator, EffectSpawner effects) : EntitySystem
 {
     //**********************************************************
     //** fields
@@ -65,6 +65,9 @@ public sealed class MinerControlSystem(Mine mine, EffectSpawner effects) : Entit
         CommandBuffer commands)
     {
         if (UpdateRescue(ref miner, ref position, input.Rescue, deltaSeconds, commands) || miner.IsMoving)
+            return;
+
+        if (miner.IsRiding && Ride(ref miner, input))
             return;
 
         if (!mine.IsSupported(miner.Column, miner.Row))
@@ -126,6 +129,35 @@ public sealed class MinerControlSystem(Mine mine, EffectSpawner effects) : Entit
     //**********************************************************
     //** internals
     //**********************************************************
+
+    /// <summary>
+    /// The ride keys while in the stopped car: Up to the top, Down to the bottom. Left/Right, or Down at the bottom,
+    /// step off (returns false, so the key is handled as usual). True when the frame is used up.
+    /// </summary>
+    private bool Ride(ref Miner miner, in MinerInput input)
+    {
+        if (elevator.IsCarMoving)
+            return true;
+
+        var atTop = miner.Row == Elevator.TopRow;
+        if (input.Up && !atTop)
+        {
+            elevator.Send(Elevator.TopRow);
+            return true;
+        }
+
+        if (input.Down && atTop)
+        {
+            elevator.Send(elevator.BottomRow);
+            return true;
+        }
+
+        if (input.Horizontal == 0 && !input.Down)
+            return true;
+
+        miner.IsRiding = false;
+        return false;
+    }
 
     /// <summary>Walks/climbs into air, digs anything else. Unbreakable tiles just block.</summary>
     private void MoveOrDig(ref Miner miner, int dx, int dy, float duration, MinerMotion motion,
@@ -207,6 +239,7 @@ public sealed class MinerControlSystem(Mine mine, EffectSpawner effects) : Entit
         miner.Motion = MinerMotion.Idle;
         miner.FallRows = 0;
         miner.ClimbStreak = 0;
+        miner.IsRiding = false;
         position.Value = Layout.TileToWorld(miner.Column, miner.Row);
 
         effects.Pop(commands, Layout.TileCenter(miner.Column, miner.Row));
