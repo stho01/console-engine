@@ -145,6 +145,17 @@ public sealed class Mine
     }
 
     /// <summary>
+    /// The depth of the obsidian wall's last row in a column: <see cref="Tiles.WallDepth"/> plus 2–4, so the wall is
+    /// <see cref="Tiles.WallMinThickness"/> to <see cref="Tiles.WallMaxThickness"/> tiles thick.
+    /// </summary>
+    public int WallBottomDepth(int column)
+    {
+        var range = Tiles.WallMaxThickness - Tiles.WallMinThickness + 1;
+        var thickness = Tiles.WallMinThickness + Math.Min(range - 1, (int)(Noise(column, 0, 41) * range));
+        return Tiles.WallDepth + thickness - 1;
+    }
+
+    /// <summary>
     /// A value in [0, 1) that only depends on the seed and the arguments. For textures and effects that must not
     /// flicker.
     /// </summary>
@@ -182,7 +193,12 @@ public sealed class Mine
         if (column == 0 || column == Columns - 1)
             return new TileCell { Type = TileType.Bedrock };
 
-        return new TileCell { Type = Underground(column, row, depth) };
+        if (depth < Tiles.WallDepth)
+            return new TileCell { Type = Underground(column, row, depth) };
+
+        var wallBottom = WallBottomDepth(column);
+        var type = depth <= wallBottom ? TileType.Obsidian : BelowTheWall(column, row, depth - wallBottom);
+        return new TileCell { Type = type };
     }
 
     private TileType Underground(int column, int row, int depth)
@@ -212,6 +228,19 @@ public sealed class Mine
 
     private static bool IsSame(in TileCell a, in TileCell b) =>
         a.Type == b.Type && a.Damage == b.Damage && a.HasLadder == b.HasLadder && a.Seen == b.Seen;
+
+    /// <summary>Act 2: slate with quartzite blobs, gem veins and caves. None of the act 1 rock or ore.</summary>
+    private TileType BelowTheWall(int column, int row, int depthBelowWall)
+    {
+        if (IsVein(column, row, 37, Math.Min(.04f + depthBelowWall * .0005f, .07f)))
+            return TileType.Gem;
+
+        if ((Noise(column >> 1, row, 43) + Noise(column, row >> 1, 47)) * .5f < .06f)
+            return TileType.Air;
+
+        var rock = Noise(column >> 1, row, 53) * .5f + Noise(column, row, 59) * .5f;
+        return rock < Math.Min(.25f + depthBelowWall * .004f, .5f) ? TileType.Quartzite : TileType.Slate;
+    }
 
     private bool IsVein(int column, int row, int salt, float chance) =>
         Noise(column >> 1, row >> 1, salt) < chance * 1.6f && Noise(column, row, salt + 1) < .6f;

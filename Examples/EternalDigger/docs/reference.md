@@ -10,7 +10,7 @@ Examples/EternalDigger/
 ├── Program.cs                  seed from the first argument, creates and starts the game
 ├── EternalDiggerGame.cs        GameBase: 120 × 48, 8 × 16 font, ESC saves and quits, starts on TitleScene
 ├── Layout.cs                   screen and tile sizes, surface spots, tile ↔ world helpers
-├── Shop.cs                     prices and start inventory; Deliver, TryBuyLadder, Collect
+├── Shop.cs                     prices and start inventory; BagValue, Deliver, EmptyBag, TryBuyLadder, Collect
 ├── MinerInput.cs               one frame of miner keys; FromKeyboard
 ├── Scenes/
 │   ├── MineScene.cs            services, the miner entity, systems in run order; Save() for Esc
@@ -21,9 +21,10 @@ Examples/EternalDigger/
 │   ├── SaveFile.cs             binary versioned file: Save, Load, Read, Write, SaveStatus, DefaultPath
 │   └── GameSaver.cs            the running mine's slot: Request, Save, Saves, LastSaveFailed
 ├── Mining/
-│   ├── Mine.cs                 the endless seeded grid: At, Hit, TryPlaceLadder, IsSupported, Noise
+│   ├── Mine.cs                 the endless seeded grid: At, Hit, TryPlaceLadder, IsSupported, WallBottomDepth, Noise
 │   ├── Tiles.cs                per-type rules: solid, breakable, ore value, hits, start depths
-│   ├── TileType.cs             Air, Grass, Dirt, Stone, Granite, Copper, Silver, Gold, Bedrock
+│   ├── TileType.cs             Air, Grass, Dirt, Stone, Granite, Copper, Silver, Gold, Bedrock, then (act 2)
+│   │                           Obsidian, Slate, Quartzite, Gem. New types go at the end (saves store the byte)
 │   ├── TileCell.cs             one tile: Type, Damage, HasLadder, Seen
 │   ├── TileChange.cs           a saved tile: Column, Row, Cell
 │   └── Elevator.cs             the lift: TryBuild, Send, Update, landings, car, Restore; ElevatorBuild
@@ -74,32 +75,32 @@ Examples/EternalDigger/
 | 5 | `ParticleRenderSystem` | `Canvas`, `Camera`, `LightMap` | `Particle, Position, Glyph`; `Miner, Position` | Particles (dust and mist only where lit; none on the miner, capped and dimmed around him) |
 | 6 | `MinerRenderSystem` | `Canvas`, `Camera` | `Miner, Position` | The miner and lamp glow, over the particles |
 | 7 | `FloatingTextRenderSystem` | `Canvas`, `Camera` | `FloatingText, Position` | `+150g` / `-10g` |
-| 8 | `PromptRenderSystem` | `Canvas`, `Camera`, `Elevator` | `Miner, Position` | Door, shop, lift sign and landing prompts |
+| 8 | `PromptRenderSystem` | `Canvas`, `Camera`, `Mine`, `Elevator` | `Miner, Position` | Door, shop, lift sign and landing prompts |
 | 9 | `HudSystem` | `Canvas`, `GameSaver`, `Elevator` | `Miner` | Rows 0–1, the save hint |
 
 ## Components
 
 | Component | Fields | On |
 |---|---|---|
-| `Miner` | `Column`, `Row` (tile; the target while moving), `MoveFrom` (tile, `Vector2`), `MoveElapsed`, `MoveDuration` (0 = idle), `Motion` (`Idle`, `Walking`, `Climbing`, `Falling`), `ClimbStreak`, `IsRiding`, `FallRows`, `FacingX` (−1/1), `LampDirection`, `DigCooldown`, `SwingTime`, `SwingDirection` (`Point`), `RescueHold`, `Gold`, `Ladders`, `CopperOre`, `SilverOre`, `GoldOre`. Read-only: `IsMoving`, `OreCount` | The miner |
+| `Miner` | `Column`, `Row` (tile; the target while moving), `MoveFrom` (tile, `Vector2`), `MoveElapsed`, `MoveDuration` (0 = idle), `Motion` (`Idle`, `Walking`, `Climbing`, `Falling`), `ClimbStreak`, `IsRiding`, `FallRows`, `FacingX` (−1/1), `LampDirection`, `DigCooldown`, `SwingTime`, `SwingDirection` (`Point`), `RescueHold`, `Gold`, `Ladders`, `CopperOre`, `SilverOre`, `GoldOre`, `GemOre`. Read-only: `IsMoving`, `OreCount` | The miner |
 | `Particle` | `Age`, `Lifetime`, `Style` (`ParticleStyle`), `Variant` (random byte). Read-only: `Progress` | Every particle |
 | `Physics` | `Gravity` (cells/s²), `Drag` (per second) | Every particle |
 | `TileCollider` | tag | Debris, coins |
 | `Mist` | tag | Mist |
-| `FloatingText` | `Kind` (`FloatingTextKind`: `Gold`, `Elevator`), `Amount`, `Age`, `Lifetime` | Floating texts |
+| `FloatingText` | `Kind` (`FloatingTextKind`: `Gold`, `Elevator`, `TooHard`), `Amount`, `Age`, `Lifetime` | Floating texts |
 | `Position`, `Velocity`, `Glyph` | engine components (`ConsoleEngine.Ecs.Components`) | Miner (`Position` only), particles, numbers (no `Glyph`) |
 
 ## Services
 
 | Service | Created in | Used by | Key members |
 |---|---|---|---|
-| `Mine` | `MineScene` | control, motion, light, glints, mist, particle physics, terrain, saving | `At`, `TypeAt`, `IsSolid`, `HasLadder`, `IsSupported`, `Hit`, `TryPlaceLadder`, `CollectChanges`, `Apply`, `Noise`, `GeneratedRows`; static `Depth`, `IsInside` |
+| `Mine` | `MineScene` | control, motion, light, glints, mist, particle physics, terrain, saving | `At`, `TypeAt`, `IsSolid`, `HasLadder`, `IsSupported`, `Hit`, `TryPlaceLadder`, `CollectChanges`, `Apply`, `WallBottomDepth`, `Noise`, `GeneratedRows`; static `Depth`, `IsInside` |
 | `EffectSpawner` | `MineScene` | control, interaction, motion, glints, mist | `DigHit`, `TileBreak`, `FootDust`, `LandingDust`, `Glint`, `Mist`, `Coins`, `Pop`, `Number`, `Shake` |
 | `ScreenShake` | `MineScene` (inside `EffectSpawner`) | `EffectSpawner`, `CameraSystem` | `Add`, `Update`, `Strength` |
 | `LightMap` | `MineScene` | lighting, glints, mist, terrain, particles | `Compute`, `Get`, `FirstRow`, `Rows`; `Dark`, `Dim`, `Lit`, `Bright` |
 | `Canvas` | `MineScene` | all Presentation systems | `Draw`, `DrawOver`, `BackgroundAt`, `Width`, `Height` |
 | `Random(seed)` | `MineScene` | `EffectSpawner`, camera, glints, mist | — |
-| `Elevator` | `MineScene` | control, interaction, `ElevatorSystem`, lift and prompt rendering, HUD, saving | `TryBuild`, `Send`, `PickedUp`, `Update`, `Restore`, `IsLanding`, `IsCarAt`, `Segments`, `Depth`, `BottomRow`, `NextSegmentPrice`, `CarRow`, `CarTargetRow`, `IsCarMoving`, `IsCalled`; consts `Column`, `TopRow` |
+| `Elevator` | `MineScene` | control, interaction, `ElevatorSystem`, lift and prompt rendering, HUD, saving | `TryBuild`, `CanBuildNext`, `Send`, `PickedUp`, `Update`, `Restore`, `IsLanding`, `IsCarAt`, `Segments`, `Depth`, `BottomRow`, `NextSegmentPrice`, `CarRow`, `CarTargetRow`, `IsCarMoving`, `IsCalled`; consts `Column`, `TopRow` |
 | `GameSaver` | `MineScene` | interaction, `SaveSystem`, HUD, `MineScene.Save` | `Request`, `Save`, `IsRequested`, `Saves`, `LastSaveFailed`, `Path`, `Seed` |
 
 Static rule classes: `Tiles`, `Shop`, `Layout`, `TileLooks`, `ParticleLooks`, `SaveFile`.
@@ -123,6 +124,11 @@ Static rule classes: `Tiles`, `Shop`, `Layout`, `TileLooks`, `ParticleLooks`, `S
 | `Tiles.CopperValue` / `SilverValue` / `GoldValue` | 15 / 40 / 100 | Gold per ore |
 | `Tiles.CopperDepth` / `SilverDepth` / `GoldDepth` | 2 / 12 / 30 | First depth of each ore (m) |
 | `Tiles.CaveDepth` / `GraniteDepth` | 6 / 40 | First depth of caves and granite (m) |
+| `Tiles.WallDepth` | 110 m | Top of the obsidian wall |
+| `Tiles.WallMinThickness` / `WallMaxThickness` | 3 / 5 tiles | Wall thickness range, per column |
+| `Tiles.HintDepth` | 95 m | From here, gems below the wall glint on screen at any distance |
+| `Tiles.GemValue` | 250 | Gold per gem |
+| `MinerControlSystem.TooHardInterval` | 1 s | Least time between two `TOO HARD` texts |
 | `Tiles.DepthPerExtraHit` | 25 | Metres per extra hit |
 | `Shop.LadderPrice` | 10 | Gold per ladder |
 | `Shop.StartGold` / `StartLadders` | 0 / 8 | Start inventory |
@@ -138,7 +144,7 @@ Static rule classes: `Tiles`, `Shop`, `Layout`, `TileLooks`, `ParticleLooks`, `S
 | `ScreenShake.MaxStrength` / `Decay` | 2 cells / 6 per s | Shake cap and fade |
 | `GameSaver.AutosaveInterval` | 60 s | Time underground between autosaves (0 = off) |
 | `HudSystem.SavedHintSeconds` | 1.5 s | How long ` SAVED ` shows |
-| `SaveFile.Version` / `OldestVersion` | 2 / 1 | Save-format version written / oldest still read |
+| `SaveFile.Version` / `OldestVersion` | 3 / 1 | Save-format version written / oldest still read |
 | `Elevator.SegmentMetres` | 10 m | Lift length per purchase |
 | `Elevator.FirstSegmentPrice` / `SegmentPriceStep` | 200g / 100g | First segment price, increase per segment |
 | `Elevator.RideDuration` | 0.04 s | Car time per tile |
@@ -160,6 +166,8 @@ Static rule classes: `Tiles`, `Shop`, `Layout`, `TileLooks`, `ParticleLooks`, `S
 | ` NO LADDERS LEFT!  Hold R to be rescued (the bag is lost) ` | `HudSystem.NoLaddersWarning` |
 | ` DELIVER [E] ` | `PromptRenderSystem.DeliverText` |
 | ` BUILD LIFT +10m [E] <price>g ` | `PromptRenderSystem.BuildLiftText` |
+| ` LIFT BLOCKED BY OBSIDIAN ` | `PromptRenderSystem.LiftBlockedText` |
+| `TOO HARD` (floating) | `FloatingTextRenderSystem.TooHardText` |
 | ` CALL LIFT [E] ` / ` GET IN [E] ` / ` ↑↓ RIDE   ←→ GET OUT ` | `PromptRenderSystem.CallLiftText`, `BoardLiftText`, `RideText` |
 | `ELEVATOR +10m` (floating) | `FloatingTextRenderSystem.ElevatorLabel` + metres |
 | `   LIFT <n>m` (HUD row 0) | `HudSystem.DrawStatus` |

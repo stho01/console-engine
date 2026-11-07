@@ -9,8 +9,8 @@ namespace EternalDigger.Systems;
 
 /// <summary>
 /// Draws <see cref="FloatingText"/>s centred on their position, fading at the end: gold as <c>+150g</c> (yellow) or
-/// <c>-10g</c> (red), a lift segment as <c>ELEVATOR +10m</c> (yellow). Formatted into a reused buffer, so nothing is
-/// allocated.
+/// <c>-10g</c> (red), a lift segment as <c>ELEVATOR +10m</c> (yellow), a shovel on obsidian as <c>TOO HARD</c> (red).
+/// Formatted into a reused buffer, so nothing is allocated.
 /// </summary>
 public sealed class FloatingTextRenderSystem(Canvas canvas, Camera camera) : EntitySystem
 {
@@ -22,6 +22,7 @@ public sealed class FloatingTextRenderSystem(Canvas canvas, Camera camera) : Ent
     private const float FadeStart = .7f;
 
     public const string ElevatorLabel = "ELEVATOR +";
+    public const string TooHardText = "TOO HARD";
 
     private readonly char[] _buffer = new char[24];
     private Query _texts;
@@ -53,9 +54,10 @@ public sealed class FloatingTextRenderSystem(Canvas canvas, Camera camera) : Ent
         var length = text.Kind switch
         {
             FloatingTextKind.Elevator => Format(ElevatorLabel, text.Amount, 'm'),
+            FloatingTextKind.TooHard => Copy(TooHardText),
             _ => FormatGold(text.Amount)
         };
-        var color = text.Kind == FloatingTextKind.Gold && text.Amount < 0
+        var color = text.Kind == FloatingTextKind.TooHard || text.Kind == FloatingTextKind.Gold && text.Amount < 0
             ? fading ? ConsoleColor.DarkRed : ConsoleColor.Red
             : fading ? ConsoleColor.DarkYellow : ConsoleColor.Yellow;
 
@@ -63,6 +65,12 @@ public sealed class FloatingTextRenderSystem(Canvas canvas, Camera camera) : Ent
         var y = (int)MathF.Floor(worldY - camera.Position.Y);
         for (var i = 0; i < length; i++)
             canvas.DrawOver(x + i, y, _buffer[i], color);
+    }
+
+    private int Copy(string text)
+    {
+        text.AsSpan().CopyTo(_buffer);
+        return text.Length;
     }
 
     /// <summary>Writes a label, a number and a unit, like "ELEVATOR +10m", into the buffer and returns its length.</summary>

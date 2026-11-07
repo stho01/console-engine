@@ -10,6 +10,8 @@ public class TilesTests
     [TestCase(TileType.Dirt, true)]
     [TestCase(TileType.Bedrock, true)]
     [TestCase(TileType.Gold, true)]
+    [TestCase(TileType.Obsidian, true)]
+    [TestCase(TileType.Slate, true)]
     public void IsSolid_Type_ReturnsExpected(TileType type, bool expected) =>
         Assert.That(Tiles.IsSolid(type), Is.EqualTo(expected));
 
@@ -20,13 +22,19 @@ public class TilesTests
     [TestCase(TileType.Stone, true)]
     [TestCase(TileType.Granite, true)]
     [TestCase(TileType.Copper, true)]
+    [TestCase(TileType.Obsidian, false)]
+    [TestCase(TileType.Slate, true)]
+    [TestCase(TileType.Quartzite, true)]
+    [TestCase(TileType.Gem, true)]
     public void IsBreakable_Type_ReturnsExpected(TileType type, bool expected) =>
         Assert.That(Tiles.IsBreakable(type), Is.EqualTo(expected));
 
     [TestCase(TileType.Copper, Tiles.CopperValue)]
     [TestCase(TileType.Silver, Tiles.SilverValue)]
     [TestCase(TileType.Gold, Tiles.GoldValue)]
+    [TestCase(TileType.Gem, Tiles.GemValue)]
     [TestCase(TileType.Stone, 0)]
+    [TestCase(TileType.Slate, 0)]
     public void OreValue_Type_ReturnsExpected(TileType type, int expected)
     {
         Assert.That(Tiles.OreValue(type), Is.EqualTo(expected));
@@ -52,4 +60,16 @@ public class TilesTests
     [TestCase(TileType.Bedrock)]
     public void HitsToBreak_Unbreakable_ReturnsZero(TileType type) =>
         Assert.That(Tiles.HitsToBreak(type, 100), Is.Zero);
+
+    [TestCase(TileType.Obsidian, true)]
+    [TestCase(TileType.Bedrock, false)]
+    [TestCase(TileType.Granite, false)]
+    public void IsBlastOnly_Type_ReturnsExpected(TileType type, bool expected) =>
+        Assert.That(Tiles.IsBlastOnly(type), Is.EqualTo(expected));
+
+    [TestCase(TileType.Slate)]
+    [TestCase(TileType.Quartzite)]
+    [TestCase(TileType.Gem)]
+    public void HitsToBreak_Act2Tiles_NeedHits(TileType type) =>
+        Assert.That(Tiles.HitsToBreak(type, Tiles.WallDepth), Is.GreaterThan(0));
 }

@@ -57,6 +57,17 @@ public sealed class EffectSpawner(Random random, ScreenShake shake)
             Spawn(commands, face, RandomDirection(14f, 30f), ParticleStyle.Spark, Range(.2f, .45f), 0f, 3f);
     }
 
+    /// <summary>The shovel bounces off rock it can't break: a few sparks and a tiny shake, no chunks.</summary>
+    public void Clank(CommandBuffer commands, int column, int row, Point digDirection)
+    {
+        var face = Layout.TileCenter(column, row) - new Vector2(digDirection.X * 2.5f, digDirection.Y * 1.5f);
+        var sparks = random.Next(3, 6);
+        for (var i = 0; i < sparks; i++)
+            Spawn(commands, face, RandomDirection(10f, 24f), ParticleStyle.Spark, Range(.15f, .35f), 0f, 3f);
+
+        Shake.Add(.15f);
+    }
+
     /// <summary>The tile broke: a burst of chunks, a dust cloud and a small shake. Ore adds glitter.</summary>
     public void TileBreak(CommandBuffer commands, int column, int row, TileType type)
     {

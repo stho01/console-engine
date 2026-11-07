@@ -12,6 +12,7 @@ public static class Tiles
     public const int CopperValue = 15;
     public const int SilverValue = 40;
     public const int GoldValue = 100;
+    public const int GemValue = 250;
 
     /// <summary>Every this many metres of depth add one hit to every breakable tile.</summary>
     public const int DepthPerExtraHit = 25;
@@ -22,15 +23,31 @@ public static class Tiles
     public const int GraniteDepth = 40;
     public const int CaveDepth = 6;
 
+    /// <summary>Depth of the top of the obsidian wall, the end of act 1.</summary>
+    public const int WallDepth = 110;
+
+    /// <summary>The wall is this many tiles thick, varying per column.</summary>
+    public const int WallMinThickness = 3;
+    public const int WallMaxThickness = 5;
+
+    /// <summary>From this depth, gems below the wall glint on screen from further away: a hint of what lies below.</summary>
+    public const int HintDepth = 95;
+
     //**********************************************************
     //** public methods
     //**********************************************************
 
     public static bool IsSolid(TileType type) => type != TileType.Air;
 
-    public static bool IsBreakable(TileType type) => type is not (TileType.Air or TileType.Grass or TileType.Bedrock);
+    /// <summary>The shovel can break it. Obsidian can't, though a blast can (<see cref="IsBlastOnly"/>).</summary>
+    public static bool IsBreakable(TileType type) =>
+        type is not (TileType.Air or TileType.Grass or TileType.Bedrock or TileType.Obsidian);
 
-    public static bool IsOre(TileType type) => type is TileType.Copper or TileType.Silver or TileType.Gold;
+    /// <summary>Only a blast clears it: the shovel just clanks.</summary>
+    public static bool IsBlastOnly(TileType type) => type == TileType.Obsidian;
+
+    public static bool IsOre(TileType type) =>
+        type is TileType.Copper or TileType.Silver or TileType.Gold or TileType.Gem;
 
     /// <summary>Gold paid at the house for one piece of this ore, 0 for anything else.</summary>
     public static int OreValue(TileType type) => type switch
@@ -38,6 +55,7 @@ public static class Tiles
         TileType.Copper => CopperValue,
         TileType.Silver => SilverValue,
         TileType.Gold => GoldValue,
+        TileType.Gem => GemValue,
         _ => 0
     };
 
@@ -52,6 +70,9 @@ public static class Tiles
             TileType.Silver => 6,
             TileType.Granite => 7,
             TileType.Gold => 8,
+            TileType.Slate => 6,
+            TileType.Quartzite => 8,
+            TileType.Gem => 9,
             _ => 0
         };
 

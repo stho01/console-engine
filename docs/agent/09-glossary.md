@@ -49,6 +49,9 @@ Support/user words are **[inferred]**. The team may also use Norwegian terms. Ad
 | miner / digger | EternalDigger player | `Miner` component, `MinerControlSystem` |
 | mine / map / world (EternalDigger) | The endless tile grid | `Mine`, `TileCell`, `TileType`. Not the ECS `World` |
 | lift / elevator / car / landing / segment (EternalDigger) | The buyable lift in the mine shaft: 10 m segments, a car that stops at the top and bottom landings | `Elevator`, `ElevatorSystem`, `Miner.IsRiding` |
+| wall / obsidian (EternalDigger) | The unbreakable-by-shovel band at 110 m that ends act 1 | `TileType.Obsidian`, `Tiles.WallDepth`, `Mine.WallBottomDepth` |
+| act 1 / act 2 (EternalDigger) | The layers above and below the wall: dirt/stone/granite with copper/silver/gold, then slate/quartzite with gems | `Mine.Underground`, `Mine.BelowTheWall` |
+| gem (EternalDigger) | The act 2 ore, 250g, glints magenta | `TileType.Gem`, `Miner.GemOre` |
 | save / slot / continue (EternalDigger) | The one save file and loading it | `SaveFile`, `SaveData`, `GameSaver`, `TitleMenu.ContinueText` |
 | changed tiles (EternalDigger) | Tiles that differ from what the seed generates; what a save stores of the mine | `TileChange`, `Mine.CollectChanges` |
 | shaft / mine entrance | The only way down from the surface, column 21 under the `MINE` frame | `Mine.ShaftColumn` |

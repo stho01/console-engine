@@ -72,11 +72,20 @@ string, colours for full and dim light, and for ores a speck character (`◆`) a
 
 | Light | Character | Foreground | Background |
 |---|---|---|---|
-| `Bright` | Texture, or a speck (40% of an ore tile's cells) | `Foreground`, or `SpeckColor` | `Background` (filled) |
+| `Bright` | Texture, or a speck (`TileLook.SpeckShare`: 40% of an ore tile's cells, 12% for obsidian's `▪` highlights) | `Foreground`, or `SpeckColor` | `Background` (filled) |
 | `Lit` | Texture or speck | `DimColor`, or `SpeckColor` | Black |
 | `Dim` | `░`, or a speck | `DimColor`, or `DimSpeckColor` | Black |
 | `Dark`, seen before | `░` on most cells | Dark grey | Black |
 | `Dark`, never seen | Space | — | Black |
+
+| Tile | Texture | Bright colours | Speck |
+|---|---|---|---|
+| Obsidian | `▓▓█▓▒▓█▓` | Dark magenta on black (reads apart from granite's dark grey fill) | `▪` magenta, 12% |
+| Slate | `▓▒░▓▒▓░▒` | Blue on dark blue | — |
+| Quartzite | `▒▓▒░▓▒█▓` | Cyan on dark cyan | — |
+| Gem | slate's | Blue on dark blue | `◆` magenta (dark magenta when dim) |
+
+(The act 1 tiles are unchanged; their looks are in `TileLooks.cs`.)
 
 - **No flicker:** which texture character, which cells are specks and which crack are picked with `Mine.Noise` on
   the cell's world position (salts `TextureSalt`, `SpeckSalt`, `CrackSalt`), so they're the same every frame.
@@ -188,10 +197,10 @@ flowchart LR
 
 | Style | Characters, birth → death | Colour |
 |---|---|---|
-| `Dirt`, `Stone`, `Granite`, `Copper`, `Silver`, `Gold` (debris) | `■ ▪ ▪ ·` (variant shifts it) | The tile's colours, e.g. gold yellow → dark yellow |
+| `Dirt`, `Stone`, `Granite`, `Copper`, `Silver`, `Gold`, `Obsidian`, `Slate`, `Quartzite`, `Gem` (debris) | `■ ▪ ▪ ·` (variant shifts it) | The tile's colours, e.g. gold yellow → dark yellow, gem magenta → dark magenta |
 | `Dust` | `▓ ▒ ░ ░ ·` | Grey, then dark grey |
 | `Spark` | `* + ·` | Yellow, then dark yellow |
-| `Glint` | `· + ✦ ✦ + ·` | White at the peak; yellow (gold), cyan (silver), dark yellow (copper) at the ends |
+| `Glint` | `· + ✦ ✦ + ·` | White at the peak; magenta (gem), yellow (gold), cyan (silver), dark yellow (copper) at the ends |
 | `Mist` | One of `· ∙ · · ˙` | Dark grey |
 | `Coin` | Spins `● ◐ \| ◑` | Yellow, dark yellow on the edge frame |
 | `Pop` | `✶ * + ·` | White, then dark yellow |
@@ -204,9 +213,10 @@ flowchart LR
 | `DigHit` | Every shovel hit (`MinerControlSystem`) | 4–7 debris chunks from the struck face, flying back towards the miner and falling (gravity 40, lands on rock), 0.5–1.1 s. Ore adds 2–4 sparks |
 | `TileBreak` | The hit that breaks a tile | 14–22 chunks bursting out, 6–10 dust puffs drifting up, screen shake 0.6 (rock) or 0.9 (ore). Ore adds 6–10 glitter sparks |
 | `ClimbTrail` | Every tile of a top-speed climb (instead of `FootDust`) | 1–2 specks dropping below the feet |
+| `Clank` | The shovel on obsidian | 3–5 sparks from the face, a 0.15 shake, no chunks |
 | `FootDust` | Every other walking step, every climb step below top speed, a placed ladder, a refused `E`/`SPACE` | 1–2 small puffs behind the feet |
 | `LandingDust` | The end of a fall; a rescue | 2 + 2 per row fallen (max 12) puffs to both sides; falls of 3+ rows shake the screen (0.15 per row, max 1.2) |
-| `Glint` | `GlintSystem`: every 0.08 s, 6 random tiles within 9 tiles of the miner and on screen; ore glints with 90/60/40% (gold/silver/copper), 60% of that when lit | One twinkle, 0.5–0.8 s, no gravity |
+| `Glint` | `GlintSystem`: every 0.08 s, 6 random tiles within 9 tiles of the miner and on screen; ore glints with 90/90/60/40% (gem/gold/silver/copper), 60% of that when lit. From 95 m (`Tiles.HintDepth`) also 3 random tiles in the 16 rows below the wall's thinnest point, at any distance, when on screen and a gem | One twinkle, 0.5–0.8 s, no gravity |
 | `Mist` | `MistSystem`: while fewer than 40 exist, up to 12 per second, in a random lit air tile below the surface | One slow drifting dot, 4–8 s |
 | `Coins` | A delivery (`InteractionSystem`): one coin per 10g, 3 to 30 | Coins shoot up and rain onto the grass (gravity 45, bounce once), spinning, 1.6–2.4 s |
 | `Pop` | A delivery, a purchase, a rescue | A ring of 8–12 stars, 0.35–0.5 s |
@@ -219,8 +229,8 @@ a random amount up to the strength in both directions and decays it by 6 per sec
 
 ## Text: numbers, prompts, HUD
 
-- **`FloatingTextRenderSystem`** formats `+123g`, `-10g` or `ELEVATOR +10m` into a reused `char[24]` with
-  `int.TryFormat`, so a text allocates nothing per frame. Positive gold and lift texts yellow, negative red, darker for
+- **`FloatingTextRenderSystem`** formats `+123g`, `-10g`, `ELEVATOR +10m` or `TOO HARD` into a reused `char[24]` with
+  `int.TryFormat`, so a text allocates nothing per frame. Positive gold and lift texts yellow, negative gold and `TOO HARD` red, darker for
   the last 30% of its life.
 - **`PromptRenderSystem`** draws a three-row box (`┌─┐ │ │ └─┘`, yellow on dark blue) with the text, a `▼` pointer
   just above the miner's head, and a small bob. `[E]` is yellow. The text strings are `PromptRenderSystem.DeliverText`,

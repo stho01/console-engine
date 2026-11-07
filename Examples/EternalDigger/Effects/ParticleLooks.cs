@@ -59,6 +59,10 @@ public static class ParticleLooks
             ParticleStyle.Coin => (int)(progress * 24f + variant) % 4 == 2 ? ConsoleColor.DarkYellow : ConsoleColor.Yellow,
             ParticleStyle.Pop => faded ? ConsoleColor.DarkYellow : ConsoleColor.White,
             ParticleStyle.Trail => faded ? ConsoleColor.DarkGray : ConsoleColor.Gray,
+            ParticleStyle.Obsidian => (variant & 1) == 0 ? ConsoleColor.DarkMagenta : ConsoleColor.DarkGray,
+            ParticleStyle.Slate => faded || (variant & 1) == 0 ? ConsoleColor.DarkBlue : ConsoleColor.Blue,
+            ParticleStyle.Quartzite => faded || (variant & 1) == 0 ? ConsoleColor.DarkCyan : ConsoleColor.Cyan,
+            ParticleStyle.Gem => faded ? ConsoleColor.DarkMagenta : ConsoleColor.Magenta,
             _ => ConsoleColor.Gray
         };
     }
@@ -78,12 +82,17 @@ public static class ParticleLooks
         TileType.Copper => ParticleStyle.Copper,
         TileType.Silver => ParticleStyle.Silver,
         TileType.Gold => ParticleStyle.Gold,
+        TileType.Obsidian => ParticleStyle.Obsidian,
+        TileType.Slate => ParticleStyle.Slate,
+        TileType.Quartzite => ParticleStyle.Quartzite,
+        TileType.Gem => ParticleStyle.Gem,
         _ => ParticleStyle.Dirt
     };
 
-    /// <summary>Glint variants encode the ore: 0 copper, 1 silver, 2 gold.</summary>
+    /// <summary>Glint variants encode the ore: 0 copper, 1 silver, 2 gold, 3 gem.</summary>
     public static byte GlintVariant(TileType ore) => ore switch
     {
+        TileType.Gem => 3,
         TileType.Gold => 2,
         TileType.Silver => 1,
         _ => 0
@@ -104,6 +113,7 @@ public static class ParticleLooks
 
         return variant switch
         {
+            3 => ConsoleColor.Magenta,
             2 => ConsoleColor.Yellow,
             1 => ConsoleColor.Cyan,
             _ => ConsoleColor.DarkYellow

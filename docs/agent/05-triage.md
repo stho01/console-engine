@@ -197,8 +197,10 @@ Rules: [03 § EternalDigger](03-rules.md#eternal-digger). Flow: [04 § F10](04-f
    row 9 and 200g (+100g per segment built; the prompt price is red when short). Calling needs standing still on a
    landing in column 21: row 9 or the bottom row; mid-shaft, `E` does nothing. In the car, `E` does nothing: use ↑/↓.
    Stop.
-10. "Fell all the way down the shaft" → **Cause:** a built lift digs out the shaft; without ladders there a step into it
+10. "Can't dig at 110 m", "TOO HARD" → **Cause:** the obsidian wall (`Tiles.WallDepth`, 3–5 tiles); the shovel can't
+    break it by design. **Fix:** dynamite (once it exists in this build). Same reason the lift stops at 100 m. Stop.
+11. "Fell all the way down the shaft" → **Cause:** a built lift digs out the shaft; without ladders there a step into it
     falls to the bottom landing. No damage. Stop.
-11. "Debris or sparks disappear right next to the miner" → **Cause:** by design. No particle is drawn on his 4 × 2
+12. "Debris or sparks disappear right next to the miner" → **Cause:** by design. No particle is drawn on his 4 × 2
    cells, and at most 6 (dimmed) are drawn in the tile around him, so he stays readable (`ParticleRenderSystem`). Stop.
 

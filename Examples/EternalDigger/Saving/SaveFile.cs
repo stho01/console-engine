@@ -20,8 +20,8 @@ public enum SaveStatus : byte
 /// <summary>
 /// The save file: one slot, binary, versioned. Layout (little-endian): magic <c>EDSV</c>, format version, seed,
 /// miner column, row and facing, gold, ladders, copper, silver and gold ore, (version 2+) lift segments and car row,
-/// then the changed tiles (count, then row, column, type, damage, flags each). Older versions are still read. Writing
-/// goes to a temp file first, so a crash never leaves half a save.
+/// (version 3+) gem ore, then the changed tiles (count, then row, column, type, damage, flags each). Older versions
+/// are still read. Writing goes to a temp file first, so a crash never leaves half a save.
 /// </summary>
 public static class SaveFile
 {
@@ -30,7 +30,7 @@ public static class SaveFile
     //**********************************************************
 
     /// <summary>The save-format version written. Bump it whenever the layout changes, and keep reading older ones.</summary>
-    public const int Version = 2;
+    public const int Version = 3;
 
     /// <summary>The oldest save-format version this build still reads.</summary>
     public const int OldestVersion = 1;
@@ -119,6 +119,7 @@ public static class SaveFile
         writer.Write(data.GoldOre);
         writer.Write(data.ElevatorSegments);
         writer.Write(data.ElevatorCarRow);
+        writer.Write(data.GemOre);
 
         writer.Write(data.Changes.Count);
         for (var i = 0; i < data.Changes.Count; i++)
@@ -189,6 +190,10 @@ public static class SaveFile
                 return SaveStatus.Corrupt;
         }
 
+        var gems = version >= 3 ? reader.ReadInt32() : 0;
+        if (gems < 0)
+            return SaveStatus.Corrupt;
+
         var count = reader.ReadInt32();
         if ((uint)count > (MaxRow + 1L) * Mine.Columns)
             return SaveStatus.Corrupt;
@@ -228,6 +233,7 @@ public static class SaveFile
             CopperOre = copper,
             SilverOre = silver,
             GoldOre = goldOre,
+            GemOre = gems,
             ElevatorSegments = segments,
             ElevatorCarRow = carRow,
             Changes = changes

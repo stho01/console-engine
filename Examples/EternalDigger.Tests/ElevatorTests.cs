@@ -90,6 +90,29 @@ public class ElevatorTests
     }
 
     [Test]
+    public void TryBuild_ObsidianInTheNextSegment_IsBlocked()
+    {
+        _miner.Gold = 10_000;
+        _mine.At(Elevator.Column, Mine.SurfaceRow + 7) = new TileCell { Type = TileType.Obsidian };
+
+        Assert.That(_elevator.CanBuildNext(_mine), Is.False);
+        Assert.That(_elevator.TryBuild(_mine, ref _miner), Is.EqualTo(ElevatorBuild.Blocked));
+        Assert.That(_elevator.IsBuilt, Is.False);
+        Assert.That(_miner.Gold, Is.EqualTo(10_000));
+    }
+
+    [Test]
+    public void TryBuild_DownToTheWall_StopsAboveIt()
+    {
+        _miner.Gold = int.MaxValue / 2;
+        while (_elevator.TryBuild(_mine, ref _miner) == ElevatorBuild.Built)
+        {
+        }
+
+        Assert.That(_elevator.Depth, Is.EqualTo(Tiles.WallDepth - Elevator.SegmentMetres));
+    }
+
+    [Test]
     public void Update_SentToTheBottom_TakesRideDurationPerTile()
     {
         Build(segments: 10);

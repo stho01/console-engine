@@ -36,12 +36,13 @@ public sealed class HudSystem(Canvas canvas, GameSaver saver, Elevator elevator)
     private const float BlinkSpeed = 4f;
     private const ConsoleColor Bar = ConsoleColor.DarkBlue;
 
-    private static readonly ConsoleColor[] OreColors = [ConsoleColor.DarkYellow, ConsoleColor.White, ConsoleColor.Yellow];
+    private static readonly ConsoleColor[] OreColors =
+        [ConsoleColor.DarkYellow, ConsoleColor.White, ConsoleColor.Yellow, ConsoleColor.Magenta];
 
     private Query _miners;
     private string _status = string.Empty;
     private int _shownGold = -1, _shownLadders = -1, _shownDepth = -1, _shownCopper = -1, _shownSilver = -1,
-        _shownGoldOre = -1, _shownLift = -1;
+        _shownGoldOre = -1, _shownGems = -1, _shownLift = -1;
     private float _time;
     private int _shownSaves;
     private float _savedHint;
@@ -74,8 +75,9 @@ public sealed class HudSystem(Canvas canvas, GameSaver saver, Elevator elevator)
         var depth = Math.Max(0, Mine.Depth(miner.Row));
         if (miner.Gold != _shownGold || miner.Ladders != _shownLadders || depth != _shownDepth ||
             miner.CopperOre != _shownCopper || miner.SilverOre != _shownSilver || miner.GoldOre != _shownGoldOre ||
-            elevator.Depth != _shownLift)
+            miner.GemOre != _shownGems || elevator.Depth != _shownLift)
         {
+            _shownGems = miner.GemOre;
             _shownLift = elevator.Depth;
             _shownGold = miner.Gold;
             _shownLadders = miner.Ladders;
@@ -83,11 +85,11 @@ public sealed class HudSystem(Canvas canvas, GameSaver saver, Elevator elevator)
             _shownCopper = miner.CopperOre;
             _shownSilver = miner.SilverOre;
             _shownGoldOre = miner.GoldOre;
-            var bagValue = miner.CopperOre * Tiles.CopperValue + miner.SilverOre * Tiles.SilverValue +
-                           miner.GoldOre * Tiles.GoldValue;
+            var bagValue = Shop.BagValue(miner);
             var lift = elevator.IsBuilt ? $"   LIFT {elevator.Depth}m" : string.Empty;
             _status = $"  GOLD {miner.Gold:N0}g   LADDERS {miner.Ladders}{lift}   DEPTH {depth}m   BAG " +
-                      $"{OreIcon}{miner.CopperOre} {OreIcon}{miner.SilverOre} {OreIcon}{miner.GoldOre} = {bagValue:N0}g";
+                      $"{OreIcon}{miner.CopperOre} {OreIcon}{miner.SilverOre} {OreIcon}{miner.GoldOre} " +
+                      $"{OreIcon}{miner.GemOre} = {bagValue:N0}g";
         }
 
         Fill(0, Bar);

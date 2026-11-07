@@ -67,7 +67,8 @@ public struct Miner
     public int CopperOre;
     public int SilverOre;
     public int GoldOre;
+    public int GemOre;
 
     public readonly bool IsMoving => MoveDuration > 0f;
-    public readonly int OreCount => CopperOre + SilverOre + GoldOre;
+    public readonly int OreCount => CopperOre + SilverOre + GoldOre + GemOre;
 }

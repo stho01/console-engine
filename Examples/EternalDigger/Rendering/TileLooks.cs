@@ -6,11 +6,12 @@ namespace EternalDigger.Rendering;
 /// <summary>
 /// How a tile type looks. Fully lit, a tile shows its <see cref="Texture"/> in <see cref="Foreground"/> over a filled
 /// <see cref="Background"/>; less light drops the fill (black background) and then the colour. Ores mix
-/// <see cref="Speck"/> characters in <see cref="SpeckColor"/> into their rock.
+/// <see cref="Speck"/> characters in <see cref="SpeckColor"/> into their rock, on <see cref="SpeckShare"/> of their cells.
 /// </summary>
 public readonly struct TileLook(
     string texture, ConsoleColor foreground, ConsoleColor background, ConsoleColor dimColor,
-    char speck = ' ', ConsoleColor speckColor = ConsoleColor.Black, ConsoleColor dimSpeckColor = ConsoleColor.Black)
+    char speck = ' ', ConsoleColor speckColor = ConsoleColor.Black, ConsoleColor dimSpeckColor = ConsoleColor.Black,
+    float speckShare = .4f)
 {
     public string Texture { get; } = texture;
     public ConsoleColor Foreground { get; } = foreground;
@@ -19,6 +20,7 @@ public readonly struct TileLook(
     public char Speck { get; } = speck;
     public ConsoleColor SpeckColor { get; } = speckColor;
     public ConsoleColor DimSpeckColor { get; } = dimSpeckColor;
+    public float SpeckShare { get; } = speckShare;
     public bool HasSpecks => Speck != ' ';
 }
 
@@ -53,6 +55,19 @@ public static class TileLooks
     private static readonly TileLook Bedrock =
         new("█▓█▓▓█▓█", ConsoleColor.DarkGray, ConsoleColor.Black, ConsoleColor.DarkGray);
 
+    /// <summary>Dark glassy rock with an occasional bright glint, on a black fill so it reads apart from granite.</summary>
+    private static readonly TileLook Obsidian = new("▓▓█▓▒▓█▓", ConsoleColor.DarkMagenta, ConsoleColor.Black,
+        ConsoleColor.DarkMagenta, '▪', ConsoleColor.Magenta, ConsoleColor.DarkMagenta, .12f);
+
+    private static readonly TileLook Slate =
+        new("▓▒░▓▒▓░▒", ConsoleColor.Blue, ConsoleColor.DarkBlue, ConsoleColor.DarkBlue);
+
+    private static readonly TileLook Quartzite =
+        new("▒▓▒░▓▒█▓", ConsoleColor.Cyan, ConsoleColor.DarkCyan, ConsoleColor.DarkCyan);
+
+    private static readonly TileLook Gem = new("▓▒░▓▒░", ConsoleColor.Blue, ConsoleColor.DarkBlue,
+        ConsoleColor.DarkBlue, '◆', ConsoleColor.Magenta, ConsoleColor.DarkMagenta);
+
     private static readonly TileLook Grass =
         new("▒░▒·░▒ ░", ConsoleColor.DarkRed, ConsoleColor.DarkYellow, ConsoleColor.DarkYellow);
 
@@ -69,6 +84,10 @@ public static class TileLooks
         TileType.Gold => Gold,
         TileType.Bedrock => Bedrock,
         TileType.Grass => Grass,
+        TileType.Obsidian => Obsidian,
+        TileType.Slate => Slate,
+        TileType.Quartzite => Quartzite,
+        TileType.Gem => Gem,
         _ => Dirt
     };
 }

@@ -22,9 +22,6 @@ public sealed class TerrainRenderSystem(Canvas canvas, Camera camera, Mine mine,
     private const int SpeckSalt = 103;
     private const int CrackSalt = 107;
 
-    /// <summary>Share of an ore tile's cells that show a speck of metal.</summary>
-    private const float SpeckShare = .4f;
-
     //**********************************************************
     //** lifecycle
     //**********************************************************
@@ -69,7 +66,7 @@ public sealed class TerrainRenderSystem(Canvas canvas, Camera camera, Mine mine,
             var cellX = column * Layout.TileWidth + dx;
             var cellY = row * Layout.TileHeight + dy;
             var texture = look.Texture[(int)(mine.Noise(cellX, cellY, TextureSalt) * look.Texture.Length)];
-            var isSpeck = look.HasSpecks && mine.Noise(cellX, cellY, SpeckSalt) < SpeckShare;
+            var isSpeck = look.HasSpecks && mine.Noise(cellX, cellY, SpeckSalt) < look.SpeckShare;
             var isCrack = cracks > 0 && mine.Noise(cellX, cellY, CrackSalt) * 8f < cracks;
 
             char character;

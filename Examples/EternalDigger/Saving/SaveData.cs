@@ -28,6 +28,7 @@ public sealed class SaveData
     public int CopperOre { get; init; }
     public int SilverOre { get; init; }
     public int GoldOre { get; init; }
+    public int GemOre { get; init; }
 
     /// <summary>Lift segments built (<see cref="Elevator.SegmentMetres"/> m each). 0 = no lift.</summary>
     public int ElevatorSegments { get; init; }
@@ -69,6 +70,7 @@ public sealed class SaveData
             CopperOre = miner.CopperOre,
             SilverOre = miner.SilverOre,
             GoldOre = miner.GoldOre,
+            GemOre = miner.GemOre,
             ElevatorSegments = elevator.Segments,
             ElevatorCarRow = elevator.CarTargetRow,
             Changes = changes
@@ -87,7 +89,8 @@ public sealed class SaveData
         Ladders = Ladders,
         CopperOre = CopperOre,
         SilverOre = SilverOre,
-        GoldOre = GoldOre
+        GoldOre = GoldOre,
+        GemOre = GemOre
     };
 
     /// <summary>Puts the saved tiles back into a mine made from <see cref="Seed"/>, and the lift back.</summary>

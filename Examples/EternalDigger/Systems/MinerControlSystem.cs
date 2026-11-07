@@ -11,7 +11,8 @@ namespace EternalDigger.Systems;
 /// <summary>
 /// Turns input into moves, digs, ladders and rescues while the miner is idle. Falling comes first: an unsupported
 /// miner always falls one tile before any key is read. A miner riding the lift only reads the ride keys.
-/// <see cref="MinerMotionSystem"/> plays the moves this starts. The keyboard is read once per frame into a <see cref="MinerInput"/>; <see cref="Control"/> holds the rules.
+/// <see cref="MinerMotionSystem"/> plays the moves this starts. The keyboard is read once per frame into a
+/// <see cref="MinerInput"/>; <see cref="Control"/> holds the rules.
 /// </summary>
 public sealed class MinerControlSystem(Mine mine, Elevator elevator, EffectSpawner effects) : EntitySystem
 {
@@ -36,7 +37,11 @@ public sealed class MinerControlSystem(Mine mine, Elevator elevator, EffectSpawn
     public const float SwingDuration = .12f;
     public const float RescueDuration = 1.5f;
 
+    /// <summary>Seconds between two "TOO HARD" texts while the shovel keeps clanking on obsidian.</summary>
+    public const float TooHardInterval = 1f;
+
     private Query _miners;
+    private float _tooHardCooldown;
 
     //**********************************************************
     //** lifecycle
@@ -64,6 +69,7 @@ public sealed class MinerControlSystem(Mine mine, Elevator elevator, EffectSpawn
     public void Control(ref Miner miner, ref Position position, in MinerInput input, float deltaSeconds,
         CommandBuffer commands)
     {
+        _tooHardCooldown = Math.Max(0f, _tooHardCooldown - deltaSeconds);
         if (UpdateRescue(ref miner, ref position, input.Rescue, deltaSeconds, commands) || miner.IsMoving)
             return;
 
@@ -173,13 +179,20 @@ public sealed class MinerControlSystem(Mine mine, Elevator elevator, EffectSpawn
             return;
         }
 
-        if (miner.DigCooldown > 0f || !Tiles.IsBreakable(mine.TypeAt(column, row)))
+        var type = mine.TypeAt(column, row);
+        if (miner.DigCooldown > 0f || !Tiles.IsBreakable(type) && !Tiles.IsBlastOnly(type))
             return;
 
-        var result = mine.Hit(column, row);
         miner.DigCooldown = DigInterval;
         miner.SwingTime = SwingDuration;
         miner.SwingDirection = new Point(dx, dy);
+        if (Tiles.IsBlastOnly(type))
+        {
+            Clank(column, row, miner.SwingDirection, commands);
+            return;
+        }
+
+        var result = mine.Hit(column, row);
         effects.DigHit(commands, column, row, result.Type, miner.SwingDirection);
 
         if (result.Outcome != DigOutcome.Broken)
@@ -187,6 +200,18 @@ public sealed class MinerControlSystem(Mine mine, Elevator elevator, EffectSpawn
 
         effects.TileBreak(commands, column, row, result.Type);
         Shop.Collect(ref miner, result.Type);
+    }
+
+    /// <summary>The shovel bounces off obsidian: sparks, no damage, and now and then a floating "TOO HARD".</summary>
+    private void Clank(int column, int row, Point direction, CommandBuffer commands)
+    {
+        effects.Clank(commands, column, row, direction);
+        if (_tooHardCooldown > 0f)
+            return;
+
+        _tooHardCooldown = TooHardInterval;
+        effects.Text(commands, Layout.TileCenter(column - direction.X, row - direction.Y) - new Vector2(0f, 2f),
+            FloatingTextKind.TooHard, 0);
     }
 
     private static void StartMove(ref Miner miner, int dx, int dy, float duration, MinerMotion motion)
@@ -228,9 +253,7 @@ public sealed class MinerControlSystem(Mine mine, Elevator elevator, EffectSpawn
             return false;
 
         miner.RescueHold = 0f;
-        miner.CopperOre = 0;
-        miner.SilverOre = 0;
-        miner.GoldOre = 0;
+        Shop.EmptyBag(ref miner);
         miner.Column = Layout.SpawnColumn;
         miner.Row = Layout.GroundRow;
         miner.MoveFrom = new Vector2(miner.Column, miner.Row);

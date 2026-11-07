@@ -224,6 +224,10 @@ public class MineTests
     [TestCase(TileType.Silver, Tiles.SilverDepth)]
     [TestCase(TileType.Gold, Tiles.GoldDepth)]
     [TestCase(TileType.Granite, Tiles.GraniteDepth)]
+    [TestCase(TileType.Obsidian, Tiles.WallDepth)]
+    [TestCase(TileType.Slate, Tiles.WallDepth + Tiles.WallMinThickness)]
+    [TestCase(TileType.Quartzite, Tiles.WallDepth + Tiles.WallMinThickness)]
+    [TestCase(TileType.Gem, Tiles.WallDepth + Tiles.WallMinThickness)]
     public void At_Generation_NeverPlacesATypeAboveItsDepth(TileType type, int firstDepth)
     {
         for (var seed = 0; seed < 20; seed++)
@@ -239,6 +243,10 @@ public class MineTests
     [TestCase(TileType.Silver)]
     [TestCase(TileType.Gold)]
     [TestCase(TileType.Granite)]
+    [TestCase(TileType.Obsidian)]
+    [TestCase(TileType.Slate)]
+    [TestCase(TileType.Quartzite)]
+    [TestCase(TileType.Gem)]
     public void At_Generation_EventuallyPlacesEveryType(TileType type)
     {
         var mine = new Mine(Seed);
@@ -251,6 +259,45 @@ public class MineTests
 
         Assert.That(found, Is.GreaterThan(5));
     }
+
+    [Test]
+    public void At_Wall_IsObsidianThreeToFiveThickInEveryInnerColumn()
+    {
+        for (var seed = 0; seed < 10; seed++)
+        {
+            var mine = new Mine(seed);
+            for (var column = 1; column < Mine.Columns - 1; column++)
+            {
+                var bottom = mine.WallBottomDepth(column);
+                var thickness = bottom - Tiles.WallDepth + 1;
+                Assert.That(thickness, Is.InRange(Tiles.WallMinThickness, Tiles.WallMaxThickness));
+                for (var depth = Tiles.WallDepth; depth <= bottom; depth++)
+                    Assert.That(mine.TypeAt(column, Mine.SurfaceRow + depth), Is.EqualTo(TileType.Obsidian),
+                        $"seed {seed} column {column} depth {depth}");
+                Assert.That(mine.TypeAt(column, Mine.SurfaceRow + bottom + 1), Is.Not.EqualTo(TileType.Obsidian));
+            }
+
+            Assert.That(mine.TypeAt(0, Mine.SurfaceRow + Tiles.WallDepth), Is.EqualTo(TileType.Bedrock));
+        }
+    }
+
+    [Test]
+    public void At_BelowTheWall_HasNoAct1RockOrOre()
+    {
+        var mine = new Mine(Seed);
+        for (var column = 1; column < Mine.Columns - 1; column++)
+        for (var depth = mine.WallBottomDepth(column) + 1; depth < Tiles.WallDepth + 120; depth++)
+        {
+            var type = mine.TypeAt(column, Mine.SurfaceRow + depth);
+            Assert.That(type, Is.AnyOf(TileType.Slate, TileType.Quartzite, TileType.Gem, TileType.Air),
+                $"column {column} depth {depth}");
+        }
+    }
+
+    [Test]
+    public void Hit_Obsidian_DoesNothing() =>
+        Assert.That(MineWith(TileType.Obsidian, Column, DeepRow).Hit(Column, DeepRow).Outcome,
+            Is.EqualTo(DigOutcome.Nothing));
 
     //**********************************************************
     //** helpers
