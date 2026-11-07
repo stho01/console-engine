@@ -21,7 +21,11 @@ public enum ParticleStyle : byte
     /// <summary>The ring of stars when delivering or buying.</summary>
     Pop,
     /// <summary>Specks left below the miner on a top-speed climb.</summary>
-    Trail
+    Trail,
+    Obsidian,
+    Slate,
+    Quartzite,
+    Gem
 }
 
 /// <summary>
@@ -60,7 +64,9 @@ public enum FloatingTextKind : byte
     /// <summary><c>+150g</c> (yellow) or <c>-10g</c> (red): <see cref="FloatingText.Amount"/> in gold.</summary>
     Gold,
     /// <summary><c>ELEVATOR +10m</c>: a lift segment was built, <see cref="FloatingText.Amount"/> in metres.</summary>
-    Elevator
+    Elevator,
+    /// <summary><c>TOO HARD</c> (red): the shovel hit obsidian. No amount.</summary>
+    TooHard
 }
 
 /// <summary>

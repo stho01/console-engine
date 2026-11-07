@@ -88,14 +88,11 @@ public sealed class Elevator
         if (miner.Gold < price)
             return ElevatorBuild.TooPoor;
 
+        if (!CanBuildNext(mine))
+            return ElevatorBuild.Blocked;
+
         var firstRow = Mine.SurfaceRow + Depth + 1;
         var lastRow = firstRow + SegmentMetres - 1;
-        for (var row = firstRow; row <= lastRow; row++)
-        {
-            if (!CanDigOut(mine.TypeAt(Column, row)))
-                return ElevatorBuild.Blocked;
-        }
-
         for (var row = firstRow; row <= lastRow; row++)
         {
             ref var cell = ref mine.At(Column, row);
@@ -106,6 +103,22 @@ public sealed class Elevator
         miner.Gold -= price;
         Segments++;
         return ElevatorBuild.Built;
+    }
+
+    /// <summary>
+    /// Whether the builders can dig out the next segment: not through the unbreakable side walls, and not through
+    /// obsidian that is still standing in the shaft (blast it first).
+    /// </summary>
+    public bool CanBuildNext(Mine mine)
+    {
+        var firstRow = Mine.SurfaceRow + Depth + 1;
+        for (var row = firstRow; row < firstRow + SegmentMetres; row++)
+        {
+            if (!CanDigOut(mine.TypeAt(Column, row)))
+                return false;
+        }
+
+        return true;
     }
 
     /// <summary>Sends the car to a landing. A call (<paramref name="isCall"/>) picks up whoever waits there.</summary>

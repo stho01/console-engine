@@ -84,7 +84,7 @@ using [04](04-flows.md).
 | Text | Where | Meaning |
 |---|---|---|
 | ` ETERNAL DIGGER ` | `HudSystem.Title`, row 0 | Title |
-| `  GOLD <n>g   LADDERS <n>   DEPTH <n>m   BAG ◆<copper> ◆<silver> ◆<gold> = <value>g` | `HudSystem.DrawStatus`, row 0. `N0` formatting in the user's culture | Inventory and depth |
+| `  GOLD <n>g   LADDERS <n>[   LIFT <n>m]   DEPTH <n>m   BAG ◆<copper> ◆<silver> ◆<gold> ◆<gem> = <value>g` (gem `◆` magenta) | `HudSystem.DrawStatus`, row 0. `N0` formatting in the user's culture | Inventory and depth |
 | ` ←→ walk/dig   ↓ dig   ↑ climb ladder   SPACE place ladder   E deliver/buy   hold R rescue   ESC save & quit` | `HudSystem.KeyHelp`, row 1 | Default help line |
 | ` SAVED ` (grey, then dark grey, 1.5 s) | `HudSystem.SavedText`, right end of row 1 | The game was just saved |
 | ` SAVE FAILED` (red, 1.5 s) | `HudSystem.SaveFailedText`, right end of row 1 | The save file couldn't be written (`GameSaver.LastSaveFailed`); play goes on |
@@ -98,6 +98,8 @@ using [04](04-flows.md).
 | ` NO LADDERS LEFT!  Hold R to be rescued (the bag is lost) ` (blinking) | `HudSystem.NoLaddersWarning` | 0 ladders and below the surface |
 | ` DELIVER [E] ` | `PromptRenderSystem.DeliverText` | Standing at the door |
 | ` BUILD LIFT +10m [E] <price>g ` (red when short) | `PromptRenderSystem.BuildLiftText` | Standing at the lift sign |
+| ` LIFT BLOCKED BY OBSIDIAN ` (red) | `PromptRenderSystem.LiftBlockedText` | At the lift sign while the next segment has obsidian in the shaft |
+| `TOO HARD` (red, floating) | `FloatingTextRenderSystem.TooHardText` | The shovel hit obsidian (at most once a second) |
 | ` CALL LIFT [E] ` / ` GET IN [E] ` | `PromptRenderSystem.CallLiftText`, `BoardLiftText` | On a lift landing, car away / there |
 | ` ↑↓ RIDE   ←→ GET OUT ` | `PromptRenderSystem.RideText` | In the stopped car |
 | `ELEVATOR +10m` (floating) | `FloatingTextRenderSystem.ElevatorLabel` | A lift segment was built |

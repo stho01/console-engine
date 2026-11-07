@@ -26,6 +26,12 @@ public sealed class GlintSystem(Mine mine, LightMap light, Camera camera, Effect
     private const int SamplesPerTick = 6;
     private const int Radius = 9;
 
+    /// <summary>Extra gem samples per tick once the miner is past <see cref="Tiles.HintDepth"/>.</summary>
+    private const int HintSamplesPerTick = 3;
+
+    /// <summary>How many rows below the wall the hint samples reach.</summary>
+    private const int HintReach = 16;
+
     private Query _miners;
     private float _elapsed;
 
@@ -42,7 +48,11 @@ public sealed class GlintSystem(Mine mine, LightMap light, Camera camera, Effect
         {
             var miner = chunk.GetSpan<Miner>()[0];
             for (; _elapsed >= Interval; _elapsed -= Interval)
+            {
                 Sample(miner.Column, miner.Row);
+                if (Mine.Depth(miner.Row) >= Tiles.HintDepth)
+                    SampleBelowTheWall();
+            }
 
             return;
         }
@@ -73,10 +83,34 @@ public sealed class GlintSystem(Mine mine, LightMap light, Camera camera, Effect
         }
     }
 
+    /// <summary>
+    /// Gems just below the wall glint on screen however far the miner is from them, so they are seen before the wall
+    /// is reached.
+    /// </summary>
+    private void SampleBelowTheWall()
+    {
+        var firstRow = (int)MathF.Floor(camera.Position.Y / Layout.TileHeight);
+        var lastRow = firstRow + Layout.ScreenHeight / Layout.TileHeight;
+        var wallTop = Mine.SurfaceRow + Tiles.WallDepth;
+        for (var i = 0; i < HintSamplesPerTick; i++)
+        {
+            var column = random.Next(1, Mine.Columns - 1);
+            var row = wallTop + Tiles.WallMinThickness + random.Next(HintReach);
+            if (row < firstRow || row > lastRow || mine.TypeAt(column, row) != TileType.Gem ||
+                random.NextSingle() >= Chance(TileType.Gem, light.Get(column, row)))
+                continue;
+
+            var cell = Layout.TileToWorld(column, row) +
+                       new Vector2(random.Next(Layout.TileWidth), random.Next(Layout.TileHeight));
+            effects.Glint(Commands, cell, TileType.Gem);
+        }
+    }
+
     private static float Chance(TileType ore, byte lightLevel)
     {
         var chance = ore switch
         {
+            TileType.Gem => .9f,
             TileType.Gold => .9f,
             TileType.Silver => .6f,
             _ => .4f

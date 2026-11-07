@@ -43,7 +43,7 @@ The only other persistent inputs are the TerraForM map files ([§ Map file forma
 |---|---|---|---|
 | `Mine` (one per `MineScene`) | `_cells` (`TileCell[]`, row-major, 30 per row), `_generatedRows` | The world. `TileCell`: `Type` (`TileType`), `Damage` (hits taken), `HasLadder`, `Seen` (ever lit). Generated from the seed, then changed only by digging, ladders and `Seen` | New `MineScene`: regenerated from the seed, then the save's changed tiles are applied |
 | `Miner` component (one entity) | `Column`, `Row`, `MoveFrom`, `MoveElapsed`, `MoveDuration`, `Motion`, `FallRows`, `FacingX`, `LampDirection`, `DigCooldown`, `SwingTime`, `SwingDirection`, `RescueHold` | Where the miner is and what they are doing. While moving, `Column`/`Row` are already the target tile and the engine's `Position` slides there | Rescue resets the position and motion |
-| `Miner` component | `Gold`, `Ladders`, `CopperOre`, `SilverOre`, `GoldOre` | Inventory. The three ore counts are "the bag" | Ore: delivery or rescue. Gold/ladders: never |
+| `Miner` component | `Gold`, `Ladders`, `CopperOre`, `SilverOre`, `GoldOre`, `GemOre` | Inventory. The three ore counts are "the bag" | Ore: delivery or rescue. Gold/ladders: never |
 | `Elevator` (one per `MineScene`) | `Segments`, `CarRow` (fractional while moving), `CarTargetRow`, `IsCalled` | The lift in the shaft (column 21). Landings at row 9 and row `10 + 10 × Segments` | Segments: never (saved). Car: restored to its saved landing |
 | `Miner` component | `IsRiding`, `ClimbStreak` | In the lift car; tiles climbed up without letting go | Rescue, getting out / any non-climb action |
 | `LightMap` | `_levels` (byte per tile on screen), `FirstRow`, `Rows` | This frame's light | Recomputed every frame |
@@ -54,19 +54,20 @@ The only other persistent inputs are the TerraForM map files ([§ Map file forma
 
 One slot: `SaveFile.DefaultPath` = `<LocalApplicationData>/EternalDigger/save.dat` (`%LOCALAPPDATA%` on Windows,
 `~/Library/Application Support` on macOS, `~/.local/share` on Linux). Written by `SaveFile.Save` through
-`save.dat.tmp`, then moved over the old file. Little-endian binary, `SaveFile.Version` = 2 (version 1 files are still read; their lift fields get the defaults):
+`save.dat.tmp`, then moved over the old file. Little-endian binary, `SaveFile.Version` = 3 (versions 1 and 2 are still read; fields they lack get the defaults):
 
 | Field | Type | Check on load |
 |---|---|---|
 | magic `EDSV` | int `0x56534445` | else `Corrupt` |
-| version | int | not 1–2 (`OldestVersion`…`Version`) → `Unsupported` |
+| version | int | not 1–3 (`OldestVersion`…`Version`) → `Unsupported` |
 | seed | int | — |
 | column, row | int, int | column 0–29, row 0–100 000 |
 | facing | sbyte | −1 or 1 |
 | gold, ladders, copper, silver, gold ore | 5 × int | ≥ 0 |
 | lift segments, car row (version 2+) | int, int | segments 0–10 000; car row 9, or the bottom landing `10 + 10 × segments` (only with segments > 0) |
+| gem ore (version 3+) | int | ≥ 0 |
 | change count | int | ≤ 100 001 × 30 |
-| per change: row, column, type, damage, flags | int, byte, byte, byte, byte | row 0–100 000, column < 30, type a `TileType`, flags only bit 0 (ladder) and bit 1 (seen) |
+| per change: row, column, type, damage, flags | int, byte, byte, byte, byte | row 0–100 000, column < 30, type a `TileType` (its byte: new types are only ever appended), flags only bit 0 (ladder) and bit 1 (seen) |
 
 Anything after the last change, or a file that ends early, is `Corrupt`. A `Corrupt` or `Unsupported` file is moved
 to `save.dat.bad` (`SaveFile.BadPath`) by `SaveFile.Load`. Not saved: motion, dig cooldown, rescue hold, particles,

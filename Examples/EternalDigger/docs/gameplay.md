@@ -27,7 +27,9 @@ row 0   ┐
 row 9   ┘ ← the surface walk row         door: 3–6, shopfront: 8–11, spawn: 15
 row 10    grass, unbreakable ─────────── except the shaft, column 21
 row 11    first underground row          shaft rows 10–11 start dug out, with ladders
- …        dirt, stone, granite, ore, caves
+ …        act 1: dirt, stone, granite, copper, silver, gold, caves
+110 m     the obsidian wall, 3–5 tiles thick: the shovel can't break it
+ …        act 2: slate, quartzite, gems, caves
  ∞        (generated as you go)
 columns 0 and 29 below the grass: bedrock, unbreakable
 ```
@@ -54,6 +56,16 @@ before you dig it. Each underground tile is decided in this order (`Mine.Undergr
 5. **Rock** otherwise: granite from 40 m (`Tiles.GraniteDepth`), then stone, then dirt. The deeper, the more stone
    and granite.
 
+Below 110 m (`Tiles.WallDepth`) the order changes (`Mine.BelowTheWall`, after the wall in that column):
+
+1. **The wall:** obsidian from 110 m down to 112–114 m, a thickness of 3–5 tiles that varies per column
+   (`Mine.WallBottomDepth`, `Tiles.WallMinThickness`/`WallMaxThickness`). Bedrock still frames it.
+2. **Gem** veins, chance 4% growing to 7%.
+3. **Cave** (air), rare small pockets.
+4. **Rock:** quartzite (25% of the rock, growing to 50%), else slate.
+
+None of the act 1 rock or ore appears below the wall.
+
 Ore comes in **veins**: a coarse noise on 2 × 2 tile blocks decides where a vein is, and a fine noise leaves gaps in
 it (`Mine.IsVein`). Rock is "blobby" the same way, half coarse, half fine noise.
 
@@ -65,6 +77,10 @@ it (`Mine.IsVein`). Rock is "blobby" the same way, half coarse, half fine noise.
 | Silver | 6 | 40g (`Tiles.SilverValue`) |
 | Granite | 7 | — |
 | Gold | 8 | 100g (`Tiles.GoldValue`) |
+| Obsidian | the shovel can't break it: a clank, sparks and a red `TOO HARD` (at most once a second) | — |
+| Slate | 6 | — |
+| Quartzite | 8 | — |
+| Gem | 9 | 250g (`Tiles.GemValue`) |
 
 The resulting mix, **measured** over 200 seeds (share of tiles between the side walls, in %). The vein chances and
 rock thresholds in the code compare against noise, so these shares are the best guide to what a player meets:
@@ -81,11 +97,16 @@ rock thresholds in the code compare against noise, so these shares are the best 
 | 80–85 m | — | 51 | 29 | 7 | 7 | 6 | 0.6 |
 | 100–105 m | — | 47 | 32 | 7 | 7 | 6 | 0.6 |
 
+(The shares are for act 1; act 2 below the wall has not been measured yet.)
+
 So: copper is everywhere from 2 m, silver becomes common below 20 m, gold appears at 30 m and levels off around
 6% from 80 m. Dirt is gone below about 60 m, so everything there takes 4 or more hits.
 
 **Toughness grows with depth:** every 25 m (`Tiles.DepthPerExtraHit`) adds one hit to every breakable tile. Dirt at
-50 m needs 4 hits, gold at 100 m needs 12 (`Tiles.HitsToBreak`).
+50 m needs 4 hits, gold at 100 m needs 12, a gem at 115 m needs 13 (`Tiles.HitsToBreak`).
+
+The lift can't be built through the wall: its segments stop at 100 m while the obsidian in the shaft column stands
+(the sign says ` LIFT BLOCKED BY OBSIDIAN `).
 
 ## The miner
 
@@ -225,7 +246,7 @@ twinkles and dig towards them.
 
 | Part | Shows | Identifier |
 |---|---|---|
-| HUD, row 0 | ` ETERNAL DIGGER ` title, gold, ladders, `LIFT <n>m` once a lift is built, depth, the bag (copper/silver/gold counts with coloured `◆` icons) and what the bag is worth | `HudSystem` |
+| HUD, row 0 | ` ETERNAL DIGGER ` title, gold, ladders, `LIFT <n>m` once a lift is built, depth, the bag (copper/silver/gold/gem counts with coloured `◆` icons) and what the bag is worth | `HudSystem` |
 | HUD, row 1 | The key help; the rescue bar while `R` is held; the no-ladders warning. After a save, ` SAVED ` at the right end for 1.5 s (grey, then dark grey), or ` SAVE FAILED` in red | `HudSystem` |
 | Title screen | `ETERNAL DIGGER` logo, `CONTINUE` / `NEW MINE` (selected item black on yellow with `►`), the confirmation, a red message for an unreadable save, `↑↓ choose   E select   ESC quit` | `TitleScene`, `TitleMenu` |
 | Camera | Keeps the miner at 40% of the screen height, eased. Never scrolls above the sky. Shakes on breaks and long falls | `CameraSystem` |
@@ -235,8 +256,8 @@ twinkles and dig towards them.
 
 | To change… | Edit |
 |---|---|
-| Ore values, depths, toughness | `Mining/Tiles.cs` |
-| How common ore, caves and rock are | `Mine.Underground` in `Mining/Mine.cs` |
+| Ore values, depths, toughness, the wall's depth and thickness, the hint depth | `Mining/Tiles.cs` |
+| How common ore, caves and rock are | `Mine.Underground` (act 1) and `Mine.BelowTheWall` (act 2) in `Mining/Mine.cs` |
 | Ladder price, starting gold and ladders | `Shop.cs` |
 | Lift prices, segment length, ride speed | constants at the top of `Mining/Elevator.cs` |
 | Move speeds, the climb ramp, dig speed, rescue time | constants at the top of `Systems/MinerControlSystem.cs` |

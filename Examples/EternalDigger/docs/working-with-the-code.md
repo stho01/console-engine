@@ -54,13 +54,14 @@ Most numbers are `const`s with a doc comment, grouped at the top of their class.
 
 Say you want **coal**: common, cheap, from 5 m.
 
-1. `Mining/TileType.cs`: add `Coal` to the enum (`byte`, so up to 256 types).
+1. `Mining/TileType.cs`: add `Coal` **at the end** of the enum (`byte`, so up to 256 types). Saves store the byte, so
+   never insert or reorder.
 2. `Mining/Tiles.cs`:
    - add `CoalValue` and `CoalDepth` constants;
    - add it to `IsOre` and `OreValue` if it can be sold;
    - give it a base hit count in `HitsToBreak` (without one it returns 0, and the tile breaks on the first hit).
    `IsSolid` and `IsBreakable` already treat every new type as solid and breakable.
-3. `Mining/Mine.cs` → `Underground`: decide where it appears. Order matters: earlier checks win. For a vein, add
+3. `Mining/Mine.cs` → `Underground` (act 1) or `BelowTheWall` (act 2): decide where it appears. Order matters: earlier checks win. For a vein, add
    `if (depth >= Tiles.CoalDepth && IsVein(column, row, <unused salt>, <chance>)) return TileType.Coal;` among the
    ore checks. Pick a salt no other call uses, or the new tiles will line up with an existing vein.
 4. `Rendering/TileLooks.cs`: add a `TileLook` (texture, colours, and a speck for ore) and a `For` case. Without one it
@@ -69,10 +70,10 @@ Say you want **coal**: common, cheap, from 5 m.
    existing style fits).
 6. If it is ore:
    - add a bag slot to `Components/Miner.cs` (`CoalOre`) and to `OreCount`;
-   - handle it in `Shop.Collect` and `Shop.Deliver`;
-   - show it in `HudSystem` (the status string, the changed-value check, the icon colours) and the bag value;
+   - handle it in `Shop.Collect`, `Shop.BagValue` and `Shop.EmptyBag`;
+   - show it in `HudSystem` (the status string, the changed-value check, the icon colours);
    - give it a glint chance in `GlintSystem.Chance` and a colour in `ParticleLooks.GlintVariant`/`GlintColor`;
-   - clear it in `MinerControlSystem.UpdateRescue`.
+   - save it: a field in `SaveData`, written and read in `SaveFile` with a `SaveFile.Version` bump.
 7. Tests: add it to the `TilesTests` tables and to `MineTests.At_Generation_NeverPlacesATypeAboveItsDepth` /
    `At_Generation_EventuallyPlacesEveryType`; for ore, to `ShopTests`.
 8. Docs: [gameplay.md](gameplay.md) (the tile tables), `docs/agent/03-rules.md`, `06-diagnostics.md` if the HUD text

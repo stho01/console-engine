@@ -156,3 +156,12 @@ car Up/Down ride to the top/bottom at 0.04 s per tile; Left/Right (or Down at th
 runs after `MinerMotionSystem`; `ElevatorRenderSystem` after `HouseRenderSystem`. The car is drawn as a roof above and
 a floor below the miner's tile so his cells stay visible. Saved from format version 2 (segments, car landing).
 
+## The wall and act 2 (Tier 1)
+
+Not in the original document. At 110 m (`Tiles.WallDepth`) every inner column has 3–5 tiles of `Obsidian`
+(`Mine.WallBottomDepth`); `Tiles.IsBreakable` is false for it, so the shovel only clanks (`EffectSpawner.Clank`,
+floating `TOO HARD`). Below it, `Mine.BelowTheWall` generates act 2: `Slate`, `Quartzite`, `Gem` veins (250g) and
+caves, none of the act 1 tiles. Gems glint magenta; from 95 m (`Tiles.HintDepth`) gems below the wall also glint when
+on screen at any distance. The lift can't be built through standing obsidian. The gem count is saved from format
+version 3.
+

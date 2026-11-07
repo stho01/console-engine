@@ -60,6 +60,7 @@ public class SaveFileTests
         Assert.That(miner.Gold, Is.EqualTo(saved.Gold));
         Assert.That(miner.Ladders, Is.EqualTo(saved.Ladders));
         Assert.That(miner.GoldOre, Is.EqualTo(saved.GoldOre));
+        Assert.That(miner.GemOre, Is.EqualTo(7));
         Assert.That(miner.IsMoving, Is.False);
         Assert.That(elevator.Segments, Is.EqualTo(2));
         Assert.That(elevator.IsCarAt(elevator.BottomRow), Is.True);
@@ -134,28 +135,9 @@ public class SaveFileTests
     }
 
     [Test]
-    public void Read_Version1Save_LoadsWithoutALift()
+    public void Read_Version1Save_LoadsWithoutALiftOrGems()
     {
-        var stream = new MemoryStream();
-        using (var writer = new BinaryWriter(stream, System.Text.Encoding.UTF8, leaveOpen: true))
-        {
-            writer.Write(0x56534445);
-            writer.Write(1);
-            foreach (var value in new[] { Seed, 7, Layout.GroundRow })
-                writer.Write(value);
-            writer.Write((sbyte)1);
-            foreach (var value in new[] { 55, 4, 1, 2, 3, 1 })
-                writer.Write(value);
-            writer.Write(13);
-            writer.Write((byte)7);
-            writer.Write((byte)TileType.Air);
-            writer.Write((byte)0);
-            writer.Write((byte)3);
-        }
-
-        stream.Position = 0;
-
-        var status = SaveFile.Read(stream, out var loaded);
+        var status = SaveFile.Read(OldSave(1), out var loaded);
 
         Assert.That(status, Is.EqualTo(SaveStatus.Loaded));
         Assert.That(loaded.Gold, Is.EqualTo(55));
@@ -163,6 +145,19 @@ public class SaveFileTests
         Assert.That(loaded.Changes[0].Cell.HasLadder, Is.True);
         Assert.That(loaded.ElevatorSegments, Is.Zero);
         Assert.That(loaded.ElevatorCarRow, Is.EqualTo(Elevator.TopRow));
+        Assert.That(loaded.GemOre, Is.Zero);
+    }
+
+    [Test]
+    public void Read_Version2Save_LoadsTheLiftWithoutGems()
+    {
+        var status = SaveFile.Read(OldSave(2), out var loaded);
+
+        Assert.That(status, Is.EqualTo(SaveStatus.Loaded));
+        Assert.That(loaded.ElevatorSegments, Is.EqualTo(3));
+        Assert.That(loaded.ElevatorCarRow, Is.EqualTo(Mine.SurfaceRow + 30));
+        Assert.That(loaded.GemOre, Is.Zero);
+        Assert.That(loaded.Changes, Has.Count.EqualTo(1));
     }
 
     [Test]
@@ -264,7 +259,8 @@ public class SaveFileTests
             Ladders = 3,
             CopperOre = 4,
             SilverOre = 5,
-            GoldOre = 6
+            GoldOre = 6,
+            GemOre = 7
         };
         var elevator = new Elevator();
         var rich = new Miner { Gold = 10_000 };
@@ -273,6 +269,37 @@ public class SaveFileTests
         elevator.Send(elevator.BottomRow);
         elevator.Update(10f);
         return SaveData.Capture(Seed, miner, mine, elevator, new List<TileChange>());
+    }
+
+    /// <summary>A save written by hand in an older format: gold 55, one changed tile, version 2 adds a 30 m lift.</summary>
+    private static MemoryStream OldSave(int version)
+    {
+        var stream = new MemoryStream();
+        using (var writer = new BinaryWriter(stream, System.Text.Encoding.UTF8, leaveOpen: true))
+        {
+            writer.Write(0x56534445);
+            writer.Write(version);
+            foreach (var value in new[] { Seed, 7, Layout.GroundRow })
+                writer.Write(value);
+            writer.Write((sbyte)1);
+            foreach (var value in new[] { 55, 4, 1, 2, 3 })
+                writer.Write(value);
+            if (version >= 2)
+            {
+                writer.Write(3);
+                writer.Write(Mine.SurfaceRow + 30);
+            }
+
+            writer.Write(1);
+            writer.Write(13);
+            writer.Write((byte)7);
+            writer.Write((byte)TileType.Air);
+            writer.Write((byte)0);
+            writer.Write((byte)3);
+        }
+
+        stream.Position = 0;
+        return stream;
     }
 
     private static MemoryStream Written(SaveData data)
@@ -294,6 +321,7 @@ public class SaveFileTests
         Assert.That(actual.CopperOre, Is.EqualTo(expected.CopperOre));
         Assert.That(actual.SilverOre, Is.EqualTo(expected.SilverOre));
         Assert.That(actual.GoldOre, Is.EqualTo(expected.GoldOre));
+        Assert.That(actual.GemOre, Is.EqualTo(expected.GemOre));
         Assert.That(actual.ElevatorSegments, Is.EqualTo(expected.ElevatorSegments));
         Assert.That(actual.ElevatorCarRow, Is.EqualTo(expected.ElevatorCarRow));
         Assert.That(actual.Changes, Is.EqualTo(expected.Changes));

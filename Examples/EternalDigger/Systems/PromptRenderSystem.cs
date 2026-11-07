@@ -13,7 +13,7 @@ namespace EternalDigger.Systems;
 /// shopfront (<c>BUY LADDERS [E] 10g</c>), the lift sign (<c>BUILD LIFT +10m [E] 200g</c>) or a lift landing (call,
 /// get in, ride). It bobs gently. A price turns red when the miner can't pay.
 /// </summary>
-public sealed class PromptRenderSystem(Canvas canvas, Camera camera, Elevator elevator) : EntitySystem
+public sealed class PromptRenderSystem(Canvas canvas, Camera camera, Mine mine, Elevator elevator) : EntitySystem
 {
     //**********************************************************
     //** fields
@@ -24,6 +24,7 @@ public sealed class PromptRenderSystem(Canvas canvas, Camera camera, Elevator el
     public const string CallLiftText = " CALL LIFT [E] ";
     public const string BoardLiftText = " GET IN [E] ";
     public const string RideText = " ↑↓ RIDE   ←→ GET OUT ";
+    public const string LiftBlockedText = " LIFT BLOCKED BY OBSIDIAN ";
 
     private const string KeyHint = "[E]";
     private const float BobSpeed = 3f;
@@ -55,6 +56,8 @@ public sealed class PromptRenderSystem(Canvas canvas, Camera camera, Elevator el
                 Draw(DeliverText, position.X, position.Y, ConsoleColor.White);
             else if (Layout.IsAtShop(miner.Column, miner.Row))
                 Draw(BuyText, position.X, position.Y, PriceColor(miner.Gold, Shop.LadderPrice));
+            else if (Layout.IsAtLiftSign(miner.Column, miner.Row) && !elevator.CanBuildNext(mine))
+                Draw(LiftBlockedText, position.X, position.Y, ConsoleColor.Red);
             else if (Layout.IsAtLiftSign(miner.Column, miner.Row))
                 Draw(BuildLiftText(), position.X, position.Y, PriceColor(miner.Gold, elevator.NextSegmentPrice));
             else if (miner.Column == Elevator.Column && elevator.IsLanding(miner.Row))

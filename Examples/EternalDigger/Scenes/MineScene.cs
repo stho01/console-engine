@@ -82,7 +82,7 @@ public sealed class MineScene(SaveData start, string savePath) : EcsScene<Eterna
         // After the particles, so debris, dust and sparks never cover the miner.
         Presentation.Add(new MinerRenderSystem(canvas, Camera));
         Presentation.Add(new FloatingTextRenderSystem(canvas, Camera));
-        Presentation.Add(new PromptRenderSystem(canvas, Camera, elevator));
+        Presentation.Add(new PromptRenderSystem(canvas, Camera, mine, elevator));
         Presentation.Add(new HudSystem(canvas, _saver, elevator));
     }
 }

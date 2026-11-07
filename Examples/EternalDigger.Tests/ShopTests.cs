@@ -9,11 +9,11 @@ public class ShopTests
     [Test]
     public void Deliver_FullBag_PaysEveryOreAndEmptiesTheBag()
     {
-        var miner = new Miner { Gold = 5, CopperOre = 2, SilverOre = 1, GoldOre = 3 };
+        var miner = new Miner { Gold = 5, CopperOre = 2, SilverOre = 1, GoldOre = 3, GemOre = 2 };
 
         var earned = Shop.Deliver(ref miner);
 
-        var expected = 2 * Tiles.CopperValue + Tiles.SilverValue + 3 * Tiles.GoldValue;
+        var expected = 2 * Tiles.CopperValue + Tiles.SilverValue + 3 * Tiles.GoldValue + 2 * Tiles.GemValue;
         Assert.That(earned, Is.EqualTo(expected));
         Assert.That(miner.Gold, Is.EqualTo(5 + expected));
         Assert.That(miner.OreCount, Is.Zero);
@@ -57,7 +57,9 @@ public class ShopTests
         Shop.Collect(ref miner, TileType.Silver);
         Shop.Collect(ref miner, TileType.Silver);
         Shop.Collect(ref miner, TileType.Gold);
+        Shop.Collect(ref miner, TileType.Gem);
 
+        Assert.That(miner.GemOre, Is.EqualTo(1));
         Assert.That(miner.CopperOre, Is.EqualTo(1));
         Assert.That(miner.SilverOre, Is.EqualTo(2));
         Assert.That(miner.GoldOre, Is.EqualTo(1));

@@ -227,6 +227,22 @@ public class MinerControlSystemTests
     }
 
     [Test]
+    public void Control_DigObsidian_ClanksWithoutDamage()
+    {
+        var row = Mine.SurfaceRow + Tiles.WallDepth - 1;
+        _mine.At(5, row) = new TileCell { Type = TileType.Air };
+        _mine.At(5, row + 1) = new TileCell { Type = TileType.Obsidian };
+        PlaceMiner(5, row);
+
+        Play(new MinerInput { Down = true }, seconds: 3f);
+
+        Assert.That(_mine.At(5, row + 1).Type, Is.EqualTo(TileType.Obsidian));
+        Assert.That(_mine.At(5, row + 1).Damage, Is.Zero);
+        Assert.That(_miner.Row, Is.EqualTo(row));
+        Assert.That(_miner.SwingDirection.Y, Is.EqualTo(1), "the shovel still swings");
+    }
+
+    [Test]
     public void ClimbUpDuration_ByStreak_RampsFromStartToTopSpeed()
     {
         Assert.That(MinerControlSystem.ClimbUpDuration(0), Is.EqualTo(MinerControlSystem.ClimbDuration));
