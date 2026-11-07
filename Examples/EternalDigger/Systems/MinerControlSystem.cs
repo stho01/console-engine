@@ -1,3 +1,4 @@
+using System;
 using ConsoleEngine.Ecs;
 using ConsoleEngine.Ecs.Components;
 using EternalDigger.Components;
@@ -20,6 +21,16 @@ public sealed class MinerControlSystem(Mine mine, EffectSpawner effects) : Entit
 
     public const float WalkDuration = .13f;
     public const float ClimbDuration = .17f;
+
+    /// <summary>Tiles climbed up at <see cref="ClimbDuration"/> before the climb starts to speed up.</summary>
+    public const int ClimbRampStart = 4;
+
+    /// <summary>Tiles over which a long climb speeds up from <see cref="ClimbDuration"/> to the top speed.</summary>
+    public const int ClimbRampTiles = 10;
+
+    /// <summary>Seconds per tile at the top climbing speed.</summary>
+    public const float TopClimbDuration = .06f;
+
     public const float FallDuration = .06f;
     public const float DigInterval = .16f;
     public const float SwingDuration = .12f;
@@ -58,6 +69,7 @@ public sealed class MinerControlSystem(Mine mine, EffectSpawner effects) : Entit
 
         if (!mine.IsSupported(miner.Column, miner.Row))
         {
+            miner.ClimbStreak = 0;
             StartMove(ref miner, 0, 1, FallDuration, MinerMotion.Falling);
             return;
         }
@@ -67,6 +79,7 @@ public sealed class MinerControlSystem(Mine mine, EffectSpawner effects) : Entit
 
         if (input.Horizontal != 0)
         {
+            miner.ClimbStreak = 0;
             miner.FacingX = input.Horizontal;
             MoveOrDig(ref miner, input.Horizontal, 0, WalkDuration, MinerMotion.Walking, commands);
             return;
@@ -74,13 +87,41 @@ public sealed class MinerControlSystem(Mine mine, EffectSpawner effects) : Entit
 
         if (input.Down)
         {
+            miner.ClimbStreak = 0;
             MoveOrDig(ref miner, 0, 1, ClimbDuration, MinerMotion.Climbing, commands);
             return;
         }
 
         if (input.Up && mine.HasLadder(miner.Column, miner.Row))
-            MoveOrDig(ref miner, 0, -1, ClimbDuration, MinerMotion.Climbing, commands);
+        {
+            var climbing = !mine.IsSolid(miner.Column, miner.Row - 1);
+            MoveOrDig(ref miner, 0, -1, ClimbUpDuration(miner.ClimbStreak), MinerMotion.Climbing, commands);
+            miner.ClimbStreak = climbing ? miner.ClimbStreak + 1 : 0;
+            return;
+        }
+
+        miner.ClimbStreak = 0;
     }
+
+    /// <summary>
+    /// Seconds for the next tile of a climb up, after <paramref name="streak"/> tiles climbed without letting go:
+    /// <see cref="ClimbDuration"/> for the first <see cref="ClimbRampStart"/>, then down to
+    /// <see cref="TopClimbDuration"/> over <see cref="ClimbRampTiles"/>.
+    /// </summary>
+    public static float ClimbUpDuration(int streak)
+    {
+        if (streak < ClimbRampStart)
+            return ClimbDuration;
+
+        var ramp = Math.Min(1f, (streak - ClimbRampStart + 1f) / ClimbRampTiles);
+        return ClimbDuration + (TopClimbDuration - ClimbDuration) * ramp;
+    }
+
+    /// <summary>Whether a climb with this streak is past the start speed (it slides without easing).</summary>
+    public static bool IsFastClimb(int streak) => streak > ClimbRampStart;
+
+    /// <summary>Whether a climb with this streak is at the top speed (it trails dust).</summary>
+    public static bool IsTopSpeedClimb(int streak) => streak >= ClimbRampStart + ClimbRampTiles;
 
     //**********************************************************
     //** internals
@@ -165,6 +206,7 @@ public sealed class MinerControlSystem(Mine mine, EffectSpawner effects) : Entit
         miner.MoveElapsed = 0f;
         miner.Motion = MinerMotion.Idle;
         miner.FallRows = 0;
+        miner.ClimbStreak = 0;
         position.Value = Layout.TileToWorld(miner.Column, miner.Row);
 
         effects.Pop(commands, Layout.TileCenter(miner.Column, miner.Row));

@@ -44,7 +44,7 @@ except `R` is read while the miner is moving (a move is a slide of one tile). Fa
 miner is idle. Digging also turns the headlamp (`LampDirection`) towards the dug tile; walking turns it to the side,
 climbing up/down points it up/down.
 
-Timings (`MinerControlSystem` constants, seconds): walk 0.13 per tile, climb 0.17, fall 0.06 per tile, dig interval
+Timings (`MinerControlSystem` constants, seconds): walk 0.13 per tile, climb 0.17 (held Up ramps to 0.06 after 4 tiles, over 10 tiles), fall 0.06 per tile, dig interval
 0.16, swing animation 0.12, rescue hold 1.5.
 
 ## Components (`Components/`)

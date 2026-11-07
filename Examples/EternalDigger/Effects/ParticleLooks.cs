@@ -22,6 +22,7 @@ public static class ParticleLooks
     private const string MistRamp = "·∙··˙";
     private const string CoinRamp = "●◐|◑";
     private const string PopRamp = "✶*+·";
+    private const string TrailRamp = "'·";
 
     //**********************************************************
     //** public methods
@@ -36,6 +37,7 @@ public static class ParticleLooks
         // Coins spin: the ramp cycles with age instead of being walked once.
         ParticleStyle.Coin => CoinRamp[(int)(progress * 24f + variant) % CoinRamp.Length],
         ParticleStyle.Pop => Ramp(PopRamp, progress),
+        ParticleStyle.Trail => Ramp(TrailRamp, progress),
         _ => ChunkRamp[Math.Min(ChunkRamp.Length - 1, (int)(progress * ChunkRamp.Length) + (variant & 1))]
     };
 
@@ -56,6 +58,7 @@ public static class ParticleLooks
             ParticleStyle.Mist => ConsoleColor.DarkGray,
             ParticleStyle.Coin => (int)(progress * 24f + variant) % 4 == 2 ? ConsoleColor.DarkYellow : ConsoleColor.Yellow,
             ParticleStyle.Pop => faded ? ConsoleColor.DarkYellow : ConsoleColor.White,
+            ParticleStyle.Trail => faded ? ConsoleColor.DarkGray : ConsoleColor.Gray,
             _ => ConsoleColor.Gray
         };
     }

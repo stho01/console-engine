@@ -96,6 +96,7 @@ plays** (except `R`, the rescue).
 |---|---|---|
 | Walk one tile | 0.13 s, eased in and out | `MinerControlSystem.WalkDuration` |
 | Climb or step down one tile | 0.17 s | `ClimbDuration` |
+| Climb up, held | 0.17 s for the first 4 tiles, then faster over the next 10 down to 0.06 s per tile; a 100 m climb takes about 7.5 s. Letting go of Up, stepping off the ladder or anything else starts slow again | `ClimbRampStart`, `ClimbRampTiles`, `TopClimbDuration`, `ClimbUpDuration`, `Miner.ClimbStreak` |
 | Fall one tile | 0.06 s, speeding up | `FallDuration` |
 | One shovel hit | every 0.16 s while the key is held | `DigInterval` |
 
@@ -217,7 +218,7 @@ twinkles and dig towards them.
 | Ore values, depths, toughness | `Mining/Tiles.cs` |
 | How common ore, caves and rock are | `Mine.Underground` in `Mining/Mine.cs` |
 | Ladder price, starting gold and ladders | `Shop.cs` |
-| Move speeds, dig speed, rescue time | constants at the top of `Systems/MinerControlSystem.cs` |
+| Move speeds, the climb ramp, dig speed, rescue time | constants at the top of `Systems/MinerControlSystem.cs` |
 | Lamp range and cone | constants at the top of `Rendering/LightMap.cs` |
 | Glint and mist rates | `Systems/GlintSystem.cs`, `Systems/MistSystem.cs` |
 | Where the house, door, shop and spawn are | `Layout.cs` |

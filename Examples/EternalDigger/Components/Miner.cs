@@ -31,6 +31,9 @@ public struct Miner
 
     public MinerMotion Motion;
 
+    /// <summary>Tiles climbed up in a row without letting go of Up. Drives the accelerating climb.</summary>
+    public int ClimbStreak;
+
     /// <summary>Rows fallen in the current fall, for the landing dust.</summary>
     public int FallRows;
 

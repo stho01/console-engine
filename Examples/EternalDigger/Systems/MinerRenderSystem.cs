@@ -28,6 +28,9 @@ public sealed class MinerRenderSystem(Canvas canvas, Camera camera) : EntitySyst
     /// <summary>Leg frames while walking, switched twice per step.</summary>
     private const string WalkLegs = "▙▟";
 
+    /// <summary>Leg frames while climbing, switched twice per tile, so a faster climb moves the legs faster.</summary>
+    private const string ClimbLegs = "╫║";
+
     private Query _miners;
 
     //**********************************************************
@@ -75,7 +78,7 @@ public sealed class MinerRenderSystem(Canvas canvas, Camera camera) : EntitySyst
     private static char Legs(in Miner miner) => miner.Motion switch
     {
         MinerMotion.Walking => WalkLegs[miner.MoveElapsed < miner.MoveDuration / 2f ? 0 : 1],
-        MinerMotion.Climbing => '╫',
+        MinerMotion.Climbing => ClimbLegs[miner.MoveElapsed < miner.MoveDuration / 2f ? 0 : 1],
         MinerMotion.Falling => '╨',
         _ => '█'
     };
