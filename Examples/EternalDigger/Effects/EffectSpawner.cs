@@ -21,6 +21,13 @@ public sealed class EffectSpawner(Random random, ScreenShake shake)
     private const float DebrisGravity = 40f;
     private const float CoinGravity = 45f;
 
+    /// <summary>Seconds the blast flash lasts: about one frame.</summary>
+    private const float FlashLifetime = .05f;
+
+    private const int BlastRubble = 150;
+    private const int BlastChunks = 40;
+    private const int BlastDust = 40;
+
     //**********************************************************
     //** props
     //**********************************************************
@@ -102,6 +109,52 @@ public sealed class EffectSpawner(Random random, ScreenShake shake)
         for (var i = 0; i < count; i++)
             Spawn(commands, feet + RandomOffset(1f, 0f),
                 new Vector2(directionX * Range(3f, 8f), -Range(.5f, 2f)), ParticleStyle.Dust, Range(.3f, .6f), 0f, 3f);
+    }
+
+    /// <summary>A lit stick of dynamite in a tile; <c>DynamiteSystem</c> burns its fuse and blows it up.</summary>
+    public void PlantDynamite(CommandBuffer commands, int column, int row, float fuse) =>
+        commands.Create(new Position(Layout.TileCenter(column, row)), new Dynamite(column, row, fuse));
+
+    /// <summary>A spark off a burning fuse, and now and then a wisp of smoke.</summary>
+    public void FuseSpark(CommandBuffer commands, Vector2 stick)
+    {
+        var top = stick - new Vector2(.5f, 1f);
+        Spawn(commands, top, RandomDirection(4f, 10f), ParticleStyle.Spark, Range(.1f, .25f), 6f, 2f);
+        if (random.Next(3) == 0)
+            Spawn(commands, top, new Vector2(Range(-1f, 1f), -Range(2f, 4f)), ParticleStyle.Smoke, Range(.6f, 1f), 0f, 1f);
+    }
+
+    /// <summary>
+    /// A blast around a tile: one frame of full-tile flash over the area, a ring of rubble and chunks, lingering dust
+    /// and a big shake. <paramref name="radius"/> is in tiles (1 = 3 x 3).
+    /// </summary>
+    public void Blast(CommandBuffer commands, int column, int row, int radius)
+    {
+        var center = Layout.TileCenter(column, row);
+        for (var r = row - radius; r <= row + radius; r++)
+        for (var c = column - radius; c <= column + radius; c++)
+        for (var y = 0; y < Layout.TileHeight; y++)
+        for (var x = 0; x < Layout.TileWidth; x++)
+            Spawn(commands, Layout.TileToWorld(c, r) + new Vector2(x + .5f, y + .5f), Vector2.Zero, ParticleStyle.Flash,
+                FlashLifetime, 0f, 0f);
+
+        for (var i = 0; i < BlastRubble; i++)
+        {
+            var angle = random.NextSingle() * MathF.Tau;
+            var speed = Range(18f, 48f);
+            var velocity = new Vector2(MathF.Cos(angle) * speed, MathF.Sin(angle) * speed * .5f - Range(2f, 8f));
+            Debris(commands, center + RandomOffset(2f, 1f), velocity, ParticleStyle.Blast, Range(.6f, 1.4f));
+        }
+
+        for (var i = 0; i < BlastChunks; i++)
+            Debris(commands, center + RandomOffset(3f, 1.5f), RandomDirection(10f, 30f), ParticleStyle.Stone,
+                Range(.8f, 1.6f));
+
+        for (var i = 0; i < BlastDust; i++)
+            Spawn(commands, center + RandomOffset(5f, 2.5f), RandomDirection(1f, 5f), ParticleStyle.Dust, Range(1f, 2f),
+                -1f, 1f);
+
+        Shake.Add(ScreenShake.MaxStrength);
     }
 
     /// <summary>One or two specks that drop away below the feet on a top-speed climb.</summary>

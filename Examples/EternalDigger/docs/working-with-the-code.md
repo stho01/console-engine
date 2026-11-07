@@ -111,7 +111,8 @@ uses all six (`Position`, `Velocity`, `Glyph`, `Particle`, `Physics`, `TileColli
 
 ### Add a key or action
 
-1. `MinerInput.cs`: add a property and read it in `FromKeyboard` (`Held` for continuous, `Pressed` for one-shot).
+1. `MinerInput.cs`: add a property and read it in `FromKeyboard` (`Held` for continuous, `Pressed` for one-shot). `E`
+   is already there twice: `Use` (held, planting) and `UsePressed` (`InteractionSystem`).
 2. `MinerControlSystem.Control`: handle it. Remember the order there: rescue, then "moving? stop", then falling, then
    keys. Actions that need the miner standing still go after the falling check.
 3. Add a test in `MinerControlSystemTests` that plays it with a scripted `MinerInput`.

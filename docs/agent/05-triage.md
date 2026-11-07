@@ -198,9 +198,13 @@ Rules: [03 § EternalDigger](03-rules.md#eternal-digger). Flow: [04 § F10](04-f
    landing in column 21: row 9 or the bottom row; mid-shaft, `E` does nothing. In the car, `E` does nothing: use ↑/↓.
    Stop.
 10. "Can't dig at 110 m", "TOO HARD" → **Cause:** the obsidian wall (`Tiles.WallDepth`, 3–5 tiles); the shovel can't
-    break it by design. **Fix:** dynamite (once it exists in this build). Same reason the lift stops at 100 m. Stop.
-11. "Fell all the way down the shaft" → **Cause:** a built lift digs out the shaft; without ladders there a step into it
+    break it by design. **Fix:** buy the blasting kit (2500g) and sticks (100g) at the `BLASTING` shed, hold `E` 0.5 s
+    facing the wall, walk away. Same reason the lift stops at 100 m (blast column 21 to go deeper). Stop.
+11. "Holding E does nothing", "can't plant dynamite" → **Cause:** one of: no kit or no sticks (HUD `DYNAMITE <n>`), on
+    the surface, on a lift landing (there `E` is the lift), facing air instead of rock (the lamp points the way you last
+    moved or dug), moving, or `E` wasn't released since the last stick. A dust puff means it was refused. Stop.
+12. "Fell all the way down the shaft" → **Cause:** a built lift digs out the shaft; without ladders there a step into it
     falls to the bottom landing. No damage. Stop.
-12. "Debris or sparks disappear right next to the miner" → **Cause:** by design. No particle is drawn on his 4 × 2
+13. "Debris or sparks disappear right next to the miner" → **Cause:** by design. No particle is drawn on his 4 × 2
    cells, and at most 6 (dimmed) are drawn in the tile around him, so he stays readable (`ParticleRenderSystem`). Stop.
 

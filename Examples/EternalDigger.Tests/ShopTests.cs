@@ -73,4 +73,30 @@ public class ShopTests
         Assert.That(Shop.Collect(ref miner, TileType.Dirt), Is.False);
         Assert.That(miner.OreCount, Is.Zero);
     }
+
+    [Test]
+    public void TryBuyBlasting_FirstTime_BuysTheKitThenSticks()
+    {
+        var miner = new Miner { Gold = Shop.BlastingKitPrice + 2 * Shop.DynamitePrice };
+
+        Assert.That(Shop.TryBuyBlasting(ref miner), Is.True);
+        Assert.That(miner.HasBlastingKit, Is.True);
+        Assert.That(miner.Dynamite, Is.Zero);
+        Assert.That(Shop.BlastingPrice(miner), Is.EqualTo(Shop.DynamitePrice));
+
+        Assert.That(Shop.TryBuyBlasting(ref miner), Is.True);
+        Assert.That(Shop.TryBuyBlasting(ref miner), Is.True);
+        Assert.That(miner.Dynamite, Is.EqualTo(2));
+        Assert.That(miner.Gold, Is.Zero);
+    }
+
+    [Test]
+    public void TryBuyBlasting_NotEnoughForTheKit_ChangesNothing()
+    {
+        var miner = new Miner { Gold = Shop.BlastingKitPrice - 1 };
+
+        Assert.That(Shop.TryBuyBlasting(ref miner), Is.False);
+        Assert.That(miner.HasBlastingKit, Is.False);
+        Assert.That(miner.Gold, Is.EqualTo(Shop.BlastingKitPrice - 1));
+    }
 }

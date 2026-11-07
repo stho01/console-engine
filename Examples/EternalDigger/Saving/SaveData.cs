@@ -29,6 +29,10 @@ public sealed class SaveData
     public int SilverOre { get; init; }
     public int GoldOre { get; init; }
     public int GemOre { get; init; }
+    public bool HasBlastingKit { get; init; }
+
+    /// <summary>Sticks carried. Sticks whose fuse was burning when the game saved are counted back in.</summary>
+    public int Dynamite { get; init; }
 
     /// <summary>Lift segments built (<see cref="Elevator.SegmentMetres"/> m each). 0 = no lift.</summary>
     public int ElevatorSegments { get; init; }
@@ -71,6 +75,8 @@ public sealed class SaveData
             SilverOre = miner.SilverOre,
             GoldOre = miner.GoldOre,
             GemOre = miner.GemOre,
+            HasBlastingKit = miner.HasBlastingKit,
+            Dynamite = miner.Dynamite + miner.LitDynamite,
             ElevatorSegments = elevator.Segments,
             ElevatorCarRow = elevator.CarTargetRow,
             Changes = changes
@@ -90,7 +96,9 @@ public sealed class SaveData
         CopperOre = CopperOre,
         SilverOre = SilverOre,
         GoldOre = GoldOre,
-        GemOre = GemOre
+        GemOre = GemOre,
+        HasBlastingKit = HasBlastingKit,
+        Dynamite = Dynamite
     };
 
     /// <summary>Puts the saved tiles back into a mine made from <see cref="Seed"/>, and the lift back.</summary>

@@ -61,6 +61,9 @@ public class SaveFileTests
         Assert.That(miner.Ladders, Is.EqualTo(saved.Ladders));
         Assert.That(miner.GoldOre, Is.EqualTo(saved.GoldOre));
         Assert.That(miner.GemOre, Is.EqualTo(7));
+        Assert.That(miner.HasBlastingKit, Is.True);
+        Assert.That(miner.Dynamite, Is.EqualTo(6), "lit sticks are put back");
+        Assert.That(miner.LitDynamite, Is.Zero);
         Assert.That(miner.IsMoving, Is.False);
         Assert.That(elevator.Segments, Is.EqualTo(2));
         Assert.That(elevator.IsCarAt(elevator.BottomRow), Is.True);
@@ -158,6 +161,17 @@ public class SaveFileTests
         Assert.That(loaded.ElevatorCarRow, Is.EqualTo(Mine.SurfaceRow + 30));
         Assert.That(loaded.GemOre, Is.Zero);
         Assert.That(loaded.Changes, Has.Count.EqualTo(1));
+    }
+
+    [Test]
+    public void Read_Version3Save_LoadsGemsWithoutDynamite()
+    {
+        var status = SaveFile.Read(OldSave(3), out var loaded);
+
+        Assert.That(status, Is.EqualTo(SaveStatus.Loaded));
+        Assert.That(loaded.GemOre, Is.EqualTo(9));
+        Assert.That(loaded.HasBlastingKit, Is.False);
+        Assert.That(loaded.Dynamite, Is.Zero);
     }
 
     [Test]
@@ -260,7 +274,10 @@ public class SaveFileTests
             CopperOre = 4,
             SilverOre = 5,
             GoldOre = 6,
-            GemOre = 7
+            GemOre = 7,
+            HasBlastingKit = true,
+            Dynamite = 4,
+            LitDynamite = 2
         };
         var elevator = new Elevator();
         var rich = new Miner { Gold = 10_000 };
@@ -271,7 +288,7 @@ public class SaveFileTests
         return SaveData.Capture(Seed, miner, mine, elevator, new List<TileChange>());
     }
 
-    /// <summary>A save written by hand in an older format: gold 55, one changed tile, version 2 adds a 30 m lift.</summary>
+    /// <summary>A save written by hand in an older format: gold 55, one tile; v2 adds a 30 m lift, v3 9 gems.</summary>
     private static MemoryStream OldSave(int version)
     {
         var stream = new MemoryStream();
@@ -289,6 +306,9 @@ public class SaveFileTests
                 writer.Write(3);
                 writer.Write(Mine.SurfaceRow + 30);
             }
+
+            if (version >= 3)
+                writer.Write(9);
 
             writer.Write(1);
             writer.Write(13);
@@ -322,6 +342,8 @@ public class SaveFileTests
         Assert.That(actual.SilverOre, Is.EqualTo(expected.SilverOre));
         Assert.That(actual.GoldOre, Is.EqualTo(expected.GoldOre));
         Assert.That(actual.GemOre, Is.EqualTo(expected.GemOre));
+        Assert.That(actual.HasBlastingKit, Is.EqualTo(expected.HasBlastingKit));
+        Assert.That(actual.Dynamite, Is.EqualTo(expected.Dynamite));
         Assert.That(actual.ElevatorSegments, Is.EqualTo(expected.ElevatorSegments));
         Assert.That(actual.ElevatorCarRow, Is.EqualTo(expected.ElevatorCarRow));
         Assert.That(actual.Changes, Is.EqualTo(expected.Changes));

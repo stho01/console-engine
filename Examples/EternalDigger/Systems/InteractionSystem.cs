@@ -1,7 +1,5 @@
 using System;
-using ConsoleEngine.Abstractions.Inputs;
 using ConsoleEngine.Ecs;
-using ConsoleEngine.Infrastructure.Inputs;
 using EternalDigger.Components;
 using EternalDigger.Effects;
 using EternalDigger.Mining;
@@ -11,9 +9,9 @@ using Microsoft.Xna.Framework;
 namespace EternalDigger.Systems;
 
 /// <summary>
-/// <c>E</c> on the surface and at the lift: deliver the bag at the door, buy one ladder at the shopfront, build a lift
-/// segment at the lift sign; at a lift landing, call the car or get in. Only while the miner stands still. Every sale
-/// and purchase asks for a save.
+/// <c>E</c> on the surface and at the lift: deliver the bag at the door, buy one ladder at the shopfront, the blasting
+/// kit or a stick of dynamite at the shed, a lift segment at the lift sign; at a lift landing, call the car or get in.
+/// Only while the miner stands still. Every sale and purchase asks for a save.
 /// </summary>
 public sealed class InteractionSystem(Mine mine, Elevator elevator, EffectSpawner effects, GameSaver saver)
     : EntitySystem
@@ -32,6 +30,9 @@ public sealed class InteractionSystem(Mine mine, Elevator elevator, EffectSpawne
     public static readonly Vector2 ShopEffectOrigin = Layout.TileCenter(
         (Layout.ShopFirstColumn + Layout.ShopLastColumn) / 2, Layout.GroundRow) + new Vector2(2f, -6f);
 
+    public static readonly Vector2 BlastingEffectOrigin = Layout.TileCenter(
+        (Layout.BlastingFirstColumn + Layout.BlastingLastColumn) / 2, Layout.GroundRow) + new Vector2(2f, -6f);
+
     public static readonly Vector2 LiftEffectOrigin = Layout.TileCenter(
         (Layout.LiftSignFirstColumn + Layout.LiftSignLastColumn) / 2, Layout.GroundRow) + new Vector2(2f, -6f);
 
@@ -45,7 +46,7 @@ public sealed class InteractionSystem(Mine mine, Elevator elevator, EffectSpawne
 
     protected override void OnUpdate(float deltaSeconds)
     {
-        if (!Input.Instance.GetKey(Key.E).Pressed)
+        if (!MinerInput.FromKeyboard().UsePressed)
             return;
 
         foreach (var chunk in _miners.GetChunks())
@@ -71,6 +72,8 @@ public sealed class InteractionSystem(Mine mine, Elevator elevator, EffectSpawne
             Deliver(ref miner, feet, commands);
         else if (Layout.IsAtShop(miner.Column, miner.Row))
             BuyLadder(ref miner, feet, commands);
+        else if (Layout.IsAtBlastingShed(miner.Column, miner.Row))
+            BuyBlasting(ref miner, feet, commands);
         else if (Layout.IsAtLiftSign(miner.Column, miner.Row))
             BuildLift(ref miner, feet, commands);
         else if (miner.Column == Elevator.Column && elevator.IsLanding(miner.Row))
@@ -106,6 +109,20 @@ public sealed class InteractionSystem(Mine mine, Elevator elevator, EffectSpawne
 
         effects.Pop(commands, ShopEffectOrigin);
         effects.Number(commands, ShopEffectOrigin + new Vector2(0f, -2f), -Shop.LadderPrice);
+        saver.Request();
+    }
+
+    private void BuyBlasting(ref Miner miner, Vector2 feet, CommandBuffer commands)
+    {
+        var price = Shop.BlastingPrice(miner);
+        if (!Shop.TryBuyBlasting(ref miner))
+        {
+            effects.FootDust(commands, feet, miner.FacingX);
+            return;
+        }
+
+        effects.Pop(commands, BlastingEffectOrigin);
+        effects.Number(commands, BlastingEffectOrigin + new Vector2(0f, -2f), -price);
         saver.Request();
     }
 

@@ -23,6 +23,9 @@ public static class ParticleLooks
     private const string CoinRamp = "●◐|◑";
     private const string PopRamp = "✶*+·";
     private const string TrailRamp = "'·";
+    private const string FlashRamp = "█";
+    private const string BlastRamp = "▓▒░·";
+    private const string SmokeRamp = "·˙";
 
     //**********************************************************
     //** public methods
@@ -38,6 +41,9 @@ public static class ParticleLooks
         ParticleStyle.Coin => CoinRamp[(int)(progress * 24f + variant) % CoinRamp.Length],
         ParticleStyle.Pop => Ramp(PopRamp, progress),
         ParticleStyle.Trail => Ramp(TrailRamp, progress),
+        ParticleStyle.Flash => Ramp(FlashRamp, progress),
+        ParticleStyle.Blast => Ramp(BlastRamp, progress),
+        ParticleStyle.Smoke => Ramp(SmokeRamp, progress),
         _ => ChunkRamp[Math.Min(ChunkRamp.Length - 1, (int)(progress * ChunkRamp.Length) + (variant & 1))]
     };
 
@@ -63,6 +69,10 @@ public static class ParticleLooks
             ParticleStyle.Slate => faded || (variant & 1) == 0 ? ConsoleColor.DarkBlue : ConsoleColor.Blue,
             ParticleStyle.Quartzite => faded || (variant & 1) == 0 ? ConsoleColor.DarkCyan : ConsoleColor.Cyan,
             ParticleStyle.Gem => faded ? ConsoleColor.DarkMagenta : ConsoleColor.Magenta,
+            ParticleStyle.Flash => (variant & 1) == 0 ? ConsoleColor.White : ConsoleColor.Yellow,
+            ParticleStyle.Blast => progress < .3f ? ConsoleColor.Yellow
+                : faded ? ConsoleColor.DarkGray : ConsoleColor.DarkYellow,
+            ParticleStyle.Smoke => faded ? ConsoleColor.DarkGray : ConsoleColor.Gray,
             _ => ConsoleColor.Gray
         };
     }

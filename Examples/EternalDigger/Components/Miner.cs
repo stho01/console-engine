@@ -61,6 +61,19 @@ public struct Miner
     /// <summary>Seconds the rescue key has been held. Resets when released.</summary>
     public float RescueHold;
 
+    // Dynamite
+    /// <summary>Seconds the use key has been held to plant a stick. -1 after planting, until the key is released.</summary>
+    public float PlantHold;
+
+    /// <summary>Bought the blasting kit at the shed: sticks can be bought and planted.</summary>
+    public bool HasBlastingKit;
+
+    /// <summary>Sticks carried.</summary>
+    public int Dynamite;
+
+    /// <summary>Sticks planted whose fuse still burns. A save puts them back into <see cref="Dynamite"/>.</summary>
+    public int LitDynamite;
+
     // Inventory
     public int Gold;
     public int Ladders;

@@ -9,7 +9,8 @@ namespace EternalDigger.Systems;
 
 /// <summary>
 /// The top two screen rows. Row 0: the title, gold, ladders, the lift's depth (once built), depth and the bag (ore
-/// counts and what they are worth). Row 1: the keys, the rescue progress bar while <c>R</c> is held, or a blinking
+/// counts and what they are worth), and the dynamite count once the kit is bought. Row 1: the keys, the rescue
+/// progress bar while <c>R</c> is held, the fuse bar while <c>E</c> is held to plant dynamite, or a blinking
 /// warning when the miner is underground without ladders. After each save, a fading <c>SAVED</c> (or a red
 /// <c>SAVE FAILED</c>) at the right end of row 1. The status text is rebuilt only when a shown value changes.
 /// </summary>
@@ -21,10 +22,11 @@ public sealed class HudSystem(Canvas canvas, GameSaver saver, Elevator elevator)
 
     public const string Title = " ETERNAL DIGGER ";
     public const string KeyHelp =
-        " ←→ walk/dig   ↓ dig   ↑ climb ladder   SPACE place ladder   E deliver/buy   hold R rescue   ESC save & quit";
+        " ←→ walk/dig   ↓ dig   ↑ climb   SPACE ladder   E use/buy   hold E dynamite   hold R rescue   ESC save & quit";
     public const string RescueLabel = " RESCUE ";
     public const string RescueNote = " the bag is lost";
     public const string NoLaddersWarning = " NO LADDERS LEFT!  Hold R to be rescued (the bag is lost) ";
+    public const string PlantLabel = " LIGHTING FUSE ";
     public const string SavedText = " SAVED ";
     public const string SaveFailedText = " SAVE FAILED";
 
@@ -42,7 +44,7 @@ public sealed class HudSystem(Canvas canvas, GameSaver saver, Elevator elevator)
     private Query _miners;
     private string _status = string.Empty;
     private int _shownGold = -1, _shownLadders = -1, _shownDepth = -1, _shownCopper = -1, _shownSilver = -1,
-        _shownGoldOre = -1, _shownGems = -1, _shownLift = -1;
+        _shownGoldOre = -1, _shownGems = -1, _shownLift = -1, _shownDynamite = -1;
     private float _time;
     private int _shownSaves;
     private float _savedHint;
@@ -75,8 +77,9 @@ public sealed class HudSystem(Canvas canvas, GameSaver saver, Elevator elevator)
         var depth = Math.Max(0, Mine.Depth(miner.Row));
         if (miner.Gold != _shownGold || miner.Ladders != _shownLadders || depth != _shownDepth ||
             miner.CopperOre != _shownCopper || miner.SilverOre != _shownSilver || miner.GoldOre != _shownGoldOre ||
-            miner.GemOre != _shownGems || elevator.Depth != _shownLift)
+            miner.GemOre != _shownGems || elevator.Depth != _shownLift || DynamiteShown(miner) != _shownDynamite)
         {
+            _shownDynamite = DynamiteShown(miner);
             _shownGems = miner.GemOre;
             _shownLift = elevator.Depth;
             _shownGold = miner.Gold;
@@ -87,7 +90,8 @@ public sealed class HudSystem(Canvas canvas, GameSaver saver, Elevator elevator)
             _shownGoldOre = miner.GoldOre;
             var bagValue = Shop.BagValue(miner);
             var lift = elevator.IsBuilt ? $"   LIFT {elevator.Depth}m" : string.Empty;
-            _status = $"  GOLD {miner.Gold:N0}g   LADDERS {miner.Ladders}{lift}   DEPTH {depth}m   BAG " +
+            var dynamite = miner.HasBlastingKit ? $"   DYNAMITE {miner.Dynamite}" : string.Empty;
+            _status = $"  GOLD {miner.Gold:N0}g   LADDERS {miner.Ladders}{lift}{dynamite}   DEPTH {depth}m   BAG " +
                       $"{OreIcon}{miner.CopperOre} {OreIcon}{miner.SilverOre} {OreIcon}{miner.GoldOre} " +
                       $"{OreIcon}{miner.GemOre} = {bagValue:N0}g";
         }
@@ -108,12 +112,16 @@ public sealed class HudSystem(Canvas canvas, GameSaver saver, Elevator elevator)
         Fill(1, ConsoleColor.Black);
         if (miner.RescueHold > 0f)
         {
-            canvas.Draw(0, 1, RescueLabel, ConsoleColor.White, ConsoleColor.DarkRed);
-            var filled = (int)(miner.RescueHold / MinerControlSystem.RescueDuration * RescueBarWidth);
-            for (var i = 0; i < RescueBarWidth; i++)
-                canvas.Draw(RescueLabel.Length + i, 1, i < filled ? '█' : '░', ConsoleColor.Red, ConsoleColor.Black);
-
+            DrawBar(RescueLabel, miner.RescueHold / MinerControlSystem.RescueDuration, ConsoleColor.Red,
+                ConsoleColor.DarkRed);
             canvas.Draw(RescueLabel.Length + RescueBarWidth, 1, RescueNote, ConsoleColor.DarkGray, ConsoleColor.Black);
+            return;
+        }
+
+        if (miner.PlantHold > 0f)
+        {
+            DrawBar(PlantLabel, miner.PlantHold / MinerControlSystem.PlantDuration, ConsoleColor.Yellow,
+                ConsoleColor.DarkRed);
             return;
         }
 
@@ -127,6 +135,18 @@ public sealed class HudSystem(Canvas canvas, GameSaver saver, Elevator elevator)
 
         canvas.Draw(0, 1, KeyHelp, ConsoleColor.Gray, ConsoleColor.Black);
     }
+
+    /// <summary>A label and a progress bar on row 1.</summary>
+    private void DrawBar(string label, float progress, ConsoleColor barColor, ConsoleColor labelBackground)
+    {
+        canvas.Draw(0, 1, label, ConsoleColor.White, labelBackground);
+        var filled = (int)(progress * RescueBarWidth);
+        for (var i = 0; i < RescueBarWidth; i++)
+            canvas.Draw(label.Length + i, 1, i < filled ? '█' : '░', barColor, ConsoleColor.Black);
+    }
+
+    /// <summary>The dynamite count the HUD shows, -1 before the kit is bought.</summary>
+    private static int DynamiteShown(in Miner miner) => miner.HasBlastingKit ? miner.Dynamite : -1;
 
     private void DrawSavedHint(float deltaSeconds)
     {

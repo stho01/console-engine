@@ -50,6 +50,10 @@ public static class Layout
     public const int LiftSignFirstColumn = 23;
     public const int LiftSignLastColumn = 24;
 
+    /// <summary>Standing on these columns at <see cref="GroundRow"/> lets the miner buy the kit and dynamite.</summary>
+    public const int BlastingFirstColumn = 26;
+    public const int BlastingLastColumn = 28;
+
     /// <summary>Where the miner starts and where a rescue brings them back.</summary>
     public const int SpawnColumn = 15;
 
@@ -66,6 +70,9 @@ public static class Layout
 
     public static bool IsAtDeliverSpot(int column, int row) =>
         row == GroundRow && column >= DeliverFirstColumn && column <= DeliverLastColumn;
+
+    public static bool IsAtBlastingShed(int column, int row) =>
+        row == GroundRow && column >= BlastingFirstColumn && column <= BlastingLastColumn;
 
     public static bool IsAtLiftSign(int column, int row) =>
         row == GroundRow && column >= LiftSignFirstColumn && column <= LiftSignLastColumn;

@@ -18,7 +18,7 @@ Nothing is hosted and nothing is exposed to the internet. Every unit is a local 
 | `Snake`, `Asteroids`, `Platformer`, `ConsoleGame` and their ECS ports `Snake.Ecs`, `Asteroids.Ecs`, `Platformer.Ecs`, `ConsoleGame.Ecs`, `TerraForM.Ecs` (`Examples/*`) | Exe | Small demo games. Each `*.Ecs` project is the same game rebuilt on the ECS (`ConsoleEngine.Ecs`) for comparison |
 | `Swarm` (`Examples/Swarm`) | Exe | ECS-only stress test: 100 000 particles (first argument) chasing a moving attractor |
 | `EternalDigger` (`Examples/EternalDigger`) | Exe | ECS-only digging game: dig ore in an endless mine, sell it at the house, buy ladders. Design: `docs/design/eternal-digger.md` |
-| `EternalDigger.Tests` | NUnit test project | `MineTests`, `TilesTests`, `ShopTests`, `LightMapTests`, `ParticleLooksTests`, `MinerControlSystemTests` (plays frames with scripted `MinerInput`, no keyboard), `MinerVisibilityTests` (renders into a `RenderConsole` over `Fakes/FakeConsoleHandler`), `ElevatorTests`, `SaveFileTests`, `SaveSystemTests` (temp folders), `TitleMenuTests` |
+| `EternalDigger.Tests` | NUnit test project | `MineTests`, `TilesTests`, `ShopTests`, `LightMapTests`, `ParticleLooksTests`, `MinerControlSystemTests` (plays frames with scripted `MinerInput`, no keyboard), `MinerVisibilityTests` (renders into a `RenderConsole` over `Fakes/FakeConsoleHandler`), `ElevatorTests`, `DynamiteTests`, `SaveFileTests`, `SaveSystemTests` (temp folders), `TitleMenuTests` |
 
 Hard dependency: **Windows only.** `ConsoleHandler` and `InputHandler` call `kernel32.dll`/`user32.dll` directly
 (`GetStdHandle`, `WriteConsoleOutputW`, `SetCurrentConsoleFontEx`, `GetAsyncKeyState`…). No other platform

@@ -35,6 +35,10 @@ public sealed class HouseRenderSystem(Canvas canvas, Camera camera) : EntitySyst
     private const string ShopText = "LADDERS";
     private const string MineText = "MINE";
     private const string LiftText = " LIFT ";
+    private const string BlastingText = "BLASTING";
+    private const string BlastingDisplay = " ¡ ¡ ¡ ";
+    private const int ShedLeft = Layout.BlastingFirstColumn * Layout.TileWidth;
+    private const int ShedRight = (Layout.BlastingLastColumn + 1) * Layout.TileWidth - 1;
     private const int LiftSignLeft = Layout.LiftSignFirstColumn * Layout.TileWidth + 1;
 
     private const float SmokeRise = 1.5f;
@@ -61,6 +65,7 @@ public sealed class HouseRenderSystem(Canvas canvas, Camera camera) : EntitySyst
         DrawShop();
         DrawMineEntrance();
         DrawLiftSign();
+        DrawBlastingShed();
     }
 
     //**********************************************************
@@ -157,6 +162,20 @@ public sealed class HouseRenderSystem(Canvas canvas, Camera camera) : EntitySyst
             Backdrop(LiftSignLeft + 1, Ground));
         Fill(LiftSignLeft + LiftText.Length - 2, Ground - 2, LiftSignLeft + LiftText.Length - 2, Ground, '│',
             ConsoleColor.DarkYellow, Backdrop(LiftSignLeft + LiftText.Length - 2, Ground));
+    }
+
+    /// <summary>A small red-roofed shed with a BLASTING board and sticks in the window, where dynamite is sold.</summary>
+    private void DrawBlastingShed()
+    {
+        Fill(ShedLeft, Ground - 6, ShedRight, Ground - 6, '▄', ConsoleColor.DarkRed, Backdrop(ShedLeft, Ground - 6));
+        Fill(ShedLeft, Ground - 5, ShedRight, Ground - 5, '▀', ConsoleColor.Red, ConsoleColor.DarkRed);
+        Fill(ShedLeft + 1, Ground - 4, ShedRight - 1, Ground, '▒', ConsoleColor.DarkYellow, ConsoleColor.Black);
+        Fill(ShedLeft, Ground - 4, ShedLeft, Ground, '│', ConsoleColor.DarkYellow, ConsoleColor.Black);
+        Fill(ShedRight, Ground - 4, ShedRight, Ground, '│', ConsoleColor.DarkYellow, ConsoleColor.Black);
+        var boardX = (ShedLeft + ShedRight + 1 - BlastingText.Length) / 2;
+        Draw(boardX, Ground - 4, BlastingText, ConsoleColor.Yellow, ConsoleColor.DarkRed);
+        var windowX = (ShedLeft + ShedRight + 1 - BlastingDisplay.Length) / 2;
+        Draw(windowX, Ground - 2, BlastingDisplay, ConsoleColor.Red, ConsoleColor.Black);
     }
 
     private void Fill(int left, int top, int right, int bottom, char character, ConsoleColor foreground,
