@@ -1,0 +1,64 @@
+namespace EternalDigger.Components;
+
+/// <summary>Which look a particle has: its characters and colours over its life (see <c>ParticleStyleSystem</c>).</summary>
+public enum ParticleStyle : byte
+{
+    Dirt,
+    Stone,
+    Granite,
+    Copper,
+    Silver,
+    Gold,
+    /// <summary>Grey puff that thins out (tile breaks, footsteps, landings).</summary>
+    Dust,
+    /// <summary>Bright metal spark from hitting ore.</summary>
+    Spark,
+    /// <summary>The twinkle above an ore vein.</summary>
+    Glint,
+    /// <summary>Slow underground mist in dug-out caves.</summary>
+    Mist,
+    Coin,
+    /// <summary>The ring of stars when delivering or buying.</summary>
+    Pop
+}
+
+/// <summary>
+/// A short-lived effect cell. Uses the engine's <c>Position</c>, <c>Velocity</c> and <c>Glyph</c>; its glyph is
+/// rewritten from <see cref="Style"/> and <see cref="Age"/> every frame. Destroyed when <see cref="Age"/> reaches
+/// <see cref="Lifetime"/>.
+/// </summary>
+public struct Particle(ParticleStyle style, float lifetime)
+{
+    public float Age;
+    public float Lifetime = lifetime;
+    public ParticleStyle Style = style;
+
+    /// <summary>A per-particle random byte to vary the characters within a style.</summary>
+    public byte Variant;
+
+    public readonly float Progress => Lifetime <= 0f ? 1f : Age / Lifetime;
+}
+
+/// <summary>Downward acceleration in cells/s², and how much speed is lost per second (0..1).</summary>
+public struct Physics(float gravity, float drag)
+{
+    public float Gravity = gravity;
+    public float Drag = drag;
+}
+
+/// <summary>Tag: the particle stops on solid tiles (debris lands on the tunnel floor, coins on the grass).</summary>
+public struct TileCollider;
+
+/// <summary>Tag: an ambient mist particle, counted to keep the mist population steady.</summary>
+public struct Mist;
+
+/// <summary>
+/// Floating "+150g" / "-10g" text that drifts up and fades. Uses <c>Position</c> and <c>Velocity</c>; the text is
+/// formatted when drawn, without allocating.
+/// </summary>
+public struct FloatingNumber(int amount, float lifetime)
+{
+    public int Amount = amount;
+    public float Age;
+    public float Lifetime = lifetime;
+}

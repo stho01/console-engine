@@ -1,0 +1,109 @@
+using System;
+using ConsoleEngine.Ecs.Components;
+using EternalDigger.Components;
+using EternalDigger.Mining;
+
+namespace EternalDigger.Effects;
+
+/// <summary>
+/// How each <see cref="ParticleStyle"/> looks over its life: a character ramp walked from birth to death and a bright
+/// and a faded colour. Variants pick another ramp offset so a burst doesn't look uniform.
+/// </summary>
+public static class ParticleLooks
+{
+    //**********************************************************
+    //** fields
+    //**********************************************************
+
+    private const string ChunkRamp = "■▪▪·";
+    private const string DustRamp = "▓▒░░·";
+    private const string SparkRamp = "*+·";
+    private const string GlintRamp = "·+✦✦+·";
+    private const string MistRamp = "·∙··˙";
+    private const string CoinRamp = "●◐|◑";
+    private const string PopRamp = "✶*+·";
+
+    //**********************************************************
+    //** public methods
+    //**********************************************************
+
+    public static char Character(ParticleStyle style, byte variant, float progress) => style switch
+    {
+        ParticleStyle.Dust => Ramp(DustRamp, progress),
+        ParticleStyle.Spark => Ramp(SparkRamp, progress),
+        ParticleStyle.Glint => Ramp(GlintRamp, progress),
+        ParticleStyle.Mist => MistRamp[variant % MistRamp.Length],
+        // Coins spin: the ramp cycles with age instead of being walked once.
+        ParticleStyle.Coin => CoinRamp[(int)(progress * 24f + variant) % CoinRamp.Length],
+        ParticleStyle.Pop => Ramp(PopRamp, progress),
+        _ => ChunkRamp[Math.Min(ChunkRamp.Length - 1, (int)(progress * ChunkRamp.Length) + (variant & 1))]
+    };
+
+    public static ConsoleColor Color(ParticleStyle style, byte variant, float progress)
+    {
+        var faded = progress > .65f;
+        return style switch
+        {
+            ParticleStyle.Dirt => (variant & 1) == 0 ? ConsoleColor.DarkYellow : ConsoleColor.DarkRed,
+            ParticleStyle.Stone => faded || (variant & 1) == 0 ? ConsoleColor.DarkGray : ConsoleColor.Gray,
+            ParticleStyle.Granite => (variant & 1) == 0 ? ConsoleColor.DarkGray : ConsoleColor.DarkMagenta,
+            ParticleStyle.Copper => faded ? ConsoleColor.DarkRed : ConsoleColor.DarkYellow,
+            ParticleStyle.Silver => faded ? ConsoleColor.Gray : ConsoleColor.White,
+            ParticleStyle.Gold => faded ? ConsoleColor.DarkYellow : ConsoleColor.Yellow,
+            ParticleStyle.Dust => progress < .3f ? ConsoleColor.Gray : ConsoleColor.DarkGray,
+            ParticleStyle.Spark => faded ? ConsoleColor.DarkYellow : ConsoleColor.Yellow,
+            ParticleStyle.Glint => GlintColor(variant, progress),
+            ParticleStyle.Mist => ConsoleColor.DarkGray,
+            ParticleStyle.Coin => (int)(progress * 24f + variant) % 4 == 2 ? ConsoleColor.DarkYellow : ConsoleColor.Yellow,
+            ParticleStyle.Pop => faded ? ConsoleColor.DarkYellow : ConsoleColor.White,
+            _ => ConsoleColor.Gray
+        };
+    }
+
+    /// <summary>
+    /// The glyph for a point in a particle's life. Spawners use it at progress 0, so a particle looks right in the
+    /// frame it is created, before <c>ParticleLifetimeSystem</c> has updated it.
+    /// </summary>
+    public static Glyph GlyphAt(ParticleStyle style, byte variant, float progress) =>
+        new(Character(style, variant, progress), Color(style, variant, progress));
+
+    /// <summary>The debris style for a tile type: the colour of the chunks that fly off it.</summary>
+    public static ParticleStyle DebrisStyle(TileType type) => type switch
+    {
+        TileType.Stone => ParticleStyle.Stone,
+        TileType.Granite => ParticleStyle.Granite,
+        TileType.Copper => ParticleStyle.Copper,
+        TileType.Silver => ParticleStyle.Silver,
+        TileType.Gold => ParticleStyle.Gold,
+        _ => ParticleStyle.Dirt
+    };
+
+    /// <summary>Glint variants encode the ore: 0 copper, 1 silver, 2 gold.</summary>
+    public static byte GlintVariant(TileType ore) => ore switch
+    {
+        TileType.Gold => 2,
+        TileType.Silver => 1,
+        _ => 0
+    };
+
+    //**********************************************************
+    //** internals
+    //**********************************************************
+
+    private static char Ramp(string ramp, float progress) =>
+        ramp[Math.Clamp((int)(progress * ramp.Length), 0, ramp.Length - 1)];
+
+    private static ConsoleColor GlintColor(byte variant, float progress)
+    {
+        // The middle of the twinkle flashes white, the ends show the metal's colour.
+        if (progress is > .35f and < .65f)
+            return ConsoleColor.White;
+
+        return variant switch
+        {
+            2 => ConsoleColor.Yellow,
+            1 => ConsoleColor.Cyan,
+            _ => ConsoleColor.DarkYellow
+        };
+    }
+}

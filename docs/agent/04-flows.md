@@ -154,3 +154,19 @@ Runs inside [F2](#f2) steps "Scenes.Update" and "Scenes.Render". Both are skippe
 | 4 | `Presentation.Update(delta)` runs the render systems into the frame buffer, which `GameBase.Start` cleared at the start of the frame (if `ClearScreenOnEachFrame`) | `EcsScene.OnRender` → `SystemGroup.Update` | `OutlineRenderSystem`: bounding circle off-screen → entity skipped | Drawn cells |
 | 5 | `Presentation` plays back its own `Commands` (normally empty) | `CommandBuffer.Playback` | — | — |
 | 6 | On scene unload: `OnDestroy`, then `World.Dispose()` frees all chunks | `EcsScene.OnUnload` | — | Old entity handles stop being alive |
+
+<a id="f10"></a>
+## F10 — EternalDigger miner frame (`MinerControlSystem` → `InteractionSystem` → `MinerMotionSystem`)
+
+Runs in [F9](#f9) step 1, in this order. The keyboard is read once into a `MinerInput` (`MinerInput.FromKeyboard`).
+
+| # | Step | Class.method | Stops / skips if | Observable |
+|---|---|---|---|---|
+| 1 | Rescue: `R` held adds to `RescueHold`; at 1.5 s the miner jumps to the spawn and the bag empties | `MinerControlSystem.UpdateRescue` | `R` not held → `RescueHold = 0`, continue. Rescue done → rest of the frame's control skipped | HUD rescue bar, pop at the spawn |
+| 2 | — | `MinerControlSystem.Control` | `Miner.IsMoving` → no keys read this frame | — |
+| 3 | Fall one tile if unsupported | same | `Mine.IsSupported` false → fall starts, keys ignored | Miner drops |
+| 4 | `SPACE`: ladder | `PlaceLadder` → `Mine.TryPlaceLadder` | `Ladders == 0`, row ≤ 10, tile not air or already has a ladder → nothing placed (one dust puff) | Ladder drawn, HUD count −1 |
+| 5 | Side key, else down, else up (only on a ladder): walk/climb into air, or dig | `MoveOrDig` | Target unbreakable (grass, bedrock, outside the mine) → nothing. `DigCooldown > 0` → no hit this frame | Debris, cracks, burst on break, ore +1 in the HUD bag |
+| 6 | `E`: deliver or buy | `InteractionSystem.Interact` | `E` not pressed this frame, miner moving, or not on row 9 at columns 3–6 / 8–11 → nothing. Empty bag / gold < 10 → dust puff only | Coins and `+<n>g` / `-10g` |
+| 7 | Slide `Position`, finish the move, landing dust | `MinerMotionSystem.Move` | — | — |
+

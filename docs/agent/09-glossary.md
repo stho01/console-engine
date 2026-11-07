@@ -4,7 +4,7 @@ Support/user words are **[inferred]**. The team may also use Norwegian terms. Ad
 
 | User / support word | Meaning | Code identifier |
 |---|---|---|
-| the game / the app | One example exe built on the engine | `GameBase` subclass: `TerraformGame`, `SnakeGame`, `AsteroidsGame`, `PlatformerGame`, `ConsoleGame.Game`, and the ECS ports `TerraformEcsGame`, `SnakeEcsGame`, `AsteroidsEcsGame`, `PlatformerEcsGame`, `ConsoleEcsGame`, and the ECS stress test `SwarmGame` |
+| the game / the app | One example exe built on the engine | `GameBase` subclass: `TerraformGame`, `SnakeGame`, `AsteroidsGame`, `PlatformerGame`, `ConsoleGame.Game`, and the ECS ports `TerraformEcsGame`, `SnakeEcsGame`, `AsteroidsEcsGame`, `PlatformerEcsGame`, `ConsoleEcsGame`, the ECS stress test `SwarmGame`, and the ECS game `EternalDiggerGame` |
 | the engine | The shared library | `ConsoleEngine` project, namespace `ConsoleEngine` |
 | window / screen | The console window and its cell buffer | `RenderConsole`, `ConsoleHandler`, `IConsoleHandler` |
 | pixel / cell / character | One console cell | `Pixel` (`Char`, `ForegroundColor`, `BackgroundColor`) |
@@ -46,3 +46,16 @@ Support/user words are **[inferred]**. The team may also use Norwegian terms. Ad
 | restart | Reload same map | `R` → `Scenes.Set(new GameScene(_worldName))` |
 | player name | Typed on first screen (PII) | `TerraformGame.Playername`, `InputNameScene` |
 | debug mode | Developer overlay | `PlatformerGame.IsDebugMode` (F1), `TerraformGame.IsDebugMode` (unreachable) |
+| miner / digger | EternalDigger player | `Miner` component, `MinerControlSystem` |
+| mine / map / world (EternalDigger) | The endless tile grid | `Mine`, `TileCell`, `TileType`. Not the ECS `World` |
+| shaft / mine entrance | The only way down from the surface, column 21 under the `MINE` frame | `Mine.ShaftColumn` |
+| bag / inventory | Ore carried, not yet sold | `Miner.CopperOre`, `SilverOre`, `GoldOre` |
+| gold / money | Currency from deliveries | `Miner.Gold` |
+| deliver / sell | Sell the bag at the house door | `Shop.Deliver`, `InteractionSystem` |
+| ladder | Placed in a dug tile so the miner can stand on it and climb | `TileCell.HasLadder`, `Mine.TryPlaceLadder`, `Shop.TryBuyLadder` |
+| rescue | Hold R: back to the surface, bag lost | `MinerControlSystem.UpdateRescue` |
+| depth / metres | Rows below the grass | `Mine.Depth` |
+| headlamp / light / darkness | What the miner can see | `LightMap`, `Miner.LampDirection` |
+| glint / sparkle | Twinkle that reveals ore in the dark | `GlintSystem`, `ParticleStyle.Glint` |
+| seed | Number that decides the mine's layout | `Mine(int seed)`, first command-line argument |
+
