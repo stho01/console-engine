@@ -83,7 +83,9 @@ Say you want **coal**: common, cheap, from 5 m.
 1. If it needs a new look, add a `ParticleStyle` value (`Components/Particle.cs`) and its character ramp and colours
    in `Effects/ParticleLooks.cs`.
 2. Add a method to `EffectSpawner` that takes `CommandBuffer commands` first and positions in **world cells**. Use the
-   private helpers: `Spawn(...)` for free particles, `Debris(...)` for chunks that land on rock. Keep vertical speeds
+   private helpers: `Spawn(...)` for free particles, `Debris(...)` for chunks that land on rock. Creating a particle
+   by hand? Give it `ParticleLooks.GlyphAt(style, variant, 0f)` as its `Glyph`, or it shows a wrong look in its
+   first frame. `ParticleLooksTests` checks that no style is born blank. Keep vertical speeds
    about half the horizontal ones, because cells are twice as tall as wide.
 3. Call it from a Simulation system with that system's `Commands`, for example
    `effects.Pop(Commands, Layout.TileCenter(column, row));`.

@@ -133,7 +133,8 @@ Order matters in a few places:
   next frame's control step can start the next one right away, so falls chain without pauses.
 - **Camera before lighting and rendering.** The light is computed for exactly the rows the camera shows.
 - **Effects appear in the frame they are made.** Particles are recorded in the Simulation group's `CommandBuffer` and
-  created at its playback, before Presentation draws. Their first frame skips physics and the lifetime step.
+  created at its playback, before Presentation draws. Their first frame skips physics and the lifetime step, so
+  `EffectSpawner` gives each one its first look (`ParticleLooks.GlyphAt` at progress 0) when it is created.
 - **Draw order is the `Add` order** of the Presentation group: background first, HUD last.
 
 The Presentation group never makes structural changes, so its command buffer stays empty.

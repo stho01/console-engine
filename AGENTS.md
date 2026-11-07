@@ -145,7 +145,7 @@ Examples/
                                   (Canvas, LightMap, TileLooks), Scenes/MineScene, Layout, Shop, MinerInput.
                                   README.md + docs/ (gameplay, architecture, rendering-and-effects,
                                   working-with-the-code, testing, reference)
-  EternalDigger.Tests/            Mine, Tiles, Shop, LightMap and frame-by-frame MinerControlSystem tests
+  EternalDigger.Tests/            Mine, Tiles, Shop, LightMap, ParticleLooks and frame-by-frame MinerControlSystem tests
   TerraForM/Scenes/               GameScene, MenuScene, InputNameScene
   TerraForM/Commands/             Command, Move, Plant, Wait
   TerraForM/Assets/               Maps/*.txt, Sprites.cs, Texts/HudTexts.cs, Story/ (unused)
