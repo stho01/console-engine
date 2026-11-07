@@ -29,7 +29,7 @@ public static class Shop
     /// <summary>What the ore in the bag sells for.</summary>
     public static int BagValue(in Miner miner) =>
         miner.CopperOre * Tiles.CopperValue + miner.SilverOre * Tiles.SilverValue + miner.GoldOre * Tiles.GoldValue +
-        miner.GemOre * Tiles.GemValue;
+        miner.GemOre * Tiles.GemValue + miner.Fossils * Tiles.FossilValue + miner.Relics * Tiles.RelicValue;
 
     /// <summary>Empties the bag into gold. Returns the gold earned (0 for an empty bag).</summary>
     public static int Deliver(ref Miner miner)
@@ -40,13 +40,15 @@ public static class Shop
         return earned;
     }
 
-    /// <summary>Loses every piece of ore in the bag (a rescue).</summary>
+    /// <summary>Loses everything in the bag (a rescue). The found counts stay.</summary>
     public static void EmptyBag(ref Miner miner)
     {
         miner.CopperOre = 0;
         miner.SilverOre = 0;
         miner.GoldOre = 0;
         miner.GemOre = 0;
+        miner.Fossils = 0;
+        miner.Relics = 0;
     }
 
     /// <summary>Buys one ladder for <see cref="LadderPrice"/>. False if the miner can't afford it.</summary>
@@ -118,6 +120,8 @@ public static class Shop
             case TileType.Silver: miner.SilverOre++; return true;
             case TileType.Gold: miner.GoldOre++; return true;
             case TileType.Gem: miner.GemOre++; return true;
+            case TileType.Fossil: miner.Fossils++; miner.FossilsFound++; return true;
+            case TileType.Relic: miner.Relics++; miner.RelicsFound++; return true;
             default: return false;
         }
     }

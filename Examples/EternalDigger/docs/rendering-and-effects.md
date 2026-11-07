@@ -89,6 +89,8 @@ string, colours for full and dim light, and for ores a speck character (`◆`) a
 | Slate | `▓▒░▓▒▓░▒` | Blue on dark blue | — |
 | Quartzite | `▒▓▒░▓▒█▓` | Cyan on dark cyan | — |
 | Gem | slate's | Blue on dark blue | `◆` magenta (dark magenta when dim) |
+| Fossil | stone's | Grey on dark grey | `§` white (grey when dim), 20% |
+| Relic | slate's | Blue on dark blue | `¥` yellow (dark yellow when dim), 20% |
 
 (The act 1 tiles are unchanged; their looks are in `TileLooks.cs`.)
 
@@ -218,6 +220,7 @@ flowchart LR
 | `Blast` | `▓ ▒ ░ ·` | Yellow, dark yellow, then dark grey |
 | `Smoke` | `· ˙` | Grey, then dark grey |
 | `LampSmoke` | `° ° ·` | Grey, then dark grey |
+| `Pulse` | `· ∙ • ● • ∙ ·` | Fossil white (grey at the ends), relic yellow (dark yellow at the ends) |
 
 ### Effects catalogue
 
@@ -227,6 +230,8 @@ flowchart LR
 | `TileBreak` | The hit that breaks a tile | 14–22 chunks bursting out, 6–10 dust puffs drifting up, screen shake 0.6 (rock) or 0.9 (ore). Ore adds 6–10 glitter sparks |
 | `ClimbTrail` | Every tile of a top-speed climb (instead of `FootDust`) | 1–2 specks dropping below the feet |
 | `PlantDynamite` | A stick is planted | No particles: a `Dynamite` entity with `Position` at the tile centre |
+| `Pulse` | `GlintSystem` samples a rare find (always, not by chance) | One slow pulse, 1.4–1.8 s, no gravity |
+| `RareFind` | A fossil or relic is dug out | Two `Pop` rings, 10–15 sparks, a floating `FOSSIL!`/`RELIC!` (white), a 0.6 shake |
 | `LampSmoke` | Every 0.45 s while the lamp is low (`LampSystem`) | One `°` puff rising from the lamp |
 | `FuseSpark` | Every 0.07 s while a fuse burns | A yellow spark off the stick top, and one time in three a grey `·˙` smoke wisp rising |
 | `Blast` | A stick goes off | One frame (0.05 s) of `█` white/yellow over all 3 × 3 tiles (72 cells), 150 `▓▒░·` hot rubble flung out in a ring (`TileCollider`), 40 stone chunks, 40 dust puffs living 1–2 s, a full screen shake (`ScreenShake.MaxStrength`). About 300 particles |

@@ -68,6 +68,14 @@ public static class TileLooks
     private static readonly TileLook Gem = new("▓▒░▓▒░", ConsoleColor.Blue, ConsoleColor.DarkBlue,
         ConsoleColor.DarkBlue, '◆', ConsoleColor.Magenta, ConsoleColor.DarkMagenta);
 
+    /// <summary>Stone with a bone-white fossil in it.</summary>
+    private static readonly TileLook Fossil = new("▓▒░▓█▒▓░", ConsoleColor.Gray, ConsoleColor.DarkGray,
+        ConsoleColor.DarkGray, '§', ConsoleColor.White, ConsoleColor.Gray, .2f);
+
+    /// <summary>Slate with a gold relic in it.</summary>
+    private static readonly TileLook Relic = new("▓▒░▓▒▓░▒", ConsoleColor.Blue, ConsoleColor.DarkBlue,
+        ConsoleColor.DarkBlue, '¥', ConsoleColor.Yellow, ConsoleColor.DarkYellow, .2f);
+
     private static readonly TileLook Grass =
         new("▒░▒·░▒ ░", ConsoleColor.DarkRed, ConsoleColor.DarkYellow, ConsoleColor.DarkYellow);
 
@@ -88,6 +96,8 @@ public static class TileLooks
         TileType.Slate => Slate,
         TileType.Quartzite => Quartzite,
         TileType.Gem => Gem,
+        TileType.Fossil => Fossil,
+        TileType.Relic => Relic,
         _ => Dirt
     };
 }

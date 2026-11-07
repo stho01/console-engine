@@ -91,6 +91,15 @@ public struct Miner
     public int GoldOre;
     public int GemOre;
 
+    /// <summary>Rare finds in the bag. Sold at the door like ore.</summary>
+    public int Fossils;
+    public int Relics;
+
+    /// <summary>Rare finds ever dug up, kept for the trophy shelf.</summary>
+    public int FossilsFound;
+    public int RelicsFound;
+
     public readonly bool IsMoving => MoveDuration > 0f;
-    public readonly int OreCount => CopperOre + SilverOre + GoldOre + GemOre;
+    public readonly int OreCount => CopperOre + SilverOre + GoldOre + GemOre + Fossils + Relics;
+    public readonly int RareFinds => Fossils + Relics;
 }

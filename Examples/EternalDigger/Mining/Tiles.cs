@@ -13,6 +13,15 @@ public static class Tiles
     public const int SilverValue = 40;
     public const int GoldValue = 100;
     public const int GemValue = 250;
+    public const int FossilValue = 300;
+    public const int RelicValue = 750;
+
+    /// <summary>Fossils appear from this depth down to the wall.</summary>
+    public const int FossilDepth = 15;
+
+    /// <summary>Share of act 1 tiles (from <see cref="FossilDepth"/>) holding a fossil, and of act 2 tiles a relic.</summary>
+    public const float FossilChance = .0015f;
+    public const float RelicChance = .001f;
 
     /// <summary>Every this many metres of depth add one hit to every breakable tile.</summary>
     public const int DepthPerExtraHit = 25;
@@ -46,16 +55,21 @@ public static class Tiles
     /// <summary>Only a blast clears it: the shovel just clanks.</summary>
     public static bool IsBlastOnly(TileType type) => type == TileType.Obsidian;
 
+    /// <summary>A single rare tile that goes into the bag and sells high: a fossil or a relic.</summary>
+    public static bool IsRareFind(TileType type) => type is TileType.Fossil or TileType.Relic;
+
     public static bool IsOre(TileType type) =>
         type is TileType.Copper or TileType.Silver or TileType.Gold or TileType.Gem;
 
-    /// <summary>Gold paid at the house for one piece of this ore, 0 for anything else.</summary>
+    /// <summary>Gold paid at the house for one piece of this ore or rare find, 0 for anything else.</summary>
     public static int OreValue(TileType type) => type switch
     {
         TileType.Copper => CopperValue,
         TileType.Silver => SilverValue,
         TileType.Gold => GoldValue,
         TileType.Gem => GemValue,
+        TileType.Fossil => FossilValue,
+        TileType.Relic => RelicValue,
         _ => 0
     };
 
@@ -73,6 +87,8 @@ public static class Tiles
             TileType.Slate => 6,
             TileType.Quartzite => 8,
             TileType.Gem => 9,
+            TileType.Fossil => 5,
+            TileType.Relic => 7,
             _ => 0
         };
 

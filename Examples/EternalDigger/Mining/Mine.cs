@@ -206,6 +206,8 @@ public sealed class Mine
         // Ores come in veins: a coarse 2 x 2 noise picks the vein, a fine one leaves gaps in it. Deeper veins are richer.
         var goldChance = Math.Min(.02f + (depth - Tiles.GoldDepth) * .0008f, .06f);
         var silverChance = Math.Min(.04f + (depth - Tiles.SilverDepth) * .001f, .08f);
+        if (depth >= Tiles.FossilDepth && Noise(column, row, 61) < Tiles.FossilChance)
+            return TileType.Fossil;
         if (depth >= Tiles.GoldDepth && IsVein(column, row, 11, goldChance))
             return TileType.Gold;
         if (depth >= Tiles.SilverDepth && IsVein(column, row, 13, silverChance))
@@ -229,9 +231,12 @@ public sealed class Mine
     private static bool IsSame(in TileCell a, in TileCell b) =>
         a.Type == b.Type && a.Damage == b.Damage && a.HasLadder == b.HasLadder && a.Seen == b.Seen;
 
-    /// <summary>Act 2: slate with quartzite blobs, gem veins and caves. None of the act 1 rock or ore.</summary>
+    /// <summary>Act 2: slate with quartzite blobs, gem veins, rare relics and caves. No act 1 rock or ore.</summary>
     private TileType BelowTheWall(int column, int row, int depthBelowWall)
     {
+        if (Noise(column, row, 67) < Tiles.RelicChance)
+            return TileType.Relic;
+
         if (IsVein(column, row, 37, Math.Min(.04f + depthBelowWall * .0005f, .07f)))
             return TileType.Gem;
 

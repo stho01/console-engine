@@ -29,7 +29,8 @@ Examples/EternalDigger/
 │   ├── Mine.cs                 the endless seeded grid: At, Hit, TryPlaceLadder, IsSupported, WallBottomDepth, Noise
 │   ├── Tiles.cs                per-type rules: solid, breakable, ore value, hits, start depths
 │   ├── TileType.cs             Air, Grass, Dirt, Stone, Granite, Copper, Silver, Gold, Bedrock, then (act 2)
-│   │                           Obsidian, Slate, Quartzite, Gem. New types go at the end (saves store the byte)
+│   │                           Obsidian, Slate, Quartzite, Gem, then Fossil, Relic. New types go at the end (saves
+│   │                           store the byte)
 │   ├── TileCell.cs             one tile: Type, Damage, HasLadder, Seen
 │   ├── TileChange.cs           a saved tile: Column, Row, Cell
 │   └── Elevator.cs             the lift: TryBuild, Send, Update, landings, car, Restore; ElevatorBuild
@@ -92,13 +93,13 @@ Examples/EternalDigger/
 
 | Component | Fields | On |
 |---|---|---|
-| `Miner` | `Column`, `Row` (tile; the target while moving), `MoveFrom` (tile, `Vector2`), `MoveElapsed`, `MoveDuration` (0 = idle), `Motion` (`Idle`, `Walking`, `Climbing`, `Falling`), `ClimbStreak`, `IsRiding`, `FallRows`, `FacingX` (−1/1), `LampDirection`, `DigCooldown`, `SwingTime`, `SwingDirection` (`Point`), `RescueHold`, `PlantHold`, `HasBlastingKit`, `Dynamite`, `LitDynamite`, `Oil`, `ShovelTier`, `LampTier`, `BagTier`, `DetectorTier`, `Gold`, `Ladders`, `CopperOre`, `SilverOre`, `GoldOre`, `GemOre`. Read-only: `IsMoving`, `OreCount` | The miner |
+| `Miner` | `Column`, `Row` (tile; the target while moving), `MoveFrom` (tile, `Vector2`), `MoveElapsed`, `MoveDuration` (0 = idle), `Motion` (`Idle`, `Walking`, `Climbing`, `Falling`), `ClimbStreak`, `IsRiding`, `FallRows`, `FacingX` (−1/1), `LampDirection`, `DigCooldown`, `SwingTime`, `SwingDirection` (`Point`), `RescueHold`, `PlantHold`, `HasBlastingKit`, `Dynamite`, `LitDynamite`, `Oil`, `ShovelTier`, `LampTier`, `BagTier`, `DetectorTier`, `Gold`, `Ladders`, `CopperOre`, `SilverOre`, `GoldOre`, `GemOre`, `Fossils`, `Relics`, `FossilsFound`, `RelicsFound`. Read-only also `RareFinds`. Read-only: `IsMoving`, `OreCount` | The miner |
 | `Particle` | `Age`, `Lifetime`, `Style` (`ParticleStyle`), `Variant` (random byte). Read-only: `Progress` | Every particle |
 | `Physics` | `Gravity` (cells/s²), `Drag` (per second) | Every particle |
 | `TileCollider` | tag | Debris, coins |
 | `Mist` | tag | Mist |
 | `Dynamite` | `Column`, `Row`, `Fuse`, `SparkTimer` | A planted stick (with `Position`) |
-| `FloatingText` | `Kind` (`FloatingTextKind`: `Gold`, `Elevator`, `TooHard`), `Amount`, `Age`, `Lifetime` | Floating texts |
+| `FloatingText` | `Kind` (`FloatingTextKind`: `Gold`, `Elevator`, `TooHard`, `RareFind`), `Amount`, `Age`, `Lifetime` | Floating texts |
 | `Position`, `Velocity`, `Glyph` | engine components (`ConsoleEngine.Ecs.Components`) | Miner (`Position` only), particles, numbers (no `Glyph`) |
 
 ## Services
@@ -106,7 +107,7 @@ Examples/EternalDigger/
 | Service | Created in | Used by | Key members |
 |---|---|---|---|
 | `Mine` | `MineScene` | control, motion, light, glints, mist, particle physics, terrain, saving | `At`, `TypeAt`, `IsSolid`, `HasLadder`, `IsSupported`, `Hit`, `TryPlaceLadder`, `CollectChanges`, `Apply`, `WallBottomDepth`, `Noise`, `GeneratedRows`; static `Depth`, `IsInside` |
-| `EffectSpawner` | `MineScene` | control, interaction, motion, glints, mist | `DigHit`, `Clank`, `TileBreak`, `PlantDynamite`, `FuseSpark`, `Blast`, `ClimbTrail`, `FootDust`, `LandingDust`, `Glint`, `Mist`, `Coins`, `Pop`, `Number`, `Shake` |
+| `EffectSpawner` | `MineScene` | control, interaction, motion, glints, mist | `DigHit`, `Clank`, `TileBreak`, `RareFind`, `Pulse`, `PlantDynamite`, `FuseSpark`, `Blast`, `ClimbTrail`, `FootDust`, `LandingDust`, `Glint`, `Mist`, `Coins`, `Pop`, `Number`, `Shake` |
 | `ScreenShake` | `MineScene` (inside `EffectSpawner`) | `EffectSpawner`, `CameraSystem` | `Add`, `Update`, `Strength` |
 | `LightMap` | `MineScene` | lighting, glints, mist, terrain, particles | `Compute` (with reach and flicker), `Get`, `FirstRow`, `Rows`; `Dark`, `Dim`, `Lit`, `Bright` |
 | `Canvas` | `MineScene` | all Presentation systems | `Draw`, `DrawOver`, `BackgroundAt`, `Width`, `Height` |
@@ -141,6 +142,8 @@ Static rule classes: `Tiles`, `Shop`, `Upgrades`, `Layout`, `TileLooks`, `Partic
 | `Tiles.WallMinThickness` / `WallMaxThickness` | 3 / 5 tiles | Wall thickness range, per column |
 | `Tiles.HintDepth` | 95 m | From here, gems below the wall glint on screen at any distance |
 | `Tiles.GemValue` | 250 | Gold per gem |
+| `Tiles.FossilValue` / `RelicValue` | 300 / 750 | Gold per rare find |
+| `Tiles.FossilDepth` / `FossilChance` / `RelicChance` | 15 m / 0.15% / 0.1% | Where and how often rare finds appear |
 | `MinerControlSystem.TooHardInterval` | 1 s | Least time between two `TOO HARD` texts |
 | `Tiles.DepthPerExtraHit` | 25 | Metres per extra hit |
 | `Shop.LadderPrice` | 10 | Gold per ladder |
@@ -166,7 +169,7 @@ Static rule classes: `Tiles`, `Shop`, `Upgrades`, `Layout`, `TileLooks`, `Partic
 | `ScreenShake.MaxStrength` / `Decay` | 2 cells / 6 per s | Shake cap and fade |
 | `GameSaver.AutosaveInterval` | 60 s | Time underground between autosaves (0 = off) |
 | `HudSystem.SavedHintSeconds` | 1.5 s | How long ` SAVED ` shows |
-| `SaveFile.Version` / `OldestVersion` | 6 / 1 | Save-format version written / oldest still read |
+| `SaveFile.Version` / `OldestVersion` | 7 / 1 | Save-format version written / oldest still read |
 | `Elevator.SegmentMetres` | 10 m | Lift length per purchase |
 | `Elevator.FirstSegmentPrice` / `SegmentPriceStep` | 200g / 100g | First segment price, increase per segment |
 | `Elevator.RideDuration` | 0.04 s | Car time per tile |
@@ -194,6 +197,7 @@ Static rule classes: `Tiles`, `Shop`, `Upgrades`, `Layout`, `TileLooks`, `Partic
 | `  ¡<n>` (dynamite), `  OIL ▮▮▮▮▮▯▯▯`, `╟╢<n>` (ladders) (HUD row 0) | `HudSystem.DrawStatus` |
 | `BLASTING`, ` ¡ ¡ ¡ ` (shed) | `HouseRenderSystem.BlastingText`, `BlastingDisplay` |
 | `TOO HARD` (floating) | `FloatingTextRenderSystem.TooHardText` |
+| `FOSSIL!` / `RELIC!` (floating) | `FloatingTextRenderSystem.FossilText`, `RelicText` |
 | ` CALL LIFT [E] ` / ` GET IN [E] ` / ` ↑↓ RIDE   ←→ GET OUT ` | `PromptRenderSystem.CallLiftText`, `BoardLiftText`, `RideText` |
 | `ELEVATOR +10m` (floating) | `FloatingTextRenderSystem.ElevatorLabel` + metres |
 | `  LIFT <n>m` (HUD row 0) | `HudSystem.DrawStatus` |

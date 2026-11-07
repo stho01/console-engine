@@ -3,6 +3,7 @@ using ConsoleEngine.Ecs;
 using ConsoleEngine.Ecs.Components;
 using ConsoleEngine.Ecs.Rendering;
 using EternalDigger.Components;
+using EternalDigger.Mining;
 using EternalDigger.Rendering;
 
 namespace EternalDigger.Systems;
@@ -23,6 +24,8 @@ public sealed class FloatingTextRenderSystem(Canvas canvas, Camera camera) : Ent
 
     public const string ElevatorLabel = "ELEVATOR +";
     public const string TooHardText = "TOO HARD";
+    public const string FossilText = "FOSSIL!";
+    public const string RelicText = "RELIC!";
 
     private readonly char[] _buffer = new char[24];
     private Query _texts;
@@ -55,9 +58,11 @@ public sealed class FloatingTextRenderSystem(Canvas canvas, Camera camera) : Ent
         {
             FloatingTextKind.Elevator => Format(ElevatorLabel, text.Amount, 'm'),
             FloatingTextKind.TooHard => Copy(TooHardText),
+            FloatingTextKind.RareFind => Copy((TileType)text.Amount == TileType.Relic ? RelicText : FossilText),
             _ => FormatGold(text.Amount)
         };
-        var color = text.Kind == FloatingTextKind.TooHard || text.Kind == FloatingTextKind.Gold && text.Amount < 0
+        var color = text.Kind == FloatingTextKind.RareFind ? fading ? ConsoleColor.Gray : ConsoleColor.White
+            : text.Kind == FloatingTextKind.TooHard || text.Kind == FloatingTextKind.Gold && text.Amount < 0
             ? fading ? ConsoleColor.DarkRed : ConsoleColor.Red
             : fading ? ConsoleColor.DarkYellow : ConsoleColor.Yellow;
 

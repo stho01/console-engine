@@ -33,7 +33,9 @@ public enum ParticleStyle : byte
     /// <summary>Grey smoke rising from a burning fuse.</summary>
     Smoke,
     /// <summary>A puff rising from a lamp low on oil.</summary>
-    LampSmoke
+    LampSmoke,
+    /// <summary>The slow pulsing glint of a rare find.</summary>
+    Pulse
 }
 
 /// <summary>
@@ -74,7 +76,9 @@ public enum FloatingTextKind : byte
     /// <summary><c>ELEVATOR +10m</c>: a lift segment was built, <see cref="FloatingText.Amount"/> in metres.</summary>
     Elevator,
     /// <summary><c>TOO HARD</c> (red): the shovel hit obsidian. No amount.</summary>
-    TooHard
+    TooHard,
+    /// <summary><c>FOSSIL!</c> or <c>RELIC!</c>: a rare find was dug up. <see cref="FloatingText.Amount"/> is its type.</summary>
+    RareFind
 }
 
 /// <summary>

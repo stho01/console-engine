@@ -23,5 +23,9 @@ public enum TileType : byte
     /// <summary>Harder act 2 rock below the wall, dark cyan.</summary>
     Quartzite,
     /// <summary>The act 2 ore, below the wall.</summary>
-    Gem
+    Gem,
+    /// <summary>A rare find in act 1 rock: a fossil. Sells high.</summary>
+    Fossil,
+    /// <summary>A rare find below the wall: an old miner's relic. Sells higher.</summary>
+    Relic
 }

@@ -39,6 +39,7 @@ public sealed class HudSystem(Canvas canvas, GameSaver saver, Elevator elevator)
     private const char DynamiteIcon = '¡';
     private const char OilFull = '▮';
     private const char OilEmpty = '▯';
+    private const char FindIcon = '✦';
 
     /// <summary>Cells in the oil gauge.</summary>
     public const int OilGaugeCells = 8;
@@ -52,7 +53,7 @@ public sealed class HudSystem(Canvas canvas, GameSaver saver, Elevator elevator)
     private Query _miners;
     private string _status = string.Empty;
     private int _shownGold = -1, _shownLadders = -1, _shownDepth = -1, _shownCopper = -1, _shownSilver = -1,
-        _shownGoldOre = -1, _shownGems = -1, _shownLift = -1, _shownDynamite = -1, _shownOilCells = -1;
+        _shownGoldOre = -1, _shownGems = -1, _shownLift = -1, _shownDynamite = -1, _shownOilCells = -1, _shownFinds = -1;
     private float _time;
     private int _shownSaves;
     private float _savedHint;
@@ -86,8 +87,9 @@ public sealed class HudSystem(Canvas canvas, GameSaver saver, Elevator elevator)
         if (miner.Gold != _shownGold || miner.Ladders != _shownLadders || depth != _shownDepth ||
             miner.CopperOre != _shownCopper || miner.SilverOre != _shownSilver || miner.GoldOre != _shownGoldOre ||
             miner.GemOre != _shownGems || elevator.Depth != _shownLift || DynamiteShown(miner) != _shownDynamite ||
-            OilCells(miner.Oil) != _shownOilCells)
+            OilCells(miner.Oil) != _shownOilCells || miner.RareFinds != _shownFinds)
         {
+            _shownFinds = miner.RareFinds;
             _shownOilCells = OilCells(miner.Oil);
             _shownDynamite = DynamiteShown(miner);
             _shownGems = miner.GemOre;
@@ -104,7 +106,7 @@ public sealed class HudSystem(Canvas canvas, GameSaver saver, Elevator elevator)
             var gauge = new string(OilFull, _shownOilCells) + new string(OilEmpty, OilGaugeCells - _shownOilCells);
             _status = $"  GOLD {miner.Gold:N0}g  {LadderIcon}{LadderIconEnd}{miner.Ladders}{lift}{dynamite}  OIL {gauge}" +
                       $"  DEPTH {depth}m  BAG {OreIcon}{miner.CopperOre} {OreIcon}{miner.SilverOre} " +
-                      $"{OreIcon}{miner.GoldOre} {OreIcon}{miner.GemOre} = {bagValue:N0}g";
+                      $"{OreIcon}{miner.GoldOre} {OreIcon}{miner.GemOre} {FindIcon}{miner.RareFinds} = {bagValue:N0}g";
         }
 
         Fill(0, Bar);
@@ -119,6 +121,7 @@ public sealed class HudSystem(Canvas canvas, GameSaver saver, Elevator elevator)
                 OreIcon => OreColors[Math.Min(ore++, OreColors.Length - 1)],
                 LadderIcon or LadderIconEnd => ConsoleColor.Yellow,
                 DynamiteIcon => ConsoleColor.Red,
+                FindIcon => ConsoleColor.Yellow,
                 OilFull or OilEmpty => oilColor,
                 _ => ConsoleColor.White
             };

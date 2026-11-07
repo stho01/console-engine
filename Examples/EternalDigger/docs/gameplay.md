@@ -66,6 +66,13 @@ Below 110 m (`Tiles.WallDepth`) the order changes (`Mine.BelowTheWall`, after th
 
 None of the act 1 rock or ore appears below the wall.
 
+**Rare finds** are single tiles, checked before anything else (`Tiles.IsRareFind`): a fossil `§` in about 0.15% of act 1
+tiles from 15 m (`Tiles.FossilDepth`, `FossilChance`), a relic `¥` in about 0.1% of act 2 tiles (`RelicChance`).
+They pulse slowly (`·∙•●•∙·`, white for fossils, yellow for relics) instead of glinting, also through rock and in the
+dark, within the glint radius. Digging one out bursts two rings of stars and sparks and floats `FOSSIL!` or `RELIC!`.
+They go into the bag, sell at the door like ore, and are counted for good (`Miner.FossilsFound`, `RelicsFound`) for
+the trophy shelf to come.
+
 Ore comes in **veins**: a coarse noise on 2 × 2 tile blocks decides where a vein is, and a fine noise leaves gaps in
 it (`Mine.IsVein`). Rock is "blobby" the same way, half coarse, half fine noise.
 
@@ -81,6 +88,8 @@ it (`Mine.IsVein`). Rock is "blobby" the same way, half coarse, half fine noise.
 | Slate | 6 | — |
 | Quartzite | 8 | — |
 | Gem | 9 | 250g (`Tiles.GemValue`) |
+| Fossil `§` (rare find) | 5 | 300g (`Tiles.FossilValue`) |
+| Relic `¥` (rare find) | 7 | 750g (`Tiles.RelicValue`) |
 
 The resulting mix, **measured** over 200 seeds (share of tiles between the side walls, in %). The vein chances and
 rock thresholds in the code compare against noise, so these shares are the best guide to what a player meets:
@@ -307,7 +316,7 @@ twinkles and dig towards them.
 
 | Part | Shows | Identifier |
 |---|---|---|
-| HUD, row 0 | ` ETERNAL DIGGER ` title, gold, ladders (`╟╢<n>`), `LIFT <n>m` once a lift is built, dynamite (`¡<n>`) once the kit is bought, the oil gauge, depth, the bag (copper/silver/gold/gem counts with coloured `◆` icons) and what the bag is worth | `HudSystem` |
+| HUD, row 0 | ` ETERNAL DIGGER ` title, gold, ladders (`╟╢<n>`), `LIFT <n>m` once a lift is built, dynamite (`¡<n>`) once the kit is bought, the oil gauge, depth, the bag (copper/silver/gold/gem counts with coloured `◆` icons, and `✦` rare finds) and what the bag is worth | `HudSystem` |
 | HUD, row 1 | The key help; the rescue bar while `R` is held; the ` LIGHTING FUSE ` bar while `E` is held to plant; the no-ladders warning. After a save, ` SAVED ` at the right end for 1.5 s (grey, then dark grey), or ` SAVE FAILED` in red | `HudSystem` |
 | Title screen | `ETERNAL DIGGER` logo, `CONTINUE` / `NEW MINE` (selected item black on yellow with `►`), the confirmation, a red message for an unreadable save, `↑↓ choose   E select   ESC quit` | `TitleScene`, `TitleMenu` |
 | Camera | Keeps the miner at 40% of the screen height, eased. Never scrolls above the sky. Shakes on breaks and long falls | `CameraSystem` |
@@ -345,7 +354,7 @@ The game saves itself; there is no save key.
 - **When:** after every sale at the door (when it earned gold) and every ladder bought, every 60 s spent underground
   (`GameSaver.AutosaveInterval`), and on `ESC`, which saves and quits. A NEW MINE is saved as soon as it starts.
 - **What:** the seed, the miner's tile and facing, gold, ladders and the bag, the lift (segments and the car's
-  landing), the blasting kit and the dynamite stock (lit sticks counted back in), the upgrade tiers, the lamp oil, and every tile that differs from what
+  landing), the blasting kit and the dynamite stock (lit sticks counted back in), the upgrade tiers, the lamp oil, rare finds (in the bag and ever found), and every tile that differs from what
   the seed generates (dug, half-dug, ladder placed, seen). The mine itself is regenerated from the seed.
 - **Not saved:** anything mid-action. A continued game starts with the miner standing still on the saved tile (if
   that tile has no support, they fall), no particles, and the rescue timer at zero.

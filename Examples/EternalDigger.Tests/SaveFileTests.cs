@@ -66,6 +66,8 @@ public class SaveFileTests
         Assert.That(miner.LitDynamite, Is.Zero);
         Assert.That(miner.LampTier, Is.EqualTo(2));
         Assert.That(miner.BagTier, Is.EqualTo(3));
+        Assert.That(miner.Fossils, Is.EqualTo(2));
+        Assert.That(miner.RelicsFound, Is.EqualTo(3));
         Assert.That(miner.IsMoving, Is.False);
         Assert.That(elevator.Segments, Is.EqualTo(2));
         Assert.That(elevator.IsCarAt(elevator.BottomRow), Is.True);
@@ -186,6 +188,18 @@ public class SaveFileTests
         Assert.That(loaded.Dynamite, Is.EqualTo(5));
         Assert.That(loaded.ShovelTier + loaded.LampTier + loaded.BagTier + loaded.DetectorTier, Is.Zero);
         Assert.That(loaded.Oil, Is.EqualTo(LampOil.TankSize), "saves from before lamp oil start full");
+    }
+
+    [Test]
+    public void Read_Version6Save_LoadsOilWithoutRareFinds()
+    {
+        var status = SaveFile.Read(OldSave(6), out var loaded);
+
+        Assert.That(status, Is.EqualTo(SaveStatus.Loaded));
+        Assert.That(loaded.LampTier, Is.EqualTo(2));
+        Assert.That(loaded.DetectorTier, Is.EqualTo(3));
+        Assert.That(loaded.Oil, Is.EqualTo(25f));
+        Assert.That(loaded.Fossils + loaded.Relics + loaded.FossilsFound + loaded.RelicsFound, Is.Zero);
     }
 
     [Test]
@@ -312,7 +326,11 @@ public class SaveFileTests
             LampTier = 2,
             BagTier = 3,
             DetectorTier = 1,
-            Oil = 42.5f
+            Oil = 42.5f,
+            Fossils = 2,
+            Relics = 1,
+            FossilsFound = 5,
+            RelicsFound = 3
         };
         var elevator = new Elevator();
         var rich = new Miner { Gold = 10_000 };
@@ -323,7 +341,10 @@ public class SaveFileTests
         return SaveData.Capture(Seed, miner, mine, elevator, new List<TileChange>());
     }
 
-    /// <summary>A hand-written old save: gold 55, one tile; v2 a 30 m lift, v3 9 gems, v4 the kit and 5 sticks.</summary>
+    /// <summary>
+    /// A hand-written old save: gold 55, one tile; v2 a 30 m lift, v3 9 gems, v4 the kit and 5 sticks, v5 tiers 1-2-0-3,
+    /// v6 25 oil.
+    /// </summary>
     private static MemoryStream OldSave(int version)
     {
         var stream = new MemoryStream();
@@ -350,6 +371,12 @@ public class SaveFileTests
                 writer.Write((byte)1);
                 writer.Write(5);
             }
+
+            if (version >= 5)
+                writer.Write(new byte[] { 1, 2, 0, 3 });
+
+            if (version >= 6)
+                writer.Write(25f);
 
             writer.Write(1);
             writer.Write(13);
@@ -390,6 +417,10 @@ public class SaveFileTests
         Assert.That(actual.BagTier, Is.EqualTo(expected.BagTier));
         Assert.That(actual.DetectorTier, Is.EqualTo(expected.DetectorTier));
         Assert.That(actual.Oil, Is.EqualTo(expected.Oil));
+        Assert.That(actual.Fossils, Is.EqualTo(expected.Fossils));
+        Assert.That(actual.Relics, Is.EqualTo(expected.Relics));
+        Assert.That(actual.FossilsFound, Is.EqualTo(expected.FossilsFound));
+        Assert.That(actual.RelicsFound, Is.EqualTo(expected.RelicsFound));
         Assert.That(actual.ElevatorSegments, Is.EqualTo(expected.ElevatorSegments));
         Assert.That(actual.ElevatorCarRow, Is.EqualTo(expected.ElevatorCarRow));
         Assert.That(actual.Changes, Is.EqualTo(expected.Changes));

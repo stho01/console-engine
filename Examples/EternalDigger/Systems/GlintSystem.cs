@@ -13,7 +13,7 @@ namespace EternalDigger.Systems;
 /// <summary>
 /// Ore veins near the miner twinkle now and then, also through rock and in the dark: that is how ore is found.
 /// Samples a few random tiles around the miner at a fixed rate, so the glint rate doesn't depend on the FPS. Ore in
-/// the dark glints more, gold more than silver, silver more than copper.
+/// the dark glints more, gold more than silver, silver more than copper. Rare finds pulse slowly instead.
 /// </summary>
 public sealed class GlintSystem(Mine mine, LightMap light, Camera camera, EffectSpawner effects, Random random)
     : EntitySystem
@@ -78,6 +78,12 @@ public sealed class GlintSystem(Mine mine, LightMap light, Camera camera, Effect
                 continue;
 
             var type = mine.TypeAt(column, row);
+            if (Tiles.IsRareFind(type))
+            {
+                effects.Pulse(Commands, Layout.TileCenter(column, row), type);
+                continue;
+            }
+
             if (!Tiles.IsOre(type) || random.NextSingle() >= Chance(type, light.Get(column, row)))
                 continue;
 

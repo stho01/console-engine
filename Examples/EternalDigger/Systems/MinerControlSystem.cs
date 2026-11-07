@@ -249,6 +249,9 @@ public sealed class MinerControlSystem(Mine mine, Elevator elevator, EffectSpawn
             return;
 
         effects.TileBreak(commands, column, row, result.Type);
+        if (Tiles.IsRareFind(result.Type))
+            effects.RareFind(commands, column, row, result.Type);
+
         Shop.Collect(ref miner, result.Type);
     }
 

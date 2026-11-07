@@ -48,6 +48,7 @@ The only other persistent inputs are the TerraForM map files ([§ Map file forma
 | `Miner` component | `PlantHold`, `HasBlastingKit`, `Dynamite`, `LitDynamite` | Holding `E` to plant (−1 = wait for release); the kit; sticks carried; sticks burning | Kit and sticks: saved. `PlantHold`: release, rescue |
 | Dynamite entities | `Dynamite` (`Column`, `Row`, `Fuse`, `SparkTimer`) + `Position` | A planted, lit stick | Destroyed when it goes off; not saved (refunded into `Dynamite`) |
 | `Miner` component | `ShovelTier`, `LampTier`, `BagTier`, `DetectorTier` | Upgrade tiers 0–3 | Never (saved) |
+| `Miner` component | `Fossils`, `Relics`, `FossilsFound`, `RelicsFound` | Rare finds in the bag; ever dug up | Bag: delivery or rescue. Found: never (saved) |
 | `Miner` component | `Oil` | Lamp oil 0–100, burns underground | Refilled at the counter (saved) |
 | `Headlamp` (one per `MineScene`) | `Reach`, `IsDimmed`, `IsLow`, `IsEmpty` | This frame's lamp, from the oil and lamp tier | Every frame (`LampSystem`) |
 | `Miner` component | `IsRiding`, `ClimbStreak` | In the lift car; tiles climbed up without letting go | Rescue, getting out / any non-climb action |
@@ -59,12 +60,12 @@ The only other persistent inputs are the TerraForM map files ([§ Map file forma
 
 One slot: `SaveFile.DefaultPath` = `<LocalApplicationData>/EternalDigger/save.dat` (`%LOCALAPPDATA%` on Windows,
 `~/Library/Application Support` on macOS, `~/.local/share` on Linux). Written by `SaveFile.Save` through
-`save.dat.tmp`, then moved over the old file. Little-endian binary, `SaveFile.Version` = 6 (versions 1–5 are still read; fields they lack get the defaults):
+`save.dat.tmp`, then moved over the old file. Little-endian binary, `SaveFile.Version` = 7 (versions 1–6 are still read; fields they lack get the defaults):
 
 | Field | Type | Check on load |
 |---|---|---|
 | magic `EDSV` | int `0x56534445` | else `Corrupt` |
-| version | int | not 1–6 (`OldestVersion`…`Version`) → `Unsupported` |
+| version | int | not 1–7 (`OldestVersion`…`Version`) → `Unsupported` |
 | seed | int | — |
 | column, row | int, int | column 0–29, row 0–100 000 |
 | facing | sbyte | −1 or 1 |
@@ -74,6 +75,7 @@ One slot: `SaveFile.DefaultPath` = `<LocalApplicationData>/EternalDigger/save.da
 | blasting kit, dynamite (version 4+) | byte, int | kit 0 or 1; dynamite ≥ 0 (sticks carried + sticks burning at save time) |
 | shovel, lamp, bag, detector tier (version 5+) | 4 × byte | each 0–3 |
 | oil (version 6+) | float | 0–100 (older saves load full) |
+| fossils, relics, fossils found, relics found (version 7+) | 4 × int | ≥ 0 |
 | change count | int | ≤ 100 001 × 30 |
 | per change: row, column, type, damage, flags | int, byte, byte, byte, byte | row 0–100 000, column < 30, type a `TileType` (its byte: new types are only ever appended), flags only bit 0 (ladder) and bit 1 (seen) |
 

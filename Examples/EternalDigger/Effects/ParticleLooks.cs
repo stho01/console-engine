@@ -27,6 +27,7 @@ public static class ParticleLooks
     private const string BlastRamp = "▓▒░·";
     private const string SmokeRamp = "·˙";
     private const string LampSmokeRamp = "°°·";
+    private const string PulseRamp = "·∙•●•∙·";
 
     //**********************************************************
     //** public methods
@@ -46,6 +47,7 @@ public static class ParticleLooks
         ParticleStyle.Blast => Ramp(BlastRamp, progress),
         ParticleStyle.Smoke => Ramp(SmokeRamp, progress),
         ParticleStyle.LampSmoke => Ramp(LampSmokeRamp, progress),
+        ParticleStyle.Pulse => Ramp(PulseRamp, progress),
         _ => ChunkRamp[Math.Min(ChunkRamp.Length - 1, (int)(progress * ChunkRamp.Length) + (variant & 1))]
     };
 
@@ -74,6 +76,7 @@ public static class ParticleLooks
             ParticleStyle.Flash => (variant & 1) == 0 ? ConsoleColor.White : ConsoleColor.Yellow,
             ParticleStyle.Blast => progress < .3f ? ConsoleColor.Yellow
                 : faded ? ConsoleColor.DarkGray : ConsoleColor.DarkYellow,
+            ParticleStyle.Pulse => PulseColor(variant, progress),
             ParticleStyle.Smoke or ParticleStyle.LampSmoke => faded ? ConsoleColor.DarkGray : ConsoleColor.Gray,
             _ => ConsoleColor.Gray
         };
@@ -98,6 +101,8 @@ public static class ParticleLooks
         TileType.Slate => ParticleStyle.Slate,
         TileType.Quartzite => ParticleStyle.Quartzite,
         TileType.Gem => ParticleStyle.Gem,
+        TileType.Fossil => ParticleStyle.Stone,
+        TileType.Relic => ParticleStyle.Slate,
         _ => ParticleStyle.Dirt
     };
 
@@ -116,6 +121,17 @@ public static class ParticleLooks
 
     private static char Ramp(string ramp, float progress) =>
         ramp[Math.Clamp((int)(progress * ramp.Length), 0, ramp.Length - 1)];
+
+    /// <summary>Pulse variants encode the find: 0 fossil (white), 1 relic (yellow); dimmer at the ends.</summary>
+    public static byte PulseVariant(TileType find) => find == TileType.Relic ? (byte)1 : (byte)0;
+
+    private static ConsoleColor PulseColor(byte variant, float progress)
+    {
+        var bright = progress is > .25f and < .75f;
+        return variant == 1
+            ? bright ? ConsoleColor.Yellow : ConsoleColor.DarkYellow
+            : bright ? ConsoleColor.White : ConsoleColor.Gray;
+    }
 
     private static ConsoleColor GlintColor(byte variant, float progress)
     {

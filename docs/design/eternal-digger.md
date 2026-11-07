@@ -195,3 +195,10 @@ the `Miner` and saved from format version 5. The shovel and lamp glyph colours f
 one light level darker, `°` smoke and a dark-yellow lamp glyph; empty, only the close radius one level darker.
 Refilled at the counter (`FILL LAMP`, 2g a unit). The HUD shows an 8-cell gauge. Saved from format version 6.
 
+## Gems and rare finds (Tier 2)
+
+The Tier 1 gem already matched the handover (250g, magenta glint, a bag slot). Rare finds are new tile types `Fossil`
+(`§`, act 1 from 15 m, 0.15%, 300g) and `Relic` (`¥`, act 2, 0.1%, 750g): single tiles with a slow pulsing glint, a
+double star burst and a floating name when dug out, sold at the door, counted in the HUD as `✦n` and for good in
+`Miner.FossilsFound`/`RelicsFound` for the Tier 3 trophy shelf. Saved from format version 7.
+

@@ -99,4 +99,31 @@ public class ShopTests
         Assert.That(miner.HasBlastingKit, Is.False);
         Assert.That(miner.Gold, Is.EqualTo(Shop.BlastingKitPrice - 1));
     }
+
+    [Test]
+    public void CollectAndDeliver_RareFinds_SellHighAndCountAsFound()
+    {
+        var miner = new Miner();
+
+        Shop.Collect(ref miner, TileType.Fossil);
+        Shop.Collect(ref miner, TileType.Relic);
+        var earned = Shop.Deliver(ref miner);
+
+        Assert.That(earned, Is.EqualTo(Tiles.FossilValue + Tiles.RelicValue));
+        Assert.That(miner.RareFinds, Is.Zero);
+        Assert.That(miner.FossilsFound, Is.EqualTo(1));
+        Assert.That(miner.RelicsFound, Is.EqualTo(1));
+    }
+
+    [Test]
+    public void EmptyBag_WithFinds_KeepsTheFoundCounts()
+    {
+        var miner = new Miner();
+        Shop.Collect(ref miner, TileType.Fossil);
+
+        Shop.EmptyBag(ref miner);
+
+        Assert.That(miner.Fossils, Is.Zero);
+        Assert.That(miner.FossilsFound, Is.EqualTo(1));
+    }
 }

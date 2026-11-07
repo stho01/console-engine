@@ -227,6 +227,22 @@ public class MinerControlSystemTests
     }
 
     [Test]
+    public void Control_DigAFossil_BagsItAndCountsIt()
+    {
+        var row = Mine.SurfaceRow + 30;
+        _mine.At(5, row) = new TileCell { Type = TileType.Air };
+        _mine.At(5, row + 1) = new TileCell { Type = TileType.Stone };
+        _mine.At(6, row) = new TileCell { Type = TileType.Fossil };
+        PlaceMiner(5, row);
+
+        Play(new MinerInput { Horizontal = 1 }, seconds: 2f);
+
+        Assert.That(_mine.TypeAt(6, row), Is.EqualTo(TileType.Air));
+        Assert.That(_miner.Fossils, Is.EqualTo(1));
+        Assert.That(_miner.FossilsFound, Is.EqualTo(1));
+    }
+
+    [Test]
     public void Control_DigObsidian_ClanksWithoutDamage()
     {
         var row = Mine.SurfaceRow + Tiles.WallDepth - 1;

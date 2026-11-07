@@ -289,9 +289,42 @@ public class MineTests
         for (var depth = mine.WallBottomDepth(column) + 1; depth < Tiles.WallDepth + 120; depth++)
         {
             var type = mine.TypeAt(column, Mine.SurfaceRow + depth);
-            Assert.That(type, Is.AnyOf(TileType.Slate, TileType.Quartzite, TileType.Gem, TileType.Air),
+            Assert.That(type, Is.AnyOf(TileType.Slate, TileType.Quartzite, TileType.Gem, TileType.Relic, TileType.Air),
                 $"column {column} depth {depth}");
         }
+    }
+
+    [Test]
+    public void At_RareFinds_FossilsInAct1AndRelicsBelowTheWallOnly()
+    {
+        int fossils = 0, relics = 0, act1Tiles = 0;
+        for (var seed = 0; seed < 10; seed++)
+        {
+            var mine = new Mine(seed);
+            for (var column = 1; column < Mine.Columns - 1; column++)
+            for (var depth = 0; depth < Tiles.WallDepth + 200; depth++)
+            {
+                var type = mine.TypeAt(column, Mine.SurfaceRow + depth);
+                var act2 = depth > mine.WallBottomDepth(column);
+                if (!act2 && depth >= Tiles.FossilDepth && depth < Tiles.WallDepth)
+                    act1Tiles++;
+                if (type == TileType.Fossil)
+                {
+                    fossils++;
+                    Assert.That(depth, Is.InRange(Tiles.FossilDepth, Tiles.WallDepth - 1), $"seed {seed}");
+                }
+
+                if (type == TileType.Relic)
+                {
+                    relics++;
+                    Assert.That(act2, Is.True, $"seed {seed} depth {depth}");
+                }
+            }
+        }
+
+        Assert.That(fossils, Is.GreaterThan(0));
+        Assert.That(relics, Is.GreaterThan(0));
+        Assert.That(fossils, Is.LessThan(act1Tiles * Tiles.FossilChance * 3), "rare");
     }
 
     [Test]

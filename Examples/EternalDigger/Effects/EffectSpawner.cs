@@ -198,6 +198,32 @@ public sealed class EffectSpawner(Random random, ScreenShake shake)
             new Physics(0f, 0f));
     }
 
+    /// <summary>A rare find's slow pulse, seen through rock and in the dark.</summary>
+    public void Pulse(CommandBuffer commands, Vector2 position, TileType find)
+    {
+        var variant = ParticleLooks.PulseVariant(find);
+        commands.Create(
+            new Position(position),
+            new Velocity(Vector2.Zero),
+            ParticleLooks.GlyphAt(ParticleStyle.Pulse, variant, 0f),
+            new Particle(ParticleStyle.Pulse, Range(1.4f, 1.8f)) { Variant = variant },
+            new Physics(0f, 0f));
+    }
+
+    /// <summary>A rare find dug up: two rings of stars, a spray of sparks and its name floating up.</summary>
+    public void RareFind(CommandBuffer commands, int column, int row, TileType find)
+    {
+        var center = Layout.TileCenter(column, row);
+        Pop(commands, center);
+        Pop(commands, center);
+        var sparks = random.Next(10, 16);
+        for (var i = 0; i < sparks; i++)
+            Spawn(commands, center, RandomDirection(16f, 36f), ParticleStyle.Spark, Range(.4f, .8f), 6f, 2.5f);
+
+        Text(commands, center - new Vector2(0f, 3f), FloatingTextKind.RareFind, (int)find);
+        Shake.Add(.6f);
+    }
+
     /// <summary>One slow mist particle drifting through a dug-out cave.</summary>
     public void Mist(CommandBuffer commands, Vector2 position)
     {

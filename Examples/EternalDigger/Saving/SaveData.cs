@@ -29,6 +29,12 @@ public sealed class SaveData
     public int SilverOre { get; init; }
     public int GoldOre { get; init; }
     public int GemOre { get; init; }
+
+    /// <summary>Rare finds in the bag, and ever found (for the trophy shelf).</summary>
+    public int Fossils { get; init; }
+    public int Relics { get; init; }
+    public int FossilsFound { get; init; }
+    public int RelicsFound { get; init; }
     public bool HasBlastingKit { get; init; }
 
     /// <summary>Upgrade tiers, 0 to <see cref="Upgrades.MaxTier"/>.</summary>
@@ -85,6 +91,10 @@ public sealed class SaveData
             SilverOre = miner.SilverOre,
             GoldOre = miner.GoldOre,
             GemOre = miner.GemOre,
+            Fossils = miner.Fossils,
+            Relics = miner.Relics,
+            FossilsFound = miner.FossilsFound,
+            RelicsFound = miner.RelicsFound,
             HasBlastingKit = miner.HasBlastingKit,
             ShovelTier = miner.ShovelTier,
             LampTier = miner.LampTier,
@@ -112,6 +122,10 @@ public sealed class SaveData
         SilverOre = SilverOre,
         GoldOre = GoldOre,
         GemOre = GemOre,
+        Fossils = Fossils,
+        Relics = Relics,
+        FossilsFound = FossilsFound,
+        RelicsFound = RelicsFound,
         HasBlastingKit = HasBlastingKit,
         Dynamite = Dynamite,
         ShovelTier = ShovelTier,
