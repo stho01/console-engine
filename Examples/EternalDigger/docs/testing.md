@@ -17,7 +17,7 @@ CI (`.github/workflows/build-and-test.yml`) runs it with the rest of the solutio
 |---|---|---|
 | `MineTests` | 37 | Same seed gives the same mine, different seeds differ; sky, grass, shaft and bedrock layout; rows generated in whole blocks; outside the mine is bedrock (beside) or air (above) and ignores writes; hitting damages then breaks, returns the type, ignores unbreakable tiles; the support rule; ladder placement rules; no tile type above its start depth (20 seeds); every ore and granite eventually appears; `CollectChanges` is empty for a fresh mine and lists only changed tiles; `Apply` outside the mine is ignored |
 | `TilesTests` | 24 | `IsSolid`, `IsBreakable`, `IsOre`/`OreValue` tables; deeper ore is worth more; hits grow by one per 25 m; unbreakable tiles need 0 hits |
-| `MinerControlSystemTests` | 11 | Real frames of gameplay with scripted input (below) |
+| `MinerControlSystemTests` | 15 | Real frames of gameplay with scripted input (below) |
 | `LightMapTests` | 7 | The surface is bright; outside the window is dark; neighbours of the lamp are bright even when solid; a tunnel in the cone is lit and marked seen; rock blocks the lamp; tiles behind the miner stay dark; light falls off with distance (bright → lit → dim → dark) |
 | `ParticleLooksTests` | 2 | No particle style is born blank (which would erase a cell for a frame); `GlyphAt` matches `Character` and `Color` |
 | `MinerVisibilityTests` | 4 | Holding a dig key on gold at 100 m (right, left, down) with the real particle systems and renderers: on every frame the face `☻` and the lamp are on screen and the miner's empty back column has no particle; the tile breaks and digging made particles. `ParticleRenderSystem.Dim` maps bright colours to their dark twins |
@@ -75,7 +75,9 @@ Control_LaddersAllTheWay_ClimbsBackToTheSurface
 The other tests in the class: walking along the surface; stopping at the left edge; grass can't be dug; holding down
 in the shaft climbs and digs deeper and ends exactly on a tile; up without a ladder does nothing; no ladder placed
 with 0 ladders; falling until landing (and `FallRows` resets); digging gold puts it in the bag; a full rescue (spawn,
-empty bag, gold kept); releasing the rescue early resets it.
+empty bag, gold kept); releasing the rescue early resets it; a held 100 m climb takes 7–8 s (about 7.65 s at 60 fps); a
+short climb keeps the start speed; letting go of Up during a long climb starts slow again; the `ClimbUpDuration`
+ramp.
 
 ## What is not covered
 

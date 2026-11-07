@@ -53,8 +53,13 @@ public sealed class MinerMotionSystem(Mine mine, EffectSpawner effects) : Entity
 
         miner.MoveElapsed += deltaSeconds;
         var t = Math.Min(1f, miner.MoveElapsed / miner.MoveDuration);
-        // Walking and climbing ease in and out, falling speeds up.
-        var eased = miner.Motion == MinerMotion.Falling ? t * t : t * t * (3f - 2f * t);
+        // Walking and slow climbing ease in and out, a fast climb slides evenly, falling speeds up.
+        var eased = miner.Motion switch
+        {
+            MinerMotion.Falling => t * t,
+            MinerMotion.Climbing when MinerControlSystem.IsFastClimb(miner.ClimbStreak) => t,
+            _ => t * t * (3f - 2f * t)
+        };
         var from = Layout.TileToWorld((int)miner.MoveFrom.X, (int)miner.MoveFrom.Y);
         var to = Layout.TileToWorld(miner.Column, miner.Row);
         position.Value = Vector2.Lerp(from, to, eased);
@@ -80,6 +85,9 @@ public sealed class MinerMotionSystem(Mine mine, EffectSpawner effects) : Entity
         {
             case MinerMotion.Walking when ++_steps % 2 == 0:
                 effects.FootDust(commands, feet, -miner.FacingX);
+                break;
+            case MinerMotion.Climbing when MinerControlSystem.IsTopSpeedClimb(miner.ClimbStreak):
+                effects.ClimbTrail(commands, feet);
                 break;
             case MinerMotion.Climbing:
                 effects.FootDust(commands, feet, miner.FacingX);

@@ -185,6 +185,59 @@ public class MinerControlSystemTests
     //** helpers
     //**********************************************************
 
+    [Test]
+    public void Control_HoldUpOnA100mLadder_ClimbsOutInSevenToEightSeconds()
+    {
+        const int depth = 100;
+        LadderShaft(Mine.SurfaceRow + depth);
+        PlaceMiner(Mine.ShaftColumn, Mine.SurfaceRow + depth);
+
+        var seconds = SecondsUntil(new MinerInput { Up = true }, () => _miner.Row == Layout.GroundRow, limit: 20f);
+
+        Assert.That(seconds, Is.InRange(7f, 8f));
+    }
+
+    [Test]
+    public void Control_ShortClimb_KeepsTheStartSpeed()
+    {
+        LadderShaft(Mine.SurfaceRow + 20);
+        PlaceMiner(Mine.ShaftColumn, Mine.SurfaceRow + 20);
+        var target = _miner.Row - MinerControlSystem.ClimbRampStart;
+
+        var seconds = SecondsUntil(new MinerInput { Up = true }, () => _miner.Row == target && !_miner.IsMoving, 5f);
+
+        // One frame is lost at the end of each tile.
+        var expected = MinerControlSystem.ClimbRampStart * MinerControlSystem.ClimbDuration;
+        Assert.That(seconds, Is.InRange(expected, expected + MinerControlSystem.ClimbRampStart * FrameSeconds + .001f));
+    }
+
+    [Test]
+    public void Control_ReleaseUpDuringALongClimb_StartsSlowAgain()
+    {
+        LadderShaft(Mine.SurfaceRow + 60);
+        PlaceMiner(Mine.ShaftColumn, Mine.SurfaceRow + 60);
+        Play(new MinerInput { Up = true }, seconds: 3f);
+        Assert.That(_miner.MoveDuration, Is.EqualTo(MinerControlSystem.TopClimbDuration).Within(.001f));
+
+        SecondsUntil(default, () => !_miner.IsMoving, 1f);
+        Play(default, seconds: FrameSeconds);
+        Play(new MinerInput { Up = true }, seconds: FrameSeconds);
+
+        Assert.That(_miner.MoveDuration, Is.EqualTo(MinerControlSystem.ClimbDuration));
+    }
+
+    [Test]
+    public void ClimbUpDuration_ByStreak_RampsFromStartToTopSpeed()
+    {
+        Assert.That(MinerControlSystem.ClimbUpDuration(0), Is.EqualTo(MinerControlSystem.ClimbDuration));
+        Assert.That(MinerControlSystem.ClimbUpDuration(MinerControlSystem.ClimbRampStart - 1),
+            Is.EqualTo(MinerControlSystem.ClimbDuration));
+        Assert.That(MinerControlSystem.ClimbUpDuration(MinerControlSystem.ClimbRampStart),
+            Is.LessThan(MinerControlSystem.ClimbDuration));
+        Assert.That(MinerControlSystem.ClimbUpDuration(MinerControlSystem.ClimbRampStart + 100),
+            Is.EqualTo(MinerControlSystem.TopClimbDuration).Within(.0001f));
+    }
+
     private void PlaceMiner(int column, int row)
     {
         _miner = new Miner { Column = column, Row = row, FacingX = 1, Ladders = _miner.Ladders };
@@ -196,6 +249,28 @@ public class MinerControlSystemTests
     {
         for (var row = from; row <= to; row++)
             _mine.At(Mine.ShaftColumn, row) = new TileCell { Type = type };
+    }
+
+    /// <summary>Air with a ladder in every shaft tile from the surface down to <paramref name="bottom"/>.</summary>
+    private void LadderShaft(int bottom)
+    {
+        for (var row = Mine.SurfaceRow; row <= bottom; row++)
+            _mine.At(Mine.ShaftColumn, row) = new TileCell { Type = TileType.Air, HasLadder = true };
+        _mine.At(Mine.ShaftColumn, bottom + 1) = new TileCell { Type = TileType.Stone };
+    }
+
+    /// <summary>Plays frames with the input until the condition holds; returns the seconds it took.</summary>
+    private float SecondsUntil(MinerInput input, Func<bool> done, float limit)
+    {
+        var elapsed = 0f;
+        while (!done() && elapsed < limit)
+        {
+            Play(input, FrameSeconds);
+            elapsed += FrameSeconds;
+        }
+
+        Assert.That(done(), Is.True, "condition reached within the limit");
+        return elapsed;
     }
 
     private void Play(MinerInput input, float seconds)

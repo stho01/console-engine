@@ -345,7 +345,7 @@ tile is 4 × 2 cells (`Layout.TileWidth`/`TileHeight`). Row 0 is the top of the 
 | Ore value | Copper 15g, silver 40g, gold 100g | `Tiles.CopperValue/SilverValue/GoldValue` |
 | Start | 0 gold, 8 ladders, column 15 on row 9 | `Shop.StartGold`, `Shop.StartLadders`, `Layout.SpawnColumn`, `Layout.GroundRow` |
 | Support / falling | The miner stands still if their tile has a ladder, or the tile below is solid or has a ladder. Otherwise they fall one tile at a time (0.06 s per tile) **before any key is read**. No fall damage | `Mine.IsSupported`, `MinerControlSystem.Control` |
-| Moves | One tile per move: walk 0.13 s, climb 0.17 s. **No keys are read while a move plays** (except the rescue key) | `MinerControlSystem` constants, `Miner.IsMoving` |
+| Moves | One tile per move: walk 0.13 s, climb 0.17 s. Holding Up on ladders speeds up after 4 tiles, down to 0.06 s per tile after 10 more (`ClimbUpDuration`); any other action or letting go resets it (`Miner.ClimbStreak`). **No keys are read while a move plays** (except the rescue key) | `MinerControlSystem` constants, `Miner.IsMoving` |
 | Side keys | Air → walk. Solid and breakable → one hit every 0.16 s (`DigInterval`) while held. Left and right both held cancel out | `MinerControlSystem.MoveOrDig` |
 | Down key | Below solid → dig it. Below air → step down (then the fall rule applies if there's no ladder) | same |
 | Up key | Only works on a ladder tile: above air → climb, above solid → dig. Without a ladder in the miner's own tile, up does nothing | same |

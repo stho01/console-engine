@@ -93,6 +93,15 @@ public sealed class EffectSpawner(Random random, ScreenShake shake)
                 new Vector2(directionX * Range(3f, 8f), -Range(.5f, 2f)), ParticleStyle.Dust, Range(.3f, .6f), 0f, 3f);
     }
 
+    /// <summary>One or two specks that drop away below the feet on a top-speed climb.</summary>
+    public void ClimbTrail(CommandBuffer commands, Vector2 feet)
+    {
+        var count = random.Next(1, 3);
+        for (var i = 0; i < count; i++)
+            Spawn(commands, feet + RandomOffset(1.2f, 0f) + new Vector2(0f, .5f),
+                new Vector2(Range(-1.5f, 1.5f), Range(3f, 6f)), ParticleStyle.Trail, Range(.25f, .45f), 4f, 2f);
+    }
+
     /// <summary>Puffs to both sides of the feet, more for longer falls. Long falls shake the screen.</summary>
     public void LandingDust(CommandBuffer commands, Vector2 feet, int rowsFallen)
     {

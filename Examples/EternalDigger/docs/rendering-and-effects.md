@@ -121,7 +121,7 @@ miner's back:
 | Top | (empty), `▄` backpack, `☻` head, the lamp: `•`, or `▲`/`▼` when it points up/down |
 | Bottom | (empty), `▐` overalls, legs, shovel |
 
-Legs: `█` standing, `▙`/`▟` alternating while walking, `╫` climbing, `╨` falling. The shovel is `/` (or `\` facing
+Legs: `█` standing, `▙`/`▟` alternating while walking, `╫`/`║` alternating while climbing (twice per tile, so a fast climb moves them faster), `╨` falling. The shovel is `/` (or `\` facing
 left) at rest; mid-swing it is `│` for up/down digs, or `─` then a tilt for side digs. Underground, two dots (`∙`
 `·`) glow in front of the lamp. All miner cells use `DrawOver`, so the sky or the tunnel shows around the sprite.
 
@@ -182,6 +182,7 @@ flowchart LR
 | `Mist` | One of `· ∙ · · ˙` | Dark grey |
 | `Coin` | Spins `● ◐ \| ◑` | Yellow, dark yellow on the edge frame |
 | `Pop` | `✶ * + ·` | White, then dark yellow |
+| `Trail` | `' ·` | Grey, then dark grey |
 
 ### Effects catalogue
 
@@ -189,7 +190,8 @@ flowchart LR
 |---|---|---|
 | `DigHit` | Every shovel hit (`MinerControlSystem`) | 4–7 debris chunks from the struck face, flying back towards the miner and falling (gravity 40, lands on rock), 0.5–1.1 s. Ore adds 2–4 sparks |
 | `TileBreak` | The hit that breaks a tile | 14–22 chunks bursting out, 6–10 dust puffs drifting up, screen shake 0.6 (rock) or 0.9 (ore). Ore adds 6–10 glitter sparks |
-| `FootDust` | Every other walking step, every climb step, a placed ladder, a refused `E`/`SPACE` | 1–2 small puffs behind the feet |
+| `ClimbTrail` | Every tile of a top-speed climb (instead of `FootDust`) | 1–2 specks dropping below the feet |
+| `FootDust` | Every other walking step, every climb step below top speed, a placed ladder, a refused `E`/`SPACE` | 1–2 small puffs behind the feet |
 | `LandingDust` | The end of a fall; a rescue | 2 + 2 per row fallen (max 12) puffs to both sides; falls of 3+ rows shake the screen (0.15 per row, max 1.2) |
 | `Glint` | `GlintSystem`: every 0.08 s, 6 random tiles within 9 tiles of the miner and on screen; ore glints with 90/60/40% (gold/silver/copper), 60% of that when lit | One twinkle, 0.5–0.8 s, no gravity |
 | `Mist` | `MistSystem`: while fewer than 40 exist, up to 12 per second, in a random lit air tile below the surface | One slow drifting dot, 4–8 s |

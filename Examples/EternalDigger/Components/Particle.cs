@@ -19,7 +19,9 @@ public enum ParticleStyle : byte
     Mist,
     Coin,
     /// <summary>The ring of stars when delivering or buying.</summary>
-    Pop
+    Pop,
+    /// <summary>Specks left below the miner on a top-speed climb.</summary>
+    Trail
 }
 
 /// <summary>
