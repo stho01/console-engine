@@ -71,6 +71,7 @@ On Windows the game sets a 120 × 48 console with an 8 × 16 font. In a macOS or
 
 | Read this | When you want to know… |
 |---|---|
+| [docs/game-brief.md](docs/game-brief.md) | The game with no tech at all: a self-contained brief for design conversations (paste it into a new chat) |
 | [docs/gameplay.md](docs/gameplay.md) | How the game plays: the loop, digging, ladders, the economy, light and every number behind them |
 | [docs/architecture.md](docs/architecture.md) | How the game is built on the engine: `GameBase`, `EcsScene`, the `World`, systems and one frame step by step |
 | [docs/rendering-and-effects.md](docs/rendering-and-effects.md) | How the screen is drawn: `Canvas`, the light map, tile looks, the particle pipeline and every effect |
