@@ -183,7 +183,7 @@
 <a id="p17"></a>
 ## P17 — EternalDigger: stuck, can't dig, can't place or buy ladders, can't find ore
 
-Rules: [03 § EternalDigger](03-rules.md#eternal-digger). Flow: [04 § F11](04-flows.md#f11).
+Rules: [03 § EternalDigger](03-rules.md#eternal-digger). Flows: [04 § F11](04-flows.md#f11), [F12](04-flows.md#f12).
 
 1. Stuck at the bottom of a pit, up does nothing → **Cause:** up only works with a ladder in the miner's own tile
    (`Mine.IsSupported`, `MinerControlSystem.Control`). **Fix:** place ladders with `SPACE` on the way down; with none

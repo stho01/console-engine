@@ -185,8 +185,8 @@ Runs in [F9](#f9) step 1, in this order. The keyboard is read once into a `Miner
 | 9 | Burn fuses; at 0 blast the 3 × 3, push the miner, chain | `DynamiteSystem` | Fuse > 0 → only sparks. No miner entity → nothing burns | Flash, rubble, shake |
 | 10 | Burn oil underground; set the headlamp's reach, flicker and low/empty state; smoke when low | `LampSystem` | On the surface → no burn | HUD oil gauge, shorter / flickering cone |
 
-<a id="f11"></a>
-## F11 — EternalDigger start, save and load (`TitleScene` → `MineScene` → `SaveSystem`)
+<a id="f12"></a>
+## F12 — EternalDigger start, save and load (`TitleScene` → `MineScene` → `SaveSystem`)
 
 | # | Step | Class.method | Stops / skips if | Observable |
 |---|---|---|---|---|
