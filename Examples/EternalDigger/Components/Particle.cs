@@ -25,7 +25,13 @@ public enum ParticleStyle : byte
     Obsidian,
     Slate,
     Quartzite,
-    Gem
+    Gem,
+    /// <summary>The one-frame full-tile flash of a blast.</summary>
+    Flash,
+    /// <summary>Hot rubble flung out by a blast.</summary>
+    Blast,
+    /// <summary>Grey smoke rising from a burning fuse.</summary>
+    Smoke
 }
 
 /// <summary>

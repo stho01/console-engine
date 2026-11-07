@@ -25,6 +25,8 @@ public sealed class PromptRenderSystem(Canvas canvas, Camera camera, Mine mine, 
     public const string BoardLiftText = " GET IN [E] ";
     public const string RideText = " ↑↓ RIDE   ←→ GET OUT ";
     public const string LiftBlockedText = " LIFT BLOCKED BY OBSIDIAN ";
+    public static readonly string BlastingKitText = $" BLASTING KIT [E] {Shop.BlastingKitPrice}g ";
+    public static readonly string DynamiteText = $" DYNAMITE [E] {Shop.DynamitePrice}g ";
 
     private const string KeyHint = "[E]";
     private const float BobSpeed = 3f;
@@ -56,6 +58,9 @@ public sealed class PromptRenderSystem(Canvas canvas, Camera camera, Mine mine, 
                 Draw(DeliverText, position.X, position.Y, ConsoleColor.White);
             else if (Layout.IsAtShop(miner.Column, miner.Row))
                 Draw(BuyText, position.X, position.Y, PriceColor(miner.Gold, Shop.LadderPrice));
+            else if (Layout.IsAtBlastingShed(miner.Column, miner.Row))
+                Draw(miner.HasBlastingKit ? DynamiteText : BlastingKitText, position.X, position.Y,
+                    PriceColor(miner.Gold, Shop.BlastingPrice(miner)));
             else if (Layout.IsAtLiftSign(miner.Column, miner.Row) && !elevator.CanBuildNext(mine))
                 Draw(LiftBlockedText, position.X, position.Y, ConsoleColor.Red);
             else if (Layout.IsAtLiftSign(miner.Column, miner.Row))

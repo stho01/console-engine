@@ -20,8 +20,9 @@ public enum SaveStatus : byte
 /// <summary>
 /// The save file: one slot, binary, versioned. Layout (little-endian): magic <c>EDSV</c>, format version, seed,
 /// miner column, row and facing, gold, ladders, copper, silver and gold ore, (version 2+) lift segments and car row,
-/// (version 3+) gem ore, then the changed tiles (count, then row, column, type, damage, flags each). Older versions
-/// are still read. Writing goes to a temp file first, so a crash never leaves half a save.
+/// (version 3+) gem ore, (version 4+) blasting kit and dynamite, then the changed tiles (count, then row, column,
+/// type, damage, flags each). Older versions are still read. Writing goes to a temp file first, so a crash never
+/// leaves half a save.
 /// </summary>
 public static class SaveFile
 {
@@ -30,7 +31,7 @@ public static class SaveFile
     //**********************************************************
 
     /// <summary>The save-format version written. Bump it whenever the layout changes, and keep reading older ones.</summary>
-    public const int Version = 3;
+    public const int Version = 4;
 
     /// <summary>The oldest save-format version this build still reads.</summary>
     public const int OldestVersion = 1;
@@ -120,6 +121,8 @@ public static class SaveFile
         writer.Write(data.ElevatorSegments);
         writer.Write(data.ElevatorCarRow);
         writer.Write(data.GemOre);
+        writer.Write(data.HasBlastingKit);
+        writer.Write(data.Dynamite);
 
         writer.Write(data.Changes.Count);
         for (var i = 0; i < data.Changes.Count; i++)
@@ -191,7 +194,9 @@ public static class SaveFile
         }
 
         var gems = version >= 3 ? reader.ReadInt32() : 0;
-        if (gems < 0)
+        var kit = version >= 4 ? reader.ReadByte() : (byte)0;
+        var dynamite = version >= 4 ? reader.ReadInt32() : 0;
+        if (gems < 0 || kit > 1 || dynamite < 0)
             return SaveStatus.Corrupt;
 
         var count = reader.ReadInt32();
@@ -234,6 +239,8 @@ public static class SaveFile
             SilverOre = silver,
             GoldOre = goldOre,
             GemOre = gems,
+            HasBlastingKit = kit == 1,
+            Dynamite = dynamite,
             ElevatorSegments = segments,
             ElevatorCarRow = carRow,
             Changes = changes

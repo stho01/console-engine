@@ -9,7 +9,7 @@ using Microsoft.Xna.Framework;
 namespace EternalDigger.Systems;
 
 /// <summary>
-/// Turns input into moves, digs, ladders and rescues while the miner is idle. Falling comes first: an unsupported
+/// Turns input into moves, digs, ladders, dynamite and rescues while the miner is idle. Falling comes first: an unsupported
 /// miner always falls one tile before any key is read. A miner riding the lift only reads the ride keys.
 /// <see cref="MinerMotionSystem"/> plays the moves this starts. The keyboard is read once per frame into a
 /// <see cref="MinerInput"/>; <see cref="Control"/> holds the rules.
@@ -36,6 +36,12 @@ public sealed class MinerControlSystem(Mine mine, Elevator elevator, EffectSpawn
     public const float DigInterval = .16f;
     public const float SwingDuration = .12f;
     public const float RescueDuration = 1.5f;
+
+    /// <summary>Seconds the use key must be held underground to plant a stick of dynamite.</summary>
+    public const float PlantDuration = .5f;
+
+    /// <summary>Seconds a planted stick's fuse burns.</summary>
+    public const float FuseDuration = 2f;
 
     /// <summary>Seconds between two "TOO HARD" texts while the shovel keeps clanking on obsidian.</summary>
     public const float TooHardInterval = 1f;
@@ -82,6 +88,9 @@ public sealed class MinerControlSystem(Mine mine, Elevator elevator, EffectSpawn
             StartMove(ref miner, 0, 1, FallDuration, MinerMotion.Falling);
             return;
         }
+
+        if (UpdatePlanting(ref miner, input, deltaSeconds, commands))
+            return;
 
         if (input.PlaceLadder)
             PlaceLadder(ref miner, commands);
@@ -135,6 +144,46 @@ public sealed class MinerControlSystem(Mine mine, Elevator elevator, EffectSpawn
     //**********************************************************
     //** internals
     //**********************************************************
+
+    /// <summary>
+    /// Holding the use key underground (not on a lift landing) for <see cref="PlantDuration"/> plants a lit stick in
+    /// the tile the lamp faces. Needs the blasting kit, a stick and rock there; otherwise a dust puff. While the key is
+    /// held the miner does nothing else (true). After planting, the key must be released before the next stick.
+    /// </summary>
+    private bool UpdatePlanting(ref Miner miner, in MinerInput input, float deltaSeconds, CommandBuffer commands)
+    {
+        var canHold = Mine.Depth(miner.Row) > 0 &&
+                      !(miner.Column == Elevator.Column && elevator.IsLanding(miner.Row));
+        if (!input.Use || !canHold)
+        {
+            miner.PlantHold = 0f;
+            return false;
+        }
+
+        if (miner.PlantHold < 0f)
+            return false;
+
+        miner.PlantHold += deltaSeconds;
+        if (miner.PlantHold < PlantDuration)
+            return true;
+
+        miner.PlantHold = -1f;
+        var column = miner.Column + (int)MathF.Round(miner.LampDirection.X);
+        var row = miner.Row + (int)MathF.Round(miner.LampDirection.Y);
+        var type = mine.TypeAt(column, row);
+        var feet = Layout.TileCenter(miner.Column, miner.Row) + new Vector2(0, Layout.TileHeight / 2f);
+        if (!miner.HasBlastingKit || miner.Dynamite <= 0 || !Mine.IsInside(column, row) ||
+            !Tiles.IsBreakable(type) && !Tiles.IsBlastOnly(type))
+        {
+            effects.FootDust(commands, feet, miner.FacingX);
+            return true;
+        }
+
+        miner.Dynamite--;
+        miner.LitDynamite++;
+        effects.PlantDynamite(commands, column, row, FuseDuration);
+        return true;
+    }
 
     /// <summary>
     /// The ride keys while in the stopped car: Up to the top, Down to the bottom. Left/Right, or Down at the bottom,
@@ -263,6 +312,7 @@ public sealed class MinerControlSystem(Mine mine, Elevator elevator, EffectSpawn
         miner.FallRows = 0;
         miner.ClimbStreak = 0;
         miner.IsRiding = false;
+        miner.PlantHold = 0f;
         position.Value = Layout.TileToWorld(miner.Column, miner.Row);
 
         effects.Pop(commands, Layout.TileCenter(miner.Column, miner.Row));

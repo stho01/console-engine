@@ -106,7 +106,7 @@ So: copper is everywhere from 2 m, silver becomes common below 20 m, gold appear
 50 m needs 4 hits, gold at 100 m needs 12, a gem at 115 m needs 13 (`Tiles.HitsToBreak`).
 
 The lift can't be built through the wall: its segments stop at 100 m while the obsidian in the shaft column stands
-(the sign says ` LIFT BLOCKED BY OBSIDIAN `).
+(the sign says ` LIFT BLOCKED BY OBSIDIAN `). Blasting the obsidian in column 21 lets it go deeper ([Dynamite](#dynamite)).
 
 ## The miner
 
@@ -205,6 +205,23 @@ the mine entrance.
 The shaft below the surface is open once the lift is built: stepping into it without a ladder or the car means a
 fall to the bottom landing (no fall damage).
 
+<a id="dynamite"></a>
+## Dynamite
+
+The way through the obsidian wall, and a fast but costly way to dig anywhere.
+
+| What | Rule | Identifier |
+|---|---|---|
+| Buying | The `BLASTING` shed at columns 26–28 on row 9: `E` buys the blasting kit once (2500g), then one stick per press (100g). Not enough gold: a dust puff, the prompt price is red. Every purchase saves | `Shop.TryBuyBlasting`, `BlastingKitPrice`, `DynamitePrice`, `Layout.IsAtBlastingShed` |
+| Planting | Hold `E` for 0.5 s underground, standing still and not on a lift landing: a lit stick goes into the tile the lamp faces (the last move or dig direction). Needs the kit, a stick, and rock there (any breakable rock or obsidian). Otherwise a dust puff. While `E` is held the miner does nothing else; let go to plant the next one. The HUD shows a ` LIGHTING FUSE ` bar | `MinerControlSystem.UpdatePlanting`, `PlantDuration` |
+| The fuse | 2 s, with yellow/red `*` sparks and grey `·` smoke | `FuseDuration`, `DynamiteSystem` |
+| The blast | Clears the 3 × 3 tiles around the stick: any rock, obsidian included. Bedrock, the grass and the sky stay. Ore in it goes into the bag; ladders in it are destroyed; other sticks in it go off 0.12 s later | `DynamiteSystem.Blast`, `BlastRadius`, `ChainDelay` |
+| The miner | Never hurt. Inside the blast area (and standing, not riding) he slides one tile away from the stick if that tile is open | `DynamiteSystem.Push`, `PushDuration` |
+| Looks | One frame of white/yellow `█` over the area, a ring of 150 `▓▒░` rubble and 40 chunks, dust that lingers 1–2 s, the biggest screen shake. The miner stays drawn on top. A red `¡` on his belt while he carries sticks | `EffectSpawner.Blast`, `MinerRenderSystem` |
+
+A 4-tile wall needs about 4–6 sticks. A stick in a lit fuse that is saved (sale, purchase, autosave, `ESC`) goes back
+into the stock.
+
 ## The rescue
 
 Hold `R` for 1.5 s (`MinerControlSystem.RescueDuration`) and the miner is pulled back to the spawn tile. It works
@@ -246,11 +263,11 @@ twinkles and dig towards them.
 
 | Part | Shows | Identifier |
 |---|---|---|
-| HUD, row 0 | ` ETERNAL DIGGER ` title, gold, ladders, `LIFT <n>m` once a lift is built, depth, the bag (copper/silver/gold/gem counts with coloured `◆` icons) and what the bag is worth | `HudSystem` |
-| HUD, row 1 | The key help; the rescue bar while `R` is held; the no-ladders warning. After a save, ` SAVED ` at the right end for 1.5 s (grey, then dark grey), or ` SAVE FAILED` in red | `HudSystem` |
+| HUD, row 0 | ` ETERNAL DIGGER ` title, gold, ladders, `LIFT <n>m` once a lift is built, `DYNAMITE <n>` once the kit is bought, depth, the bag (copper/silver/gold/gem counts with coloured `◆` icons) and what the bag is worth | `HudSystem` |
+| HUD, row 1 | The key help; the rescue bar while `R` is held; the ` LIGHTING FUSE ` bar while `E` is held to plant; the no-ladders warning. After a save, ` SAVED ` at the right end for 1.5 s (grey, then dark grey), or ` SAVE FAILED` in red | `HudSystem` |
 | Title screen | `ETERNAL DIGGER` logo, `CONTINUE` / `NEW MINE` (selected item black on yellow with `►`), the confirmation, a red message for an unreadable save, `↑↓ choose   E select   ESC quit` | `TitleScene`, `TitleMenu` |
 | Camera | Keeps the miner at 40% of the screen height, eased. Never scrolls above the sky. Shakes on breaks and long falls | `CameraSystem` |
-| Prompts | ` DELIVER [E] ` / ` BUY LADDERS [E] 10g ` / ` BUILD LIFT +10m [E] <price>g ` / ` CALL LIFT [E] ` / ` GET IN [E] ` / ` ↑↓ RIDE   ←→ GET OUT ` in a small bobbing frame above the miner | `PromptRenderSystem` |
+| Prompts | ` DELIVER [E] ` / ` BUY LADDERS [E] 10g ` / ` BUILD LIFT +10m [E] <price>g ` / ` CALL LIFT [E] ` / ` GET IN [E] ` / ` ↑↓ RIDE   ←→ GET OUT ` / ` BLASTING KIT [E] 2500g ` / ` DYNAMITE [E] 100g ` / ` LIFT BLOCKED BY OBSIDIAN ` in a small bobbing frame above the miner | `PromptRenderSystem` |
 
 ## Tuning cheat sheet
 
@@ -260,6 +277,9 @@ twinkles and dig towards them.
 | How common ore, caves and rock are | `Mine.Underground` (act 1) and `Mine.BelowTheWall` (act 2) in `Mining/Mine.cs` |
 | Ladder price, starting gold and ladders | `Shop.cs` |
 | Lift prices, segment length, ride speed | constants at the top of `Mining/Elevator.cs` |
+| Kit and dynamite prices | `Shop.cs` |
+| Plant time, fuse length | `MinerControlSystem.PlantDuration`, `FuseDuration` |
+| Blast size, chain delay, push | constants at the top of `Systems/DynamiteSystem.cs` |
 | Move speeds, the climb ramp, dig speed, rescue time | constants at the top of `Systems/MinerControlSystem.cs` |
 | Lamp range and cone | constants at the top of `Rendering/LightMap.cs` |
 | Glint and mist rates | `Systems/GlintSystem.cs`, `Systems/MistSystem.cs` |
@@ -279,7 +299,7 @@ The game saves itself; there is no save key.
 - **When:** after every sale at the door (when it earned gold) and every ladder bought, every 60 s spent underground
   (`GameSaver.AutosaveInterval`), and on `ESC`, which saves and quits. A NEW MINE is saved as soon as it starts.
 - **What:** the seed, the miner's tile and facing, gold, ladders and the bag, the lift (segments and the car's
-  landing), and every tile that differs from what
+  landing), the blasting kit and the dynamite stock (lit sticks counted back in), and every tile that differs from what
   the seed generates (dug, half-dug, ladder placed, seen). The mine itself is regenerated from the seed.
 - **Not saved:** anything mid-action. A continued game starts with the miner standing still on the saved tile (if
   that tile has no support, they fall), no particles, and the rescue timer at zero.

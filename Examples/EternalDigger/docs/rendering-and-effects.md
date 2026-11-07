@@ -13,11 +13,12 @@ The Presentation group draws in `Add` order, each layer over the last:
 | 2 | `TerrainRenderSystem` | Every tile from the grass row down, by light level | Every screen cell from the grass down (the mine's 30 columns) |
 | 3 | `HouseRenderSystem` | House, sign, chimney smoke, ladder shop, `MINE` frame, `LIFT` sign | Fixed spots on the surface |
 | 4 | `ElevatorRenderSystem` | Shaft walls and braces, cable, car, speed lines | The shaft column (and the cells beside it), over terrain |
-| 5 | `ParticleRenderSystem` | Every particle glyph, except on the miner's cells | Over the world, keeping its background |
-| 6 | `MinerRenderSystem` | The 4 × 2 miner and the lamp glow | Over the world and the particles |
-| 7 | `FloatingTextRenderSystem` | `+150g` / `-10g` / `ELEVATOR +10m` | Over everything so far |
-| 8 | `PromptRenderSystem` | The door, shop, lift sign and landing prompts | Above the miner |
-| 9 | `HudSystem` | The two top rows | Screen rows 0–1 |
+| 5 | `DynamiteRenderSystem` | Planted sticks: red `¡` with a `*` fuse flickering yellow/red above it | The stick's tile, in the dark too |
+| 6 | `ParticleRenderSystem` | Every particle glyph, except on the miner's cells | Over the world, keeping its background |
+| 7 | `MinerRenderSystem` | The 4 × 2 miner and the lamp glow | Over the world and the particles |
+| 8 | `FloatingTextRenderSystem` | `+150g` / `-10g` / `ELEVATOR +10m` | Over everything so far |
+| 9 | `PromptRenderSystem` | The door, shop, shed, lift sign and landing prompts | Above the miner |
+| 10 | `HudSystem` | The two top rows | Screen rows 0–1 |
 
 Layers 1 and 2 together paint every cell of the screen each frame. That matters for the `Canvas`.
 
@@ -121,6 +122,7 @@ string, colours for full and dim light, and for ores a speck character (`◆`) a
 | Shop | x 32–47 | Red/white striped awning, black window with `╟─╢` ladders on display, counter, `LADDERS` |
 | Mine frame | Around the shaft (x 83–88) | `╔════╗` beam on `║` posts, a `MINE` plank |
 | Lift sign | x 93–98 (`Layout.LiftSignFirstColumn`) | ` LIFT ` white on dark yellow, on two `│` posts |
+| Blasting shed | x 104–115 (`Layout.BlastingFirstColumn`…`BlastingLastColumn`), 7 rows | Red `▄▀` roof, `▒` plank walls between `│` posts, a yellow-on-dark-red `BLASTING` board, ` ¡ ¡ ¡ ` red sticks in the window |
 
 ## The lift
 
@@ -145,7 +147,8 @@ miner's back:
 
 Legs: `█` standing, `▙`/`▟` alternating while walking, `╫`/`║` alternating while climbing (twice per tile, so a fast climb moves them faster), `╨` falling. The shovel is `/` (or `\` facing
 left) at rest; mid-swing it is `│` for up/down digs, or `─` then a tilt for side digs. Underground, two dots (`∙`
-`·`) glow in front of the lamp. All miner cells use `DrawOver`, so the sky or the tunnel shows around the sprite.
+`·`) glow in front of the lamp. All miner cells use `DrawOver`, so the sky or the tunnel shows around the sprite. While he carries dynamite a red `¡`
+sits in the back cell of the bottom row (his belt).
 
 **Keeping him readable.** Digging throws debris, dust and sparks straight at the miner, so three rules keep his face
 `☻` and lamp visible on every frame:
@@ -205,6 +208,9 @@ flowchart LR
 | `Coin` | Spins `● ◐ \| ◑` | Yellow, dark yellow on the edge frame |
 | `Pop` | `✶ * + ·` | White, then dark yellow |
 | `Trail` | `' ·` | Grey, then dark grey |
+| `Flash` | `█` | White or yellow by variant |
+| `Blast` | `▓ ▒ ░ ·` | Yellow, dark yellow, then dark grey |
+| `Smoke` | `· ˙` | Grey, then dark grey |
 
 ### Effects catalogue
 
@@ -213,6 +219,9 @@ flowchart LR
 | `DigHit` | Every shovel hit (`MinerControlSystem`) | 4–7 debris chunks from the struck face, flying back towards the miner and falling (gravity 40, lands on rock), 0.5–1.1 s. Ore adds 2–4 sparks |
 | `TileBreak` | The hit that breaks a tile | 14–22 chunks bursting out, 6–10 dust puffs drifting up, screen shake 0.6 (rock) or 0.9 (ore). Ore adds 6–10 glitter sparks |
 | `ClimbTrail` | Every tile of a top-speed climb (instead of `FootDust`) | 1–2 specks dropping below the feet |
+| `PlantDynamite` | A stick is planted | No particles: a `Dynamite` entity with `Position` at the tile centre |
+| `FuseSpark` | Every 0.07 s while a fuse burns | A yellow spark off the stick top, and one time in three a grey `·˙` smoke wisp rising |
+| `Blast` | A stick goes off | One frame (0.05 s) of `█` white/yellow over all 3 × 3 tiles (72 cells), 150 `▓▒░·` hot rubble flung out in a ring (`TileCollider`), 40 stone chunks, 40 dust puffs living 1–2 s, a full screen shake (`ScreenShake.MaxStrength`). About 300 particles |
 | `Clank` | The shovel on obsidian | 3–5 sparks from the face, a 0.15 shake, no chunks |
 | `FootDust` | Every other walking step, every climb step below top speed, a placed ladder, a refused `E`/`SPACE` | 1–2 small puffs behind the feet |
 | `LandingDust` | The end of a fall; a rescue | 2 + 2 per row fallen (max 12) puffs to both sides; falls of 3+ rows shake the screen (0.15 per row, max 1.2) |

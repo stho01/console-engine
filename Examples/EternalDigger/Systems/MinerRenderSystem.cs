@@ -10,7 +10,8 @@ namespace EternalDigger.Systems;
 
 /// <summary>
 /// The miner, 4 x 2 cells, drawn for facing right and mirrored for left. Top row: backpack, head and headlamp.
-/// Bottom row: body, legs (animated by motion) and the shovel, which swings towards the tile being dug. Underground
+/// Bottom row: body, legs (animated by motion) and the shovel, which swings towards the tile being dug, plus a red
+/// <c>¡</c> on the belt while carrying dynamite. Underground
 /// the lamp leaves a short glow in the direction it points.
 /// </summary>
 public sealed class MinerRenderSystem(Canvas canvas, Camera camera) : EntitySystem
@@ -67,6 +68,8 @@ public sealed class MinerRenderSystem(Canvas canvas, Camera camera) : EntitySyst
         DrawCell(x, y, facingRight, 2, '☻', Skin);
         DrawCell(x, y, facingRight, 3, lamp, Lamp);
 
+        if (miner.Dynamite > 0)
+            DrawCell(x, y + 1, facingRight, 0, '¡', ConsoleColor.Red);
         DrawCell(x, y + 1, facingRight, 1, '▐', Overalls);
         DrawCell(x, y + 1, facingRight, 2, Legs(miner), Overalls);
         DrawCell(x, y + 1, facingRight, 3, swinging ? SwingTool(miner, facingRight) : facingRight ? '/' : '\\', Tool);

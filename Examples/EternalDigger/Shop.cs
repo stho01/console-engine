@@ -3,12 +3,18 @@ using EternalDigger.Mining;
 
 namespace EternalDigger;
 
-/// <summary>The house: buys the ore in the miner's bag and sells ladders.</summary>
+/// <summary>The surface trade: buys the ore in the miner's bag, sells ladders, the blasting kit and dynamite.</summary>
 public static class Shop
 {
     public const int LadderPrice = 10;
     public const int StartLadders = 8;
     public const int StartGold = 0;
+
+    /// <summary>The blasting kit, bought once at the shed. Unlocks buying and planting dynamite.</summary>
+    public const int BlastingKitPrice = 2500;
+
+    /// <summary>One stick of dynamite at the shed, once the kit is owned.</summary>
+    public const int DynamitePrice = 100;
 
     /// <summary>What the ore in the bag sells for.</summary>
     public static int BagValue(in Miner miner) =>
@@ -41,6 +47,25 @@ public static class Shop
 
         miner.Gold -= LadderPrice;
         miner.Ladders++;
+        return true;
+    }
+
+    /// <summary>The price of what the blasting shed sells next: the kit, then sticks.</summary>
+    public static int BlastingPrice(in Miner miner) => miner.HasBlastingKit ? DynamitePrice : BlastingKitPrice;
+
+    /// <summary>Buys the blasting kit, or one stick once the kit is owned. False if the miner can't afford it.</summary>
+    public static bool TryBuyBlasting(ref Miner miner)
+    {
+        var price = BlastingPrice(miner);
+        if (miner.Gold < price)
+            return false;
+
+        miner.Gold -= price;
+        if (miner.HasBlastingKit)
+            miner.Dynamite++;
+        else
+            miner.HasBlastingKit = true;
+
         return true;
     }
 

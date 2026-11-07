@@ -160,8 +160,8 @@ Examples/
                                   README.md + docs/ (gameplay, architecture, rendering-and-effects,
                                   working-with-the-code, testing, reference)
   EternalDigger.Tests/            Mine, Tiles, Shop, LightMap, ParticleLooks, frame-by-frame MinerControlSystem,
-                                  MinerVisibility (render), Elevator, SaveFile, SaveSystem and TitleMenu tests, Fakes/ (console
-                                  handler)
+                                  MinerVisibility (render), Elevator, Dynamite, SaveFile, SaveSystem and TitleMenu
+                                  tests, Fakes/ (console handler)
   TerraForM/Scenes/               GameScene, MenuScene, InputNameScene
   TerraForM/Commands/             Command, Move, Plant, Wait
   TerraForM/Assets/               Maps/*.txt, Sprites.cs, Texts/HudTexts.cs, Story/ (unused)

@@ -13,8 +13,9 @@ Program.cs                       parses the seed, creates the game, Initialize()
     └── MineScene : EcsScene<EternalDiggerGame>  started from a SaveData (loaded, or SaveData.NewMine)
         ├── shared services       Mine, Elevator, Random, EffectSpawner (+ ScreenShake), LightMap, Canvas, GameSaver
         ├── World                 the miner, particles, floating texts
-        ├── Simulation group      12 systems: rules, motion, lift, camera, light, effects, saving
-        └── Presentation group    9 systems: sky, terrain, house, lift, particles, miner, texts, prompts, HUD
+        ├── World                 (also) planted dynamite
+        ├── Simulation group      13 systems: rules, motion, lift, dynamite, camera, light, effects, saving
+        └── Presentation group    10 systems: sky, terrain, house, lift, dynamite, particles, miner, texts, prompts, HUD
 ```
 
 | Engine piece | Used for | Where |
@@ -27,7 +28,7 @@ Program.cs                       parses the seed, creates the game, Initialize()
 | `Position`, `Velocity`, `Glyph` | Built-in components, reused instead of game copies | miner, particles, numbers |
 | `Camera` | Which world cell is in the top-left screen cell | `CameraSystem` writes it, every renderer reads it |
 | `RenderConsole` | The frame buffer, reached through the game's `Canvas` | `Rendering/Canvas.cs` |
-| `Input.Instance` | Key states (`Held`, `Pressed`) | `MinerInput.FromKeyboard`, `InteractionSystem` |
+| `Input.Instance` | Key states (`Held`, `Pressed`) | `MinerInput.FromKeyboard` (also `E`: `Use`, `UsePressed`, read by `InteractionSystem` too) |
 
 Not used: the engine's `MovementSystem` (particles move in `ParticlePhysicsSystem` together with gravity and
 collisions), `GlyphRenderSystem` (it paints a background behind each glyph; the game wants to keep the background),
@@ -89,12 +90,13 @@ Why a grid and not one entity per tile:
 | The miner | Entity: `Position` + `Miner` | Moves, has state, drawn and queried by several systems |
 | Particles | Entities: `Position`, `Velocity`, `Glyph`, `Particle`, `Physics` (+ `TileCollider` or `Mist`) | Hundreds at a time, short-lived, iterated in bulk |
 | Floating texts | Entities: `Position`, `Velocity`, `FloatingText` | Short-lived |
+| Planted dynamite | Entities: `Position`, `Dynamite` | A few at a time, burn down and go off |
 | Rules (prices, hits, depths) | `const`s on static classes: `Tiles`, `Shop`, `Layout` | Shared, testable, no state |
 | The lift | `Elevator` service (segments, car row, call) | One of it; rules testable without a `World` |
 
 ### Archetypes in play
 
-Because components are grouped by their exact set, the world holds five archetypes:
+Because components are grouped by their exact set, the world holds six archetypes:
 
 | Archetype | Created by |
 |---|---|
@@ -102,7 +104,8 @@ Because components are grouped by their exact set, the world holds five archetyp
 | `Position, Velocity, Glyph, Particle, Physics` | `EffectSpawner` (dust, sparks, pops, glints) |
 | … + `TileCollider` | `EffectSpawner` (debris chunks, coins) |
 | … + `Mist` | `EffectSpawner.Mist` |
-| `Position, Velocity, FloatingText` | `EffectSpawner.Number` |
+| `Position, Velocity, FloatingText` | `EffectSpawner.Number`, `EffectSpawner.Text` |
+| `Position, Dynamite` | `EffectSpawner.PlantDynamite` |
 
 Systems pick the parts they need with queries, for example `Query.With<Particle, Position, Velocity>().With<Physics>()`
 matches all three particle archetypes, and `chunk.Has<TileCollider>()` tells a chunk loop whether to run collisions.
@@ -120,6 +123,7 @@ Scenes.Update → MineScene.OnUpdate → Simulation.Update(dt)
   InteractionSystem       E at the door/shop/lift sign/landing → Deliver / TryBuyLadder / Elevator.TryBuild / call
   MinerMotionSystem       slide Position one tile, finish moves, foot and landing dust
   ElevatorSystem          move the car; carry the rider; a called car picks up the caller
+  DynamiteSystem          burn fuses (sparks, smoke); blast: clear 3 × 3, bag ore, push the miner, chain
   CameraSystem            follow the miner, add shake, round to whole cells → Camera.Position
   LightingSystem          LightMap.Compute for the rows on screen (marks tiles Seen)
   GlintSystem             sample ore near the miner → glints
@@ -131,7 +135,8 @@ Scenes.Update → MineScene.OnUpdate → Simulation.Update(dt)
   ── Commands.Playback: the particles recorded above are created, expired ones destroyed
 OnUpdate (game)           ESC → MineScene.Save(), Stop()
 Scenes.Render → MineScene.OnRender → Presentation.Update(dt)
-  SkyRenderSystem → TerrainRenderSystem → HouseRenderSystem → ElevatorRenderSystem → ParticleRenderSystem
+  SkyRenderSystem → TerrainRenderSystem → HouseRenderSystem → ElevatorRenderSystem → DynamiteRenderSystem
+  → ParticleRenderSystem
   → MinerRenderSystem → FloatingTextRenderSystem → PromptRenderSystem → HudSystem
 Display                   the frame goes to the console in one write
 ```
@@ -205,8 +210,8 @@ Saving lives in `Saving/` and never runs per frame:
 
 | Piece | Does |
 |---|---|
-| `SaveData` | What a save holds: seed, miner tile and facing, gold, ladders, bag (with gems), lift segments and car row, `List<TileChange>`. `NewMine(seed)`, `Capture(seed, miner, mine, changes)`, `ToMiner()`, `ApplyTo(mine)` |
-| `SaveFile` | The binary, versioned file (`Version` = 3, reads back to `OldestVersion` = 1, magic `EDSV`). `Save` (temp file, then move), `Load` (never throws; returns `SaveStatus` `Missing`/`Loaded`/`Corrupt`/`Unsupported`, moves an unreadable file to `save.dat.bad`), `Write`/`Read` on a stream, `DefaultPath` |
+| `SaveData` | What a save holds: seed, miner tile and facing, gold, ladders, bag (with gems), blasting kit and dynamite, lift segments and car row, `List<TileChange>`. `NewMine(seed)`, `Capture(seed, miner, mine, changes)`, `ToMiner()`, `ApplyTo(mine)` |
+| `SaveFile` | The binary, versioned file (`Version` = 4, reads back to `OldestVersion` = 1, magic `EDSV`). `Save` (temp file, then move), `Load` (never throws; returns `SaveStatus` `Missing`/`Loaded`/`Corrupt`/`Unsupported`, moves an unreadable file to `save.dat.bad`), `Write`/`Read` on a stream, `DefaultPath` |
 | `GameSaver` | The running mine's slot: `Request()` from gameplay, `Save(miner)` builds the data and writes it, catching I/O errors (`LastSaveFailed`); `Saves` counts attempts for the HUD |
 | `SaveSystem` | Last in Simulation: saves when requested (`InteractionSystem` after a sale or purchase) or after `AutosaveInterval` s underground |
 | `Mine.CollectChanges` / `Apply` | The mine as seed + changes: at save time every generated tile is compared with a freshly generated one, so nothing is tracked while playing |

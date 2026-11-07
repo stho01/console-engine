@@ -21,7 +21,13 @@ public readonly struct MinerInput
     /// <summary>The rescue key is held.</summary>
     public bool Rescue { get; init; }
 
-    /// <summary>Arrows and WASD, <c>SPACE</c> for a ladder, <c>R</c> for the rescue.</summary>
+    /// <summary>The use key (<c>E</c>) is held: underground, holding it plants dynamite.</summary>
+    public bool Use { get; init; }
+
+    /// <summary>The use key went down this frame: deliver, buy, call the lift.</summary>
+    public bool UsePressed { get; init; }
+
+    /// <summary>Arrows and WASD, <c>SPACE</c> for a ladder, <c>R</c> for the rescue, <c>E</c> to use.</summary>
     public static MinerInput FromKeyboard()
     {
         var input = Input.Instance;
@@ -35,7 +41,9 @@ public readonly struct MinerInput
             Down = input.GetKey(Key.DOWN).Held || input.GetKey(Key.S).Held,
             Up = input.GetKey(Key.UP).Held || input.GetKey(Key.W).Held,
             PlaceLadder = input.GetKey(Key.SPACE).Pressed,
-            Rescue = input.GetKey(Key.R).Held
+            Rescue = input.GetKey(Key.R).Held,
+            Use = input.GetKey(Key.E).Held,
+            UsePressed = input.GetKey(Key.E).Pressed
         };
     }
 }

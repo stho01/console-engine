@@ -33,6 +33,7 @@ public class MinerVisibilityTests
     private SystemGroup _presentation;
     private MinerControlSystem _control;
     private MinerMotionSystem _motion;
+    private EffectSpawner _effects;
     private Entity _miner;
 
     [SetUp]
@@ -46,11 +47,13 @@ public class MinerVisibilityTests
         var light = new LightMap(Mine.Columns, Layout.ScreenHeight / Layout.TileHeight + 2);
         var random = new Random(Seed);
         var effects = new EffectSpawner(random, new ScreenShake());
+        _effects = effects;
         _control = new MinerControlSystem(_mine, new Elevator(), effects);
         _motion = new MinerMotionSystem(_mine, effects);
 
         _simulation = new SystemGroup(_world);
         _simulation.Add(new LightingSystem(_mine, light, _camera));
+        _simulation.Add(new DynamiteSystem(_mine, effects));
         _simulation.Add(new ParticlePhysicsSystem(_mine));
         _simulation.Add(new ParticleLifetimeSystem());
 
@@ -94,6 +97,27 @@ public class MinerVisibilityTests
 
         Assert.That(_mine.TypeAt(Column + dx, Row + dy), Is.EqualTo(TileType.Air), "the gold tile broke");
         Assert.That(mostParticles, Is.GreaterThan(20), "digging made particles");
+    }
+
+    [Test]
+    public void Render_BlastRightNextToTheMiner_ShowsFaceAndLampEveryFrame()
+    {
+        _mine.At(Column + 1, Row) = new TileCell { Type = TileType.Granite };
+        _mine.At(Column - 1, Row) = new TileCell { Type = TileType.Air };
+        _mine.At(Column - 1, Row + 1) = new TileCell { Type = TileType.Granite };
+        _effects.PlantDynamite(_simulation.Commands, Column + 1, Row, fuse: .2f);
+        _simulation.Update(0f);
+        var mostParticles = 0;
+
+        for (var frame = 0; frame < (int)(2f / FrameSeconds); frame++)
+        {
+            Step(default);
+            mostParticles = Math.Max(mostParticles, CountParticles());
+            AssertMinerVisible(frame);
+        }
+
+        Assert.That(_mine.TypeAt(Column + 1, Row), Is.EqualTo(TileType.Air), "the blast went off");
+        Assert.That(mostParticles, Is.GreaterThan(200), "a blast is hundreds of particles");
     }
 
     [Test]

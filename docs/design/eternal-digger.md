@@ -165,3 +165,13 @@ caves, none of the act 1 tiles. Gems glint magenta; from 95 m (`Tiles.HintDepth`
 on screen at any distance. The lift can't be built through standing obsidian. The gem count is saved from format
 version 3.
 
+## Dynamite (Tier 1)
+
+Not in the original document. The `BLASTING` shed (columns 26–28) sells the kit once (2500g), then sticks (100g)
+(`Shop.TryBuyBlasting`). Holding `E` 0.5 s underground, off the lift landings, plants a lit stick in the faced rock
+(`MinerControlSystem.UpdatePlanting`; a `Dynamite` entity with a 2 s fuse). `DynamiteSystem` runs after
+`ElevatorSystem`: the blast clears 3 x 3 of any rock including obsidian (not bedrock, grass or sky), bags ore,
+destroys ladders, chains to nearby sticks and pushes the miner one tile away; he is never hurt.
+`DynamiteRenderSystem` runs before the particles. The miner is drawn after all effects, so the Tier 0 acceptance test
+now covers a blast too (`MinerVisibilityTests`). Saved from format version 4 (kit, sticks; lit sticks are refunded).
+
