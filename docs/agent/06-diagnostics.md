@@ -56,7 +56,7 @@ Grep these to locate the code path. None of them has a log level.
 | `Component type <Type> is listed more than once.` | `World.Create` (`ArgumentException`) | Same type twice in one `Create` |
 | `Cannot register <Type>: the ECS supports at most 256 component types.` | `ComponentRegistry.Register` (`InvalidOperationException`, wrapped in `TypeInitializationException`) | 257th component type used in the process |
 | `An archetype row needs <n> bytes and does not fit in one 16384-byte chunk.` | `Archetype` ctor (`InvalidOperationException`) | A component set too large for a chunk |
-| Window title = `GameBase.Name` | `GameBase.Initialize` → `SetTitle` | Default `"Game"`. Platformer `"Platformer game"`, Asteroids.Ecs `"Asteroids (ECS)"`, Snake.Ecs `"Snake (ECS)"`, TerraForM.Ecs `"TerraForM (ECS)"`, Platformer.Ecs `"Platformer (ECS)"`, Swarm `"Swarm (ECS)"` |
+| Window title = `GameBase.Name` | `GameBase.Initialize` → `SetTitle` | Default `"Game"`. Platformer `"Platformer game"`, Asteroids.Ecs `"Asteroids (ECS)"`, Snake.Ecs `"Snake (ECS)"`, TerraForM.Ecs `"TerraForM (ECS)"`, Platformer.Ecs `"Platformer (ECS)"`, Swarm `"Swarm (ECS)"`, EternalDigger `"EternalDigger"` |
 
 Runtime exceptions without repo-authored text (message comes from .NET and varies): `DllNotFoundException`,
 `SocketException`, `Win32Exception`, `FileNotFoundException`, `DirectoryNotFoundException`, `FormatException`,
@@ -78,6 +78,40 @@ using [04](04-flows.md).
 | `{0} is not built: {1}. Run dotnet build.` | `LauncherTexts.NotBuilt` (`{1}` = expected exe path) | Started a game whose exe is missing |
 | `Could not start {0}: {1}` | `LauncherTexts.StartFailed` (`{1}` = `Win32Exception` message) | `Process.Start` failed |
 | `No Launcher.csproj found above <dir>. Run the launcher from its build output (dotnet run --project Examples/Launcher).` | `GameLocator.FromLauncherOutput` (`InvalidOperationException`, printed to stderr by `Program.cs`, exit code 1) | Launcher exe is not inside the repository's build output |
+
+### EternalDigger screen text
+
+| Text | Where | Meaning |
+|---|---|---|
+| ` ETERNAL DIGGER ` | `HudSystem.Title`, row 0 | Title |
+| `  GOLD <n>g  ╟╢<ladders>[  LIFT <n>m][  ¡<dynamite>]  OIL ▮▮▮▮▮▯▯▯  DEPTH <n>m  BAG ◆<copper> ◆<silver> ◆<gold> ◆<gem> ✦<finds> = <value>g` (gem `◆` magenta, `✦` yellow, the bag value yellow when the bag is heavy, `╟╢` yellow, `¡` red; the gauge white, yellow below half, blinking red when low) | `HudSystem.DrawStatus`, row 0. `N0` formatting in the user's culture | Inventory and depth |
+| ` ←→ walk/dig   ↓ dig   ↑ climb   SPACE ladder   E use/buy   hold E dynamite   hold R rescue   ESC save & quit` | `HudSystem.KeyHelp`, row 1 | Default help line |
+| ` SAVED ` (grey, then dark grey, 1.5 s) | `HudSystem.SavedText`, right end of row 1 | The game was just saved |
+| ` SAVE FAILED` (red, 1.5 s) | `HudSystem.SaveFailedText`, right end of row 1 | The save file couldn't be written (`GameSaver.LastSaveFailed`); play goes on |
+| `CONTINUE`, `NEW MINE` | `TitleMenu.ContinueText`, `NewMineText` (title screen) | CONTINUE only with a readable save |
+| `Start over? The saved mine will be lost.`, `NO`, `YES, START OVER` | `TitleMenu.ConfirmQuestion`, `NoText`, `YesText` | NEW MINE picked while a save exists |
+| `↑↓ choose   E select   ESC quit` | `TitleScene.KeyHelp` | Title screen help |
+| `The saved mine could not be read. Starting a new mine.` (red) | `TitleScene.CorruptMessage` | `SaveStatus.Corrupt`: file moved to `save.dat.bad` |
+| `The saved mine is from another version of the game. Starting a new mine.` (red) | `TitleScene.UnsupportedMessage` | `SaveStatus.Unsupported`: file moved to `save.dat.bad` |
+| `ETERNAL DIGGER` block logo | `TitleScene.Logo` | Title screen |
+| ` RESCUE ` + bar + ` the bag is lost` | `HudSystem.RescueLabel`, `RescueNote` | `R` is held |
+| ` NO LADDERS LEFT!  Hold R to be rescued (the bag is lost) ` (blinking) | `HudSystem.NoLaddersWarning` | 0 ladders and below the surface |
+| ` DELIVER [E] ` | `PromptRenderSystem.DeliverText` | Standing at the door |
+| ` BUILD LIFT +10m [E] <price>g ` (red when short) | `PromptRenderSystem.BuildLiftText` | Standing at the lift sign |
+| ` ↑ LADDER ↓ ` / ` ↑ BLASTING KIT ↓ ` / ` ↑ DYNAMITE ↓ `, (or ` ↑ FILL LAMP ↓ `, ` ↑ SHOVEL ↓ ` / `LAMP` / `BAG` / `DETECTOR`), then `HAVE <n>`, `OIL <n>%`, `UNLOCKS DYNAMITE` or tier pips `●●○`, then `<price>g [E]` (red when short), `FULL`, `MAX` or `SOLD OUT` | `PromptRenderSystem.DrawCounterPanel`, `Shop.LadderName`/`BlastingKitName`/`DynamiteName`, `KitUnlocksText`, `SoldOutText` | At the shop counter |
+| ` LIGHTING FUSE ` + bar | `HudSystem.PlantLabel`, row 1 | `E` held underground to plant |
+| `  ¡<n>` (red `¡`) | `HudSystem.DrawStatus`, row 0, after the lift | Dynamite, once the kit is bought |
+| `BLASTING`, ` ¡ ¡ ¡ ` | `HouseRenderSystem.BlastingText`, `BlastingDisplay` (shed) | Scenery |
+| ` LIFT BLOCKED BY OBSIDIAN ` (red) | `PromptRenderSystem.LiftBlockedText` | At the lift sign while the next segment has obsidian in the shaft |
+| `FOSSIL!` / `RELIC!` (white, floating) | `FloatingTextRenderSystem.FossilText`, `RelicText` | A rare find was dug out |
+| `TOO HARD` (red, floating) | `FloatingTextRenderSystem.TooHardText` | The shovel hit obsidian (at most once a second) |
+| ` CALL LIFT [E] ` / ` GET IN [E] ` | `PromptRenderSystem.CallLiftText`, `BoardLiftText` | On a lift landing, car away / there |
+| ` ↑↓ RIDE   ←→ GET OUT ` | `PromptRenderSystem.RideText` | In the stopped car |
+| `ELEVATOR +10m` (floating) | `FloatingTextRenderSystem.ElevatorLabel` | A lift segment was built |
+| `  LIFT <n>m` | `HudSystem.DrawStatus`, row 0, after the ladders | Once a lift is built |
+| ` LIFT ` | `HouseRenderSystem.LiftText` (sign beside the mine entrance) | Scenery |
+| `+<n>g` / `-10g` (floating) | `FloatingTextRenderSystem` | Delivery / purchase |
+| ` EternalDigger `, `SHOP`, `MINE` | `HouseRenderSystem` (house sign, shop, shaft frame) | Scenery |
 
 ### TerraForM screen text (`HudTexts`, `Sprites`)
 

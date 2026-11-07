@@ -17,8 +17,10 @@ Nothing is hosted and nothing is exposed to the internet. Every unit is a local 
 | `ConsoleEngine.Benchmarks` (`ConsoleEngine.Benchmarks/`) | **Exe**, BenchmarkDotNet 0.15.8 | `Baseline/OopUpdateBenchmarks` (list of classes vs. struct arrays), `Ecs/WorldBenchmarks`, `Ecs/QueryBenchmarks`. Built by CI, never run by CI |
 | `Snake`, `Asteroids`, `Platformer`, `ConsoleGame` and their ECS ports `Snake.Ecs`, `Asteroids.Ecs`, `Platformer.Ecs`, `ConsoleGame.Ecs`, `TerraForM.Ecs` (`Examples/*`) | Exe | Small demo games. Each `*.Ecs` project is the same game rebuilt on the ECS (`ConsoleEngine.Ecs`) for comparison |
 | `Swarm` (`Examples/Swarm`) | Exe | ECS-only stress test: 100 000 particles (first argument) chasing a moving attractor |
-| `Launcher` (`Examples/Launcher`) | **Exe** `Launcher.exe`, no engine dependency (plain `System.Console`) | Text menu that starts the ECS games (`GameCatalog.Games`: Snake.Ecs, Asteroids.Ecs, Platformer.Ecs, TerraForM.Ecs, ConsoleGame.Ecs, Swarm). Build-order `ProjectReference`s (`ReferenceOutputAssembly=false, Private=false as default metadata`) make building it build those games, without copying anything into its output |
+| `Launcher` (`Examples/Launcher`) | **Exe** `Launcher.exe`, no engine dependency (plain `System.Console`) | Text menu that starts the ECS games (`GameCatalog.Games`: Snake.Ecs, Asteroids.Ecs, Platformer.Ecs, TerraForM.Ecs, ConsoleGame.Ecs, Swarm, EternalDigger). Build-order `ProjectReference`s (`ReferenceOutputAssembly=false, Private=false as default metadata`) make building it build those games, without copying anything into its output |
 | `Launcher.Tests` (`Examples/Launcher.Tests`) | NUnit test project | `LauncherMenu` keys, `GameLocator` paths, and that every `GameCatalog` game has a `ProjectReference` in `Launcher.csproj` |
+| `EternalDigger` (`Examples/EternalDigger`) | Exe | ECS-only digging game: dig ore in an endless mine, sell it at the house, buy ladders. Design: `docs/design/eternal-digger.md` |
+| `EternalDigger.Tests` | NUnit test project | `MineTests`, `TilesTests`, `ShopTests`, `LightMapTests`, `ParticleLooksTests`, `MinerControlSystemTests` (plays frames with scripted `MinerInput`, no keyboard), `MinerVisibilityTests` (renders into a `RenderConsole` over `Fakes/FakeConsoleHandler`), `ElevatorTests`, `DynamiteTests`, `ShopCounterTests`, `UpgradesTests`, `LampOilTests`, `BagWeightTests`, `SaveFileTests`, `SaveSystemTests` (temp folders), `TitleMenuTests` |
 
 Hard dependency: **Windows only.** `ConsoleHandler` and `InputHandler` call `kernel32.dll`/`user32.dll` directly
 (`GetStdHandle`, `WriteConsoleOutputW`, `SetCurrentConsoleFontEx`, `GetAsyncKeyState`…). No other platform
@@ -37,7 +39,7 @@ implementation exists; macOS support is GitHub issue 7, open.
 
 | Link | Direction | Detail | Where |
 |---|---|---|---|
-| Launcher → game process | spawn | `Process.Start` of `%SystemRoot%System32nhost.exe cmd.exe /c ".<ProjectName>.exe || pause"` with `UseShellExecute = true` and `WorkingDirectory` = the exe's folder, so the game gets a **classic console window** even when Windows Terminal is the default terminal. The launcher waits for conhost to exit (`WaitForExit`), so one game runs at a time. Exe path: `Examples/<ProjectName>/<launcher's output path, e.g. bin/Debug/net10.0>/<ProjectName>.exe` | `GameRunner.Run`, `GameRunner.BuildArguments`, `GameLocator` |
+| Launcher → game process | spawn | `Process.Start` of `%SystemRoot%System32nhost.exe cmd.exe /c ".<ProjectName>.exe || pause"` with `UseShellExecute = true` and `WorkingDirectory` = the exe's folder, so the game gets a **classic console window** even when Windows Terminal is the default terminal. The launcher waits for conhost to exit (`WaitForExit`), so one game runs at a time. Exe path: `Examples/<ProjectName>/<launcher's output path, e.g. bin/Debug/net10.0>/<ProjectName>.exe`. **On macOS and Linux** there is no conhost: the apphost has no extension (`<ProjectName>`) and is started directly (`UseShellExecute = false`, same working directory), inheriting the launcher's terminal | `GameRunner.Run`, `GameRunner.BuildArguments`, `GameLocator.GetExecutablePath` |
 | Game → console window | out | Whole frame written each frame with `WriteConsoleOutput` | `ConsoleHandler.Render` |
 | Keyboard → game | in | `GetAsyncKeyState(i)` polled for all 256 virtual keys every frame | `InputHandler.Update` |
 | Game → logger | out, TCP | Game **listens** on `Dns.GetHostEntry("localhost").AddressList[0]`, port **11000** (hard-coded). No auth. Messages are UTF-8 and end with `'\0'` | `Log` static ctor, `Log.Start` |
@@ -62,6 +64,7 @@ callbacks that run on the game loop thread ([03 § Intervals](03-rules.md#interv
 | `ConsoleGame.Game` | 64 × 64 | 8×8 Consolas | `ShowFps = true`, `EnableLogger = true` |
 | `ConsoleEcsGame` | 64 × 64 | 8×8 Consolas | `ShowFps = true`, `EnableLogger = true` |
 | `SwarmGame` | 160 × 100 | 6×6 Consolas | `Name = "Swarm (ECS)"`, `EnableLogger = true`, `ShowFps = true`. First command-line argument = starting particle count (default 100 000) |
+| `EternalDiggerGame` | 120 × 48 (`Layout.ScreenWidth` × `Layout.ScreenHeight`) | 8×16 Consolas | `Name = "EternalDigger"`. First command-line argument = seed for a NEW MINE (default `Environment.TickCount`); CONTINUE uses the saved seed. Reads and writes `<LocalApplicationData>/EternalDigger/save.dat` (+ `.tmp`, `.bad`). No logger, no FPS |
 
 `GameBase(width, height, fontWidth, fontHeight)` always uses face `"Consolas"`.
 

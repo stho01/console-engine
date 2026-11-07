@@ -5,7 +5,7 @@
 
 | Fact | Why | How to get it |
 |---|---|---|
-| **Which game** (TerraForM, Snake, Asteroids, Platformer, ConsoleGame, their `.Ecs` ports, Swarm, or their own game on `ConsoleEngine`) | Rules differ per game ([03](03-rules.md)) | Ask, or the exe name |
+| **Which game** (TerraForM, Snake, Asteroids, Platformer, ConsoleGame, their `.Ecs` ports, Swarm, EternalDigger, or their own game on `ConsoleEngine`) | Rules differ per game ([03](03-rules.md)) | Ask, or the exe name |
 | **OS and console host** | Windows only. Windows Terminal ignores the sizing/font calls **[external]** | [07 § Q1, Q2](07-checks.md#q1) |
 | **How it was launched and from which folder** (double-click the exe, `dotnet run`, IDE, a shortcut, a terminal in another folder) | Map files and the logger exe are found by **relative path** | [07 § Q3](07-checks.md#q3) |
 | **The exact error text**, if any | There are no log files. The exception printed to the console is the only record | Ask them to start it from an already-open terminal so the text stays ([06 § Capturing a crash](06-diagnostics.md#capture)) |
@@ -91,7 +91,7 @@
 
 **Symptom [inferred]:** "how do I exit?", "ESC doesn't quit", "the logger window stays open after the game closes".
 
-1. Which game? Only `ConsoleGame`, `ConsoleGame.Ecs` and `Swarm` quit on `ESC` (`Stop()`). In TerraForM and TerraForM.Ecs `ESC` opens the menu. Others have no quit key. → **Cause:** no quit path ([04 § F3](04-flows.md#f3)). **Fix:** close the console window. Stop.
+1. Which game? Only `ConsoleGame`, `ConsoleGame.Ecs`, `Swarm` and `EternalDigger` quit on `ESC` (`Stop()`). In TerraForM and TerraForM.Ecs `ESC` opens the menu. Others have no quit key. → **Cause:** no quit path ([04 § F3](04-flows.md#f3)). **Fix:** close the console window. Stop.
 2. Logger stays open after the game exits → **Cause:** `Log.Stop` is never reached, because `RenderConsole.Close` calls `Environment.Exit(0)` first, and the logger only exits on a `SocketException` ([04 § F4](04-flows.md#f4)). How the logger sees the closed connection is **[external]** and unverified. **Fix:** close the logger window. Escalate if it spins CPU.
 
 <a id="p6"></a>
@@ -180,3 +180,51 @@
    listed game. Stop.
 3. Game window stays open on `Press any key to continue . . .` → the game exited non-zero (crashed) and `pause` kept the window open. The exception text is above it. Continue with [P1](#p1) step 1 using that text. Stop.
 4. `Could not start ...` → `Win32Exception` from `Process.Start` (`conhost.exe` missing or blocked). Escalate with the message. Stop.
+<a id="p17"></a>
+## P17 — EternalDigger: stuck, can't dig, can't place or buy ladders, can't find ore
+
+Rules: [03 § EternalDigger](03-rules.md#eternal-digger). Flows: [04 § F11](04-flows.md#f11), [F12](04-flows.md#f12).
+
+1. Stuck at the bottom of a pit, up does nothing → **Cause:** up only works with a ladder in the miner's own tile
+   (`Mine.IsSupported`, `MinerControlSystem.Control`). **Fix:** place ladders with `SPACE` on the way down; with none
+   left, hold `R` for 1.5 s (rescue, the bag is lost). The HUD shows `NO LADDERS LEFT!` underground at 0 ladders. Stop.
+2. Can't dig down from the grass, or into the side walls → **Cause:** grass and bedrock are unbreakable
+   (`Tiles.IsBreakable`). **Fix:** go down the shaft under the `MINE` frame (column 21). Stop.
+3. `SPACE` places no ladder → **Cause:** one of: 0 ladders, still at the surface (row ≤ 10), the tile already has one,
+   or the miner was mid-move/falling (keys aren't read then). Stop.
+4. `E` does nothing at the house → **Cause:** must stand still right in front of the door (columns 3–6) or the shop
+   counter (columns 8–11); a prompt or panel appears there. At the door with an empty bag, or at the counter without
+   enough gold for the selected item, only a dust puff shows (the price is red). `↑`/`↓` at the counter change what
+   `E` buys. The `BLASTING` shed sells nothing itself. Stop.
+5. Lost all ore → **Cause:** a rescue (`R` held 1.5 s) empties the bag by design. Stop.
+5a. "Climbing got slow", "the miner crawls up the ladder" → **Cause:** a heavy bag (HUD bag value yellow, backpack
+    `▓`): each 10 weight over the capacity (20, +10 per bag tier) makes climbing up 20% slower. **Fix:** sell at the
+    door, or buy the bag upgrade. Stop.
+6a. "The light keeps shrinking", "the lamp flickers", "it's all dark now" → **Cause:** lamp oil. It burns underground
+    (1 unit per 3 s of 100); below 30 the cone shrinks and flickers, at 0 only the close radius is lit. **Fix:** fill
+    the lamp at the shop counter (`FILL LAMP`, 2g per unit); a better lamp burns less. Outlines and glints still show
+    the way, or hold `R`. Stop.
+6. "Ore is invisible", "everything is black" → **Cause:** only lit tiles show colour; remembered tiles are grey outlines
+   without ore (`TerrainRenderSystem`). **Fix:** watch for glints (twinkles near the miner, also through rock) and point
+   the headlamp by moving/digging towards the ore. Stop.
+7. Different mine every time → **Cause:** the seed defaults to `Environment.TickCount`. **Fix:** pass a number as
+   the first argument for a repeatable mine. Stop.
+8. "My progress is gone", "no CONTINUE" → **Cause:** one of: the game was closed without `ESC` (progress since the
+   last sale, purchase or 60 s underground autosave is lost); NEW MINE was confirmed (replaces the slot); the save was
+   unreadable (the title said so; the file is now `save.dat.bad`, [Q11](07-checks.md#q11)); or ` SAVE FAILED` showed
+   (the folder isn't writable). Stop.
+9. "Can't build the lift", "E does nothing at the lift" → **Cause:** building needs standing still at columns 23–24 on
+   row 9 and 200g (+100g per segment built; the prompt price is red when short). Calling needs standing still on a
+   landing in column 21: row 9 or the bottom row; mid-shaft, `E` does nothing. In the car, `E` does nothing: use ↑/↓.
+   Stop.
+10. "Can't dig at 110 m", "TOO HARD" → **Cause:** the obsidian wall (`Tiles.WallDepth`, 3–5 tiles); the shovel can't
+    break it by design. **Fix:** select the blasting slot at the shop counter (`↓`), buy the kit (2500g) and sticks (100g), hold `E` 0.5 s
+    facing the wall, walk away. Same reason the lift stops at 100 m (blast column 21 to go deeper). Stop.
+11. "Holding E does nothing", "can't plant dynamite" → **Cause:** one of: no kit or no sticks (HUD `DYNAMITE <n>`), on
+    the surface, on a lift landing (there `E` is the lift), facing air instead of rock (the lamp points the way you last
+    moved or dug), moving, or `E` wasn't released since the last stick. A dust puff means it was refused. Stop.
+12. "Fell all the way down the shaft" → **Cause:** a built lift digs out the shaft; without ladders there a step into it
+    falls to the bottom landing. No damage. Stop.
+13. "Debris or sparks disappear right next to the miner" → **Cause:** by design. No particle is drawn on his 4 × 2
+   cells, and at most 6 (dimmed) are drawn in the tile around him, so he stays readable (`ParticleRenderSystem`). Stop.
+

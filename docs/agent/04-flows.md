@@ -44,7 +44,7 @@ the final `Width`/`Height`, because those come from the ctor arguments.
 
 | # | Step | Class.method | Note |
 |---|---|---|---|
-| 1 | Game calls `Stop()`. Only `ConsoleGame` does, on `ESC` | `GameBase.Stop` | Other games have no quit path: the user closes the window |
+| 1 | Game calls `Stop()` on `ESC`: `ConsoleGame`, `ConsoleGame.Ecs`, `Swarm`, `EternalDigger` (after `MineScene.Save`) | `GameBase.Stop` | Other games have no quit path: the user closes the window. EternalDigger: closing the window without `ESC` loses progress since the last save |
 | 2 | `_running = false`, then `_console.Close()` | `RenderConsole.Close` | **Calls `Environment.Exit(0)`: the process ends here** |
 | 3 | `if (EnableLogger) Log.Stop()` | `GameBase.Stop` | **Never reached** (step 2 exited). The logger socket isn't closed by `Log.Stop` |
 
@@ -164,5 +164,38 @@ Runs inside [F2](#f2) steps "Scenes.Update" and "Scenes.Render". Both are skippe
 | 2 | Compute each game's exe path | `LauncherApp` ctor, `GameLocator.GetExecutablePath` | — | — |
 | 3 | Loop: check which exes exist, draw, `Console.ReadKey` | `LauncherApp.Run`, `RefreshBuilt`, `LauncherScreen.Draw` | Esc/Q → loop ends, screen cleared | Menu; unbuilt games show `(not built)` |
 | 4 | Enter/Space/digit → `Launch(index)` | `LauncherMenu.HandleKey`, `LauncherApp.Launch` | Exe missing → status `LauncherTexts.NotBuilt`, nothing started | Yellow status line |
-| 5 | Start the exe through `conhost.exe` + `cmd.exe` in a new classic console window, working directory = exe folder, and wait | `GameRunner.Run` | `Process.Start` fails → `Win32Exception` caught | Status `LauncherTexts.StartFailed` |
+| 5 | Windows: start the exe through `conhost.exe` + `cmd.exe` in a new classic console window. macOS/Linux: start it directly in the launcher's terminal (`RunInCurrentTerminal`). Working directory = exe folder, and wait | `GameRunner.Run` | `Process.Start` fails → `Win32Exception` caught | Status `LauncherTexts.StartFailed` |
 | 6 | Window closes → status `Closed`, discard buffered keys, back to step 3. A crashing game first stops at `pause` | `DiscardBufferedKeys` | — | `LauncherTexts.Closed` |
+<a id="f11"></a>
+## F11 — EternalDigger miner frame (`MinerControlSystem` → `InteractionSystem` → `MinerMotionSystem`)
+
+Runs in [F9](#f9) step 1, in this order. The keyboard is read once into a `MinerInput` (`MinerInput.FromKeyboard`).
+
+| # | Step | Class.method | Stops / skips if | Observable |
+|---|---|---|---|---|
+| 1 | Rescue: `R` held adds to `RescueHold`; at 1.5 s the miner jumps to the spawn and the bag empties | `MinerControlSystem.UpdateRescue` | `R` not held → `RescueHold = 0`, continue. Rescue done → rest of the frame's control skipped | HUD rescue bar, pop at the spawn |
+| 2 | — | `MinerControlSystem.Control` | `Miner.IsMoving` → no keys read this frame. Riding: car moving → nothing; Up (not at top) / Down (at top) → send the car, rest skipped; Left/Right or Down at the bottom → get out and go on; anything else → rest skipped | — |
+| 3 | Fall one tile if unsupported | same | `Mine.IsSupported` false → fall starts, keys ignored | Miner drops |
+| 3b | Hold `E` to plant dynamite | `UpdatePlanting` | `E` not held, on the surface or a lift landing → hold reset, go on. Holding (< 0.5 s) → rest of the frame skipped. At 0.5 s: no kit, no sticks, or no rock in the faced tile → dust puff; else a `Dynamite` entity is recorded. After that, `E` must be released | Fuse bar in the HUD, then the stick `¡` |
+| 4 | `SPACE`: ladder | `PlaceLadder` → `Mine.TryPlaceLadder` | `Ladders == 0`, row ≤ 10, tile not air or already has a ladder → nothing placed (one dust puff) | Ladder drawn, HUD count −1 |
+| 5 | Side key, else down, else up (only on a ladder): walk/climb into air, or dig | `MoveOrDig` | Target unbreakable (grass, bedrock, outside the mine) → nothing. `DigCooldown > 0` → no hit this frame | Debris, cracks, burst on break, ore +1 in the HUD bag |
+| 6 | At the counter `↑`/`↓` move the selection; `E` (pressed): deliver, buy the selected item, build a lift segment, or get in / call the lift | `InteractionSystem.Interact` | `E` not pressed this frame, miner moving or riding, or not on a spot (row 9 at columns 3–6 / 8–11 / 23–24) or a landing in column 21 → nothing. Empty bag / not enough gold → dust puff only | Coins, `+<n>g` / `-10g` / `ELEVATOR +10m` |
+| 7 | Slide `Position`, finish the move, landing dust | `MinerMotionSystem.Move` | — | — |
+| 8 | Move the car; carry the rider; a called car picks up the miner waiting on its landing | `ElevatorSystem` → `Elevator.Update`, `Carry` | Not riding and (car didn't arrive this frame, not called, or the miner isn't idle on that landing) → nothing | Car and miner move together |
+| 9 | Burn fuses; at 0 blast the 3 × 3, push the miner, chain | `DynamiteSystem` | Fuse > 0 → only sparks. No miner entity → nothing burns | Flash, rubble, shake |
+| 10 | Burn oil underground; set the headlamp's reach, flicker and low/empty state; smoke when low | `LampSystem` | On the surface → no burn | HUD oil gauge, shorter / flickering cone |
+
+<a id="f12"></a>
+## F12 — EternalDigger start, save and load (`TitleScene` → `MineScene` → `SaveSystem`)
+
+| # | Step | Class.method | Stops / skips if | Observable |
+|---|---|---|---|---|
+| 1 | `OnInitialize` sets the title scene | `EternalDiggerGame.OnInitialize` | — | Title screen |
+| 2 | Load the save once | `TitleScene.OnLoad` → `SaveFile.Load` | No file → `Missing`, only NEW MINE. Bad magic, early end, trailing bytes, out-of-range value → `Corrupt`; version ≠ 1 → `Unsupported`; I/O error → `Corrupt`. Not `Loaded` → file moved to `save.dat.bad` (if that fails, silently left in place) | Red message, only NEW MINE |
+| 3 | `E` on CONTINUE | `TitleMenu.Select` → `Scenes.Set(new MineScene(save, path))` | — | Saved mine |
+| 4 | `E` on NEW MINE | `TitleMenu.Select` | With a save: switch to the confirmation, nothing starts until `YES, START OVER` | Confirmation |
+| 5 | New mine: write its first save, then start | `TitleScene.StartNewMine` → `SaveFile.Save` | I/O error is **ignored** (the mine still starts; the next save retries) | — |
+| 6 | Sale (earned > 0) or purchase → `GameSaver.Request` | `InteractionSystem.Interact` | Empty bag, not enough gold → no request | — |
+| 7 | Save when requested or after 60 s underground | `SaveSystem.OnUpdate` → `GameSaver.Save` → `SaveData.Capture` + `SaveFile.Save` | No request and timer not reached → nothing. `IOException`/`UnauthorizedAccessException` → caught, `LastSaveFailed = true` | ` SAVED ` / ` SAVE FAILED` |
+| 8 | `ESC` | `EternalDiggerGame.OnUpdate` → `MineScene.Save` → `Stop()` | On the title: no save | Process exits |
+

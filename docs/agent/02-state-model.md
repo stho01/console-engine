@@ -1,8 +1,8 @@
 # 02 — State model
 
-There is no database. All state is in memory in one process and is lost when the window closes. Nothing is saved:
-no high scores, settings or save games. The only persistent inputs are the TerraForM map files
-([§ Map file format](#map-format)).
+There is no database. All state is in memory in one process and is lost when the window closes, with one exception:
+EternalDigger's save file ([§ EternalDigger save file](#eternal-digger-save)). There are no high scores or settings.
+The only other persistent inputs are the TerraForM map files ([§ Map file format](#map-format)).
 
 ## Engine objects
 
@@ -36,6 +36,52 @@ no high scores, settings or save games. The only persistent inputs are the Terra
 | `BonusPoint` | `HasBeenConsumed` | Each bonus can be collected once | New level / restart |
 | `Hud` | `_commandSequence`, `_sequenceReadyToShip` | Commands typed but not yet sent with SPACE | Cleared by `GetCommands()` on SPACE |
 | `Sprites.Story` (static) | sprite pixels | Player name is stamped into it in place by `MenuScene.OnLoad` | Never. It mutates a shared static sprite |
+
+## EternalDigger state
+
+| Owner | Field | Meaning | Reset when |
+|---|---|---|---|
+| `Mine` (one per `MineScene`) | `_cells` (`TileCell[]`, row-major, 30 per row), `_generatedRows` | The world. `TileCell`: `Type` (`TileType`), `Damage` (hits taken), `HasLadder`, `Seen` (ever lit). Generated from the seed, then changed only by digging, ladders and `Seen` | New `MineScene`: regenerated from the seed, then the save's changed tiles are applied |
+| `Miner` component (one entity) | `Column`, `Row`, `MoveFrom`, `MoveElapsed`, `MoveDuration`, `Motion`, `FallRows`, `FacingX`, `LampDirection`, `DigCooldown`, `SwingTime`, `SwingDirection`, `RescueHold` | Where the miner is and what they are doing. While moving, `Column`/`Row` are already the target tile and the engine's `Position` slides there | Rescue resets the position and motion |
+| `Miner` component | `Gold`, `Ladders`, `CopperOre`, `SilverOre`, `GoldOre`, `GemOre` | Inventory. The three ore counts are "the bag" | Ore: delivery or rescue. Gold/ladders: never |
+| `Elevator` (one per `MineScene`) | `Segments`, `CarRow` (fractional while moving), `CarTargetRow`, `IsCalled` | The lift in the shaft (column 21). Landings at row 9 and row `10 + 10 × Segments` | Segments: never (saved). Car: restored to its saved landing |
+| `Miner` component | `PlantHold`, `HasBlastingKit`, `Dynamite`, `LitDynamite` | Holding `E` to plant (−1 = wait for release); the kit; sticks carried; sticks burning | Kit and sticks: saved. `PlantHold`: release, rescue |
+| Dynamite entities | `Dynamite` (`Column`, `Row`, `Fuse`, `SparkTimer`) + `Position` | A planted, lit stick | Destroyed when it goes off; not saved (refunded into `Dynamite`) |
+| `Miner` component | `ShovelTier`, `LampTier`, `BagTier`, `DetectorTier` | Upgrade tiers 0–3 | Never (saved) |
+| `Miner` component | `Fossils`, `Relics`, `FossilsFound`, `RelicsFound` | Rare finds in the bag; ever dug up | Bag: delivery or rescue. Found: never (saved) |
+| `Miner` component | `Oil` | Lamp oil 0–100, burns underground | Refilled at the counter (saved) |
+| `Headlamp` (one per `MineScene`) | `Reach`, `IsDimmed`, `IsLow`, `IsEmpty` | This frame's lamp, from the oil and lamp tier | Every frame (`LampSystem`) |
+| `Miner` component | `IsRiding`, `ClimbStreak` | In the lift car; tiles climbed up without letting go | Rescue, getting out / any non-climb action |
+| `LightMap` | `_levels` (byte per tile on screen), `FirstRow`, `Rows` | This frame's light | Recomputed every frame |
+| Particles | `Particle` (`Age`, `Lifetime`, `Style`, `Variant`), `Physics`, `TileCollider`/`Mist` tags, `FloatingText` + engine `Position`/`Velocity`/`Glyph` | Effects only, no game state | Destroyed when `Age >= Lifetime` |
+
+<a id="eternal-digger-save"></a>
+### EternalDigger save file
+
+One slot: `SaveFile.DefaultPath` = `<LocalApplicationData>/EternalDigger/save.dat` (`%LOCALAPPDATA%` on Windows,
+`~/Library/Application Support` on macOS, `~/.local/share` on Linux). Written by `SaveFile.Save` through
+`save.dat.tmp`, then moved over the old file. Little-endian binary, `SaveFile.Version` = 7 (versions 1–6 are still read; fields they lack get the defaults):
+
+| Field | Type | Check on load |
+|---|---|---|
+| magic `EDSV` | int `0x56534445` | else `Corrupt` |
+| version | int | not 1–7 (`OldestVersion`…`Version`) → `Unsupported` |
+| seed | int | — |
+| column, row | int, int | column 0–29, row 0–100 000 |
+| facing | sbyte | −1 or 1 |
+| gold, ladders, copper, silver, gold ore | 5 × int | ≥ 0 |
+| lift segments, car row (version 2+) | int, int | segments 0–10 000; car row 9, or the bottom landing `10 + 10 × segments` (only with segments > 0) |
+| gem ore (version 3+) | int | ≥ 0 |
+| blasting kit, dynamite (version 4+) | byte, int | kit 0 or 1; dynamite ≥ 0 (sticks carried + sticks burning at save time) |
+| shovel, lamp, bag, detector tier (version 5+) | 4 × byte | each 0–3 |
+| oil (version 6+) | float | 0–100 (older saves load full) |
+| fossils, relics, fossils found, relics found (version 7+) | 4 × int | ≥ 0 |
+| change count | int | ≤ 100 001 × 30 |
+| per change: row, column, type, damage, flags | int, byte, byte, byte, byte | row 0–100 000, column < 30, type a `TileType` (its byte: new types are only ever appended), flags only bit 0 (ladder) and bit 1 (seen) |
+
+Anything after the last change, or a file that ends early, is `Corrupt`. A `Corrupt` or `Unsupported` file is moved
+to `save.dat.bad` (`SaveFile.BadPath`) by `SaveFile.Load`. Not saved: motion, dig cooldown, rescue hold, particles,
+the lamp direction (rebuilt from facing), riding (a rider is saved standing at the landing the car is heading for).
 
 <a id="map-format"></a>
 ## Map file format (`Examples/TerraForM/Assets/Maps/mapN.txt`)

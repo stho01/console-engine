@@ -5,7 +5,7 @@ namespace Launcher;
 
 /// <summary>
 /// Finds each game's exe in its own build output. Games are built next to the launcher with the same configuration
-/// and target framework, so a game's exe is <c>Examples/&lt;Project&gt;/&lt;output path&gt;/&lt;Project&gt;.exe</c>,
+/// and target framework, so a game's exe is <c>Examples/&lt;Project&gt;/&lt;output path&gt;/&lt;Project&gt;[.exe]</c> (no extension off Windows),
 /// where the output path (e.g. <c>bin/Debug/net10.0</c>) is the launcher's own.
 /// </summary>
 internal sealed class GameLocator
@@ -53,6 +53,10 @@ internal sealed class GameLocator
         return new GameLocator(projectDirectory.Parent.FullName, outputPath);
     }
 
-    public string GetExecutablePath(GameEntry game) =>
-        Path.GetFullPath(Path.Combine(_examplesDirectory, game.ProjectName, _outputPath, game.ProjectName + ".exe"));
+    public string GetExecutablePath(GameEntry game) => GetExecutablePath(game, OperatingSystem.IsWindows());
+
+    /// <summary>The apphost is <c>&lt;Project&gt;.exe</c> on Windows and plain <c>&lt;Project&gt;</c> on macOS and Linux.</summary>
+    internal string GetExecutablePath(GameEntry game, bool isWindows) =>
+        Path.GetFullPath(Path.Combine(_examplesDirectory, game.ProjectName, _outputPath,
+            isWindows ? game.ProjectName + ".exe" : game.ProjectName));
 }
