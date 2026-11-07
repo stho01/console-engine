@@ -22,21 +22,22 @@ You are working on **EternalDigger**, a text-mode ECS mining game built on the c
 
 1. Read `AGENTS.md`, the game README, `game-brief.md`, `feature-handover.md`, `architecture.md` and `working-with-the-code.md`. Skim the rest as you need them.
 2. Run `dotnet build` and `dotnet test Examples/EternalDigger.Tests` and confirm both pass **before** you change anything.
-3. Find where each feature of this round touches the code: the surface shops, interaction, prompts and input (for the upgrade counter); digging, the light map and the lamp, glints, the bag and the HUD (for the upgrades); the lighting, the miner render, the HUD and time underground (for lamp oil); mine generation, tiles, glints, effects and the save file (for gems and rare finds); climbing and the bag (for bag weight).
+3. Find where each feature of this round touches the code: the lift and its bottom landing, the shop counter, its items and prices, and the surface spots (for the deep camp); mine generation, caves, the light map, the headlamp and oil, glints, mist and effects (for the hazards); the house and surface drawing, the HUD, rare finds and the save file (for surface progression).
 4. Send me a short plan for this round: the files and systems you'll touch, new components or systems, any engine changes you think you need, and anything in the handover that conflicts with the code or the repo rules. Wait for my go-ahead before building.
 
-## This round: Tier 2 only
+## This round: Tier 3 only
 
-Tiers 0 and 1 are done and approved (miner visibility, saving, accelerating climb, lift, obsidian wall, act 2 layer, dynamite). Build the four Tier 2 features from `feature-handover.md`, in this order:
+Tiers 0–2 are done and approved (miner visibility, saving, accelerating climb, lift, obsidian wall, act 2 layer, dynamite, shop counter, upgrades, lamp oil, rare finds, bag weight). Build these Tier 3 features from `feature-handover.md`, in this order:
 
-1. **Upgrade shop.** One counter where Up/Down cycles the items (ladders, oil, the upgrades, the blasting kit, dynamite) and E buys the selected one, with a small panel above it showing the item, tier pips `●●○` and the price (red when unaffordable). It replaces today's single-item prompts. Four upgrade lines with three tiers each: shovel, lamp, bag and detector, with the handover's effects and prices. Upgrades show on the miner where the handover suggests (shovel and lamp colour per tier). Save the upgrade tiers.
-2. **Lamp oil.** A tank (e.g. 100 units) that burns only underground; below 30% the cone shortens and flickers, empty leaves only the dimmed close radius (outlines and glints still show). Refill at the counter. An oil gauge in the HUD, smoke and a dim lamp glyph when low. It never kills. Save the oil level.
-3. **Gem ore below the wall, and rare finds.** Gems already exist from Tier 1: check them against the handover's spec and adjust where they differ. Add rare finds (e.g. fossil `§`, relic `¥`): very rare single tiles with a slow pulsing glint, a big star burst and a floating name when broken, sold high, and a `✦` counter in the HUD. Leave the trophy shelf for Tier 3. Save the rare finds.
-4. **Bag weight.** Ore weights (copper 1, silver 1, gold 2, gem 2, rare finds as you propose); above the threshold climbing slows a step per 10 weight; walking unaffected; no hard cap. With oil, a heavy bag burns more while climbing. The bag value turns yellow and the backpack glyph bulges when heavy. The bag upgrade from the shop works with this.
+1. **Deep camp.** Bought at the surface shop counter. It stands at the lift's bottom landing (just above the wall, ~100 m), a small tent with a lantern. It uses the same counter controls as the surface (Up/Down to pick, E to buy or sell). It buys ore at ~70% of surface prices, and sells ladders, oil and dynamite at a markup. Save whether the camp is built.
+2. **Hazards, gas pockets first, then darkness.** Gas: faint green shimmer in caves; bringing the lamp within 2 tiles makes it flare (burst, shake) and blows out the lamp for a few seconds or drains some oil; a blast near gas gives a bigger flare, still harmless. Darkness: act 2 rock absorbs light (cone reach −2 tiles), and rare black-damp caves halve the cone and double the oil burn while inside, with no mist and dark-grey `░` edges when lit. Both are forgiving: nothing kills, and glints and remembered outlines always still show, so the way home is never lost.
+3. **Surface progression.** A trophy shelf showing the rare finds ever dug up (one glyph each), a depth-record sign on the mine entrance ("RECORD 112m"), house upgrades at gold milestones, and one NPC shop that unlocks after a milestone (e.g. once the first wall is broken), at miner sprite size with one or two idle frames. Save the depth record and what has been unlocked.
+
+Leave "Repeating acts" (acts 3 and 4) out: they are designed after this playtest.
 
 Bump the save-format version for each change to the save and keep reading every older version.
 
-Don't start on Tier 3 or later, even where it looks easy. I'll playtest each tier before we move on.
+Don't start on anything beyond this round, even where it looks easy. I'll playtest each tier before we move on.
 
 ## Working rules
 
