@@ -49,7 +49,9 @@ public class GameLocatorTests
         {
             var reference = $@"..\{game.ProjectName}\{game.ProjectName}.csproj";
             Assert.That(projectXml, Does.Contain(reference), game.Title);
-            Assert.That(File.Exists(Path.Combine(Path.GetDirectoryName(launcherProject), reference)), Is.True, game.Title);
+            var gameProject = Path.Combine(
+                Path.GetDirectoryName(launcherProject), "..", game.ProjectName, game.ProjectName + ".csproj");
+            Assert.That(File.Exists(gameProject), Is.True, game.Title);
         }
     }
 
