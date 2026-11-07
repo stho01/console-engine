@@ -116,10 +116,12 @@ internal sealed class SpatialHashGrid
 
                     ref readonly var a = ref bodies[first.Body];
                     ref readonly var b = ref bodies[second.Body];
-                    var minX = MathF.Max(a.Center.X - a.Extents.X, b.Center.X - b.Extents.X);
-                    var minY = MathF.Max(a.Center.Y - a.Extents.Y, b.Center.Y - b.Extents.Y);
-                    var maxX = MathF.Min(a.Center.X + a.Extents.X, b.Center.X + b.Extents.X);
-                    var maxY = MathF.Min(a.Center.Y + a.Extents.Y, b.Center.Y + b.Extents.Y);
+                    var boundsA = a.BoundsExtents;
+                    var boundsB = b.BoundsExtents;
+                    var minX = MathF.Max(a.Center.X - boundsA.X, b.Center.X - boundsB.X);
+                    var minY = MathF.Max(a.Center.Y - boundsA.Y, b.Center.Y - boundsB.Y);
+                    var maxX = MathF.Min(a.Center.X + boundsA.X, b.Center.X + boundsB.X);
+                    var maxY = MathF.Min(a.Center.Y + boundsA.Y, b.Center.Y + boundsB.Y);
                     if (minX > maxX || minY > maxY)
                         continue;
 
@@ -142,10 +144,11 @@ internal sealed class SpatialHashGrid
 
     private void GetCellRange(in BodyProxy body, out int minX, out int minY, out int maxX, out int maxY)
     {
-        minX = CellOf(body.Center.X - body.Extents.X);
-        minY = CellOf(body.Center.Y - body.Extents.Y);
-        maxX = CellOf(body.Center.X + body.Extents.X);
-        maxY = CellOf(body.Center.Y + body.Extents.Y);
+        var bounds = body.BoundsExtents;
+        minX = CellOf(body.Center.X - bounds.X);
+        minY = CellOf(body.Center.Y - bounds.Y);
+        maxX = CellOf(body.Center.X + bounds.X);
+        maxY = CellOf(body.Center.Y + bounds.Y);
     }
 
     private int CellOf(float coordinate) => (int)MathF.Floor(coordinate * _inverseCellSize);

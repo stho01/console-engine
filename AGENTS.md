@@ -31,9 +31,9 @@ Platform: **Windows only.** Rendering and input go through Win32 P/Invoke (`kern
 | Win32 signatures and structs | `Libs/ConsoleEngine.Windows/LowLevel/` (`Kernel32.cs`, `User32.cs`) |
 | Vector/matrix math | `Libs/Microsoft.Xna.Framework/` (copied from MonoGame, change only with good reason) |
 | ECS (entities, components, archetypes, chunks) | `ConsoleEngine/Ecs/`, design and phases in [`docs/design/ecs-plan.md`](docs/design/ecs-plan.md) |
-| 2D physics (bodies, colliders, broadphase, contact/sensor events; no contact response yet) | `ConsoleEngine/Ecs/Physics/`, rules in [`docs/agent/03-rules.md` § Physics](docs/agent/03-rules.md#physics), design and phases in [`docs/design/physics-plan.md`](docs/design/physics-plan.md). Example: `Examples/Asteroids.Ecs` |
+| 2D physics (bodies, colliders, broadphase, Soft Step contact solver, contact/sensor events) | `ConsoleEngine/Ecs/Physics/`, rules in [`docs/agent/03-rules.md` § Physics](docs/agent/03-rules.md#physics), design and phases in [`docs/design/physics-plan.md`](docs/design/physics-plan.md). Examples: `Examples/PhysicsSandbox` (solver), `Examples/Asteroids.Ecs` (sensors, layers) |
 | Performance measurements | `ConsoleEngine.Benchmarks/` (BenchmarkDotNet) |
-| How to use the engine | `Examples/Snake` (smallest), `Examples/TerraForM` (scenes, assets, tests), `Examples/<Game>.Ecs` (ECS port of each game: components, systems, queries, `EcsScene`; compare with `Examples/<Game>`. `Snake.Ecs` is the smallest, `TerraForM.Ecs` the fullest), `Examples/Swarm` (ECS at scale, system ordering attributes) |
+| How to use the engine | `Examples/Snake` (smallest), `Examples/TerraForM` (scenes, assets, tests), `Examples/<Game>.Ecs` (ECS port of each game: components, systems, queries, `EcsScene`; compare with `Examples/<Game>`. `Snake.Ecs` is the smallest, `TerraForM.Ecs` the fullest), `Examples/Swarm` (ECS at scale, system ordering attributes), `Examples/PhysicsSandbox` (physics: bodies, colliders, fixed step, kinematic platform) |
 | Build/test pipeline | `.github/workflows/build-and-test.yml` |
 | Formatting rules | `.editorconfig` + [§ Code style](#code-style) |
 | Open feature requests | GitHub issues: mouse input (8), macOS (7), more colours (6) |
@@ -49,7 +49,7 @@ Every name in `docs/agent/` is grep-able. Search for the identifier you are inte
 | `ConsoleEngine.Windows` | `Libs/ConsoleEngine.Windows/` | Library, namespace `ConsoleEngine.Native` | Abstractions |
 | `ConsoleEngine.Logger` | `Libs/ConsoleEngine.Logger/` | Exe: TCP log viewer (port 11000) | — |
 | `Microsoft.Xna.Framework` | `Libs/Microsoft.Xna.Framework/` | Library: math types | — |
-| `TerraForM`, `Snake`, `Asteroids`, `Platformer`, `ConsoleGame`, their ports `<Game>.Ecs`, and `Swarm` (ECS stress test) | `Examples/*` | Exe | ConsoleEngine |
+| `TerraForM`, `Snake`, `Asteroids`, `Platformer`, `ConsoleGame`, their ports `<Game>.Ecs`, `Swarm` (ECS stress test) and `PhysicsSandbox` (physics demo) | `Examples/*` | Exe | ConsoleEngine |
 | `Launcher` | `Examples/Launcher/` | Exe: text menu that starts the ECS games (plain `System.Console`, no engine) | ECS games (build order only) |
 | `TerraForM.Tests` | `Examples/TerraForM.Tests/` | NUnit 5 + NSubstitute | TerraForM |
 | `Launcher.Tests` | `Examples/Launcher.Tests/` | NUnit 5 | Launcher |
@@ -125,7 +125,7 @@ ConsoleEngine/                    the engine
     Rendering/                      Camera, OutlineLibrary, SpriteLibrary (namespace ConsoleEngine.Ecs.Rendering)
     Physics/                        RigidBody, Collider, PhysicsSystem, ContactEvent/SensorEvent; internal:
                                     BodyProxy, Collision (narrowphase), SpatialHashGrid (broadphase), PairCache,
-                                    ArrayBuffer
+                                    ContactSolver (+ SolverBody, ContactConstraint, Softness), ArrayBuffer
     Systems/                        built-in systems: MovementSystem, GlyphRenderSystem, OutlineRenderSystem,
                                     SpriteRenderSystem
   Extensions/ArrayExtensions.cs     To1D for 2D arrays
@@ -154,6 +154,8 @@ Examples/
                                   Systems/ (EntitySystem subclasses), Scenes/ (an EcsScene that spawns entities and
                                   adds systems in run order). TerraForM.Ecs links Assets/ from Examples/TerraForM
   Swarm/                          ECS stress test (no OOP original): Components/, Systems/, Scenes/SwarmScene
+  PhysicsSandbox/                 physics demo (no OOP original): BodySpawner, Components/, Systems/,
+                                  Scenes/SandboxScene
   Launcher/                       game launcher: GameCatalog (menu entries), GameLocator (exe paths), LauncherMenu
                                   (keys), LauncherScreen (drawing), GameRunner (Process.Start + wait), LauncherTexts
   Launcher.Tests/                 LauncherMenuTests, GameLocatorTests
@@ -288,7 +290,7 @@ Use [Conventional Commits 1.0.0](https://www.conventionalcommits.org/en/v1.0.0/#
 | `chore` | Anything else |
 
 - **Scopes** (optional): `engine`, `abstractions`, `windows`, `logger`, `xna`, `terraform`, `snake`, `asteroids`,
-  `platformer`, `consolegame`, `launcher`, `docs`, `ci`.
+  `platformer`, `consolegame`, `swarm`, `physicssandbox`, `launcher`, `docs`, `ci`.
 - **Description:** imperative, lower case, no trailing period. For example `fix(terraform): reset score on restart`.
 - **Breaking changes** to the public `ConsoleEngine` API or target framework: `!` after the type/scope and/or a
   `BREAKING CHANGE:` footer. For example `chore!: net8.0` (#10).

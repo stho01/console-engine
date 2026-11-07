@@ -163,20 +163,31 @@ fixed steps, so a system in `FixedSimulation` that reads a key's `Pressed` edge 
 input in `Simulation`, consume it in `FixedSimulation`. Asteroids.Ecs runs its physics there.
 
 <a id="physics"></a>
-**Physics** (namespace `ConsoleEngine.Ecs.Physics`, plan `docs/design/physics-plan.md`, phase 2 done: detection and
-events, **no contact response yet**, so touching bodies pass through each other). Units are console cells on both axes
-(a circle looks twice as tall as wide on screen).
+**Physics** (namespace `ConsoleEngine.Ecs.Physics`, plan `docs/design/physics-plan.md`, phases 0–3 done: detection,
+events and the Soft Step contact solver of Box2D v3, without rotation). Units are console cells on both axes (a circle
+looks twice as tall as wide on screen unless the font is square, as in PhysicsSandbox).
 - `RigidBody` (`RigidBody.Dynamic(mass, gravityScale, linearDamping)`, `.Kinematic()`, `.Static()`; `default` is
   static). `Collider` (`Collider.Circle(radius, offset)`, `Collider.Box(halfExtents, offset)`, then `with { … }`):
-  shape, `Category`/`Mask` bits (factory default: category 1, collides with all), `IsSensor`. A `Collider` without a
-  `RigidBody` is a static body. `default(Collider)` has `Mask` 0 and collides with nothing.
-- `PhysicsSystem` (add it to `FixedSimulation`, default `DefaultCellSize` 8 cells, `Gravity` default 0) moves every
-  non-static `RigidBody` that has a `Velocity` (dynamic: `v += Gravity * GravityScale * step`, then
-  `v *= 1 / (1 + step * LinearDamping)`; then `p += v * step`). A body without `Velocity` never moves. A dynamic body
-  without `Collider` still moves.
+  shape, `Category`/`Mask` bits (factory default: category 1, collides with all), `IsSensor`, `Friction` (factory
+  default `DefaultFriction` 0.6), `Restitution` (default 0). A `Collider` without a `RigidBody` is a static body.
+  `default(Collider)` has `Mask` 0 and collides with nothing.
+- A dynamic or kinematic body needs a `Velocity`; without one it is handled as **static** (never moves, never pushed).
+- `PhysicsSystem` (add it to `FixedSimulation`; `DefaultCellSize` 8 cells; `Gravity` default 0; `SubstepCount` 4;
+  `ContactHertz` 30, capped at a quarter of the substep rate, doubled for contacts with a static or kinematic body;
+  `ContactDampingRatio` 10; `ContactPushMaxSpeed` 3 cells/s; `RestitutionThreshold` 1 cell/s — all Box2D's defaults
+  with 1 cell = 1 Box2D length unit). Each step is split into `SubstepCount` substeps of `h = step / SubstepCount`;
+  per substep, dynamic bodies get `v = v / (1 + h * LinearDamping) + Gravity * GravityScale * h`, contacts push, and
+  non-static bodies move `p += v * h`. Rigid bodies without a `Collider` get the same substeps without contacts.
 - A pair is tested only if `(a.Category & b.Mask) != 0` and `(b.Category & a.Mask) != 0`, not both static, not both
   sensors, and, if neither is a sensor, at least one is dynamic (kinematic–kinematic and kinematic–static never touch).
-  Touching edges count as touching.
+- Contact response: dynamic bodies don't pass through each other or through static/kinematic ones. Static and
+  kinematic bodies are never pushed. Overlaps are pushed out at most `ContactPushMaxSpeed`, and that push adds no
+  velocity. Bodies settle about `LinearSlop` (0.005 cells) into each other per contact, so a stack sinks a little.
+  Friction per pair = `sqrt(a.Friction * b.Friction)`, restitution = `max(a.Restitution, b.Restitution)`; impacts
+  slower than `RestitutionThreshold` don't bounce. Contacts start before the shapes touch (speculative: when the gap
+  is less than how far both can move this step), so fast bodies don't tunnel through thin walls.
+- "Touching" (for events and `TouchingPairCount`) = separation below `TouchDistance` (0.02 cells), so a resting
+  contact stays touching instead of flickering.
 - Events (`ContactBeginEvents`, `ContactEndEvents`, `SensorBeginEvents`, `SensorEndEvents`) hold the last step's
   changes only and are replaced every step. A begin fires once when a pair starts touching; an end fires when it stops
   **or when either entity was destroyed** (the entity in the event is then dead). In contact events `A` has the lower
@@ -348,6 +359,8 @@ files, so every rule above applies, except:
 | ConsoleGame.Ecs | One entity per cell (4096). Every **500 ms** (timer reset to 0) each gets a random colour of the same five. Cells are black until the first recolour. `ESC` quits | `RecolorSystem`, `ColorGridScene`, `ConsoleEcsGame.OnUpdate` |
 | Swarm | Particles are pulled towards a point moving on a Lissajous curve, each with its own `Agility.Pull` (30–180 cells/s²), drag 0.3/s, and bounce off the screen edges. Colour by speed: dark blue < 15, blue < 30, cyan < 50 cells/s, else white. The HUD on row 0 shows the count | `AttractorSystem`, `BounceSystem`, `ColorBySpeedSystem`, `HudSystem` |
 | Swarm | `SPACE` adds 10 000 particles, `BACKSPACE` removes up to 10 000 (both through the command buffer, applied at the end of the simulation group). `ESC` quits | `SpawnControlSystem`, `SwarmGame.OnUpdate` |
+| PhysicsSandbox | Gravity 30 cells/s² down. Static floor (3 rows), side walls and two ledges (`█`), a kinematic platform (`▒`, 16×1) that moves at 12 cells/s between 20 % and 80 % of the width. `PhysicsSystem` cell size 2 | `SandboxScene`, `PatrolSystem` (fixed step, `[UpdateBefore(typeof(PhysicsSystem))]`) |
+| PhysicsSandbox | `SPACE` drops a ball (`●`, radius 0.5, restitution 0.6, mass 1), `B` a box (`■`, 1×1, mass 3, no bounce), `ENTER` 50 balls stacked 1.2 cells apart, all at random x on row 3 with a random sideways speed up to 8 cells/s. `R` removes every dropped body. `ESC` quits. Dropping goes through the command buffer: the bodies appear at the end of the simulation group and move from the next fixed step. The HUD on row 0 shows the count | `DropSystem`, `BodySpawner`, `HudSystem`, `PhysicsSandboxGame.OnUpdate` |
 
 <a id="launcher"></a>
 ## Launcher (`Examples/Launcher`)

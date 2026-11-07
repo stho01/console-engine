@@ -15,13 +15,13 @@ internal enum PairKind : byte
 }
 
 /// <summary>
-/// The pairs that touch, kept from one step to the next so a step can tell which pairs began and which ended (and,
-/// from phase 3, carry the contact impulse over for warm starting). Keyed by the two entities, never by body index:
-/// indices change whenever the chunk layout does.
+/// The pairs of the last two steps: contacts (touching or speculative) and touching sensor overlaps. A step uses the
+/// previous step's entry of a pair to tell whether it began or ended touching, and to warm start the solver with the
+/// pair's impulses. Keyed by the two entities, never by body index: indices change whenever the chunk layout does.
 /// <para>
-/// Two open-addressing hash tables with linear probing, swapped every step. The step inserts its pairs into the
-/// current table and marks them in the previous one; whatever is left unmarked in the previous table has ended. That
-/// needs no deletion, and the tables only grow.
+/// Two open-addressing hash tables with linear probing, swapped every step. The step adds its pairs to the current
+/// table and marks them in the previous one; whatever is left unmarked in the previous table is gone. That needs no
+/// deletion, and the tables only grow.
 /// </para>
 /// </summary>
 internal sealed class PairCache
@@ -40,53 +40,94 @@ internal sealed class PairCache
     //** props
     //**********************************************************
 
-    /// <summary>Pairs touching in the current step.</summary>
+    /// <summary>Pairs added in the current step.</summary>
     public int Count { get; private set; }
+
+    /// <summary>Pairs added in the current step that touch.</summary>
+    public int TouchingCount { get; private set; }
 
     //**********************************************************
     //** public methods
     //**********************************************************
 
-    /// <summary>Starts a step: this step's pairs become the previous ones, and the current table is emptied.</summary>
-    public void BeginStep()
+    /// <summary>
+    /// Starts a step: this step's pairs become the previous ones, and the current table is emptied and made big enough
+    /// for <paramref name="maxPairs"/>, so slots returned by <see cref="Add"/> stay valid for the whole step.
+    /// </summary>
+    public void BeginStep(int maxPairs)
     {
         (_current, _previous) = (_previous, _current);
         _previousCount = Count;
         Count = 0;
-        Array.Clear(_current);
+        TouchingCount = 0;
+
+        var capacity = _current.Length;
+        while (capacity < maxPairs * 2)
+            capacity *= 2;
+
+        if (capacity == _current.Length)
+            Array.Clear(_current);
+        else
+            _current = new Entry[capacity];
     }
 
     /// <summary>
-    /// Records that the pair touches in this step. Returns true if it didn't touch in the previous step, i.e. it
-    /// begins. Call at most once per pair and step. <paramref name="a"/> must have the lower id.
+    /// Adds a pair to this step. <paramref name="a"/> must have the lower id, and each pair may be added once per step,
+    /// at most as many as <see cref="BeginStep"/> allowed. Returns the pair's slot for <see cref="StoreImpulses"/>, and
+    /// what the previous step knew about it (all zero/false if it wasn't there).
     /// </summary>
-    public bool Touch(Entity a, Entity b, PairKind kind)
+    public int Add(Entity a, Entity b, PairKind kind, bool touching, out bool wasTouching, out float normalImpulse,
+        out float tangentImpulse)
     {
-        if ((Count + 1) * 2 > _current.Length)
-            GrowCurrent();
+        wasTouching = false;
+        normalImpulse = 0f;
+        tangentImpulse = 0f;
 
-        Insert(_current, new Entry(a, b, kind));
-        Count++;
-
-        if (_previousCount == 0)
-            return true;
-
-        var mask = _previous.Length - 1;
-        for (var slot = Hash(a, b) & mask; ; slot = (slot + 1) & mask)
+        if (_previousCount > 0)
         {
-            ref var entry = ref _previous[slot];
-            if (entry.IsEmpty)
-                return true;
-
-            if (entry.A == a && entry.B == b)
+            var previousMask = _previous.Length - 1;
+            for (var slot = Hash(a, b) & previousMask; ; slot = (slot + 1) & previousMask)
             {
-                entry.Seen = true;
-                return false;
+                ref var entry = ref _previous[slot];
+                if (entry.IsEmpty)
+                    break;
+
+                if (entry.A == a && entry.B == b)
+                {
+                    entry.Seen = true;
+                    wasTouching = entry.Touching;
+                    normalImpulse = entry.NormalImpulse;
+                    tangentImpulse = entry.TangentImpulse;
+                    break;
+                }
             }
         }
+
+        Count++;
+        if (touching)
+            TouchingCount++;
+
+        var mask = _current.Length - 1;
+        var free = Hash(a, b) & mask;
+        while (!_current[free].IsEmpty)
+            free = (free + 1) & mask;
+
+        _current[free] = new Entry(a, b, kind, touching);
+        return free;
     }
 
-    /// <summary>Ends the step: adds every pair of the previous step that didn't touch in this one.</summary>
+    /// <summary>Keeps the solver's impulses of a pair for warm starting the next step.</summary>
+    public void StoreImpulses(int slot, float normalImpulse, float tangentImpulse)
+    {
+        ref var entry = ref _current[slot];
+        entry.NormalImpulse = normalImpulse;
+        entry.TangentImpulse = tangentImpulse;
+    }
+
+    /// <summary>
+    /// Adds an end event for every pair that touched in the previous step and wasn't added in this one (moved apart
+    /// beyond contact range, filtered out, or an entity destroyed).
+    /// </summary>
     public void CollectEnded(ArrayBuffer<ContactEvent> contactsEnded, ArrayBuffer<SensorEvent> sensorsEnded)
     {
         if (_previousCount == 0)
@@ -95,7 +136,7 @@ internal sealed class PairCache
         for (var i = 0; i < _previous.Length; i++)
         {
             ref readonly var entry = ref _previous[i];
-            if (entry.IsEmpty || entry.Seen)
+            if (entry.IsEmpty || entry.Seen || !entry.Touching)
                 continue;
 
             switch (entry.Kind)
@@ -117,37 +158,18 @@ internal sealed class PairCache
     //** internals
     //**********************************************************
 
-    private static void Insert(Entry[] table, in Entry entry)
-    {
-        var mask = table.Length - 1;
-        var slot = Hash(entry.A, entry.B) & mask;
-        while (!table[slot].IsEmpty)
-            slot = (slot + 1) & mask;
-
-        table[slot] = entry;
-    }
-
-    /// <summary>Doubles the current table. Only while the number of touching pairs grows past its high-water mark.</summary>
-    private void GrowCurrent()
-    {
-        var old = _current;
-        _current = new Entry[old.Length * 2];
-        for (var i = 0; i < old.Length; i++)
-        {
-            if (!old[i].IsEmpty)
-                Insert(_current, old[i]);
-        }
-    }
-
     private static int Hash(Entity a, Entity b) =>
         (int)(((uint)a.Id * 0x9E3779B1u) ^ ((uint)b.Id * 0x85EBCA77u) ^ (uint)(a.Version + b.Version));
 
-    internal struct Entry(Entity a, Entity b, PairKind kind)
+    internal struct Entry(Entity a, Entity b, PairKind kind, bool touching)
     {
         public readonly Entity A = a;
         public readonly Entity B = b;
         public readonly PairKind Kind = kind;
+        public readonly bool Touching = touching;
         public bool Seen;
+        public float NormalImpulse;
+        public float TangentImpulse;
 
         /// <summary>Versions start at 1, so a zeroed slot is empty.</summary>
         public readonly bool IsEmpty => A.Version == 0;

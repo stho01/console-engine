@@ -17,7 +17,8 @@ public enum ShapeType : byte
 /// static body.
 /// <para>
 /// Two colliders are tested only if each one's <see cref="Category"/> is in the other's <see cref="Mask"/> (Box2D's
-/// filter rule). The factories put the collider in category 1 and let it collide with every category.
+/// filter rule). The factories put the collider in category 1, let it collide with every category, and give it
+/// <see cref="DefaultFriction"/> and no restitution.
 /// </para>
 /// </summary>
 public struct Collider
@@ -28,6 +29,9 @@ public struct Collider
 
     public const uint DefaultCategory = 1u;
     public const uint AllCategories = uint.MaxValue;
+
+    /// <summary>Box2D's default.</summary>
+    public const float DefaultFriction = .6f;
 
     public ShapeType Shape;
 
@@ -51,6 +55,17 @@ public struct Collider
     /// </summary>
     public bool IsSensor;
 
+    /// <summary>
+    /// Coulomb friction, usually 0 to 1. A pair uses <c>sqrt(a * b)</c>, so 0 on either side means no friction.
+    /// </summary>
+    public float Friction;
+
+    /// <summary>
+    /// Bounciness, 0 (no bounce) to 1 (keeps its speed). A pair uses the larger of the two. Only for impacts faster than
+    /// <see cref="PhysicsSystem.RestitutionThreshold"/>.
+    /// </summary>
+    public float Restitution;
+
     //**********************************************************
     //** public methods
     //**********************************************************
@@ -61,7 +76,8 @@ public struct Collider
         Radius = radius,
         Offset = offset,
         Category = DefaultCategory,
-        Mask = AllCategories
+        Mask = AllCategories,
+        Friction = DefaultFriction
     };
 
     public static Collider Box(Vector2 halfExtents, Vector2 offset = default) => new()
@@ -70,6 +86,7 @@ public struct Collider
         HalfExtents = halfExtents,
         Offset = offset,
         Category = DefaultCategory,
-        Mask = AllCategories
+        Mask = AllCategories,
+        Friction = DefaultFriction
     };
 }

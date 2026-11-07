@@ -4,7 +4,7 @@ Support/user words are **[inferred]**. The team may also use Norwegian terms. Ad
 
 | User / support word | Meaning | Code identifier |
 |---|---|---|
-| the game / the app | One example exe built on the engine | `GameBase` subclass: `TerraformGame`, `SnakeGame`, `AsteroidsGame`, `PlatformerGame`, `ConsoleGame.Game`, and the ECS ports `TerraformEcsGame`, `SnakeEcsGame`, `AsteroidsEcsGame`, `PlatformerEcsGame`, `ConsoleEcsGame`, and the ECS stress test `SwarmGame` |
+| the game / the app | One example exe built on the engine | `GameBase` subclass: `TerraformGame`, `SnakeGame`, `AsteroidsGame`, `PlatformerGame`, `ConsoleGame.Game`, and the ECS ports `TerraformEcsGame`, `SnakeEcsGame`, `AsteroidsEcsGame`, `PlatformerEcsGame`, `ConsoleEcsGame`, the ECS stress test `SwarmGame`, and the physics demo `PhysicsSandboxGame` |
 | the engine | The shared library | `ConsoleEngine` project, namespace `ConsoleEngine` |
 | window / screen | The console window and its cell buffer | `RenderConsole`, `ConsoleHandler`, `IConsoleHandler` |
 | pixel / cell / character | One console cell | `Pixel` (`Char`, `ForegroundColor`, `BackgroundColor`) |
@@ -31,6 +31,12 @@ Support/user words are **[inferred]**. The team may also use Norwegian terms. Ad
 | sensor / trigger | A collider that only reports overlaps, never pushes | `Collider.IsSensor`, `SensorEvent` |
 | contact / hit / collision event | Two colliders started or stopped touching | `ContactEvent`, `PhysicsSystem.ContactBeginEvents` / `ContactEndEvents` / `SensorBeginEvents` / `SensorEndEvents` |
 | broadphase | Fast search for pairs that might touch, before the exact test | `SpatialHashGrid` (narrowphase: `Collision`) |
+| solver / contact response / bounce / friction | What stops bodies going through each other, makes them slide or bounce | `ContactSolver`, `Collider.Friction`, `Collider.Restitution`, `PhysicsSystem.RestitutionThreshold` |
+| substep | One of the slices a physics step is cut into for the solver (default 4) | `PhysicsSystem.SubstepCount` |
+| soft contact / soft step | Contacts act as stiff, damped springs instead of hard corrections (Box2D v3) | `Softness`, `PhysicsSystem.ContactHertz`, `ContactDampingRatio`, `ContactPushMaxSpeed` |
+| warm starting | Starting the solver with the previous step's impulses, so stacks rest instead of jitter | `PairCache.Add` / `StoreImpulses`, `ContactConstraint.NormalImpulse` |
+| speculative contact | A contact created before two bodies touch, because they can close the gap this step; stops tunnelling | `BodyProxy.Margin`, `PhysicsSystem.CreateContacts` |
+| moving platform | A kinematic body moved by its velocity; never pushed, carries what stands on it by friction | `BodyType.Kinematic`, PhysicsSandbox `Patrol` / `PatrolSystem` |
 | fixed step / fixed timestep | A simulation step of constant length (default 1/60 s), run 0 or more times per frame so physics doesn't depend on the frame rate | `FixedTimestep`, `EcsScene.FixedSimulation` |
 | command buffer / deferred change | Create/destroy/add/remove recorded during a loop, applied later | `CommandBuffer`, `EntitySystem.Commands` |
 | deferred handle / deferred entity | Handle returned by a buffered Create, usable only in the same buffer until playback | Negative `Entity.Id`, `CommandBuffer.Create`, `CommandBuffer.Resolve` |

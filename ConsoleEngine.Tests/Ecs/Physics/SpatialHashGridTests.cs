@@ -98,7 +98,8 @@ public class SpatialHashGridTests
     };
 
     private static bool Overlaps(in BodyProxy a, in BodyProxy b) =>
-        a.Min.X <= b.Max.X && b.Min.X <= a.Max.X && a.Min.Y <= b.Max.Y && b.Min.Y <= a.Max.Y;
+        MathF.Abs(a.Center.X - b.Center.X) <= a.Extents.X + b.Extents.X &&
+        MathF.Abs(a.Center.Y - b.Center.Y) <= a.Extents.Y + b.Extents.Y;
 
     private static List<(int, int)> FindPairs(BodyProxy[] bodies, float cellSize)
     {

@@ -1,9 +1,10 @@
 # Plan: 2D-fysikk i ConsoleEngine
 
-Status (2026-11-07): fase 0, 1 og 2 er ferdige (baseline-benchmark, `FixedTimestep` og `EcsScene.FixedSimulation`,
-`ConsoleEngine/Ecs/Physics/` med deteksjon og hendelser, Asteroids.Ecs som pilot). Fase 3 (løser) gjenstår. Målingene
-står i § 12b. Planen er gjennomgått mot industristandard (Box2D v3, «Fix Your Timestep»,
-Ericson, Godot/Unity 2D). Avvik fra standarden er markert og begrunnet i § 10.
+Status (2026-11-07): fase 0–3 er ferdige: `FixedTimestep` og `EcsScene.FixedSimulation`, deteksjon og hendelser,
+og Soft Step-løseren. Pilotene er Asteroids.Ecs (sensorer, lag) og det nye eksempelet `Examples/PhysicsSandbox`
+(løseren). Fase 4 (tilegrid, spørringer, karakterkontroller) gjenstår. Målingene står i § 12b. Planen er gjennomgått
+mot industristandard (Box2D v3, «Fix Your Timestep», Ericson, Godot/Unity 2D). Avvik fra standarden er markert og
+begrunnet i § 10.
 
 ## 1. Mål og ikke-mål
 
@@ -246,11 +247,22 @@ ristende kontroll.
   som treffer to asteroider i samme steg, ødelegger begge (før: bare den første), og asteroider og kuler flytter seg i
   faste steg på 1/60 s.
 
-### Fase 3: Løser (`feat(engine):`)
+### Fase 3: Løser (`feat(engine):`) — ferdig
 
-- Soft Step, warm starting, restitusjon, friksjon, spekulative kontakter, kinematiske kropper.
-- **Pilot: Swarm.** Ny atferd: partikler kolliderer med hverandre (i dag speiler de bare ved kanten i
-  `BounceSystem`). Skaleringstesten for løseren.
+- Soft Step som i Box2D v3 (`ContactSolver`): 4 substeg, myk push-out med `ContactHertz` 30 og dempingsforhold 10,
+  relax-pass, restitusjon til slutt, warm starting fra `PairCache`, friksjon √(a·b), restitusjon max(a, b).
+  Standardverdiene er Box2D sine med 1 celle = 1 lengdeenhet.
+- Spekulative kontakter: hver kropp får en margin (fart × steg, pluss tyngdekraft × steg²). Broadphase-boksen vokser
+  med den, og et par blir en kontakt når gapet er mindre enn begge marginene. Det gjør at raske kropper ikke tunnelerer,
+  uten egen CCD. Den sveipede testen mot tilegrid kommer i fase 4.
+- `Collision` gir nå separasjonen også når formene er fra hverandre (gap), ikke bare ved overlapp.
+- «Touching» (hendelser) er separasjon under `TouchDistance` = 4 × `LinearSlop` (Box2D sin speculative distance),
+  så en kropp som hviler ikke blinker mellom begin og end.
+- Dynamiske og kinematiske kropper uten `Velocity` regnes som statiske. Rigid bodies uten `Collider` integreres med
+  de samme substegene, uten kontakter.
+- **Pilot: `Examples/PhysicsSandbox` i stedet for Swarm.** Swarm har 100 000 partikler på 160 × 100 celler (rundt 6 per
+  celle). Kollisjon mellom alle gjør den ubrukelig som stresstest, så eier valgte et nytt lite eksempel: baller og
+  bokser som slippes i en boks med to hyller og en kinematisk plattform. Spillet ligger i launcheren.
 
 ### Fase 4: Tilegrid, spørringer, karakterkontroller (`feat(engine):`)
 
@@ -301,6 +313,21 @@ Samme maskin og oppsett.
 Lineært som ventet: ti ganger flere kropper gir rundt ti til tjue ganger tiden, og ved 10 000 kropper er hele steget
 32 ganger raskere enn bare partestene i brute force. Ved 100 kropper koster gather og parcachen omtrent det brute force
 sparer. 1 000-målingen har stor feilmargin (`--job short`, få iterasjoner).
+
+### Fase 3: med løseren (2026-11-07)
+
+Samme benchmark som fase 2 (`PhysicsStepBenchmarks.Step60Hz`), nå med løseren og 4 substeg. Kroppene starter på
+tilfeldige steder; overlappende skyves fra hverandre og blir liggende inntil hverandre, så de fleste kontaktene varer
+fra steg til steg. Samme maskin og oppsett.
+
+| Kropper | Fase 2 (deteksjon) | Fase 3 (med løser) | Allokert |
+|---|---|---|---|
+| 100 | 3,8 µs | 5,1 µs | 0 B |
+| 1 000 | 53 µs | 109 µs | 0 B |
+| 10 000 | 0,98 ms | 2,0 ms | 0 B |
+
+Løseren omtrent dobler steget. 10 000 kropper i kontakt tar 2 ms av et 16,7 ms-steg ved 60 Hz. Feilmarginene er store
+(`--job short`).
 
 ## 13. Åpne spørsmål til eier
 

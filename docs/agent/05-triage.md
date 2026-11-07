@@ -5,7 +5,7 @@
 
 | Fact | Why | How to get it |
 |---|---|---|
-| **Which game** (TerraForM, Snake, Asteroids, Platformer, ConsoleGame, their `.Ecs` ports, Swarm, or their own game on `ConsoleEngine`) | Rules differ per game ([03](03-rules.md)) | Ask, or the exe name |
+| **Which game** (TerraForM, Snake, Asteroids, Platformer, ConsoleGame, their `.Ecs` ports, Swarm, PhysicsSandbox, or their own game on `ConsoleEngine`) | Rules differ per game ([03](03-rules.md)) | Ask, or the exe name |
 | **OS and console host** | Windows only. Windows Terminal ignores the sizing/font calls **[external]** | [07 § Q1, Q2](07-checks.md#q1) |
 | **How it was launched and from which folder** (double-click the exe, `dotnet run`, IDE, a shortcut, a terminal in another folder) | Map files and the logger exe are found by **relative path** | [07 § Q3](07-checks.md#q3) |
 | **The exact error text**, if any | There are no log files. The exception printed to the console is the only record | Ask them to start it from an already-open terminal so the text stays ([06 § Capturing a crash](06-diagnostics.md#capture)) |
@@ -91,7 +91,7 @@
 
 **Symptom [inferred]:** "how do I exit?", "ESC doesn't quit", "the logger window stays open after the game closes".
 
-1. Which game? Only `ConsoleGame`, `ConsoleGame.Ecs` and `Swarm` quit on `ESC` (`Stop()`). In TerraForM and TerraForM.Ecs `ESC` opens the menu. Others have no quit key. → **Cause:** no quit path ([04 § F3](04-flows.md#f3)). **Fix:** close the console window. Stop.
+1. Which game? Only `ConsoleGame`, `ConsoleGame.Ecs`, `Swarm` and `PhysicsSandbox` quit on `ESC` (`Stop()`). In TerraForM and TerraForM.Ecs `ESC` opens the menu. Others have no quit key. → **Cause:** no quit path ([04 § F3](04-flows.md#f3)). **Fix:** close the console window. Stop.
 2. Logger stays open after the game exits → **Cause:** `Log.Stop` is never reached, because `RenderConsole.Close` calls `Environment.Exit(0)` first, and the logger only exits on a `SocketException` ([04 § F4](04-flows.md#f4)). How the logger sees the closed connection is **[external]** and unverified. **Fix:** close the logger window. Escalate if it spins CPU.
 
 <a id="p6"></a>
@@ -182,20 +182,24 @@
 4. `Could not start ...` → `Win32Exception` from `Process.Start` (`conhost.exe` missing or blocked). Escalate with the message. Stop.
 
 <a id="p17"></a>
-## P17 — Physics: bodies pass through each other / no hit / hit reported twice or late
+## P17 — Physics: bodies pass through each other / sink / no hit / hit reported twice or late
 
-Applies to Asteroids.Ecs and any game on `ConsoleEngine.Ecs.Physics`. Rules: [03 § Physics](03-rules.md#physics),
+Applies to PhysicsSandbox, Asteroids.Ecs and any game on `ConsoleEngine.Ecs.Physics`. Rules: [03 § Physics](03-rules.md#physics),
 flow: [04 § F11](04-flows.md#f11).
 
-1. Bodies overlap and keep going → **expected in phase 2**: there is no contact response yet (`docs/design/physics-plan.md`
-   phase 3). Stop.
-2. No event at all for a pair → check, in order: both have a `Collider` and a `Position`; the `Category`/`Mask` bits accept
+1. Bodies overlap and keep going → check, in order: a filter or pair rule excludes the pair (step 2 below; in Asteroids.Ecs
+   asteroids pass through each other by design); one body is static or kinematic and the other too (no contact between
+   them); the dynamic body has no `Velocity` (handled as static). Otherwise escalate with the body sizes and speeds. Stop.
+2. Bodies sink a little into each other or into the floor, more in a tall stack → by design: each contact settles about
+   `PhysicsSystem.LinearSlop` (0.005 cells) deep, and contacts are soft springs. A deep overlap is pushed out at most
+   `ContactPushMaxSpeed` (3 cells/s), so it takes a moment. Stop.
+3. No event at all for a pair → check, in order: both have a `Collider` and a `Position`; the `Category`/`Mask` bits accept
    each other both ways (`default(Collider)` has `Mask` 0); not both static (a `Collider` without `RigidBody` is static);
    not both sensors; a non-sensor pair has a dynamic body. Any of these → skipped silently ([04 § F11](04-flows.md#f11)
    step 4). Stop.
-3. A body never moves → it has no `Velocity`, is `BodyType.Static`, or `PhysicsSystem` was added to `Simulation` or not
+4. A body never moves → it has no `Velocity`, is `BodyType.Static`, or `PhysicsSystem` was added to `Simulation` or not
    at all instead of `FixedSimulation`. Stop.
-4. The same hit handled several times, or hits missed → the reacting system reads the events from `Simulation` instead of
+5. The same hit handled several times, or hits missed → the reacting system reads the events from `Simulation` instead of
    after `PhysicsSystem` in `FixedSimulation` ([03 § Physics](03-rules.md#physics)). Stop.
-5. Asteroids.Ecs: one bullet removed two asteroids → by design when it touches both in the same step ([03 § Asteroids.Ecs
+6. Asteroids.Ecs: one bullet removed two asteroids → by design when it touches both in the same step ([03 § Asteroids.Ecs
    row](03-rules.md)). Stop.

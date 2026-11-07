@@ -9,9 +9,10 @@ using EngineVelocity = ConsoleEngine.Ecs.Components.Velocity;
 namespace ConsoleEngine.Benchmarks.Physics;
 
 /// <summary>
-/// One whole <see cref="PhysicsSystem"/> step (integrate, gather, grid broadphase, narrowphase, pair cache, events)
-/// on the same bodies as <see cref="BruteForceCollisionBenchmarks"/>: compare the two tables. The bodies are dynamic
-/// circles that don't move, so after the first step every touching pair persists (the steady state of a game).
+/// One whole <see cref="PhysicsSystem"/> step (integrate, gather, grid broadphase, narrowphase, pair cache, events,
+/// solver with 4 substeps) on the same bodies as <see cref="BruteForceCollisionBenchmarks"/>: compare the two tables.
+/// The bodies are dynamic circles without gravity that start at random places. Overlapping ones are pushed apart and
+/// then rest against each other, so most contacts persist from step to step (warm started), as in a running game.
 /// </summary>
 [MemoryDiagnoser]
 public class PhysicsStepBenchmarks

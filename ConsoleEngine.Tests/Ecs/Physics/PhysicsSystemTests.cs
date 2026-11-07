@@ -39,10 +39,29 @@ public class PhysicsSystemTests
 
         _group.Update(Step);
 
+        // 4 substeps of 0.125 s: vy = 2.5, 5, 7.5, 10, y = 0.125 * (2.5 + 5 + 7.5 + 10).
         Assert.Multiple(() =>
         {
             Assert.That(_world.Get<Velocity>(body).Value, Is.EqualTo(new Vector2(2, 10)));
-            Assert.That(_world.Get<Position>(body).Value, Is.EqualTo(new Vector2(1, 5)));
+            Assert.That(_world.Get<Position>(body).Value, Is.EqualTo(new Vector2(1, 3.125f)));
+        });
+    }
+
+    [Test]
+    public void Update_DynamicBodyWithCollider_IntegratesLikeOneWithout()
+    {
+        _physics.Gravity = new Vector2(0, 10);
+        var plain = _world.Create(new Position(Vector2.Zero), new Velocity(new Vector2(2, 0)), RigidBody.Dynamic());
+        var shaped = _world.Create(new Position(new Vector2(100, 0)), new Velocity(new Vector2(2, 0)),
+            RigidBody.Dynamic(), Collider.Circle(1f));
+
+        _group.Update(Step);
+
+        Assert.Multiple(() =>
+        {
+            Assert.That(_world.Get<Velocity>(shaped).Value, Is.EqualTo(_world.Get<Velocity>(plain).Value));
+            Assert.That(_world.Get<Position>(shaped).Value - new Vector2(100, 0),
+                Is.EqualTo(_world.Get<Position>(plain).Value));
         });
     }
 
@@ -54,8 +73,8 @@ public class PhysicsSystemTests
 
         _group.Update(Step);
 
-        // 6 / (1 + 0.5 * 2) = 3.
-        Assert.That(_world.Get<Velocity>(body).Value, Is.EqualTo(new Vector2(3, 0)));
+        // Each of 4 substeps multiplies by 1 / (1 + 0.125 * 2) = 0.8.
+        Assert.That(_world.Get<Velocity>(body).Value.X, Is.EqualTo(6f * .8f * .8f * .8f * .8f).Within(1e-4f));
     }
 
     [Test]
@@ -178,9 +197,9 @@ public class PhysicsSystemTests
     public void Update_FiltersRejectEachOther_NoEvent()
     {
         _world.Create(new Position(Vector2.Zero), Collider.Circle(1f) with { Category = 2, Mask = 4 },
-            RigidBody.Dynamic());
+            RigidBody.Dynamic(), new Velocity(Vector2.Zero));
         _world.Create(new Position(Vector2.One), Collider.Circle(1f) with { Category = 4, Mask = 1 },
-            RigidBody.Dynamic());
+            RigidBody.Dynamic(), new Velocity(Vector2.Zero));
 
         _group.Update(Step);
 
@@ -191,9 +210,9 @@ public class PhysicsSystemTests
     public void Update_FiltersAcceptEachOther_Touches()
     {
         _world.Create(new Position(Vector2.Zero), Collider.Circle(1f) with { Category = 2, Mask = 4 },
-            RigidBody.Dynamic());
+            RigidBody.Dynamic(), new Velocity(Vector2.Zero));
         _world.Create(new Position(Vector2.One), Collider.Circle(1f) with { Category = 4, Mask = 2 },
-            RigidBody.Dynamic());
+            RigidBody.Dynamic(), new Velocity(Vector2.Zero));
 
         _group.Update(Step);
 

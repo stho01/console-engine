@@ -13,6 +13,7 @@ internal static class GameCatalog
         new("Platformer (ECS)", "Platformer.Ecs", "A D move, Space jump, F1 debug"),
         new("TerraForM (ECS)", "TerraForM.Ecs", "Arrows plan, P plant, Space send, R restart"),
         new("ConsoleGame (ECS)", "ConsoleGame.Ecs", "Esc quit"),
-        new("Swarm", "Swarm", "Space / Backspace +/- 10 000 particles, Esc quit")
+        new("Swarm", "Swarm", "Space / Backspace +/- 10 000 particles, Esc quit"),
+        new("Physics Sandbox", "PhysicsSandbox", "Space ball, B box, Enter 50 balls, R clear, Esc quit")
     ];
 }
