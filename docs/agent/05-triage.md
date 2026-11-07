@@ -208,8 +208,12 @@ flow: [04 § F11](04-flows.md#f11).
 8. A raycast or box cast misses a body that is clearly there → queries see the world as at the end of the last physics
    step; a body created or moved by game code since then shows up after the next step. Sensors are never reported, and
    the query mask must include the collider's `Category`. Stop.
-9. Dynamic bodies fall through a `TileGrid` → by design in phase 4: only queries and `CharacterMover` see the tile grid.
-   Use static box colliders for walls that bodies must hit. Stop.
-10. Platformer.Ecs: player stuck, falls through the floor, or can't jump → check the debug overlay (F1): `HIT: Floor`
+9. Dynamic bodies fall through a `TileGrid` → the body's `Collider.Mask` must include `TileGrid.Category` (default 1),
+   and it must be dynamic with a `Velocity`. Stop.
+10. Bodies hang in the air, don't fall after gravity changed, or don't react → they are asleep (`RigidBody.IsSleeping`,
+   drawn dark grey in PhysicsShowcase). Changing `Gravity` doesn't wake them (as Box2D): clear `IsSleeping`. A body that
+   never sleeps keeps moving faster than 0.05 cells/s (no damping, a moving platform). Stop.
+11. A box doesn't turn when hit off-centre → it needs both `Rotation` and `AngularVelocity`. Stop.
+12. Platformer.Ecs: player stuck, falls through the floor, or can't jump → check the debug overlay (F1): `HIT: Floor`
    while standing means landing works and `AIR` should be `False`. A jump pressed in the air waits for the landing (by
    design, as the original). Otherwise escalate with `POS`, `VEL` and `HIT`. Stop.

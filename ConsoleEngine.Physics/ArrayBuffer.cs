@@ -37,6 +37,32 @@ internal sealed class ArrayBuffer<T>(int capacity = 64) where T : struct
 
     public void Clear() => Count = 0;
 
+    /// <summary>Keeps the first <paramref name="count"/> items.</summary>
+    public void Truncate(int count) => Count = Math.Min(count, Count);
+
+    /// <summary>
+    /// Appends a slot and returns it for filling in place, without copying a whole item. The slot still holds whatever
+    /// a previous step left there: set every field the reader uses.
+    /// </summary>
+    public ref T Push()
+    {
+        if (Count == _items.Length)
+            Grow(Count + 1);
+
+        return ref _items[Count++];
+    }
+
+    /// <summary>
+    /// Makes the buffer exactly <paramref name="count"/> items long and returns them for filling by index, so a loop that
+    /// knows the count writes without a check per item. Items keep what a previous step left there.
+    /// </summary>
+    public Span<T> Resize(int count)
+    {
+        EnsureCapacity(count);
+        Count = count;
+        return AsSpan();
+    }
+
     public void EnsureCapacity(int capacity)
     {
         if (capacity > _items.Length)

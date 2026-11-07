@@ -6,7 +6,7 @@ repository and can be grepped.
 
 **What this system is:** a Windows-only .NET 10 library that draws games into a console window via Win32 P/Invoke
 (`ConsoleEngine`, `ConsoleEngine.Windows`), an optional out-of-process TCP logger (`ConsoleEngine.Logger`), and eleven
-example games (`TerraForM`, `Snake`, `Asteroids`, `Platformer`, `ConsoleGame`, an ECS port `*.Ecs` of each, the ECS stress test `Swarm` and the physics demo `PhysicsSandbox`), plus `Launcher`, a text menu that starts the ECS games. There is **no server, no database, no
+example games (`TerraForM`, `Snake`, `Asteroids`, `Platformer`, `ConsoleGame`, an ECS port `*.Ecs` of each, the ECS stress test `Swarm` and the physics demos `PhysicsSandbox` and `PhysicsShowcase`), plus `Launcher`, a text menu that starts the ECS games. There is **no server, no database, no
 queue, no tenant, no log file**. Each game is a single local process. See [01-system-map](01-system-map.md).
 
 ## How to use these docs
@@ -44,7 +44,7 @@ Tags used throughout:
 | Platformer: "debug text everywhere", "FPS not shown", "player vanishes into walls" | [P14](05-triage.md#p14) |
 | TerraForM: "the story is in English, where's the Norwegian version?" | [P15](05-triage.md#p15) |
 | Launcher: "game says (not built)", "launcher won't start a game", "game window stops at Press any key" | [P16](05-triage.md#p16) |
-| "Things pass through each other", "things sink into the floor", "bullet didn't hit", "hit counted twice", "physics events don't fire", "raycast misses", "platformer player stuck or falls through" | [P17](05-triage.md#p17) |
+| "Things pass through each other", "things sink into the floor", "bullet didn't hit", "hit counted twice", "physics events don't fire", "raycast misses", "platformer player stuck or falls through", "bodies hang in the air", "box doesn't spin" | [P17](05-triage.md#p17) |
 
 ## File index
 

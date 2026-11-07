@@ -37,10 +37,13 @@ public sealed class SpriteRenderSystem(
         {
             var positions = chunk.GetSpan<Position>();
             var refs = chunk.GetSpan<SpriteRef>();
+            var offsets = chunk.Has<RenderOffset>() ? chunk.GetSpan<RenderOffset>() : Span<RenderOffset>.Empty;
             for (var i = 0; i < chunk.Count; i++)
             {
                 var sprite = sprites.Get(refs[i].Id);
                 var screen = positions[i].Value - cameraPosition;
+                if (!offsets.IsEmpty)
+                    screen += offsets[i].Position;
                 var x = (int)MathF.Floor(screen.X) + refs[i].Offset.X;
                 var y = (int)MathF.Floor(screen.Y) + refs[i].Offset.Y;
                 CopyClipped(sprite.Data, x, y, pixels, width, height);

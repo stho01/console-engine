@@ -32,14 +32,22 @@ public sealed class OutlineRenderSystem(RenderConsole console, Camera camera, Ou
             var positions = chunk.GetSpan<Position>();
             var shapes = chunk.GetSpan<Outline>();
             var rotations = chunk.Has<Rotation>() ? chunk.GetSpan<Rotation>() : Span<Rotation>.Empty;
+            var offsets = chunk.Has<RenderOffset>() ? chunk.GetSpan<RenderOffset>() : Span<RenderOffset>.Empty;
 
             for (var i = 0; i < chunk.Count; i++)
             {
                 var screen = camera.WorldToScreen(positions[i].Value);
+                var rotation = rotations.IsEmpty ? 0f : rotations[i].Radians;
+                if (!offsets.IsEmpty)
+                {
+                    screen += offsets[i].Position;
+                    rotation += offsets[i].Radians;
+                }
+
                 if (!IsOnScreen(screen, outlines.GetRadius(shapes[i].Id)))
                     continue;
 
-                Draw(shapes[i], screen, rotations.IsEmpty ? 0f : rotations[i].Radians);
+                Draw(shapes[i], screen, rotation);
             }
         }
     }

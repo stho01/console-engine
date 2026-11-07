@@ -6,15 +6,19 @@ public enum ShapeType : byte
 {
     Circle,
 
-    /// <summary>Axis-aligned box. Bodies don't rotate, so the box never turns.</summary>
-    Box
+    /// <summary>A box, turned with the body's <c>Rotation</c> if it has one.</summary>
+    Box,
+
+    /// <summary>A convex polygon from the system's <see cref="PolygonLibrary"/>.</summary>
+    Polygon
 }
 
 /// <summary>
-/// The shape of a body and what it collides with, around the entity's <c>Position</c> (plus <see cref="Offset"/>), in
-/// cells. Create it with <see cref="Circle"/> or <see cref="Box"/> and change the rest with <c>with</c>:
+/// The shape of a body and what it collides with, around the entity's <c>Position</c>, in cells. Create it with
+/// <see cref="Circle"/>, <see cref="Box"/> or <see cref="Polygon"/> and change the rest with <c>with</c>:
 /// <c>Collider.Circle(.5f) with { IsSensor = true }</c>. An entity with a collider but no <see cref="RigidBody"/> is a
-/// static body.
+/// static body. If the entity has a <c>Rotation</c>, the shape (and its <see cref="Offset"/>) turns with it around
+/// <c>Position</c>.
 /// <para>
 /// Two colliders are tested only if each one's <see cref="Category"/> is in the other's <see cref="Mask"/> (Box2D's
 /// filter rule). The factories put the collider in category 1, let it collide with every category, and give it
@@ -41,7 +45,12 @@ public struct Collider
     /// <summary><see cref="ShapeType.Circle"/> only.</summary>
     public float Radius;
 
-    /// <summary>Centre of the shape relative to the entity's position.</summary>
+    /// <summary>Id in the <see cref="PhysicsSystem.Polygons"/> library. <see cref="ShapeType.Polygon"/> only.</summary>
+    public int PolygonId;
+
+    /// <summary>
+    /// Centre of a circle or box relative to the entity's position. Polygons have their vertices relative to the position.
+    /// </summary>
     public Vector2 Offset;
 
     /// <summary>The categories this collider belongs to, as bits.</summary>
@@ -85,6 +94,18 @@ public struct Collider
         Shape = ShapeType.Box,
         HalfExtents = halfExtents,
         Offset = offset,
+        Category = DefaultCategory,
+        Mask = AllCategories,
+        Friction = DefaultFriction
+    };
+
+    /// <param name="polygonId">
+    /// From <see cref="PolygonLibrary.Add"/> of the <see cref="PhysicsSystem"/> it's used with.
+    /// </param>
+    public static Collider Polygon(int polygonId) => new()
+    {
+        Shape = ShapeType.Polygon,
+        PolygonId = polygonId,
         Category = DefaultCategory,
         Mask = AllCategories,
         Friction = DefaultFriction

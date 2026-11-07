@@ -4,7 +4,7 @@ Support/user words are **[inferred]**. The team may also use Norwegian terms. Ad
 
 | User / support word | Meaning | Code identifier |
 |---|---|---|
-| the game / the app | One example exe built on the engine | `GameBase` subclass: `TerraformGame`, `SnakeGame`, `AsteroidsGame`, `PlatformerGame`, `ConsoleGame.Game`, and the ECS ports `TerraformEcsGame`, `SnakeEcsGame`, `AsteroidsEcsGame`, `PlatformerEcsGame`, `ConsoleEcsGame`, the ECS stress test `SwarmGame`, and the physics demo `PhysicsSandboxGame` |
+| the game / the app | One example exe built on the engine | `GameBase` subclass: `TerraformGame`, `SnakeGame`, `AsteroidsGame`, `PlatformerGame`, `ConsoleGame.Game`, and the ECS ports `TerraformEcsGame`, `SnakeEcsGame`, `AsteroidsEcsGame`, `PlatformerEcsGame`, `ConsoleEcsGame`, the ECS stress test `SwarmGame`, and the physics demos `PhysicsSandboxGame` and `PhysicsShowcaseGame` |
 | the engine | The shared library | `ConsoleEngine` project, namespace `ConsoleEngine` |
 | window / screen | The console window and its cell buffer | `RenderConsole`, `ConsoleHandler`, `IConsoleHandler` |
 | pixel / cell / character | One console cell | `Pixel` (`Char`, `ForegroundColor`, `BackgroundColor`) |
@@ -39,6 +39,11 @@ Support/user words are **[inferred]**. The team may also use Norwegian terms. Ad
 | tile grid / level collision | Solid and empty tiles the physics queries and characters collide with, without one entity per wall | `TileGrid`, `PhysicsSystem.TileGrid`, Platformer.Ecs `TileMap.ToTileGrid` |
 | raycast / box cast / overlap | Asking the physics what is along a line, in the way of a moving box, or inside an area | `IPhysicsQueries.Raycast`, `CastBox`, `OverlapBox`, `OverlapCircle`, `CastHit` |
 | character controller / move and slide | Moving a player box that stops at walls and slides along them, not pushed by physics | `CharacterMover.MoveAndSlide`, `SlideCollisions` |
+| polygon shape | A convex shape of up to 8 corners, shared by id | `PolygonLibrary`, `Collider.Polygon`, `ConvexPolygon` |
+| spin / turning body | A body that rotates from contacts and friction | `Rotation` + `AngularVelocity`, `RigidBody.AngularDamping` |
+| manifold / contact points | Where two shapes touch: a normal and up to 2 points | `Manifold`, `ManifoldPoint`, `Collision` |
+| sleeping / asleep / island | Bodies at rest that the physics stops simulating until something wakes them; an island is a group of touching bodies that sleep and wake together | `RigidBody.IsSleeping`, `PhysicsSystem.EnableSleep`, `TimeToSleep`, `SleepingBodyCount` |
+| interpolation / smoothing | Drawing a body between its last two fixed steps so it glides instead of jumping | `Interpolation`, `InterpolationSystem`, engine `RenderOffset`, `FixedTimestep.Alpha` |
 | speculative contact | A contact created before two bodies touch, because they can close the gap this step; stops tunnelling | `BodyProxy.Margin`, `PhysicsSystem.CreateContacts` |
 | moving platform | A kinematic body moved by its velocity; never pushed, carries what stands on it by friction | `BodyType.Kinematic`, PhysicsSandbox `Patrol` / `PatrolSystem` |
 | fixed step / fixed timestep | A simulation step of constant length (default 1/60 s), run 0 or more times per frame so physics doesn't depend on the frame rate | `FixedTimestep`, `EcsScene.FixedSimulation` |

@@ -1,4 +1,5 @@
 using System;
+using Microsoft.Xna.Framework;
 
 namespace ConsoleEngine.Physics;
 
@@ -20,10 +21,19 @@ internal sealed class SpatialHashGrid
 
     private const int MinTableSize = 64;
 
+    /// <summary>Multiplying is much cheaper than dividing, and <see cref="CellOf"/> runs for every bound.</summary>
+    private readonly float _inverseCellSize;
+
     /// <summary>After a build, bucket <c>h</c> is <c>_entries[_bucketStarts[h] .. _bucketStarts[h + 1]]</c>.</summary>
     private int[] _bucketStarts = new int[MinTableSize + 1];
 
     private Entry[] _entries = new Entry[MinTableSize];
+
+    /// <summary>The entries in body order before sorting, and the bucket of each, from the same build.</summary>
+    private Entry[] _unsorted = new Entry[MinTableSize];
+
+    private int[] _entryBuckets = new int[MinTableSize];
+    private readonly ArrayBuffer<CellBox> _bounds = new();
     private int _tableMask = MinTableSize - 1;
 
     //**********************************************************
@@ -36,6 +46,7 @@ internal sealed class SpatialHashGrid
             throw new ArgumentOutOfRangeException(nameof(cellSize), cellSize, "Must be a positive, finite number.");
 
         CellSize = cellSize;
+        _inverseCellSize = 1f / cellSize;
     }
 
     //**********************************************************
@@ -53,72 +64,83 @@ internal sealed class SpatialHashGrid
 
     public void Build(ReadOnlySpan<BodyProxy> bodies)
     {
+        // Each body's bounds and cell range, worked out once.
+        _bounds.Resize(bodies.Length);
+        var bounds = _bounds.AsSpan();
         var entryCount = 0;
         for (var i = 0; i < bodies.Length; i++)
         {
-            GetCellRange(bodies[i], out var minX, out var minY, out var maxX, out var maxY);
-            entryCount += (maxX - minX + 1) * (maxY - minY + 1);
+            ref readonly var body = ref bodies[i];
+            var extents = body.BoundsExtents;
+            ref var box = ref bounds[i];
+            box.Min = body.Center - extents;
+            box.Max = body.Center + extents;
+            box.MinX = CellOf(box.Min.X);
+            box.MinY = CellOf(box.Min.Y);
+            box.MaxX = CellOf(box.Max.X);
+            box.MaxY = CellOf(box.Max.Y);
+            entryCount += (box.MaxX - box.MinX + 1) * (box.MaxY - box.MinY + 1);
         }
 
         EnsureCapacity(entryCount);
         EntryCount = entryCount;
-
-        // Counting sort. Count per bucket, turn counts into bucket ends, then fill backwards: each entry decrements its
-        // bucket's end, so afterwards every _bucketStarts[h] is the start of bucket h.
         var tableSize = _tableMask + 1;
         var starts = _bucketStarts;
         Array.Clear(starts, 0, tableSize + 1);
 
+        // Counting sort: write the entries in body order with their bucket, counting per bucket; turn the counts into
+        // bucket ends; then move each entry (backwards) to its bucket's end minus one, so afterwards every
+        // _bucketStarts[h] is the start of bucket h. The hash is computed once per entry.
+        var unsorted = _unsorted;
+        var buckets = _entryBuckets;
+        var k = 0;
         for (var i = 0; i < bodies.Length; i++)
         {
-            GetCellRange(bodies[i], out var minX, out var minY, out var maxX, out var maxY);
-            for (var y = minY; y <= maxY; y++)
-            for (var x = minX; x <= maxX; x++)
-                starts[Hash(x, y)]++;
+            ref readonly var box = ref bounds[i];
+            for (var y = box.MinY; y <= box.MaxY; y++)
+            for (var x = box.MinX; x <= box.MaxX; x++)
+            {
+                var bucket = Hash(x, y);
+                starts[bucket]++;
+                buckets[k] = bucket;
+                unsorted[k++] = new Entry(i, x, y, box.Min, box.Max);
+            }
         }
 
         for (var h = 1; h < tableSize; h++)
             starts[h] += starts[h - 1];
         starts[tableSize] = entryCount;
 
-        for (var i = bodies.Length - 1; i >= 0; i--)
-        {
-            GetCellRange(bodies[i], out var minX, out var minY, out var maxX, out var maxY);
-            for (var y = maxY; y >= minY; y--)
-            for (var x = maxX; x >= minX; x--)
-                _entries[--starts[Hash(x, y)]] = new Entry(i, x, y);
-        }
+        for (var e = entryCount - 1; e >= 0; e--)
+            _entries[--starts[buckets[e]]] = unsorted[e];
     }
 
     /// <summary>
-    /// Adds every pair of bodies whose bounding boxes overlap, exactly once, with <c>A &lt; B</c>. Uses the bodies of
-    /// the last <see cref="Build"/>.
+    /// Adds every pair of bodies whose bounding boxes overlap, exactly once, with <c>A &lt; B</c>. Uses the bounds of the
+    /// last <see cref="Build"/>, stored in the entries so the scan reads them in order.
     /// </summary>
-    public void FindPairs(ReadOnlySpan<BodyProxy> bodies, ArrayBuffer<BodyPair> pairs)
+    public void FindPairs(ArrayBuffer<BodyPair> pairs)
     {
         var tableSize = _tableMask + 1;
+        var entries = _entries;
         for (var h = 0; h < tableSize; h++)
         {
             var end = _bucketStarts[h + 1];
             for (var i = _bucketStarts[h]; i < end - 1; i++)
             {
-                var first = _entries[i];
+                ref readonly var first = ref entries[i];
                 for (var j = i + 1; j < end; j++)
                 {
-                    var second = _entries[j];
+                    ref readonly var second = ref entries[j];
 
                     // Different cells that hash to the same bucket. The pair, if any, is found in its own cell.
                     if (first.CellX != second.CellX || first.CellY != second.CellY || first.Body == second.Body)
                         continue;
 
-                    ref readonly var a = ref bodies[first.Body];
-                    ref readonly var b = ref bodies[second.Body];
-                    var boundsA = a.BoundsExtents;
-                    var boundsB = b.BoundsExtents;
-                    var minX = MathF.Max(a.Center.X - boundsA.X, b.Center.X - boundsB.X);
-                    var minY = MathF.Max(a.Center.Y - boundsA.Y, b.Center.Y - boundsB.Y);
-                    var maxX = MathF.Min(a.Center.X + boundsA.X, b.Center.X + boundsB.X);
-                    var maxY = MathF.Min(a.Center.Y + boundsA.Y, b.Center.Y + boundsB.Y);
+                    var minX = MathF.Max(first.Min.X, second.Min.X);
+                    var minY = MathF.Max(first.Min.Y, second.Min.Y);
+                    var maxX = MathF.Min(first.Max.X, second.Max.X);
+                    var maxY = MathF.Min(first.Max.Y, second.Max.Y);
                     if (minX > maxX || minY > maxY)
                         continue;
 
@@ -139,17 +161,8 @@ internal sealed class SpatialHashGrid
     //** internals
     //**********************************************************
 
-    private void GetCellRange(in BodyProxy body, out int minX, out int minY, out int maxX, out int maxY)
-    {
-        var bounds = body.BoundsExtents;
-        minX = CellOf(body.Center.X - bounds.X);
-        minY = CellOf(body.Center.Y - bounds.Y);
-        maxX = CellOf(body.Center.X + bounds.X);
-        maxY = CellOf(body.Center.Y + bounds.Y);
-    }
-
-    /// <summary>Same rounding as <see cref="GridWalker"/> (division, not multiplication by the inverse).</summary>
-    internal int CellOf(float coordinate) => (int)MathF.Floor(coordinate / CellSize);
+    /// <summary>Same rounding as <see cref="GridWalker"/>: multiplication by the same inverse cell size.</summary>
+    internal int CellOf(float coordinate) => (int)MathF.Floor(coordinate * _inverseCellSize);
 
     private int Hash(int x, int y) => (int)(((uint)x * 73856093u) ^ ((uint)y * 19349663u)) & _tableMask;
 
@@ -168,7 +181,12 @@ internal sealed class SpatialHashGrid
     private void EnsureCapacity(int entryCount)
     {
         if (entryCount > _entries.Length)
-            _entries = new Entry[Math.Max(entryCount, _entries.Length * 2)];
+        {
+            var size = Math.Max(entryCount, _entries.Length * 2);
+            _entries = new Entry[size];
+            _unsorted = new Entry[size];
+            _entryBuckets = new int[size];
+        }
 
         var tableSize = _tableMask + 1;
         if (tableSize >= entryCount * 2)
@@ -181,11 +199,25 @@ internal sealed class SpatialHashGrid
         _tableMask = tableSize - 1;
     }
 
-    internal readonly struct Entry(int body, int cellX, int cellY)
+    /// <summary>A body in one cell, with the body's grown bounds so a pair test doesn't look the body up.</summary>
+    internal readonly struct Entry(int body, int cellX, int cellY, Vector2 min, Vector2 max)
     {
         public readonly int Body = body;
         public readonly int CellX = cellX;
         public readonly int CellY = cellY;
+        public readonly Vector2 Min = min;
+        public readonly Vector2 Max = max;
+    }
+
+    /// <summary>A body's grown bounds and the cells they cover.</summary>
+    private struct CellBox
+    {
+        public Vector2 Min;
+        public Vector2 Max;
+        public int MinX;
+        public int MinY;
+        public int MaxX;
+        public int MaxY;
     }
 }
 

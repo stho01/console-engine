@@ -4,9 +4,9 @@ using Microsoft.Xna.Framework;
 
 namespace ConsoleEngine.Physics;
 
-// IPhysicsQueries. The step's proxies are at the start-of-step positions and the grid includes each body's margin. The
-// first query after a step moves the proxies to the end-of-step positions and rebuilds the grid without margins, so a
-// game that never queries pays nothing.
+// IPhysicsQueries. The step's shapes and proxies are at the start-of-step transforms and the grid includes each body's
+// margin. The first query after a step moves the shapes to the end-of-step transforms, recomputes their bounds and
+// rebuilds the grid without margins, so a game that never queries pays nothing.
 public sealed partial class PhysicsSystem
 {
     //**********************************************************
@@ -51,12 +51,19 @@ public sealed partial class PhysicsSystem
         return best <= 1f;
     }
 
-    public int OverlapBox(Vector2 center, Vector2 halfExtents, uint mask, Span<Entity> results) =>
-        Overlap(new BodyProxy { Shape = ShapeType.Box, Center = center, Extents = halfExtents }, mask, results);
+    public int OverlapBox(Vector2 center, Vector2 halfExtents, uint mask, Span<Entity> results)
+    {
+        var shape = BodyShape.Unrotated(center, ShapeType.Box);
+        shape.HalfExtents = halfExtents;
+        return Overlap(shape, center, halfExtents, mask, results);
+    }
 
-    public int OverlapCircle(Vector2 center, float radius, uint mask, Span<Entity> results) =>
-        Overlap(new BodyProxy { Shape = ShapeType.Circle, Center = center, Extents = new Vector2(radius, radius) }, mask,
-            results);
+    public int OverlapCircle(Vector2 center, float radius, uint mask, Span<Entity> results)
+    {
+        var shape = BodyShape.Unrotated(center, ShapeType.Circle);
+        shape.Radius = radius;
+        return Overlap(shape, center, new Vector2(radius, radius), mask, results);
+    }
 
     //**********************************************************
     //** internals
@@ -68,10 +75,21 @@ public sealed partial class PhysicsSystem
             return;
 
         var proxies = _proxies.AsSpan();
-        var bodies = _bodies.AsSpan();
+        var shapes = _shapes.AsSpan();
+        var states = _states.AsSpan();
+        var sims = _sims.AsSpan();
         for (var i = 0; i < proxies.Length; i++)
         {
-            proxies[i].Center += bodies[i].DeltaPosition;
+            if (sims[i].Type != BodyType.Static)
+            {
+                ref readonly var state = ref states[i];
+                ref var shape = ref shapes[i];
+                shape.Position += state.DeltaPosition;
+                var turn = state.DeltaRotation;
+                (shape.Cos, shape.Sin) = (shape.Cos * turn.X - shape.Sin * turn.Y, shape.Sin * turn.X + shape.Cos * turn.Y);
+                ComputeBounds(shape, out proxies[i].Center, out proxies[i].Extents, out _);
+            }
+
             proxies[i].Margin = 0f;
         }
 
@@ -126,18 +144,34 @@ public sealed partial class PhysicsSystem
                     !IsCandidate(entry.Body, stamp, mask, Entity.Null))
                     continue;
 
-                ref readonly var proxy = ref _proxies[entry.Body];
-                var hitShape = proxy.Shape == ShapeType.Box
-                    ? RayCast.Box(origin, translation, proxy.Center, proxy.Extents, false, out var fraction,
-                        out var normal)
-                    : RayCast.Circle(origin, translation, proxy.Center, proxy.Radius, false, out fraction, out normal);
-                if (hitShape && fraction < best)
+                if (RaycastShape(_shapes[entry.Body], origin, translation, out var fraction, out var normal) &&
+                    fraction < best)
                 {
                     best = fraction;
                     hit = new CastHit(_entities[entry.Body], default, origin + translation * fraction, normal, fraction);
                 }
             }
         } while (walker.Next());
+    }
+
+    private bool RaycastShape(in BodyShape shape, Vector2 origin, Vector2 translation, out float fraction,
+        out Vector2 normal)
+    {
+        if (shape.Shape == ShapeType.Circle)
+        {
+            return RayCast.Circle(origin, translation, shape.ToWorld(shape.Offset), shape.Radius, false, out fraction,
+                out normal);
+        }
+
+        if (shape.Shape == ShapeType.Box && !shape.IsRotated)
+        {
+            return RayCast.Box(origin, translation, shape.Position + shape.Offset, shape.HalfExtents, false,
+                out fraction, out normal);
+        }
+
+        shape.ToWorldPolygon(Polygons, out var polygon);
+        ReadOnlySpan<Vector2> points = polygon.Points;
+        return RayCast.Polygon(origin, translation, points[..polygon.Count], false, out fraction, out normal);
     }
 
     /// <summary>
@@ -191,19 +225,50 @@ public sealed partial class PhysicsSystem
                 if (entry.CellX != x || entry.CellY != y || !IsCandidate(entry.Body, stamp, mask, ignore))
                     continue;
 
-                ref readonly var proxy = ref _proxies[entry.Body];
-                var hitShape = proxy.Shape == ShapeType.Box
-                    ? RayCast.Box(center, translation, proxy.Center, proxy.Extents + halfExtents, true,
-                        out var fraction, out var normal)
-                    : RayCast.RoundedBox(center, translation, proxy.Center, halfExtents, proxy.Radius, true,
-                        out fraction, out normal);
-                if (hitShape && fraction < best)
+                if (CastBoxAgainst(_shapes[entry.Body], center, halfExtents, translation, out var fraction,
+                        out var normal) && fraction < best)
                 {
                     best = fraction;
                     hit = new CastHit(_entities[entry.Body], default, center + translation * fraction, normal, fraction);
                 }
             }
         }
+    }
+
+    /// <summary>
+    /// A box cast is a ray from the box's centre against the shape grown by the box (Minkowski sum): a box gives a bigger
+    /// box, a circle a box with rounded corners, a turned box or polygon the hull of its corners plus the box's corners.
+    /// </summary>
+    private bool CastBoxAgainst(in BodyShape shape, Vector2 center, Vector2 halfExtents, Vector2 translation,
+        out float fraction, out Vector2 normal)
+    {
+        if (shape.Shape == ShapeType.Circle)
+        {
+            return RayCast.RoundedBox(center, translation, shape.ToWorld(shape.Offset), halfExtents, shape.Radius, true,
+                out fraction, out normal);
+        }
+
+        if (shape.Shape == ShapeType.Box && !shape.IsRotated)
+        {
+            return RayCast.Box(center, translation, shape.Position + shape.Offset, shape.HalfExtents + halfExtents, true,
+                out fraction, out normal);
+        }
+
+        shape.ToWorldPolygon(Polygons, out var polygon);
+        Span<Vector2> sum = stackalloc Vector2[ConvexPolygon.MaxVertices * 4];
+        var count = 0;
+        for (var i = 0; i < polygon.Count; i++)
+        {
+            var point = polygon.Points[i];
+            sum[count++] = point + new Vector2(-halfExtents.X, -halfExtents.Y);
+            sum[count++] = point + new Vector2(halfExtents.X, -halfExtents.Y);
+            sum[count++] = point + new Vector2(halfExtents.X, halfExtents.Y);
+            sum[count++] = point + new Vector2(-halfExtents.X, halfExtents.Y);
+        }
+
+        Span<Vector2> hull = stackalloc Vector2[ConvexPolygon.MaxVertices * 8];
+        var corners = ConvexPolygon.HullInto(sum[..count], hull);
+        return RayCast.Polygon(center, translation, hull[..corners], true, out fraction, out normal);
     }
 
     /// <summary>
@@ -238,7 +303,7 @@ public sealed partial class PhysicsSystem
         }
     }
 
-    private int Overlap(in BodyProxy shape, uint mask, Span<Entity> results)
+    private int Overlap(in BodyShape shape, Vector2 center, Vector2 extents, uint mask, Span<Entity> results)
     {
         EnsureQueryState();
         if (_proxies.Count == 0 || results.IsEmpty)
@@ -246,10 +311,10 @@ public sealed partial class PhysicsSystem
 
         var stamp = NextQueryStamp();
         var count = 0;
-        var firstX = _grid.CellOf(shape.Center.X - shape.Extents.X);
-        var lastX = _grid.CellOf(shape.Center.X + shape.Extents.X);
-        var firstY = _grid.CellOf(shape.Center.Y - shape.Extents.Y);
-        var lastY = _grid.CellOf(shape.Center.Y + shape.Extents.Y);
+        var firstX = _grid.CellOf(center.X - extents.X);
+        var lastX = _grid.CellOf(center.X + extents.X);
+        var firstY = _grid.CellOf(center.Y - extents.Y);
+        var lastY = _grid.CellOf(center.Y + extents.Y);
         for (var y = firstY; y <= lastY; y++)
         for (var x = firstX; x <= lastX; x++)
         {
@@ -257,8 +322,11 @@ public sealed partial class PhysicsSystem
             for (var i = 0; i < bucket.Length; i++)
             {
                 var entry = bucket[i];
-                if (entry.CellX != x || entry.CellY != y || !IsCandidate(entry.Body, stamp, mask, Entity.Null) ||
-                    Collision.Collide(shape, _proxies[entry.Body], out _) > 0f)
+                if (entry.CellX != x || entry.CellY != y || !IsCandidate(entry.Body, stamp, mask, Entity.Null))
+                    continue;
+
+                Collision.Collide(shape, _shapes[entry.Body], Polygons, 0f, out var manifold);
+                if (manifold.PointCount == 0 || manifold.MinSeparation > 0f)
                     continue;
 
                 results[count++] = _entities[entry.Body];

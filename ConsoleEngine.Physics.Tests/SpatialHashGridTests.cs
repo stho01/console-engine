@@ -73,12 +73,12 @@ public class SpatialHashGridTests
         var grid = new SpatialHashGrid(4f);
         var pairs = new ArrayBuffer<BodyPair>();
         grid.Build([Box(0, 0, 1), Box(1, 0, 1)]);
-        grid.FindPairs([Box(0, 0, 1), Box(1, 0, 1)], pairs);
+        grid.FindPairs(pairs);
 
         var moved = new[] { Box(0, 0, 1), Box(20, 0, 1), Box(20.5f, 0, 1) };
         pairs.Clear();
         grid.Build(moved);
-        grid.FindPairs(moved, pairs);
+        grid.FindPairs(pairs);
 
         Assert.That(pairs.Count, Is.EqualTo(1));
         Assert.That((pairs[0].A, pairs[0].B), Is.EqualTo((1, 2)));
@@ -92,7 +92,6 @@ public class SpatialHashGridTests
 
     private static BodyProxy Box(float x, float y, float halfSize) => new()
     {
-        Shape = ShapeType.Box,
         Center = new Vector2(x, y),
         Extents = new Vector2(halfSize, halfSize)
     };
@@ -106,7 +105,7 @@ public class SpatialHashGridTests
         var grid = new SpatialHashGrid(cellSize);
         var pairs = new ArrayBuffer<BodyPair>();
         grid.Build(bodies);
-        grid.FindPairs(bodies, pairs);
+        grid.FindPairs(pairs);
 
         var result = new List<(int, int)>();
         foreach (var pair in pairs.AsSpan())

@@ -3,16 +3,15 @@ using Microsoft.Xna.Framework;
 namespace ConsoleEngine.Physics;
 
 /// <summary>
-/// One collider as the physics step sees it, copied out of the chunks at the start of the step. Everything the
-/// broadphase and narrowphase read for a pair is in this one struct (32 bytes), so a pair test touches two cache lines
-/// at most.
+/// One collider as the broadphase sees it, copied out of the chunks at the start of the step: its bounding box and
+/// filter, 32 bytes. The exact shape for the narrowphase is in a <see cref="BodyShape"/> at the same index.
 /// </summary>
 internal struct BodyProxy
 {
-    /// <summary>Centre of the shape in world cells (position + collider offset) at the start of the step.</summary>
+    /// <summary>Centre of the shape's bounding box in world cells, at the start of the step.</summary>
     public Vector2 Center;
 
-    /// <summary>Half size of the shape's bounding box. For a circle both are the radius.</summary>
+    /// <summary>Half size of the shape's bounding box (for a turned shape, of the turned shape).</summary>
     public Vector2 Extents;
 
     public uint Category;
@@ -24,12 +23,11 @@ internal struct BodyProxy
     /// </summary>
     public float Margin;
 
-    public ShapeType Shape;
     public BodyType Type;
     public bool IsSensor;
 
-    /// <summary>For circles.</summary>
-    public readonly float Radius => Extents.X;
+    /// <summary>Asleep at the start of the step.</summary>
+    public bool IsSleeping;
 
     /// <summary>Half size of the box the broadphase uses: the shape's, grown by <see cref="Margin"/>.</summary>
     public readonly Vector2 BoundsExtents => new(Extents.X + Margin, Extents.Y + Margin);

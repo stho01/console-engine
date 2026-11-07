@@ -114,6 +114,71 @@ internal static class RayCast
         return Circle(origin, translation, corner, radius, castFromInside, out fraction, out normal);
     }
 
+    /// <summary>
+    /// Ray against a convex polygon given by its corners in <see cref="ConvexPolygon"/> winding (Box2D's
+    /// <c>b2RayCastPolygon</c>: clip the ray against every edge's half-plane).
+    /// </summary>
+    public static bool Polygon(Vector2 origin, Vector2 translation, ReadOnlySpan<Vector2> points, bool castFromInside,
+        out float fraction, out Vector2 normal)
+    {
+        fraction = 0f;
+        normal = default;
+        var lower = 0f;
+        var upper = 1f;
+        var entering = -1;
+        var enterNormal = Vector2.Zero;
+        var deepest = float.MinValue;
+        var deepestNormal = Vector2.Zero;
+
+        for (var i = 0; i < points.Length; i++)
+        {
+            var edge = points[i + 1 < points.Length ? i + 1 : 0] - points[i];
+            var edgeNormal = Vector2.Normalize(new Vector2(edge.Y, -edge.X));
+            var numerator = Vector2.Dot(edgeNormal, points[i] - origin);
+            var denominator = Vector2.Dot(edgeNormal, translation);
+
+            // How far outside this edge the origin is; the largest one is the nearest way out from inside.
+            if (-numerator > deepest)
+            {
+                deepest = -numerator;
+                deepestNormal = edgeNormal;
+            }
+
+            if (denominator == 0f)
+            {
+                if (numerator < 0f)
+                    return false;
+            }
+            else if (denominator < 0f && numerator < lower * denominator)
+            {
+                lower = numerator / denominator;
+                entering = i;
+                enterNormal = edgeNormal;
+            }
+            else if (denominator > 0f && numerator < upper * denominator)
+            {
+                upper = numerator / denominator;
+            }
+
+            if (upper < lower)
+                return false;
+        }
+
+        if (entering >= 0)
+        {
+            fraction = lower;
+            normal = enterNormal;
+            return true;
+        }
+
+        // The origin is inside the polygon.
+        if (!castFromInside)
+            return false;
+
+        normal = deepestNormal;
+        return Vector2.Dot(translation, normal) < 0f;
+    }
+
     //**********************************************************
     //** internals
     //**********************************************************

@@ -56,13 +56,14 @@ Grep these to locate the code path. None of them has a log level.
 | `Must be positive and finite.` (`ArgumentOutOfRangeException`, param `tileSize`); zero/negative `columns`/`rows` → .NET's own `ThrowIfNegativeOrZero` message | `TileGrid` ctor | A tile size ≤ 0, NaN or infinite, or an empty grid |
 | .NET's own `ThrowIfGreaterThanOrEqual` message (`ArgumentOutOfRangeException`, param `column` or `row`) | `TileGrid.SetSolid` | A tile outside the grid |
 | `ArgumentNullException` (param `physics`) | `CharacterMover.MoveAndSlide` | Called without a physics system |
+| `A polygon needs at least 3 points.` / `The points don't span an area.` / `The hull has <n> corners; at most 8 are supported.` (`ArgumentException`, param `points`) | `PolygonLibrary.Add` (via `ConvexPolygon.Hull`) | Too few points, all on one line, or too many corners after the convex hull |
 | .NET's own `ThrowIfNegativeOrZero` message (`ArgumentOutOfRangeException`, param `value`) | `PhysicsSystem.SubstepCount` setter | `SubstepCount` set to 0 or less |
 | `Must be a finite number.` (param `stepSeconds`, `ArgumentOutOfRangeException`); zero/negative `stepSeconds` or `maxStepsPerFrame` → .NET's own `ThrowIfNegativeOrZero` message | `FixedTimestep` ctor | A scene replaced `FixedTimestep` in `OnCreate` with a step that is NaN, infinite, ≤ 0, or a cap ≤ 0 |
 | `<Type> is not in this chunk. Add it to the query with With<<Type>>().` | `EntityChunk.GetSpan` (`InvalidOperationException`) | A system read a component its query doesn't require |
 | `Component type <Type> is listed more than once.` | `World.Create` (`ArgumentException`) | Same type twice in one `Create` |
 | `Cannot register <Type>: the ECS supports at most 256 component types.` | `ComponentRegistry.Register` (`InvalidOperationException`, wrapped in `TypeInitializationException`) | 257th component type used in the process |
 | `An archetype row needs <n> bytes and does not fit in one 16384-byte chunk.` | `Archetype` ctor (`InvalidOperationException`) | A component set too large for a chunk |
-| Window title = `GameBase.Name` | `GameBase.Initialize` → `SetTitle` | Default `"Game"`. Platformer `"Platformer game"`, Asteroids.Ecs `"Asteroids (ECS)"`, Snake.Ecs `"Snake (ECS)"`, TerraForM.Ecs `"TerraForM (ECS)"`, Platformer.Ecs `"Platformer (ECS)"`, Swarm `"Swarm (ECS)"`, PhysicsSandbox `"Physics Sandbox"` |
+| Window title = `GameBase.Name` | `GameBase.Initialize` → `SetTitle` | Default `"Game"`. Platformer `"Platformer game"`, Asteroids.Ecs `"Asteroids (ECS)"`, Snake.Ecs `"Snake (ECS)"`, TerraForM.Ecs `"TerraForM (ECS)"`, Platformer.Ecs `"Platformer (ECS)"`, Swarm `"Swarm (ECS)"`, PhysicsSandbox `"Physics Sandbox"`, PhysicsShowcase `"Physics Showcase"` |
 
 Runtime exceptions without repo-authored text (message comes from .NET and varies): `DllNotFoundException`,
 `SocketException`, `Win32Exception`, `FileNotFoundException`, `DirectoryNotFoundException`, `FormatException`,

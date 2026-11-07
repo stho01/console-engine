@@ -28,8 +28,8 @@ internal struct GridWalker
     public GridWalker(Vector2 origin, Vector2 translation, Vector2 cellSize, Vector2 gridOrigin)
     {
         var local = origin - gridOrigin;
-        X = (int)MathF.Floor(local.X / cellSize.X);
-        Y = (int)MathF.Floor(local.Y / cellSize.Y);
+        X = (int)MathF.Floor(local.X * (1f / cellSize.X));
+        Y = (int)MathF.Floor(local.Y * (1f / cellSize.Y));
         Init(local.X, translation.X, cellSize.X, X, out _stepX, out _nextX, out _deltaX);
         Init(local.Y, translation.Y, cellSize.Y, Y, out _stepY, out _nextY, out _deltaY);
         Enter = 0f;

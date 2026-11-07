@@ -1,9 +1,9 @@
 # Plan: 2D-fysikk i ConsoleEngine
 
-Status (2026-11-07): fase 0–4 er ferdige: `FixedTimestep` og `EcsScene.FixedSimulation`, deteksjon og hendelser,
-Soft Step-løseren, `TileGrid`, spørringer (`IPhysicsQueries`) og `CharacterMover.MoveAndSlide`. Pilotene er
-Asteroids.Ecs (sensorer, lag), `Examples/PhysicsSandbox` (løseren) og Platformer.Ecs (tilegrid, karakterkontroller).
-Det som gjenstår står under fase 5. Målingene står i § 12b. Planen er gjennomgått
+Status (2026-11-07): fase 0–5 er ferdige: fast tidssteg, deteksjon og hendelser, Soft Step-løseren, `TileGrid`,
+spørringer og `CharacterMover`, og i fase 5 rotasjon og konvekse polygoner, kropper mot tilegrid, sleeping med øyer
+og render-interpolering. Pilotene er Asteroids.Ecs, `Examples/PhysicsSandbox`, Platformer.Ecs og
+`Examples/PhysicsShowcase` (alt på én gang). Det som gjenstår står i § 12c. Målingene står i § 12b. Planen er gjennomgått
 mot industristandard (Box2D v3, «Fix Your Timestep», Ericson, Godot/Unity 2D). Avvik fra standarden er markert og
 begrunnet i § 10.
 
@@ -21,10 +21,9 @@ begrunnet i § 10.
 
 **Ikke-mål (v1)**
 
-- Rotasjon og vinkeldynamikk (treghetsmoment, torque). `Rotation` brukes fortsatt til tegning.
-- Ledd (joints), polygoner/konvekse former, kapsler.
-- Sleeping og øyer (islands).
-- Render-interpolering (men forrige posisjon lagres, se § 3).
+- ~~Rotasjon og vinkeldynamikk~~, ~~konvekse polygoner~~, ~~sleeping og øyer~~, ~~render-interpolering~~: kom i
+  fase 5.
+- Ledd (joints), kapsler, avrundede polygoner, kontinuerlig kollisjon (TOI) mellom dynamiske kropper.
 - Determinisme på tvers av maskiner. Single-threaded og samme input gir samme resultat på samme maskin, men vi lover
   ikke mer. Dette dokumenteres eksplisitt.
 - Multithreading. Designet (tette arrays, ingen delt mutabel tilstand per kropp) lar det komme senere.
@@ -153,14 +152,16 @@ etter gruppen, som i dag.
   Vegger blir **ikke** kropper.
 - Raycast går gjennom gridet med DDA (Amanatides–Woo, `GridWalker`). En box cast tester tilene i den sveipede boksen;
   det holder fordi slike sveip er korte (ett steg).
-- **Utsatt (fase 5):** dynamiske kropper mot tilene i løseren. Det krever kontakter uten entitet i parcachen og
-  filtrering av indre kanter for kontakter, ikke bare for sveip. Til da bruker spill statiske boks-collidere for vegger
-  som kropper skal treffe (som PhysicsSandbox).
+- **Fase 5:** dynamiske kropper mot tilene i løseren. Hver våken dynamisk kropp får kontakter med de solide tilene
+  under sine voksne bounds; en tile er en statisk boks. Parcachen har 64-bits nøkler, så par kropp–tile
+  (`PairCache.KeyOfTile`) lagres ved siden av par entitet–entitet, og alle tiles deler én statisk løserkropp. En kontakt
+  der tileflaten grenser til en annen solid tile, hoppes over, så kropper glir over skjøter. Tile-kontakter har ingen
+  hendelser.
 
 ## 7. Narrowphase
 
-- Tester: AABB–AABB, sirkel–sirkel, sirkel–AABB. Hver gir høyst **ett kontaktpunkt** med normal og separasjon. Uten
-  rotasjon trengs ikke mangepunkts-manifolder.
+- Tester: sirkel–sirkel, polygon–sirkel og polygon–polygon (bokser og tiles er polygoner). Fra fase 5 gir de en
+  manifold med normal og opptil **to punkter** (Box2D): uten to punkter kan ikke en dreid boks ligge stabilt flatt.
 - **Spekulative kontakter:** et par innenfor `separasjon < SpeculativeDistance` gir en kontakt allerede før det
   overlapper. Det hindrer tunnelering mellom dynamiske kropper uten egen CCD (Box2D v3).
 - Sensorer gir bare overlapp-hendelser, ingen kontakt til løseren.
@@ -228,10 +229,10 @@ ristende kontroll.
 | Avvik | Standard | Grunn |
 |---|---|---|
 | Uniformt grid | Dynamisk AABB-tre (Box2D) | Ericson, *Real-Time Collision Detection* kap. 7: grid er best når objektene har lik størrelse og verden er avgrenset. Konsollspill er nettopp det, og gridet bygges uten pekerjakt eller allokering |
-| Ingen rotasjon | Box2D har full vinkeldynamikk | Konsollgrafikk tegner rotasjon grovt, og ingen av eksemplene trenger torque. Halverer løseren |
-| Ett kontaktpunkt per par | Manifolder med opptil 2 punkter (2D) | Holder uten rotasjon, fordi ingen kropp kan vippe |
-| Ingen sleeping/øyer | Box2D v3 solver sets og islands | Den mest komplekse delen av Box2D. Scener i gridstørrelse trenger det ikke i v1 |
-| Ingen interpolering | Fiedler anbefaler det | Celleoppløsning skjuler det meste. Forrige posisjon lagres, så det kan legges til |
+| Rotasjon er valgfri per kropp | Box2D: alle dynamiske kropper roterer (med mindre fixed rotation) | Kropper uten `Rotation` + `AngularVelocity` har fast rotasjon, så eksisterende spill er uendret. Kontakter der ingen kropp kan rotere, løses med en lineær snarvei med samme resultat |
+| Rotasjon rundt `Position` | Box2D roterer rundt massesenteret | Enklere for spill (posisjon = rotasjonspunkt). Legg posisjonen i formens sentrum for naturlig bevegelse |
+| Øyer bygges per steg (union-find) | Box2D v3 holder øyer vedlike og flytter sovende kropper til egne «solver sets» | Mye enklere. Sovende kropper koster fortsatt gather og broadphase hvert steg (§ 12c); løser og narrowphase hoppes over |
+| Polygoner i et bibliotek, ikke i komponenten | Box2D har polygonen i formen | ECS-komponenter må være små og `unmanaged`; samme mønster som motorens `OutlineLibrary` |
 
 ## 11. Ytelsesprinsipper (sjekkliste for alle PR-er)
 
@@ -304,11 +305,25 @@ ristende kontroll.
   i `PlayerBody.RunDirection` (erstatter `Acceleration`, som summerte per frame) og `JumpRequested`.
 - TerraForM.Ecs er ikke flyttet: roveren går i ruter med kommandoer, ikke med fysikk.
 
-### Fase 5: Bare når målinger eller spill viser behov
+### Fase 5: Rotasjon, polygoner, tiles i løseren, sleeping, interpolering (`feat(physics):`) — ferdig
 
-- Dynamiske kropper mot `TileGrid` i løseren (se § 6).
-- Sleeping/øyer, render-interpolering, flere former, multithreading av narrowphase og løser.
-- `IPhysicsQueries` med flere treff per spørring (Box2D sine callback-varianter), hvis et spill trenger det.
+- **Rotasjon og polygoner** (Box2D v3): `AngularVelocity`, konvekse polygoner i `PolygonLibrary` (hull, maks 8 hjørner,
+  treghet fra `b2ComputePolygonMass`), og manifolder med opptil 2 punkter fra SAT og klipping (`b2CollidePolygons`).
+  Løseren har vinkelledd, faste ankre og separasjon fra endret posisjon og rotasjon (`b2SolveContact`). Rotasjon
+  integreres med `b2IntegrateRotation` (ingen sin/cos per substeg). Spørringene håndterer dreide bokser og polygoner
+  (raycast mot polygon, box cast mot Minkowski-summen).
+- **Kropper mot tiles**: se § 6.
+- **Sleeping**: øyer av dynamiske kropper som berører hverandre (union-find over kontaktene). En øy der alle har vært i
+  ro i `TimeToSleep` (0,5 s; 0,05 celler/s, 2°/s), sover. Vekkes av berøring fra en kropp som beveger seg, en tapt
+  kontakt, eller en fart satt av spillet. Par av to sovende (eller sovende og statisk) gjenbruker forrige stegs
+  cache-oppføring uten narrowphase. Våkner den ene, måles paret likevel, og vekkingen sprer seg gjennom hele øya
+  samme steg.
+- **Interpolering**: `Interpolation` + motorens nye `RenderOffset` + `InterpolationSystem` (Fiedler).
+  Motorens tre tegnesystemer legger til `RenderOffset` når entiteten har en.
+- **Ytelse**: kroppen er delt i `BodyState` (32 bytes, det eneste løkkene i substegene leser) og `BodySim`, som
+  Box2D. Masser kopieres inn i kontakten. Kontakter bygges på plass i bufferen. Gridet lagrer bounds i oppføringene og
+  regner hash én gang per oppføring. Se målingene i § 12b.
+- **Pilot: `Examples/PhysicsShowcase`**, i launcheren: alle funksjonene i én scene.
 
 Hver fase oppdaterer `docs/agent/` og `AGENTS.md` i samme PR, og legger målingene inn i denne filen.
 
@@ -392,6 +407,33 @@ To ting gjorde fysikkmålingene ustabile; begge er rettet:
 
 En spørring koster 0,1–0,2 µs. Den første spørringen etter et steg bygger gridet på nytt; med statiske kropper er
 det det meste av «steg + første spørring».
+
+### Fase 5: kostnaden av funksjonene, og hva sleeping sparer (2026-11-07)
+
+Målt A/B rett etter hverandre på samme maskin (Release, egen testløkke, ikke BenchmarkDotNet, som var urolig under
+denne økten): sirkler uten tyngdekraft med demping 1/s, satt i ro i 600 steg, deretter tid per steg. Fase 4 er commit
+`6810a5d`.
+
+| Kropper | Fase 4 | Fase 5, sleep av | Fase 5, sleep på |
+|---|---|---|---|
+| 100 | 17,7 µs | 20,1 µs (+13 %) | 6,9 µs |
+| 1 000 | 100 µs | 117 µs (+17 %) | 84 µs |
+| 10 000 | 1,47 ms | 1,56 ms (+6 %) | 1,10 ms |
+
+- Første versjon av fase 5 var 35–60 % tregere. Profilering per del av steget viste at løseren og gather/kontakter
+  hadde vokst. Delingen `BodyState`/`BodySim`, den lineære snarveien, kontakter bygd på plass og grid-oppføringer med
+  bounds tok det ned til 6–17 %.
+- Med sleeping er en scene i ro raskere enn i fase 4. Ved 10 000 sovende kropper går mesteparten av tiden til gather og
+  broadphase, som fortsatt kjøres for sovende kropper (§ 12c).
+- 0 B allokert per steg i alle tilfellene.
+
+### 12c. Det som gjenstår
+
+- Sovende kropper koster fortsatt gather og broadphase hvert steg. Box2D unngår det med «solver sets» og et
+  vedvarende tre; her ville det kreve et grid som overlever mellom stegene.
+- Ledd (joints), kapsler, avrundede polygoner, kontinuerlig kollisjon (TOI) mellom dynamiske kropper, multithreading.
+- `IPhysicsQueries` med flere treff per spørring (Box2D sine callback-varianter), hvis et spill trenger det.
+- Hendelser for kontakter med tiles.
 
 ## 13. Åpne spørsmål til eier
 

@@ -164,40 +164,63 @@ input in `Simulation`, consume it in `FixedSimulation`. Asteroids.Ecs runs its p
 
 <a id="physics"></a>
 **Physics** (assembly and namespace `ConsoleEngine.Physics`, optional: a game references it only if it needs physics;
-plan `docs/design/physics-plan.md`, phases 0–3 done: detection, events and the Soft Step contact solver of Box2D v3,
-without rotation). Units are console cells on both axes (a circle looks twice as tall as wide on screen unless the font
-is square, as in PhysicsSandbox).
-- `RigidBody` (`RigidBody.Dynamic(mass, gravityScale, linearDamping)`, `.Kinematic()`, `.Static()`; `default` is
-  static). `Collider` (`Collider.Circle(radius, offset)`, `Collider.Box(halfExtents, offset)`, then `with { … }`):
-  shape, `Category`/`Mask` bits (factory default: category 1, collides with all), `IsSensor`, `Friction` (factory
-  default `DefaultFriction` 0.6), `Restitution` (default 0). A `Collider` without a `RigidBody` is a static body.
-  `default(Collider)` has `Mask` 0 and collides with nothing.
+plan `docs/design/physics-plan.md`, phases 0–5 done). Units are console cells on both axes (a circle looks twice as tall
+as wide on screen unless the font is square, as in PhysicsSandbox and PhysicsShowcase).
+- `RigidBody` (`RigidBody.Dynamic(mass, gravityScale, linearDamping, angularDamping)`, `.Kinematic()`, `.Static()`;
+  `default` is static). `Collider` (`Collider.Circle(radius, offset)`, `Collider.Box(halfExtents, offset)`,
+  `Collider.Polygon(polygonId)`, then `with { … }`): shape, `Category`/`Mask` bits (factory default: category 1,
+  collides with all), `IsSensor`, `Friction` (factory default `DefaultFriction` 0.6), `Restitution` (default 0). A
+  `Collider` without a `RigidBody` is a static body. `default(Collider)` has `Mask` 0 and collides with nothing.
+- **Polygons**: convex, at most 8 corners, added once with `PhysicsSystem.Polygons.Add(vertices)` (the convex hull is
+  kept; vertices are relative to `Position`). Fewer than 3 points, points on one line, or more than 8 hull corners throw
+  `ArgumentException`.
+- **Rotation**: a body turns only if it has a `Rotation` **and** an `AngularVelocity`; without them its rotation stays
+  fixed (a `Rotation` alone still turns its shape, e.g. a static ramp). Rotation is clockwise on screen, around
+  `Position`; the rotational inertia comes from the shape and mass (uniform density, about `Position`). Kinematic
+  bodies with an `AngularVelocity` turn at that speed.
 - Game systems read the events through `IPhysicsEvents` (`PhysicsSystem` implements it), so another physics engine
   could stand in behind the same components and events.
 - A dynamic or kinematic body needs a `Velocity`; without one it is handled as **static** (never moves, never pushed).
 - `PhysicsSystem` (add it to `FixedSimulation`; `DefaultCellSize` 8 cells; `Gravity` default 0; `SubstepCount` 4;
   `ContactHertz` 30, capped at a quarter of the substep rate, doubled for contacts with a static or kinematic body;
-  `ContactDampingRatio` 10; `ContactPushMaxSpeed` 3 cells/s; `RestitutionThreshold` 1 cell/s — all Box2D's defaults
-  with 1 cell = 1 Box2D length unit). Each step is split into `SubstepCount` substeps of `h = step / SubstepCount`;
-  per substep, dynamic bodies get `v = v / (1 + h * LinearDamping) + Gravity * GravityScale * h`, contacts push, and
-  non-static bodies move `p += v * h`. Rigid bodies without a `Collider` get the same substeps without contacts.
+  `ContactDampingRatio` 10; `ContactPushMaxSpeed` 3 cells/s; `RestitutionThreshold` 1 cell/s; `EnableSleep` on;
+  `TimeToSleep` 0.5 s — all Box2D's defaults with 1 cell = 1 Box2D length unit). Each step is split into `SubstepCount`
+  substeps of `h = step / SubstepCount`; per substep, dynamic bodies get
+  `v = v / (1 + h * LinearDamping) + Gravity * GravityScale * h` (and `w = w / (1 + h * AngularDamping)`), contacts
+  push, and non-static bodies move and turn. Rigid bodies without a `Collider` get the same substeps without contacts.
 - A pair is tested only if `(a.Category & b.Mask) != 0` and `(b.Category & a.Mask) != 0`, not both static, not both
   sensors, and, if neither is a sensor, at least one is dynamic (kinematic–kinematic and kinematic–static never touch).
-- Contact response: dynamic bodies don't pass through each other or through static/kinematic ones. Static and
-  kinematic bodies are never pushed. Overlaps are pushed out at most `ContactPushMaxSpeed`, and that push adds no
-  velocity. Bodies settle about `LinearSlop` (0.005 cells) into each other per contact, so a stack sinks a little.
-  Friction per pair = `sqrt(a.Friction * b.Friction)`, restitution = `max(a.Restitution, b.Restitution)`; impacts
-  slower than `RestitutionThreshold` don't bounce. Contacts start before the shapes touch (speculative: when the gap
-  is less than how far both can move this step), so fast bodies don't tunnel through thin walls.
-- **Tile grid**: `PhysicsSystem.TileGrid` (optional `TileGrid`: columns × rows of solid/empty tiles, `TileSize`, `Origin`,
-  `Category`). Queries and `CharacterMover` collide with it; **dynamic bodies don't** (phase 4 limit: use static box
-  colliders for them). Outside the grid is empty. Touching a tile's edge is not overlapping it.
+- Contact response: dynamic bodies don't pass through each other, through static/kinematic ones or through solid
+  tiles. Static and kinematic bodies are never pushed. A contact has up to 2 points (boxes and polygons resting flat get
+  2), so turned bodies tip over and lie flat. Overlaps are pushed out at most `ContactPushMaxSpeed`, and that push adds
+  no velocity. Bodies settle about `LinearSlop` (0.005 cells) into each other per contact, so a stack sinks a little.
+  Friction per pair = `sqrt(a.Friction * b.Friction)` (a tile contact uses the body's), restitution =
+  `max(a.Restitution, b.Restitution)`; impacts slower than `RestitutionThreshold` don't bounce. Friction makes balls
+  roll. Contacts start before the shapes touch (speculative: when the gap is less than how far both can move this
+  step), so fast bodies don't tunnel through thin walls.
+- **Tile grid**: `PhysicsSystem.TileGrid` (optional `TileGrid`: columns × rows of solid/empty tiles, `TileSize`,
+  `Origin`, `Category`). Dynamic bodies whose `Mask` includes the grid's `Category`, the queries and `CharacterMover`
+  collide with it. Outside the grid is empty. Touching a tile's edge is not overlapping it. A tile face that touches
+  another solid tile is never collided with, so bodies slide over seams. Tile contacts have **no events**.
+- **Sleeping** (`EnableSleep`): a dynamic body is still while slower than `LinearSleepTolerance` (0.05 cells/s) and
+  `AngularSleepTolerance` (2°/s). Touching dynamic bodies form an island; an island whose bodies have all been still
+  for `TimeToSleep` sleeps: `RigidBody.IsSleeping` is set, velocities are zeroed, and its bodies aren't simulated.
+  It wakes when a moving body of the island or a moving kinematic body touches it, when one of its contacts ends (a
+  support moved away or was destroyed), when game code gives one of its bodies a velocity, or when `IsSleeping` is
+  cleared. **Changing `Gravity` doesn't wake sleeping bodies** (as Box2D): clear `IsSleeping` yourself.
+  `SleepingBodyCount` counts them. Sleeping bodies still cost their gather and broadphase each step.
+- **Interpolation** (opt-in): a body with `Interpolation` and the engine's `RenderOffset` gets `PreviousPosition` and
+  `PreviousRadians` set each step; `InterpolationSystem(FixedTimestep)` in the presentation group (before the render
+  systems) sets `RenderOffset = (previous - current) × (1 - FixedTimestep.Alpha)`, so the body is drawn between its last
+  two steps (up to one step behind, without jumps). Nothing is offset before the first step (`HasPrevious`). After a
+  teleport, call `Interpolation.Reset()`.
 - **Queries** (`IPhysicsQueries`, implemented by `PhysicsSystem`): `Raycast` (closest collider or tile; shapes that
   contain the origin are ignored; a ray starting inside solid tiles hits the first solid tile after it leaves them),
-  `CastBox` (an axis-aligned box swept along a translation; a shape it already overlaps is hit at fraction 0 when moving
-  further in and ignored when moving out; tile faces that touch another solid tile are never hit, so boxes don't catch on
-  seams), `OverlapBox`/`OverlapCircle` (colliders only, up to the span's length). A collider is reported if its
-  `Category` has a bit in the query mask; sensors never. Queries see the world **as at the end of the last physics step**.
+  `CastBox` (an axis-aligned box swept along a translation, against circles, turned boxes and polygons too; a shape it
+  already overlaps is hit at fraction 0 when moving further in and ignored when moving out; tile faces that touch
+  another solid tile are never hit, so boxes don't catch on seams), `OverlapBox`/`OverlapCircle` (colliders only, up to
+  the span's length). A collider is reported if its `Category` has a bit in the query mask; sensors never. Queries see
+  the world **as at the end of the last physics step**.
 - **`CharacterMover.MoveAndSlide`** (Godot `move_and_slide`): sweeps a box by `velocity * delta` with `CastBox`, stops
   `SkinWidth` (0.01 cells) before what it hits, removes the velocity part into the surface and slides with the rest, at
   most `MaxSlides` (4) hits per move. Returns `SlideCollisions`: `Floor` (normal within 45° of `up`, default
@@ -206,9 +229,9 @@ is square, as in PhysicsSandbox).
   contact stays touching instead of flickering.
 - Events (`ContactBeginEvents`, `ContactEndEvents`, `SensorBeginEvents`, `SensorEndEvents`) hold the last step's
   changes only and are replaced every step. A begin fires once when a pair starts touching; an end fires when it stops
-  **or when either entity was destroyed** (the entity in the event is then dead). In contact events `A` has the lower
-  entity id. Read them from a system added after `PhysicsSystem` in `FixedSimulation`; a system in `Simulation` sees
-  the same events again in frames without a fixed step.
+  **or when either entity was destroyed** (the entity in the event is then dead). A sleeping pair stays touching (no
+  end). In contact events `A` has the lower entity id. Read them from a system added after `PhysicsSystem` in
+  `FixedSimulation`; a system in `Simulation` sees the same events again in frames without a fixed step.
 
 **Built-in systems** (namespace `ConsoleEngine.Ecs.Systems`, components in `ConsoleEngine.Ecs.Components`):
 - `MovementSystem`: `Position += Velocity * delta` for every entity with both, or only those that also match the
@@ -217,6 +240,8 @@ is square, as in PhysicsSandbox).
   otherwise rigid bodies are moved twice (once per frame here, once per fixed step there).
 - `GlyphRenderSystem`: draws `Glyph.Character` at `floor(Position - Camera.Position)`. Off-screen cells are clipped
   by `RenderConsole.Draw`.
+- All three render systems add the entity's `RenderOffset` (position, and radians for outlines) when it has one: drawn
+  there, not moved (used by physics interpolation, or for effects).
 - `OutlineRenderSystem`: draws the `OutlineLibrary` polygon for `Outline.Id` around the position, rotated clockwise
   by `Rotation.Radians` if the entity has a `Rotation`. Skipped when its bounding circle (`OutlineLibrary.GetRadius`)
   is entirely off-screen.
@@ -379,6 +404,8 @@ files, so every rule above applies, except:
 | Swarm | `SPACE` adds 10 000 particles, `BACKSPACE` removes up to 10 000 (both through the command buffer, applied at the end of the simulation group). `ESC` quits | `SpawnControlSystem`, `SwarmGame.OnUpdate` |
 | PhysicsSandbox | Gravity 30 cells/s² down. Static floor (3 rows), side walls and two ledges (`█`), a kinematic platform (`▒`, 16×1) that moves at 12 cells/s between 20 % and 80 % of the width. `PhysicsSystem` cell size 2 | `SandboxScene`, `PatrolSystem` (fixed step, `[UpdateBefore(typeof(PhysicsSystem))]`) |
 | PhysicsSandbox | `SPACE` drops a ball (`●`, radius 0.5, restitution 0.6, mass 1), `B` a box (`■`, 1×1, mass 3, no bounce), `ENTER` 50 balls stacked 1.2 cells apart, all at random x on row 3 with a random sideways speed up to 8 cells/s. `R` removes every dropped body. `ESC` quits. Dropping goes through the command buffer: the bodies appear at the end of the simulation group and move from the next fixed step. The HUD on row 0 shows the count | `DropSystem`, `BodySpawner`, `HudSystem`, `PhysicsSandboxGame.OnUpdate` |
+| PhysicsShowcase | One scene with every physics feature. Gravity 40 cells/s² down, 120 × 60 tiles of 1×1 (`Level.CreateTiles`: ceiling row 2, floor rows 57–59, side walls, two shelves, two steps). Static turned ramp (`▓`), ice ledge without friction (`═`), kinematic platform patrolling at 10 cells/s (`▒`), kinematic windmill turning at 1.2 rad/s (`#`), static sensor zone (`·`) whose count is on the HUD. `PhysicsSystem` cell size 3, sleep and interpolation on | `ShowcaseScene`, `Level`, `PatrolSystem`, `EventCounterSystem` |
+| PhysicsShowcase | Keys: `1` bouncy ball (`●`), `2` turning 2×2 box (`#`), `3` triangle (`▲`), `4` pentagon (`*`), `5` ghost ball (`○`, category `Layers.Ghost`: passes through solid bodies, not through tiles or other ghosts); `ENTER` 30 random shapes; `R` removes every dropped body. Sleeping bodies are drawn dark grey. The player `@` (1×1, `CharacterMover`, `A`/`D` run 18 cells/s, `W` jumps from a floor) is a static obstacle for bodies. Its laser is a `Raycast` 60 cells in the facing direction (× on the hit). `E` blasts every dynamic body within 10 cells (`OverlapCircle`) outwards and spins it. `G` flips gravity and wakes everything, `I` switches interpolation | `DropSystem`, `BodyFactory`, `PlayerMoveSystem`, `LaserSystem`, `BlastSystem`, `SwitchSystem`, `TintSystem`, `HudSystem` |
 
 <a id="launcher"></a>
 ## Launcher (`Examples/Launcher`)
