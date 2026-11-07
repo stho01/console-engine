@@ -107,7 +107,7 @@ dotnet test --no-build
 Get-ChildItem Examples\*\bin\*\net10.0\*.exe -Name
 ```
 Each game in `GameCatalog.Games` needs
-`Examples\<ProjectName>\bin\<same configuration as the launcher>\net10.0\<ProjectName>.exe`. → [P16](05-triage.md#p16) step 2.
+`Examples\<ProjectName>\bin\<same configuration as the launcher>\net10.0\<ProjectName>.exe` (no `.exe` on macOS/Linux). → [P16](05-triage.md#p16) step 2.
 
 <a id="q11"></a>
 ## Q11 — Is there an EternalDigger save, and was one set aside?

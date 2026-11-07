@@ -15,7 +15,7 @@ team's process differs.
 | Close the window | Only way to exit every game except ConsoleGame, ConsoleGame.Ecs, Swarm and EternalDigger | [P5](05-triage.md#p5) |
 | Close a leftover logger window | — | [P5](05-triage.md#p5) |
 | Start the exe from an open terminal to keep crash text | Captures the exception | [06 § Capture](06-diagnostics.md#capture) |
-| Start an ECS game from the launcher (`dotnet run --project Examples/Launcher`) | Builds the games, then starts the chosen one in its own classic console window (`conhost.exe`) from its output folder, so relative paths resolve | [P16](05-triage.md#p16) |
+| Start an ECS game from the launcher (`dotnet run --project Examples/Launcher`) | Builds the games, then starts the chosen one in its own classic console window (`conhost.exe`, Windows) or in the same terminal (macOS/Linux) from its output folder, so relative paths resolve | [P16](05-triage.md#p16) |
 
 ## In-game controls
 

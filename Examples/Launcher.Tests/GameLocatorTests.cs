@@ -27,9 +27,20 @@ public class GameLocatorTests
         File.WriteAllText(Path.Combine(launcherProject, GameLocator.LauncherProjectFile), "");
 
         var locator = GameLocator.FromLauncherOutput(launcherOutput);
-        var path = locator.GetExecutablePath(new GameEntry("Snake (ECS)", "Snake.Ecs", ""));
+        var path = locator.GetExecutablePath(new GameEntry("Snake (ECS)", "Snake.Ecs", ""), isWindows: true);
 
         var expected = Path.Combine(_root, "Examples", "Snake.Ecs", "bin", "Release", "net10.0", "Snake.Ecs.exe");
+        Assert.That(path, Is.EqualTo(Path.GetFullPath(expected)));
+    }
+
+    [Test]
+    public void GetExecutablePath_OnMacOrLinux_HasNoExeExtension()
+    {
+        var locator = new GameLocator(Path.Combine(_root, "Examples"), Path.Combine("bin", "Release", "net10.0"));
+
+        var path = locator.GetExecutablePath(new GameEntry("Snake (ECS)", "Snake.Ecs", ""), isWindows: false);
+
+        var expected = Path.Combine(_root, "Examples", "Snake.Ecs", "bin", "Release", "net10.0", "Snake.Ecs");
         Assert.That(path, Is.EqualTo(Path.GetFullPath(expected)));
     }
 

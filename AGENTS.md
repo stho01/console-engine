@@ -95,8 +95,9 @@ logger exe by **relative path**, so run a game's exe from its output folder (e.g
 `Examples/TerraForM/bin/Debug/net10.0/`). CI runs restore → build → test with coverage on `windows-latest` for PRs to
 `main`. The coverage summary is in the job summary, and the HTML report is the `coverage-report` artifact.
 
-To play the ECS games, start the launcher. It builds them first and starts each one in its own classic console window
-(`conhost.exe`, even when Windows Terminal is the default) from its output folder. A new game in `Examples/` is added
+To play the ECS games, start the launcher. It builds them first and starts each one from its output folder: on Windows in its
+own classic console window (`conhost.exe`, even when Windows Terminal is the default), on macOS and Linux in the
+launcher's own terminal. A new game in `Examples/` is added
 to `GameCatalog.Games` **and** as a build-order `ProjectReference` in `Launcher.csproj`; `GameLocatorTests` checks both:
 
 ```bash
