@@ -32,7 +32,7 @@ Platform: **Windows only.** Rendering and input go through Win32 P/Invoke (`kern
 | Vector/matrix math | `Libs/Microsoft.Xna.Framework/` (copied from MonoGame, change only with good reason) |
 | ECS (entities, components, archetypes, chunks) | `ConsoleEngine/Ecs/`, design and phases in [`docs/design/ecs-plan.md`](docs/design/ecs-plan.md) |
 | Performance measurements | `ConsoleEngine.Benchmarks/` (BenchmarkDotNet) |
-| How to use the engine | `Examples/Snake` (smallest), `Examples/TerraForM` (scenes, assets, tests), `Examples/<Game>.Ecs` (ECS port of each game: components, systems, queries, `EcsScene`; compare with `Examples/<Game>`. `Snake.Ecs` is the smallest, `TerraForM.Ecs` the fullest), `Examples/Swarm` (ECS at scale, system ordering attributes), `Examples/EternalDigger` (a full original ECS game: endless grid world, particle effects, lighting; design in [`docs/design/eternal-digger.md`](docs/design/eternal-digger.md)) |
+| How to use the engine | `Examples/Snake` (smallest), `Examples/TerraForM` (scenes, assets, tests), `Examples/<Game>.Ecs` (ECS port of each game: components, systems, queries, `EcsScene`; compare with `Examples/<Game>`. `Snake.Ecs` is the smallest, `TerraForM.Ecs` the fullest), `Examples/Swarm` (ECS at scale, system ordering attributes), `Examples/EternalDigger` (a full original ECS game: endless grid world, particle effects, lighting; start at [`Examples/EternalDigger/README.md`](Examples/EternalDigger/README.md), design contract in [`docs/design/eternal-digger.md`](docs/design/eternal-digger.md)) |
 | Build/test pipeline | `.github/workflows/build-and-test.yml` |
 | Formatting rules | `.editorconfig` + [§ Code style](#code-style) |
 | Open feature requests | GitHub issues: mouse input (8), macOS (7), more colours (6) |
@@ -155,7 +155,9 @@ Examples/
   Launcher.Tests/                 LauncherMenuTests, GameLocatorTests
   EternalDigger/                  original ECS digging game (no OOP original): Mining/ (Mine grid, Tiles rules),
                                   Components/, Systems/, Effects/ (EffectSpawner, ParticleLooks), Rendering/
-                                  (Canvas, LightMap, TileLooks), Scenes/MineScene, Layout, Shop, MinerInput
+                                  (Canvas, LightMap, TileLooks), Scenes/MineScene, Layout, Shop, MinerInput.
+                                  README.md + docs/ (gameplay, architecture, rendering-and-effects,
+                                  working-with-the-code, testing, reference)
   EternalDigger.Tests/            Mine, Tiles, Shop, LightMap and frame-by-frame MinerControlSystem tests
   TerraForM/Scenes/               GameScene, MenuScene, InputNameScene
   TerraForM/Commands/             Command, Move, Plant, Wait

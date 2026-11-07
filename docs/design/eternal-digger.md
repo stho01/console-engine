@@ -4,7 +4,9 @@
 tile-by-tile digging and resource game. The miner digs down, collects ore, climbs back up on ladders they place, sells
 the ore at the house and buys more ladders. The look comes from many small particle effects.
 
-This file is the contract between the parts of the game. Names here are the names in the code.
+This file is the contract between the parts of the game. Names here are the names in the code. The game's own
+documentation, written after it was built, is in [`Examples/EternalDigger/README.md`](../../Examples/EternalDigger/README.md)
+and its `docs/` folder.
 
 ## Game rules
 
