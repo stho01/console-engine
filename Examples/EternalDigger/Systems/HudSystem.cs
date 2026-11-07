@@ -3,15 +3,17 @@ using ConsoleEngine.Ecs;
 using EternalDigger.Components;
 using EternalDigger.Mining;
 using EternalDigger.Rendering;
+using EternalDigger.Saving;
 
 namespace EternalDigger.Systems;
 
 /// <summary>
 /// The top two screen rows. Row 0: the title, gold, ladders, depth and the bag (ore counts and what they are worth).
 /// Row 1: the keys, the rescue progress bar while <c>R</c> is held, or a blinking warning when the miner is
-/// underground without ladders. The status text is rebuilt only when a shown value changes.
+/// underground without ladders. After each save, a fading <c>SAVED</c> (or a red <c>SAVE FAILED</c>) at the right end
+/// of row 1. The status text is rebuilt only when a shown value changes.
 /// </summary>
-public sealed class HudSystem(Canvas canvas) : EntitySystem
+public sealed class HudSystem(Canvas canvas, GameSaver saver) : EntitySystem
 {
     //**********************************************************
     //** fields
@@ -19,10 +21,15 @@ public sealed class HudSystem(Canvas canvas) : EntitySystem
 
     public const string Title = " ETERNAL DIGGER ";
     public const string KeyHelp =
-        " ←→ walk/dig   ↓ dig   ↑ climb ladder   SPACE place ladder   E deliver/buy   hold R rescue   ESC quit";
+        " ←→ walk/dig   ↓ dig   ↑ climb ladder   SPACE place ladder   E deliver/buy   hold R rescue   ESC save & quit";
     public const string RescueLabel = " RESCUE ";
     public const string RescueNote = " the bag is lost";
     public const string NoLaddersWarning = " NO LADDERS LEFT!  Hold R to be rescued (the bag is lost) ";
+    public const string SavedText = " SAVED ";
+    public const string SaveFailedText = " SAVE FAILED";
+
+    /// <summary>Seconds the save hint shows: the first half in grey, the second in dark grey.</summary>
+    public const float SavedHintSeconds = 1.5f;
 
     private const char OreIcon = '◆';
     private const int RescueBarWidth = 24;
@@ -36,6 +43,8 @@ public sealed class HudSystem(Canvas canvas) : EntitySystem
     private int _shownGold = -1, _shownLadders = -1, _shownDepth = -1, _shownCopper = -1, _shownSilver = -1,
         _shownGoldOre = -1;
     private float _time;
+    private int _shownSaves;
+    private float _savedHint;
 
     //**********************************************************
     //** lifecycle
@@ -51,6 +60,7 @@ public sealed class HudSystem(Canvas canvas) : EntitySystem
             var miner = chunk.GetSpan<Miner>()[0];
             DrawStatus(miner);
             DrawHelp(miner);
+            DrawSavedHint(deltaSeconds);
             return;
         }
     }
@@ -111,6 +121,24 @@ public sealed class HudSystem(Canvas canvas) : EntitySystem
         }
 
         canvas.Draw(0, 1, KeyHelp, ConsoleColor.Gray, ConsoleColor.Black);
+    }
+
+    private void DrawSavedHint(float deltaSeconds)
+    {
+        if (saver.Saves != _shownSaves)
+        {
+            _shownSaves = saver.Saves;
+            _savedHint = SavedHintSeconds;
+        }
+
+        if (_savedHint <= 0f)
+            return;
+
+        _savedHint -= deltaSeconds;
+        var text = saver.LastSaveFailed ? SaveFailedText : SavedText;
+        var color = saver.LastSaveFailed ? ConsoleColor.Red
+            : _savedHint > SavedHintSeconds / 2f ? ConsoleColor.Gray : ConsoleColor.DarkGray;
+        canvas.Draw(canvas.Width - text.Length, 1, text, color, ConsoleColor.Black);
     }
 
     private void Fill(int y, ConsoleColor background)

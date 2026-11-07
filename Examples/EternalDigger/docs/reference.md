@@ -8,21 +8,29 @@ links to the other docs.
 ```text
 Examples/EternalDigger/
 ├── Program.cs                  seed from the first argument, creates and starts the game
-├── EternalDiggerGame.cs        GameBase: 120 × 48, 8 × 16 font, ESC quits, sets MineScene
+├── EternalDiggerGame.cs        GameBase: 120 × 48, 8 × 16 font, ESC saves and quits, starts on TitleScene
 ├── Layout.cs                   screen and tile sizes, surface spots, tile ↔ world helpers
 ├── Shop.cs                     prices and start inventory; Deliver, TryBuyLadder, Collect
 ├── MinerInput.cs               one frame of miner keys; FromKeyboard
-├── Scenes/MineScene.cs         services, the miner entity, systems in run order
+├── Scenes/
+│   ├── MineScene.cs            services, the miner entity, systems in run order; Save() for Esc
+│   ├── TitleScene.cs           loads the save, draws the title menu, starts MineScene
+│   └── TitleMenu.cs            CONTINUE / NEW MINE and the confirmation, without drawing (testable)
+├── Saving/
+│   ├── SaveData.cs             what a save holds; NewMine, Capture, ToMiner, ApplyTo
+│   ├── SaveFile.cs             binary versioned file: Save, Load, Read, Write, SaveStatus, DefaultPath
+│   └── GameSaver.cs            the running mine's slot: Request, Save, Saves, LastSaveFailed
 ├── Mining/
 │   ├── Mine.cs                 the endless seeded grid: At, Hit, TryPlaceLadder, IsSupported, Noise
 │   ├── Tiles.cs                per-type rules: solid, breakable, ore value, hits, start depths
 │   ├── TileType.cs             Air, Grass, Dirt, Stone, Granite, Copper, Silver, Gold, Bedrock
 │   ├── TileCell.cs             one tile: Type, Damage, HasLadder, Seen
+│   ├── TileChange.cs           a saved tile: Column, Row, Cell
 │   └── DigResult.cs            what a hit did: DigOutcome (Nothing, Damaged, Broken), Type, Hits
 ├── Components/
 │   ├── Miner.cs                the player: grid position, motion, lamp, dig timers, inventory
 │   └── Particle.cs             Particle, ParticleStyle, Physics, TileCollider, Mist, FloatingNumber
-├── Systems/                    18 systems, listed below
+├── Systems/                    19 systems, listed below
 ├── Effects/
 │   ├── EffectSpawner.cs        creates every particle and floating number
 │   ├── ParticleLooks.cs        characters and colours per style over a lifetime; GlyphAt
@@ -42,7 +50,7 @@ Examples/EternalDigger/
 | # | System | Constructor | Queries | Does |
 |---|---|---|---|---|
 | 1 | `MinerControlSystem` | `Mine`, `EffectSpawner` | `Miner, Position` | Reads `MinerInput`; rescue, fall, ladder, walk/dig; `Mine.Hit`, `Shop.Collect`, dig effects. Public `Control(...)` |
-| 2 | `InteractionSystem` | `EffectSpawner` | `Miner` | `E` at the door or shop: `Shop.Deliver`/`TryBuyLadder`, coins, pops, numbers |
+| 2 | `InteractionSystem` | `EffectSpawner`, `GameSaver` | `Miner` | `E` at the door or shop: `Shop.Deliver`/`TryBuyLadder`, coins, pops, numbers; asks for a save |
 | 3 | `MinerMotionSystem` | `Mine`, `EffectSpawner` | `Miner, Position` | Slides `Position`, ends moves, foot and landing dust, counts down `DigCooldown`/`SwingTime`. Public `Move(...)` |
 | 4 | `CameraSystem` | `Camera`, `RenderConsole`, `ScreenShake`, `Random` | `Miner, Position` | Vertical follow, shake, whole-cell `Camera.Position` |
 | 5 | `LightingSystem` | `Mine`, `LightMap`, `Camera` | `Miner, Position` | `LightMap.Compute` for the rows on screen |
@@ -51,6 +59,7 @@ Examples/EternalDigger/
 | 8 | `ParticlePhysicsSystem` | `Mine` | `Particle, Position, Velocity, Physics` | Gravity, drag, movement, landing on rock (`TileCollider`) |
 | 9 | `ParticleLifetimeSystem` | — | `Particle, Glyph` | Ages particles, sets their glyph, destroys expired ones |
 | 10 | `FloatingNumberSystem` | — | `FloatingNumber, Position, Velocity` | Moves numbers up, destroys expired ones |
+| 11 | `SaveSystem` | `GameSaver` | `Miner` | Saves on request, or after `GameSaver.AutosaveInterval` s underground |
 
 ### Presentation (`MineScene.Presentation`)
 
@@ -63,7 +72,7 @@ Examples/EternalDigger/
 | 5 | `MinerRenderSystem` | `Canvas`, `Camera` | `Miner, Position` | The miner and lamp glow, over the particles |
 | 6 | `FloatingNumberRenderSystem` | `Canvas`, `Camera` | `FloatingNumber, Position` | `+150g` / `-10g` |
 | 7 | `PromptRenderSystem` | `Canvas`, `Camera` | `Miner, Position` | Door and shop prompts |
-| 8 | `HudSystem` | `Canvas` | `Miner` | Rows 0–1 |
+| 8 | `HudSystem` | `Canvas`, `GameSaver` | `Miner` | Rows 0–1, the save hint |
 
 ## Components
 
@@ -81,14 +90,15 @@ Examples/EternalDigger/
 
 | Service | Created in | Used by | Key members |
 |---|---|---|---|
-| `Mine` | `MineScene` | control, motion, light, glints, mist, particle physics, terrain | `At`, `TypeAt`, `IsSolid`, `HasLadder`, `IsSupported`, `Hit`, `TryPlaceLadder`, `Noise`, `GeneratedRows`; static `Depth`, `IsInside` |
+| `Mine` | `MineScene` | control, motion, light, glints, mist, particle physics, terrain, saving | `At`, `TypeAt`, `IsSolid`, `HasLadder`, `IsSupported`, `Hit`, `TryPlaceLadder`, `CollectChanges`, `Apply`, `Noise`, `GeneratedRows`; static `Depth`, `IsInside` |
 | `EffectSpawner` | `MineScene` | control, interaction, motion, glints, mist | `DigHit`, `TileBreak`, `FootDust`, `LandingDust`, `Glint`, `Mist`, `Coins`, `Pop`, `Number`, `Shake` |
 | `ScreenShake` | `MineScene` (inside `EffectSpawner`) | `EffectSpawner`, `CameraSystem` | `Add`, `Update`, `Strength` |
 | `LightMap` | `MineScene` | lighting, glints, mist, terrain, particles | `Compute`, `Get`, `FirstRow`, `Rows`; `Dark`, `Dim`, `Lit`, `Bright` |
 | `Canvas` | `MineScene` | all Presentation systems | `Draw`, `DrawOver`, `BackgroundAt`, `Width`, `Height` |
 | `Random(seed)` | `MineScene` | `EffectSpawner`, camera, glints, mist | — |
+| `GameSaver` | `MineScene` | interaction, `SaveSystem`, HUD, `MineScene.Save` | `Request`, `Save`, `IsRequested`, `Saves`, `LastSaveFailed`, `Path`, `Seed` |
 
-Static rule classes: `Tiles`, `Shop`, `Layout`, `TileLooks`, `ParticleLooks`.
+Static rule classes: `Tiles`, `Shop`, `Layout`, `TileLooks`, `ParticleLooks`, `SaveFile`.
 
 ## Constants
 
@@ -121,13 +131,21 @@ Static rule classes: `Tiles`, `Shop`, `Layout`, `TileLooks`, `ParticleLooks`.
 | `MistSystem.MaxMist` | 40 | Mist particles at most |
 | `ParticleRenderSystem.NearMinerCap` | 6 | Particles drawn per frame in the one-tile ring around the miner |
 | `ScreenShake.MaxStrength` / `Decay` | 2 cells / 6 per s | Shake cap and fade |
+| `GameSaver.AutosaveInterval` | 60 s | Time underground between autosaves (0 = off) |
+| `HudSystem.SavedHintSeconds` | 1.5 s | How long ` SAVED ` shows |
+| `SaveFile.Version` | 1 | Save-format version written |
 
 ## User-visible text
 
 | Text | Constant |
 |---|---|
 | ` ETERNAL DIGGER ` | `HudSystem.Title` |
-| ` ←→ walk/dig   ↓ dig   ↑ climb ladder   SPACE place ladder   E deliver/buy   hold R rescue   ESC quit` | `HudSystem.KeyHelp` |
+| ` ←→ walk/dig   ↓ dig   ↑ climb ladder   SPACE place ladder   E deliver/buy   hold R rescue   ESC save & quit` | `HudSystem.KeyHelp` |
+| ` SAVED ` / ` SAVE FAILED` | `HudSystem.SavedText`, `SaveFailedText` |
+| `CONTINUE`, `NEW MINE`, `Start over? The saved mine will be lost.`, `NO`, `YES, START OVER` | `TitleMenu` (`ContinueText`, `NewMineText`, `ConfirmQuestion`, `NoText`, `YesText`) |
+| `↑↓ choose   E select   ESC quit` | `TitleScene.KeyHelp` |
+| `The saved mine could not be read. Starting a new mine.` | `TitleScene.CorruptMessage` |
+| `The saved mine is from another version of the game. Starting a new mine.` | `TitleScene.UnsupportedMessage` |
 | ` RESCUE ` … ` the bag is lost` | `HudSystem.RescueLabel`, `RescueNote` |
 | ` NO LADDERS LEFT!  Hold R to be rescued (the bag is lost) ` | `HudSystem.NoLaddersWarning` |
 | ` DELIVER [E] ` | `PromptRenderSystem.DeliverText` |

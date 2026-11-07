@@ -85,7 +85,15 @@ using [04](04-flows.md).
 |---|---|---|
 | ` ETERNAL DIGGER ` | `HudSystem.Title`, row 0 | Title |
 | `  GOLD <n>g   LADDERS <n>   DEPTH <n>m   BAG ◆<copper> ◆<silver> ◆<gold> = <value>g` | `HudSystem.DrawStatus`, row 0. `N0` formatting in the user's culture | Inventory and depth |
-| ` ←→ walk/dig   ↓ dig   ↑ climb ladder   SPACE place ladder   E deliver/buy   hold R rescue   ESC quit` | `HudSystem.KeyHelp`, row 1 | Default help line |
+| ` ←→ walk/dig   ↓ dig   ↑ climb ladder   SPACE place ladder   E deliver/buy   hold R rescue   ESC save & quit` | `HudSystem.KeyHelp`, row 1 | Default help line |
+| ` SAVED ` (grey, then dark grey, 1.5 s) | `HudSystem.SavedText`, right end of row 1 | The game was just saved |
+| ` SAVE FAILED` (red, 1.5 s) | `HudSystem.SaveFailedText`, right end of row 1 | The save file couldn't be written (`GameSaver.LastSaveFailed`); play goes on |
+| `CONTINUE`, `NEW MINE` | `TitleMenu.ContinueText`, `NewMineText` (title screen) | CONTINUE only with a readable save |
+| `Start over? The saved mine will be lost.`, `NO`, `YES, START OVER` | `TitleMenu.ConfirmQuestion`, `NoText`, `YesText` | NEW MINE picked while a save exists |
+| `↑↓ choose   E select   ESC quit` | `TitleScene.KeyHelp` | Title screen help |
+| `The saved mine could not be read. Starting a new mine.` (red) | `TitleScene.CorruptMessage` | `SaveStatus.Corrupt`: file moved to `save.dat.bad` |
+| `The saved mine is from another version of the game. Starting a new mine.` (red) | `TitleScene.UnsupportedMessage` | `SaveStatus.Unsupported`: file moved to `save.dat.bad` |
+| `ETERNAL DIGGER` block logo | `TitleScene.Logo` | Title screen |
 | ` RESCUE ` + bar + ` the bag is lost` | `HudSystem.RescueLabel`, `RescueNote` | `R` is held |
 | ` NO LADDERS LEFT!  Hold R to be rescued (the bag is lost) ` (blinking) | `HudSystem.NoLaddersWarning` | 0 ladders and below the surface |
 | ` DELIVER [E] ` | `PromptRenderSystem.DeliverText` | Standing at the door |

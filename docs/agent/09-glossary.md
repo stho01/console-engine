@@ -50,6 +50,8 @@ Support/user words are **[inferred]**. The team may also use Norwegian terms. Ad
 
 | miner / digger | EternalDigger player | `Miner` component, `MinerControlSystem` |
 | mine / map / world (EternalDigger) | The endless tile grid | `Mine`, `TileCell`, `TileType`. Not the ECS `World` |
+| save / slot / continue (EternalDigger) | The one save file and loading it | `SaveFile`, `SaveData`, `GameSaver`, `TitleMenu.ContinueText` |
+| changed tiles (EternalDigger) | Tiles that differ from what the seed generates; what a save stores of the mine | `TileChange`, `Mine.CollectChanges` |
 | shaft / mine entrance | The only way down from the surface, column 21 under the `MINE` frame | `Mine.ShaftColumn` |
 | bag / inventory | Ore carried, not yet sold | `Miner.CopperOre`, `SilverOre`, `GoldOre` |
 | gold / money | Currency from deliveries | `Miner.Gold` |

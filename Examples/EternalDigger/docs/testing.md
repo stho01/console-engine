@@ -15,12 +15,15 @@ CI (`.github/workflows/build-and-test.yml`) runs it with the rest of the solutio
 
 | Class | Tests | Covers |
 |---|---|---|
-| `MineTests` | 34 | Same seed gives the same mine, different seeds differ; sky, grass, shaft and bedrock layout; rows generated in whole blocks; outside the mine is bedrock (beside) or air (above) and ignores writes; hitting damages then breaks, returns the type, ignores unbreakable tiles; the support rule; ladder placement rules; no tile type above its start depth (20 seeds); every ore and granite eventually appears |
+| `MineTests` | 37 | Same seed gives the same mine, different seeds differ; sky, grass, shaft and bedrock layout; rows generated in whole blocks; outside the mine is bedrock (beside) or air (above) and ignores writes; hitting damages then breaks, returns the type, ignores unbreakable tiles; the support rule; ladder placement rules; no tile type above its start depth (20 seeds); every ore and granite eventually appears; `CollectChanges` is empty for a fresh mine and lists only changed tiles; `Apply` outside the mine is ignored |
 | `TilesTests` | 24 | `IsSolid`, `IsBreakable`, `IsOre`/`OreValue` tables; deeper ore is worth more; hits grow by one per 25 m; unbreakable tiles need 0 hits |
 | `MinerControlSystemTests` | 11 | Real frames of gameplay with scripted input (below) |
 | `LightMapTests` | 7 | The surface is bright; outside the window is dark; neighbours of the lamp are bright even when solid; a tunnel in the cone is lit and marked seen; rock blocks the lamp; tiles behind the miner stay dark; light falls off with distance (bright → lit → dim → dark) |
 | `ParticleLooksTests` | 2 | No particle style is born blank (which would erase a cell for a frame); `GlyphAt` matches `Character` and `Color` |
 | `MinerVisibilityTests` | 4 | Holding a dig key on gold at 100 m (right, left, down) with the real particle systems and renderers: on every frame the face `☻` and the lamp are on screen and the miner's empty back column has no particle; the tile breaks and digging made particles. `ParticleRenderSystem.Dim` maps bright colours to their dark twins |
+| `SaveFileTests` | 14 | Write/read round trip of every field and changed tile; save → load → `ApplyTo` rebuilds the same mine and miner; saving over an old save leaves one file; missing file; garbage file is `Corrupt` and moved to `.bad`; every truncation and trailing bytes are `Corrupt`; versions 0 and 2 are `Unsupported` (and moved aside); out-of-range column, negative gold, unknown tile type; `NewMine` start state; `GameSaver` writes and counts saves, and reports a failed write without throwing |
+| `SaveSystemTests` | 3 | A requested save is written that frame; no autosave on the surface; one autosave per 60 s underground |
+| `TitleMenuTests` | 6 | CONTINUE first with a save; NEW MINE at once without one; NEW MINE with a save asks to confirm with NO selected; YES starts over; NO goes back; Up/Down wrap |
 | `ShopTests` | 6 | Delivering pays every ore and empties the bag; an empty bag pays 0; buying a ladder with and without enough gold; collecting each ore; non-ore isn't collected |
 
 Names follow the repository's `Method_State_Expected` style, for example
@@ -79,7 +82,8 @@ empty bag, gold kept); releasing the rescue early resets it.
 | Not tested | Why | How it was checked |
 |---|---|---|
 | Render systems other than particles and miner | Not written yet; `MinerVisibilityTests` shows how (`Fakes/FakeConsoleHandler`) | Frames captured from a real run in a macOS terminal and inspected |
-| `InteractionSystem` | Reads `Input.Instance` directly (`E`), which needs a console | `Shop.Deliver`/`TryBuyLadder` are tested; the spot checks are `Layout` one-liners |
+| `InteractionSystem` | Reads `Input.Instance` directly (`E`), which needs a console | `Shop.Deliver`/`TryBuyLadder` are tested; the spot checks are `Layout` one-liners. That it calls `GameSaver.Request` is checked by reading |
+| `TitleScene`, Esc save | Read `Input.Instance` and switch scenes on a `GameBase` | The rules are in `TitleMenu` (tested); not run in a real console yet |
 | `EffectSpawner` and particle systems | Visual; their output is entities in a `World`. The looks (`ParticleLooks`) are tested; `MinerVisibilityTests` runs physics and lifetime, but only checks the miner's cells | Reading and running the game |
 | `CameraSystem`, `GlintSystem`, `MistSystem` | Need a `World`, a `Camera` and randomness | Reading and running the game |
 | The whole scene | `GameBase` creates a real console handler | — |

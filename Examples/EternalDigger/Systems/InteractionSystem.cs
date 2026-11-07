@@ -4,15 +4,16 @@ using ConsoleEngine.Ecs;
 using ConsoleEngine.Infrastructure.Inputs;
 using EternalDigger.Components;
 using EternalDigger.Effects;
+using EternalDigger.Saving;
 using Microsoft.Xna.Framework;
 
 namespace EternalDigger.Systems;
 
 /// <summary>
 /// <c>E</c> at the house: deliver the bag at the door, buy one ladder at the shopfront. Only while the miner stands
-/// still on the spot.
+/// still on the spot. Every sale and purchase asks for a save.
 /// </summary>
-public sealed class InteractionSystem(EffectSpawner effects) : EntitySystem
+public sealed class InteractionSystem(EffectSpawner effects, GameSaver saver) : EntitySystem
 {
     //**********************************************************
     //** fields
@@ -71,6 +72,7 @@ public sealed class InteractionSystem(EffectSpawner effects) : EntitySystem
             effects.Coins(Commands, DoorEffectOrigin, Math.Clamp(earned / GoldPerCoin, 3, MaxCoins));
             effects.Pop(Commands, DoorEffectOrigin);
             effects.Number(Commands, DoorEffectOrigin + new Vector2(0f, -2f), earned);
+            saver.Request();
             return;
         }
 
@@ -85,5 +87,6 @@ public sealed class InteractionSystem(EffectSpawner effects) : EntitySystem
 
         effects.Pop(Commands, ShopEffectOrigin);
         effects.Number(Commands, ShopEffectOrigin + new Vector2(0f, -2f), -Shop.LadderPrice);
+        saver.Request();
     }
 }

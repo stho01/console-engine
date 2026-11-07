@@ -1,8 +1,8 @@
 # 02 — State model
 
-There is no database. All state is in memory in one process and is lost when the window closes. Nothing is saved:
-no high scores, settings or save games. The only persistent inputs are the TerraForM map files
-([§ Map file format](#map-format)).
+There is no database. All state is in memory in one process and is lost when the window closes, with one exception:
+EternalDigger's save file ([§ EternalDigger save file](#eternal-digger-save)). There are no high scores or settings.
+The only other persistent inputs are the TerraForM map files ([§ Map file format](#map-format)).
 
 ## Engine objects
 
@@ -41,14 +41,33 @@ no high scores, settings or save games. The only persistent inputs are the Terra
 
 | Owner | Field | Meaning | Reset when |
 |---|---|---|---|
-| `Mine` (one per `MineScene`) | `_cells` (`TileCell[]`, row-major, 30 per row), `_generatedRows` | The world. `TileCell`: `Type` (`TileType`), `Damage` (hits taken), `HasLadder`, `Seen` (ever lit). Generated from the seed, then changed only by digging, ladders and `Seen` | New process (each run starts a new `Mine`) |
+| `Mine` (one per `MineScene`) | `_cells` (`TileCell[]`, row-major, 30 per row), `_generatedRows` | The world. `TileCell`: `Type` (`TileType`), `Damage` (hits taken), `HasLadder`, `Seen` (ever lit). Generated from the seed, then changed only by digging, ladders and `Seen` | New `MineScene`: regenerated from the seed, then the save's changed tiles are applied |
 | `Miner` component (one entity) | `Column`, `Row`, `MoveFrom`, `MoveElapsed`, `MoveDuration`, `Motion`, `FallRows`, `FacingX`, `LampDirection`, `DigCooldown`, `SwingTime`, `SwingDirection`, `RescueHold` | Where the miner is and what they are doing. While moving, `Column`/`Row` are already the target tile and the engine's `Position` slides there | Rescue resets the position and motion |
 | `Miner` component | `Gold`, `Ladders`, `CopperOre`, `SilverOre`, `GoldOre` | Inventory. The three ore counts are "the bag" | Ore: delivery or rescue. Gold/ladders: never |
 | `LightMap` | `_levels` (byte per tile on screen), `FirstRow`, `Rows` | This frame's light | Recomputed every frame |
 | Particles | `Particle` (`Age`, `Lifetime`, `Style`, `Variant`), `Physics`, `TileCollider`/`Mist` tags, `FloatingNumber` + engine `Position`/`Velocity`/`Glyph` | Effects only, no game state | Destroyed when `Age >= Lifetime` |
 
-Nothing is saved: gold, ladders and the dug mine are gone when the game closes. The seed (first argument) is the only
-way to get the same mine again.
+<a id="eternal-digger-save"></a>
+### EternalDigger save file
+
+One slot: `SaveFile.DefaultPath` = `<LocalApplicationData>/EternalDigger/save.dat` (`%LOCALAPPDATA%` on Windows,
+`~/Library/Application Support` on macOS, `~/.local/share` on Linux). Written by `SaveFile.Save` through
+`save.dat.tmp`, then moved over the old file. Little-endian binary, `SaveFile.Version` = 1:
+
+| Field | Type | Check on load |
+|---|---|---|
+| magic `EDSV` | int `0x56534445` | else `Corrupt` |
+| version | int | ≠ 1 → `Unsupported` |
+| seed | int | — |
+| column, row | int, int | column 0–29, row 0–100 000 |
+| facing | sbyte | −1 or 1 |
+| gold, ladders, copper, silver, gold ore | 5 × int | ≥ 0 |
+| change count | int | ≤ 100 001 × 30 |
+| per change: row, column, type, damage, flags | int, byte, byte, byte, byte | row 0–100 000, column < 30, type a `TileType`, flags only bit 0 (ladder) and bit 1 (seen) |
+
+Anything after the last change, or a file that ends early, is `Corrupt`. A `Corrupt` or `Unsupported` file is moved
+to `save.dat.bad` (`SaveFile.BadPath`) by `SaveFile.Load`. Not saved: motion, dig cooldown, rescue hold, particles,
+the lamp direction (rebuilt from facing).
 
 <a id="map-format"></a>
 ## Map file format (`Examples/TerraForM/Assets/Maps/mapN.txt`)

@@ -8,18 +8,19 @@ not.
 
 ```text
 Program.cs                       parses the seed, creates the game, Initialize(), Start()
-└── EternalDiggerGame : GameBase  120 × 48 cells, 8 × 16 font; ESC → Stop()
-    └── MineScene : EcsScene<EternalDiggerGame>
-        ├── shared services       Mine, Random, EffectSpawner (+ ScreenShake), LightMap, Canvas
+└── EternalDiggerGame : GameBase  120 × 48 cells, 8 × 16 font; ESC → MineScene.Save(), Stop()
+    ├── TitleScene : Scene<EternalDiggerGame>   loads the save; CONTINUE / NEW MINE (TitleMenu)
+    └── MineScene : EcsScene<EternalDiggerGame>  started from a SaveData (loaded, or SaveData.NewMine)
+        ├── shared services       Mine, Random, EffectSpawner (+ ScreenShake), LightMap, Canvas, GameSaver
         ├── World                 the miner, particles, floating numbers
-        ├── Simulation group      10 systems: rules, motion, camera, light, effects
-        └── Presentation group    8 systems: sky, terrain, house, miner, particles, numbers, prompts, HUD
+        ├── Simulation group      11 systems: rules, motion, camera, light, effects, saving
+        └── Presentation group    8 systems: sky, terrain, house, particles, miner, numbers, prompts, HUD
 ```
 
 | Engine piece | Used for | Where |
 |---|---|---|
-| `GameBase` | The window, the frame loop, `Stop()` on `ESC` | `EternalDiggerGame.cs` |
-| `SceneManager.Set` | Loads the one scene | `EternalDiggerGame.OnInitialize` |
+| `GameBase` | The window, the frame loop, save and `Stop()` on `ESC` | `EternalDiggerGame.cs` |
+| `SceneManager.Set` | Loads the title, then the mine | `EternalDiggerGame.OnInitialize`, `TitleScene.OnUpdate` |
 | `EcsScene<TGame>` | Owns the `World`, the two `SystemGroup`s and the `Camera`; disposes the world on unload | `Scenes/MineScene.cs` |
 | `World`, `Query`, `EntityChunk` | Entity storage and chunk-by-chunk iteration | every system |
 | `EntitySystem` + `Commands` | Game logic; structural changes (spawning and destroying particles) through the group's `CommandBuffer` | `Systems/` |
@@ -42,22 +43,27 @@ sequenceDiagram
     participant S as MineScene
     P->>G: new EternalDiggerGame(seed) { Name = "EternalDigger" }
     P->>G: Initialize()
-    G->>S: Scenes.Set(new MineScene(seed))
-    S->>S: OnLoad: new World, Simulation, Presentation
-    S->>S: OnCreate: services, miner entity, systems
+    participant T as TitleScene
+    G->>T: Scenes.Set(new TitleScene(seed, SaveFile.DefaultPath))
+    T->>T: OnLoad: SaveFile.Load → TitleMenu
     P->>G: Start(): the frame loop until ESC
+    T->>S: E on CONTINUE / NEW MINE: Scenes.Set(new MineScene(saveData, path))
+    S->>S: OnLoad: new World, Simulation, Presentation
+    S->>S: OnCreate: Mine(seed) + saved tiles, services, miner entity, systems
 ```
 
 `MineScene.OnCreate` builds everything once:
 
 1. **Shared services**, plain objects (not ECS data) handed to the systems through their constructors:
-   - `Mine(seed)`, the world grid ([below](#the-mine-is-not-made-of-entities)).
+   - `Mine(seed)`, the world grid ([below](#the-mine-is-not-made-of-entities)), with the save's changed tiles put back
+     (`SaveData.ApplyTo`).
    - `Random(seed)`, one random source for every effect.
    - `EffectSpawner(random, new ScreenShake())`, which creates particles ([rendering-and-effects.md](rendering-and-effects.md)).
    - `LightMap(30, 26)`, the light for the tile rows on screen.
    - `Canvas(Console)`, the frame buffer wrapper that remembers backgrounds.
+   - `GameSaver(path, seed, mine)`, which writes the save ([Saving](#saving)).
 2. **The miner entity**: `Position` (top-left cell of the sprite, in world cells) and `Miner` (grid position,
-   motion, inventory).
+   motion, inventory), from `SaveData.ToMiner`.
 3. **The systems**, in run order.
 
 The engine has no singletons or resources for ECS data, so services shared by several systems are passed to their
@@ -118,8 +124,9 @@ Scenes.Update → MineScene.OnUpdate → Simulation.Update(dt)
   ParticlePhysicsSystem   gravity, drag, move, land on rock
   ParticleLifetimeSystem  age, pick the glyph for the age, destroy expired
   FloatingNumberSystem    drift up, destroy expired
+  SaveSystem              a sale/purchase asked for a save, or 60 s underground → GameSaver.Save
   ── Commands.Playback: the particles recorded above are created, expired ones destroyed
-OnUpdate (game)           ESC → Stop()
+OnUpdate (game)           ESC → MineScene.Save(), Stop()
 Scenes.Render → MineScene.OnRender → Presentation.Update(dt)
   SkyRenderSystem → TerrainRenderSystem → HouseRenderSystem → ParticleRenderSystem
   → MinerRenderSystem → FloatingNumberRenderSystem → PromptRenderSystem → HudSystem
@@ -187,6 +194,22 @@ protected override void OnUpdate(float deltaSeconds)
 
 `IForEach` jobs would work for the simple loops too; chunk loops were chosen because most systems need
 `chunk.Entities`, `chunk.Has<T>()` or a call into a shared service.
+
+<a id="saving"></a>
+## Saving
+
+Saving lives in `Saving/` and never runs per frame:
+
+| Piece | Does |
+|---|---|
+| `SaveData` | What a save holds: seed, miner tile and facing, gold, ladders, bag, `List<TileChange>`. `NewMine(seed)`, `Capture(seed, miner, mine, changes)`, `ToMiner()`, `ApplyTo(mine)` |
+| `SaveFile` | The binary, versioned file (`Version` = 1, magic `EDSV`). `Save` (temp file, then move), `Load` (never throws; returns `SaveStatus` `Missing`/`Loaded`/`Corrupt`/`Unsupported`, moves an unreadable file to `save.dat.bad`), `Write`/`Read` on a stream, `DefaultPath` |
+| `GameSaver` | The running mine's slot: `Request()` from gameplay, `Save(miner)` builds the data and writes it, catching I/O errors (`LastSaveFailed`); `Saves` counts attempts for the HUD |
+| `SaveSystem` | Last in Simulation: saves when requested (`InteractionSystem` after a sale or purchase) or after `AutosaveInterval` s underground |
+| `Mine.CollectChanges` / `Apply` | The mine as seed + changes: at save time every generated tile is compared with a freshly generated one, so nothing is tracked while playing |
+
+Esc is read by `EternalDiggerGame.OnUpdate`, which calls `MineScene.Save()` before `Stop()`. A new save-format field
+means: add it to `SaveData`, write it in `SaveFile.Write`, bump `SaveFile.Version`, and read the old version too.
 
 ## Things the engine doesn't provide, and what the game does instead
 

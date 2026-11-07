@@ -201,6 +201,10 @@ Rules: [03 § EternalDigger](03-rules.md#eternal-digger). Flow: [04 § F11](04-f
    the headlamp by moving/digging towards the ore. Stop.
 7. Different mine every time → **Cause:** the seed defaults to `Environment.TickCount`. **Fix:** pass a number as
    the first argument for a repeatable mine. Stop.
-8. "Debris or sparks disappear right next to the miner" → **Cause:** by design. No particle is drawn on his 4 × 2
+8. "My progress is gone", "no CONTINUE" → **Cause:** one of: the game was closed without `ESC` (progress since the
+   last sale, purchase or 60 s underground autosave is lost); NEW MINE was confirmed (replaces the slot); the save was
+   unreadable (the title said so; the file is now `save.dat.bad`, [Q11](07-checks.md#q11)); or ` SAVE FAILED` showed
+   (the folder isn't writable). Stop.
+9. "Debris or sparks disappear right next to the miner" → **Cause:** by design. No particle is drawn on his 4 × 2
    cells, and at most 6 (dimmed) are drawn in the tile around him, so he stays readable (`ParticleRenderSystem`). Stop.
 
