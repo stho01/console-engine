@@ -1,7 +1,8 @@
 # Plan: 2D-fysikk i ConsoleEngine
 
-Status (2026-11-07): fase 0 og 1 er ferdige (baseline-benchmark, `FixedTimestep` og `EcsScene.FixedSimulation`).
-Målingene står i § 12b. Planen er gjennomgått mot industristandard (Box2D v3, «Fix Your Timestep»,
+Status (2026-11-07): fase 0, 1 og 2 er ferdige (baseline-benchmark, `FixedTimestep` og `EcsScene.FixedSimulation`,
+`ConsoleEngine/Ecs/Physics/` med deteksjon og hendelser, Asteroids.Ecs som pilot). Fase 3 (løser) gjenstår. Målingene
+står i § 12b. Planen er gjennomgått mot industristandard (Box2D v3, «Fix Your Timestep»,
 Ericson, Godot/Unity 2D). Avvik fra standarden er markert og begrunnet i § 10.
 
 ## 1. Mål og ikke-mål
@@ -64,8 +65,9 @@ Standard: Fiedler, «Fix Your Timestep».
     Unitys `FixedUpdate`).
   - **Input-kanter må låses** til et fast steg har brukt dem. Et hopp som trykkes i en frame uten fysikksteg skal
     ikke forsvinne. `PlayerBody.JumpRequested` i Platformer.Ecs er allerede dette mønsteret.
-- Fysikken lagrer forrige posisjon per kropp. Da kan interpolering (`alpha = accumulator / FixedDelta`) legges til
-  senere uten å endre datamodellen.
+- Fysikken skal lagre forrige posisjon per kropp, så interpolering (`alpha = accumulator / FixedDelta`, nå
+  `FixedTimestep.Alpha`) kan legges til uten å endre datamodellen. Ikke gjort i fase 2: legges til sammen med
+  interpoleringen, når den trengs.
 
 ## 4. Komponenter
 
@@ -75,8 +77,11 @@ Alle er `unmanaged` structs i `ConsoleEngine.Ecs.Physics`. Posisjon og hastighet
 | Komponent | Felter | Standard |
 |---|---|---|
 | `RigidBody` | `BodyType` (`Static`/`Kinematic`/`Dynamic`), `InverseMass`, `GravityScale`, `LinearDamping` | Box2D `b2BodyDef`, Unity/Godot body types |
-| `Collider` | `ShapeType` (`Box`/`Circle`), `HalfExtents` eller `Radius`, `Offset`, `Friction`, `Restitution`, `IsSensor` | Én komponent med formtype, som Box2D `b2Shape` og Unity DOTS `PhysicsCollider` |
-| `CollisionFilter` | `Category`, `Mask` (bits) | Box2D `categoryBits`/`maskBits`, Unity/Godot layers |
+| `Collider` | `ShapeType` (`Box`/`Circle`), `HalfExtents` eller `Radius`, `Offset`, `Category`, `Mask` (bits), `IsSensor`. `Friction` og `Restitution` kommer i fase 3 | Én komponent med formtype, som Box2D `b2Shape` og Unity DOTS `PhysicsCollider`. Filteret ligger i formen, som `b2ShapeDef.filter` i Box2D |
+
+Endret i fase 2: planen hadde en egen `CollisionFilter`-komponent. Filteret ble lagt i `Collider`, slik Box2D gjør. Det
+er én komponent mindre per entitet (Create tar maks 6 komponenter, og en Asteroids-kule trenger 6), og filteret leses
+uansett sammen med formen. En `Collider` uten `RigidBody` er en statisk kropp, som en collider uten rigidbody i Unity.
 
 - **Tre kroppstyper:**
   - `Static`: flyttes aldri, uendelig masse, testes aldri mot andre statiske.
@@ -96,8 +101,10 @@ Alle er `unmanaged` structs i `ConsoleEngine.Ecs.Physics`. Posisjon og hastighet
 
 `PhysicsSystem` kjører først i `FixedSimulation`. Rekkefølgen er standard for Box2D v3:
 
-1. **Gather.** Les chunk-spans (`Position`, `Velocity`, `RigidBody`, `Collider`, `CollisionFilter`) lineært inn i
-   forhåndsallokerte SoA-arrays i `PhysicsWorld`. Hver kropp får en tett indeks, og `Entity` lagres ved siden av.
+1. **Gather.** Les chunk-spans (`Position`, `Velocity`, `RigidBody`, `Collider`) lineært inn i forhåndsallokerte
+   arrays i `PhysicsSystem`. Hver kropp får en tett indeks, og `Entity` lagres ved siden av. Fase 2 bruker én
+   32-byte `BodyProxy` per kropp (AoS) i stedet for SoA: en partest leser alle feltene til to tilfeldige kropper, og
+   da gir ett struct per kropp færre cache-linjer enn sju separate arrays.
    Kopien er en lineær kopi fra justert native-minne, så den gjøres hvert steg i stedet for å vedlikeholde en map.
 2. **Integrer hastighet:** gravitasjon × `GravityScale`, demping. Semi-implisitt Euler.
 3. **Broadphase** (§ 6) → kandidatpar.
@@ -227,12 +234,17 @@ ristende kontroll.
 - Tester for akkumulatoren (0 steg, flere steg, taket nådd kaster resten).
 - Docs: `03-rules.md` (frame-loopen), `04-flows.md` (F9).
 
-### Fase 2: Kropper, kollidere, deteksjon (`feat(engine):`)
+### Fase 2: Kropper, kollidere, deteksjon (`feat(engine):`) — ferdig
 
-- `RigidBody`, `Collider`, `CollisionFilter`, `PhysicsWorld`, gather/scatter, grid-broadphase, narrowphase,
-  parcache, begin/end-hendelser, sensorer. Ingen kontaktrespons ennå.
-- `MovementSystem` får `Without<RigidBody>`.
-- **Pilot: Asteroids.Ecs.** Spillets `Collider` gis nytt navn eller erstattes, og `CollisionSystem` leser begin-hendelser.
+- `RigidBody`, `Collider` (med filter), `PhysicsSystem`, gather, `SpatialHashGrid`, `Collision`, `PairCache`,
+  begin/end-hendelser, sensorer. Ingen kontaktrespons ennå. Scatter trengs først når løseren endrer hastigheter
+  (fase 3); i fase 2 skriver integrasjonen rett i chunkene med en `IForEach`-jobb.
+- `MovementSystem` har `Without<RigidBody>`.
+- **Pilot: Asteroids.Ecs.** Spillets `Collider` er erstattet av motorens. Kuler er kinematiske sensorer, asteroider
+  dynamiske, og `CollisionLayers` gjør at bare kule og asteroide testes mot hverandre. `CollisionSystem` leser
+  `SensorBeginEvents` i `FixedSimulation`. `Bullet`-taggen er fjernet (sensoren er kula). Endret oppførsel: én kule
+  som treffer to asteroider i samme steg, ødelegger begge (før: bare den første), og asteroider og kuler flytter seg i
+  faste steg på 1/60 s.
 
 ### Fase 3: Løser (`feat(engine):`)
 
@@ -274,11 +286,29 @@ nesten to fysikksteg à 16,7 ms. Gridet i fase 2 skal måles mot disse tallene m
 Ingen egen benchmark. `EcsScene.RunSimulation` legger til ett `FixedTimestep.Advance`-kall per frame (noen få
 flyttallsoperasjoner, ingen allokering). En tom `FixedSimulation` koster ett tomt `SystemGroup.Update` per fast steg.
 
+### Fase 2: hele fysikksteget (2026-11-07)
+
+`ConsoleEngine.Benchmarks/Physics/PhysicsStepBenchmarks.Step60Hz`: ett `PhysicsSystem`-steg (integrasjon, gather,
+grid, narrowphase, parcache, hendelser) på de samme kroppene som baseline, alle dynamiske og i ro, cellestørrelse 4.
+Samme maskin og oppsett.
+
+| Kropper | Alle par (fase 0) | Helt fysikksteg | Allokert |
+|---|---|---|---|
+| 100 | 3,0 µs | 3,8 µs | 0 B |
+| 1 000 | 314 µs | 53 µs | 0 B |
+| 10 000 | 31,0 ms | 0,98 ms | 0 B |
+
+Lineært som ventet: ti ganger flere kropper gir rundt ti til tjue ganger tiden, og ved 10 000 kropper er hele steget
+32 ganger raskere enn bare partestene i brute force. Ved 100 kropper koster gather og parcachen omtrent det brute force
+sparer. 1 000-målingen har stor feilmargin (`--job short`, få iterasjoner).
+
 ## 13. Åpne spørsmål til eier
 
 1. **Celleforhold.** En konsollcelle er omtrent dobbelt så høy som bred, men verdenen regnes i celler. En sirkel med
    radius 3 blir derfor en ellipse på skjermen, og diagonal fart ser skjev ut. Skal fysikken regne i celler (som
    eksemplene gjør i dag), eller i kvadratiske enheter med skalering ved tegning?
+   **Besluttet (2026-11-07): celler, som i dag.** Én enhet er én konsollcelle på begge akser. Former og fart ser
+   strukket ut loddrett på skjermen. Det er kjent og akseptert.
 2. **`FixedDelta`.** 60 Hz som standard, eller høyere (for eksempel 120 Hz) for raske spill?
 3. **TerraForM.Ecs:** skal roveren over på motorfysikken, eller beholder den sin turbaserte bevegelse?
 

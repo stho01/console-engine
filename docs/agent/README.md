@@ -44,6 +44,7 @@ Tags used throughout:
 | Platformer: "debug text everywhere", "FPS not shown", "player vanishes into walls" | [P14](05-triage.md#p14) |
 | TerraForM: "the story is in English, where's the Norwegian version?" | [P15](05-triage.md#p15) |
 | Launcher: "game says (not built)", "launcher won't start a game", "game window stops at Press any key" | [P16](05-triage.md#p16) |
+| "Things pass through each other", "bullet didn't hit", "hit counted twice", "physics events don't fire" | [P17](05-triage.md#p17) |
 
 ## File index
 
@@ -52,8 +53,8 @@ Tags used throughout:
 | [01-system-map.md](01-system-map.md) | Projects, processes, Win32 surface, TCP logger link, CI |
 | [02-state-model.md](02-state-model.md) | Runtime state (no DB): engine objects, TerraForM state, map file format |
 | [03-rules.md](03-rules.md) | Disputable rules: frame timing, key semantics, scenes, TerraForM power/score/sequences/maps |
-| [04-flows.md](04-flows.md) | Startup, frame loop, scenes, logger, map load, TerraForM command flow, launcher — each with "stops here if" |
-| [05-triage.md](05-triage.md) | **Entry point.** Facts to collect, first checks, playbooks P1–P16 |
+| [04-flows.md](04-flows.md) | Startup, frame loop, scenes, logger, map load, TerraForM command flow, launcher, physics step — each with "stops here if" |
+| [05-triage.md](05-triage.md) | **Entry point.** Facts to collect, first checks, playbooks P1–P17 |
 | [06-diagnostics.md](06-diagnostics.md) | Where evidence lives (there are no log files), every user-visible message verbatim |
 | [07-checks.md](07-checks.md) | Read-only diagnostic commands, one per named question (replaces SQL, since there is no DB) |
 | [08-operator-actions.md](08-operator-actions.md) | What a user/support can do without a code change, and what to escalate |

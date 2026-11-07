@@ -1,8 +1,12 @@
 using ConsoleEngine.Ecs.Components;
+using ConsoleEngine.Ecs.Physics;
 
 namespace ConsoleEngine.Ecs.Systems;
 
-/// <summary><c>Position += Velocity * delta</c> for every entity that has both.</summary>
+/// <summary>
+/// <c>Position += Velocity * delta</c> for every entity that has both, except physics bodies: <see cref="PhysicsSystem"/>
+/// moves entities with a <see cref="RigidBody"/>.
+/// </summary>
 public sealed class MovementSystem : EntitySystem
 {
     //**********************************************************
@@ -16,7 +20,7 @@ public sealed class MovementSystem : EntitySystem
     //**********************************************************
 
     protected override void OnCreate() =>
-        _movers = World.Query(Query.With<Position, Velocity>());
+        _movers = World.Query(Query.With<Position, Velocity>().Without<RigidBody>());
 
     protected override void OnUpdate(float deltaSeconds)
     {

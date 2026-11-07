@@ -31,7 +31,7 @@ Platform: **Windows only.** Rendering and input go through Win32 P/Invoke (`kern
 | Win32 signatures and structs | `Libs/ConsoleEngine.Windows/LowLevel/` (`Kernel32.cs`, `User32.cs`) |
 | Vector/matrix math | `Libs/Microsoft.Xna.Framework/` (copied from MonoGame, change only with good reason) |
 | ECS (entities, components, archetypes, chunks) | `ConsoleEngine/Ecs/`, design and phases in [`docs/design/ecs-plan.md`](docs/design/ecs-plan.md) |
-| Planned 2D physics (not implemented yet) | Design and phases in [`docs/design/physics-plan.md`](docs/design/physics-plan.md) |
+| 2D physics (bodies, colliders, broadphase, contact/sensor events; no contact response yet) | `ConsoleEngine/Ecs/Physics/`, rules in [`docs/agent/03-rules.md` § Physics](docs/agent/03-rules.md#physics), design and phases in [`docs/design/physics-plan.md`](docs/design/physics-plan.md). Example: `Examples/Asteroids.Ecs` |
 | Performance measurements | `ConsoleEngine.Benchmarks/` (BenchmarkDotNet) |
 | How to use the engine | `Examples/Snake` (smallest), `Examples/TerraForM` (scenes, assets, tests), `Examples/<Game>.Ecs` (ECS port of each game: components, systems, queries, `EcsScene`; compare with `Examples/<Game>`. `Snake.Ecs` is the smallest, `TerraForM.Ecs` the fullest), `Examples/Swarm` (ECS at scale, system ordering attributes) |
 | Build/test pipeline | `.github/workflows/build-and-test.yml` |
@@ -123,6 +123,9 @@ ConsoleEngine/                    the engine
                                     attributes (UpdateOrderAttributes.cs), EcsScene<TGame>, FixedTimestep
     Components/                     built-in components: Position, Velocity, Rotation, Glyph, Outline, SpriteRef
     Rendering/                      Camera, OutlineLibrary, SpriteLibrary (namespace ConsoleEngine.Ecs.Rendering)
+    Physics/                        RigidBody, Collider, PhysicsSystem, ContactEvent/SensorEvent; internal:
+                                    BodyProxy, Collision (narrowphase), SpatialHashGrid (broadphase), PairCache,
+                                    ArrayBuffer
     Systems/                        built-in systems: MovementSystem, GlyphRenderSystem, OutlineRenderSystem,
                                     SpriteRenderSystem
   Extensions/ArrayExtensions.cs     To1D for 2D arrays
@@ -135,7 +138,7 @@ ConsoleEngine/                    the engine
     Scenery/Scene.cs, SceneManager.cs  scene stack (Push/Pop/Set)
 ConsoleEngine.Tests/              engine unit tests (mirrors ConsoleEngine/ folders), Fakes/ (console handler, scene)
 ConsoleEngine.Benchmarks/         BenchmarkDotNet: Baseline/ (OOP vs. struct arrays), Ecs/ (World, Query),
-                                  Physics/ (brute-force collision baseline)
+                                  Physics/ (brute-force baseline, whole PhysicsSystem step)
 ConsoleEngine.Abstractions/
   Inputs/  IInputHandler, Key, KeyState
   Rendering/  IConsoleHandler, Pixel, FontInfo

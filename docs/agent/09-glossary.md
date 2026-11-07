@@ -25,6 +25,12 @@ Support/user words are **[inferred]**. The team may also use Norwegian terms. Ad
 | query | The entities that have a given set of components | `Query`, `QueryDescription` (`With`, `Without`), `IForEach<…>` |
 | system | Game logic that runs over queries each frame | `EntitySystem` subclasses: engine `MovementSystem`, `GlyphRenderSystem`, `OutlineRenderSystem`, `SpriteRenderSystem`; game ones in `Examples/Asteroids.Ecs/Systems/` |
 | system group / sync point | Ordered list of systems. After the last one, deferred changes are applied | `SystemGroup`, `EcsScene.Simulation` / `Presentation` |
+| rigid body / body type | An entity the physics moves: static (never), kinematic (by its velocity only), dynamic (velocity, gravity, later contacts) | `RigidBody`, `BodyType` |
+| collider / shape | The circle or box physics tests for an entity, plus its collision filter | `Collider`, `ShapeType` |
+| collision layer / category / mask | Bits that say which colliders may touch each other | `Collider.Category`, `Collider.Mask`, Asteroids.Ecs `CollisionLayers` |
+| sensor / trigger | A collider that only reports overlaps, never pushes | `Collider.IsSensor`, `SensorEvent` |
+| contact / hit / collision event | Two colliders started or stopped touching | `ContactEvent`, `PhysicsSystem.ContactBeginEvents` / `ContactEndEvents` / `SensorBeginEvents` / `SensorEndEvents` |
+| broadphase | Fast search for pairs that might touch, before the exact test | `SpatialHashGrid` (narrowphase: `Collision`) |
 | fixed step / fixed timestep | A simulation step of constant length (default 1/60 s), run 0 or more times per frame so physics doesn't depend on the frame rate | `FixedTimestep`, `EcsScene.FixedSimulation` |
 | command buffer / deferred change | Create/destroy/add/remove recorded during a loop, applied later | `CommandBuffer`, `EntitySystem.Commands` |
 | deferred handle / deferred entity | Handle returned by a buffered Create, usable only in the same buffer until playback | Negative `Entity.Id`, `CommandBuffer.Create`, `CommandBuffer.Resolve` |

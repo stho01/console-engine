@@ -167,3 +167,18 @@ Runs inside [F2](#f2) steps "Scenes.Update" and "Scenes.Render". Both are skippe
 | 4 | Enter/Space/digit → `Launch(index)` | `LauncherMenu.HandleKey`, `LauncherApp.Launch` | Exe missing → status `LauncherTexts.NotBuilt`, nothing started | Yellow status line |
 | 5 | Start the exe through `conhost.exe` + `cmd.exe` in a new classic console window, working directory = exe folder, and wait | `GameRunner.Run` | `Process.Start` fails → `Win32Exception` caught | Status `LauncherTexts.StartFailed` |
 | 6 | Window closes → status `Closed`, discard buffered keys, back to step 3. A crashing game first stops at `pause` | `DiscardBufferedKeys` | — | `LauncherTexts.Closed` |
+
+<a id="f11"></a>
+## F11 — Physics step (`PhysicsSystem.OnUpdate`, inside [F9](#f9) step 0)
+
+Runs once per fixed step, where the scene added it to `FixedSimulation`. Rules: [03 § Physics](03-rules.md#physics).
+
+| # | Step | Class.method | Stops / skips if | Observable |
+|---|---|---|---|---|
+| 1 | Integrate every `Position` + `Velocity` + `RigidBody`: dynamic gets gravity and damping, then non-static moves by `Velocity * step` | `PhysicsSystem.IntegrateJob` | `BodyType.Static` → not moved. No `Velocity` → not in the query, never moves | Positions change only on fixed steps |
+| 2 | Copy every `Position` + `Collider` into `BodyProxy`s (centre = position + `Offset`); no `RigidBody` → static | `PhysicsSystem.GatherBodies` | — | `BodyCount` |
+| 3 | Broadphase: hash each body into every grid cell its bounding box touches, then list overlapping boxes, each pair once | `SpatialHashGrid.Build`, `FindPairs` | Boxes apart → no pair | — |
+| 4 | Pair rules, then the exact shape test | `PhysicsSystem.ShouldTest`, `Collision.Collide` | Filters reject each other, both static, both sensors, or a non-sensor pair without a dynamic body → skipped **silently** | — |
+| 5 | Record the touching pair; a pair that wasn't touching in the previous step adds a begin event | `PairCache.Touch` | — | `ContactBeginEvents`, `SensorBeginEvents`, `TouchingPairCount` |
+| 6 | Every pair of the previous step that isn't touching now (moved apart, filtered out, or an entity destroyed) adds an end event | `PairCache.CollectEnded` | — | `ContactEndEvents`, `SensorEndEvents` (entities may be dead) |
+| 7 | Later systems in `FixedSimulation` read the events and record destroys in `Commands`; playback after the group | game systems (Asteroids.Ecs `CollisionSystem`), `CommandBuffer.Playback` | Destroy of an already-dead entity → skipped silently | Hit entities gone before the frame is drawn |

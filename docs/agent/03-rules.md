@@ -160,11 +160,32 @@ and returns the whole steps that fit; the rest carries over to the next frame (`
 than `MaxStepsPerFrame` steps are due, it returns `MaxStepsPerFrame` and **drops** the backlog, so after a long stall
 the game slows down instead of catching up. A delta ≤ 0 or NaN adds nothing. At a high frame rate most frames run 0
 fixed steps, so a system in `FixedSimulation` that reads a key's `Pressed` edge directly misses most presses: latch
-input in `Simulation`, consume it in `FixedSimulation`. No example game uses `FixedSimulation` yet (it is phase 1 of
-`docs/design/physics-plan.md`).
+input in `Simulation`, consume it in `FixedSimulation`. Asteroids.Ecs runs its physics there.
+
+<a id="physics"></a>
+**Physics** (namespace `ConsoleEngine.Ecs.Physics`, plan `docs/design/physics-plan.md`, phase 2 done: detection and
+events, **no contact response yet**, so touching bodies pass through each other). Units are console cells on both axes
+(a circle looks twice as tall as wide on screen).
+- `RigidBody` (`RigidBody.Dynamic(mass, gravityScale, linearDamping)`, `.Kinematic()`, `.Static()`; `default` is
+  static). `Collider` (`Collider.Circle(radius, offset)`, `Collider.Box(halfExtents, offset)`, then `with { … }`):
+  shape, `Category`/`Mask` bits (factory default: category 1, collides with all), `IsSensor`. A `Collider` without a
+  `RigidBody` is a static body. `default(Collider)` has `Mask` 0 and collides with nothing.
+- `PhysicsSystem` (add it to `FixedSimulation`, default `DefaultCellSize` 8 cells, `Gravity` default 0) moves every
+  non-static `RigidBody` that has a `Velocity` (dynamic: `v += Gravity * GravityScale * step`, then
+  `v *= 1 / (1 + step * LinearDamping)`; then `p += v * step`). A body without `Velocity` never moves. A dynamic body
+  without `Collider` still moves.
+- A pair is tested only if `(a.Category & b.Mask) != 0` and `(b.Category & a.Mask) != 0`, not both static, not both
+  sensors, and, if neither is a sensor, at least one is dynamic (kinematic–kinematic and kinematic–static never touch).
+  Touching edges count as touching.
+- Events (`ContactBeginEvents`, `ContactEndEvents`, `SensorBeginEvents`, `SensorEndEvents`) hold the last step's
+  changes only and are replaced every step. A begin fires once when a pair starts touching; an end fires when it stops
+  **or when either entity was destroyed** (the entity in the event is then dead). In contact events `A` has the lower
+  entity id. Read them from a system added after `PhysicsSystem` in `FixedSimulation`; a system in `Simulation` sees
+  the same events again in frames without a fixed step.
 
 **Built-in systems** (namespace `ConsoleEngine.Ecs.Systems`, components in `ConsoleEngine.Ecs.Components`):
-- `MovementSystem`: `Position += Velocity * delta`. No wrapping, no bounds.
+- `MovementSystem`: `Position += Velocity * delta` for entities **without** a `RigidBody` (those are moved by
+  `PhysicsSystem`). No wrapping, no bounds.
 - `GlyphRenderSystem`: draws `Glyph.Character` at `floor(Position - Camera.Position)`. Off-screen cells are clipped
   by `RenderConsole.Draw`.
 - `OutlineRenderSystem`: draws the `OutlineLibrary` polygon for `Outline.Id` around the position, rotated clockwise
@@ -320,9 +341,9 @@ files, so every rule above applies, except:
 | Asteroids | Steer `A`/`D`, thrust `W`. No collisions, no objective. Logger enabled but nothing is logged | `AsteroidsGame` |
 | Asteroids.Ecs | Steer `A`/`D` (`Ship.SteeringSpeed` 2π rad/s), thrust `W` (`Ship.Thrust` 60 cells/s²), drag `Ship.Drag` 1.5/s. All movement is scaled by `Delta` | `ShipControlSystem` |
 | Asteroids.Ecs | `SPACE` (Pressed) fires one bullet: 80 cells/s plus the ship's velocity, lives 1.5 s | `ShipControlSystem`, `Spawner.CreateBullet`, `LifetimeSystem` |
-| Asteroids.Ecs | A bullet whose `Collider` touches an asteroid's destroys both. The ship never collides. No score, no objective | `CollisionSystem` |
-| Asteroids.Ecs | Asteroids drift up to 6 cells/s. Everything wraps around a playfield three screens wide and high, so the camera jumps when the ship crosses an edge | `MovementSystem` (engine), `WrapSystem`, `Playfield.Wrap`, `CameraSystem` |
-| Asteroids.Ecs | Ship and asteroids are outlines, bullets are `*` glyphs. Hits and expired bullets disappear at the end of the simulation group (command buffer playback), so they are never drawn in the frame they die | `AsteroidsScene.OnCreate`, `OutlineRenderSystem`, `GlyphRenderSystem` |
+| Asteroids.Ecs | A bullet (kinematic sensor, `CollisionLayers.Bullets`) that touches an asteroid (dynamic, `CollisionLayers.Asteroids`) destroys both, on the `SensorBeginEvents` of the fixed step. One bullet touching two asteroids in the same step destroys both. Asteroids pass through each other. The ship has no collider and never collides. No score, no objective | `PhysicsSystem` (engine), `CollisionSystem`, `Spawner` |
+| Asteroids.Ecs | Asteroids drift up to 6 cells/s. Asteroids and bullets move in fixed steps of 1/60 s (`PhysicsSystem`), the ship every frame (`MovementSystem`). Everything wraps around a playfield three screens wide and high, so the camera jumps when the ship crosses an edge | `PhysicsSystem`, `MovementSystem` (engine), `WrapSystem`, `Playfield.Wrap`, `CameraSystem` |
+| Asteroids.Ecs | Ship and asteroids are outlines, bullets are `*` glyphs. Hits disappear at the end of the fixed step and expired bullets at the end of the simulation group (command buffer playback), so they are never drawn in the frame they die | `AsteroidsScene.OnCreate`, `OutlineRenderSystem`, `GlyphRenderSystem` |
 | ConsoleGame | Recolours all cells every **500 ms**. `ESC` calls `Stop()`, which exits | `Game.OnInitialize`, `OnUpdate` |
 | ConsoleGame.Ecs | One entity per cell (4096). Every **500 ms** (timer reset to 0) each gets a random colour of the same five. Cells are black until the first recolour. `ESC` quits | `RecolorSystem`, `ColorGridScene`, `ConsoleEcsGame.OnUpdate` |
 | Swarm | Particles are pulled towards a point moving on a Lissajous curve, each with its own `Agility.Pull` (30–180 cells/s²), drag 0.3/s, and bounce off the screen edges. Colour by speed: dark blue < 15, blue < 30, cyan < 50 cells/s, else white. The HUD on row 0 shows the count | `AttractorSystem`, `BounceSystem`, `ColorBySpeedSystem`, `HudSystem` |

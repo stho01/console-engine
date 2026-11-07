@@ -180,3 +180,22 @@
    listed game. Stop.
 3. Game window stays open on `Press any key to continue . . .` → the game exited non-zero (crashed) and `pause` kept the window open. The exception text is above it. Continue with [P1](#p1) step 1 using that text. Stop.
 4. `Could not start ...` → `Win32Exception` from `Process.Start` (`conhost.exe` missing or blocked). Escalate with the message. Stop.
+
+<a id="p17"></a>
+## P17 — Physics: bodies pass through each other / no hit / hit reported twice or late
+
+Applies to Asteroids.Ecs and any game on `ConsoleEngine.Ecs.Physics`. Rules: [03 § Physics](03-rules.md#physics),
+flow: [04 § F11](04-flows.md#f11).
+
+1. Bodies overlap and keep going → **expected in phase 2**: there is no contact response yet (`docs/design/physics-plan.md`
+   phase 3). Stop.
+2. No event at all for a pair → check, in order: both have a `Collider` and a `Position`; the `Category`/`Mask` bits accept
+   each other both ways (`default(Collider)` has `Mask` 0); not both static (a `Collider` without `RigidBody` is static);
+   not both sensors; a non-sensor pair has a dynamic body. Any of these → skipped silently ([04 § F11](04-flows.md#f11)
+   step 4). Stop.
+3. A body never moves → it has no `Velocity`, is `BodyType.Static`, or `PhysicsSystem` was added to `Simulation` or not
+   at all instead of `FixedSimulation`. Stop.
+4. The same hit handled several times, or hits missed → the reacting system reads the events from `Simulation` instead of
+   after `PhysicsSystem` in `FixedSimulation` ([03 § Physics](03-rules.md#physics)). Stop.
+5. Asteroids.Ecs: one bullet removed two asteroids → by design when it touches both in the same step ([03 § Asteroids.Ecs
+   row](03-rules.md)). Stop.
