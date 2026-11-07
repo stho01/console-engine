@@ -46,3 +46,4 @@ Support/user words are **[inferred]**. The team may also use Norwegian terms. Ad
 | restart | Reload same map | `R` → `Scenes.Set(new GameScene(_worldName))` |
 | player name | Typed on first screen (PII) | `TerraformGame.Playername`, `InputNameScene` |
 | debug mode | Developer overlay | `PlatformerGame.IsDebugMode` (F1), `TerraformGame.IsDebugMode` (unreachable) |
+| launcher / menu / game picker | Text menu that starts the ECS games, one at a time | `Examples/Launcher`: `LauncherApp`, `GameCatalog`, `GameLocator`, `GameRunner` |

@@ -63,6 +63,22 @@ Runtime exceptions without repo-authored text (message comes from .NET and varie
 `IndexOutOfRangeException`, `NullReferenceException`, `TypeInitializationException`. Match by **type + stack frame**
 using [04](04-flows.md).
 
+### Launcher (`LauncherTexts`, `GameLocator`)
+
+`{0}` is the game title (`GameEntry.Title`, e.g. `Snake (ECS)`).
+
+| Text | Emitted by | Meaning |
+|---|---|---|
+| `ConsoleEngine launcher` (window title) | `LauncherTexts.WindowTitle`, `LauncherApp.Run` | Launcher is running |
+| `ConsoleEngine - game launcher` | `LauncherTexts.Heading` | Menu heading |
+| `Up/Down select   Enter start   1-{0} start directly   Esc quit` | `LauncherTexts.KeyHelp` (`{0}` = number of entries, max 9) | Key help |
+| `(not built)` | `LauncherTexts.NotBuiltTag` | That game's exe is missing ([P16](05-triage.md#p16)) |
+| `Running {0}. Close its window to come back here.` | `LauncherTexts.Running` | Launcher is waiting for the game process |
+| `{0} closed.` | `LauncherTexts.Closed` | The game window closed. Shown after every game, crash or not (`conhost.exe` exits with 0) |
+| `{0} is not built: {1}. Run dotnet build.` | `LauncherTexts.NotBuilt` (`{1}` = expected exe path) | Started a game whose exe is missing |
+| `Could not start {0}: {1}` | `LauncherTexts.StartFailed` (`{1}` = `Win32Exception` message) | `Process.Start` failed |
+| `No Launcher.csproj found above <dir>. Run the launcher from its build output (dotnet run --project Examples/Launcher).` | `GameLocator.FromLauncherOutput` (`InvalidOperationException`, printed to stderr by `Program.cs`, exit code 1) | Launcher exe is not inside the repository's build output |
+
 ### TerraForM screen text (`HudTexts`, `Sprites`)
 
 | Text | Where | Meaning |

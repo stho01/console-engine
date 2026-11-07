@@ -99,3 +99,12 @@ git grep -n "RotateMap" -- Examples/TerraForM
 git grep -n "11000\|ConsoleEngine.Logger.exe" -- ConsoleEngine
 dotnet test --no-build
 ```
+
+<a id="q10"></a>
+## Q10 — Are the games where the launcher looks? (developer checkout)
+
+```powershell
+Get-ChildItem Examples\*\bin\*\net10.0\*.exe -Name
+```
+Each game in `GameCatalog.Games` needs
+`Examples\<ProjectName>\bin\<same configuration as the launcher>\net10.0\<ProjectName>.exe`. → [P16](05-triage.md#p16) step 2.

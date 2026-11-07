@@ -167,3 +167,16 @@
 ## P15 — TerraForM: Norwegian story missing
 
 1. **Cause:** `Assets/Story/story-NO.txt` (and `story-EN.txt`) are not used by code or copied to output. The story is hard-coded English in `Sprites.Story`. **Fix:** feature request. Stop.
+
+<a id="p16"></a>
+## P16 — Launcher: game shows "(not built)" / won't start / window stops at "Press any key"
+
+1. Menu never appears, message `No Launcher.csproj found above ...` → **Cause:** the launcher exe was copied or run
+   outside its build output ([04 § F10](04-flows.md#f10) step 1). **Fix:** `dotnet run --project Examples/Launcher` from
+   the repository. Stop.
+2. A game shows `(not built)`, or starting it says `... is not built: <path>. Run dotnet build.` → [07 § Q10](07-checks.md#q10).
+   **Cause:** that exe is not at the path shown, which uses the launcher's own configuration (`Debug`/`Release`). A
+   Release launcher does not see Debug games. **Fix:** `dotnet build` (or `-c Release`) of the launcher, which builds every
+   listed game. Stop.
+3. Game window stays open on `Press any key to continue . . .` → the game exited non-zero (crashed) and `pause` kept the window open. The exception text is above it. Continue with [P1](#p1) step 1 using that text. Stop.
+4. `Could not start ...` → `Win32Exception` from `Process.Start` (`conhost.exe` missing or blocked). Escalate with the message. Stop.

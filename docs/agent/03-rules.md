@@ -325,3 +325,14 @@ files, so every rule above applies, except:
 | Starguard | Four shields of 22 cells, each cell 4 health shown as `█▓▒░`. Both kinds of shot take 1 health. Aliens erase every shield cell they cover | `Spawner.CreateShields`, `CollisionSystem.TryChipShield`, `CrushShields` |
 | Starguard | 3 lives. A hit shows the wreck for 1.5 s, during which the cannon can not move, fire or be hit, then it is rebuilt in the middle. Losing the last life, or an alien reaching the cannon row (bottom edge below row `Playfield.CannonTop`), is game over: lives go to 0 and aliens, cannon and saucer timer stop. Shots already in flight finish | `Match.HitCannon`, `Match.Invade`, `CannonSystem.Rebuild`, `FormationSystem` |
 | Starguard | The high score is the best score since the exe started (`StarguardGame.HighScore`, set while game over). It is not saved to disk. `ENTER` loads a new `BattleScene`: score, lives, wave and shields start over | `RestartSystem`, `HudSystem.DrawScoreLine` |
+
+<a id="launcher"></a>
+## Launcher (`Examples/Launcher`)
+
+| Rule | Identifier |
+|---|---|
+| Keys (read with `Console.ReadKey`, so only while the launcher window has focus): Up/Down or W/S or K/J move and wrap around, Home/End jump, Enter/Space start the selected game, digit 1–9 selects **and** starts that entry (digits above the entry count are ignored), Esc/Q quit | `LauncherMenu.HandleKey` |
+| A game is "built" when its exe exists at the `GameLocator` path. Checked again before every redraw. Starting an unbuilt game shows `LauncherTexts.NotBuilt` and starts nothing | `LauncherApp.RefreshBuilt`, `LauncherApp.Launch` |
+| Games start in their **own classic console window** (`conhost.exe`), working directory = the exe's folder, with no arguments (Asteroids.Ecs and Swarm use their default counts). The launcher blocks until the game exits; keys typed into the launcher meanwhile are discarded | `GameRunner.Run`, `LauncherApp.DiscardBufferedKeys` |
+| `conhost.exe` always exits with 0, so the launcher cannot tell a crash from a normal quit: it always shows `LauncherTexts.Closed`. A game that exits non-zero (crash) leaves its window open on `pause` with the exception text above it. The logger window that a game opens (`Log.Start`, `UseShellExecute`) still follows the default terminal setting | `GameRunner.BuildArguments` |
+| The launcher finds games only from its own build output: it walks up from `AppContext.BaseDirectory` to the folder holding `Launcher.csproj` and uses the same relative output path (configuration + framework) for each game | `GameLocator.FromLauncherOutput` |

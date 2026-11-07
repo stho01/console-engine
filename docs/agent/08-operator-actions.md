@@ -15,6 +15,7 @@ team's process differs.
 | Close the window | Only way to exit every game except ConsoleGame, ConsoleGame.Ecs and Swarm | [P5](05-triage.md#p5) |
 | Close a leftover logger window | — | [P5](05-triage.md#p5) |
 | Start the exe from an open terminal to keep crash text | Captures the exception | [06 § Capture](06-diagnostics.md#capture) |
+| Start an ECS game from the launcher (`dotnet run --project Examples/Launcher`) | Builds the games, then starts the chosen one in its own classic console window (`conhost.exe`) from its output folder, so relative paths resolve | [P16](05-triage.md#p16) |
 
 ## In-game controls
 
@@ -38,6 +39,7 @@ team's process differs.
 | ConsoleGame.Ecs | ESC | Quit (`Stop()`) | `ConsoleEcsGame.OnUpdate` |
 | Swarm | SPACE / BACKSPACE / ESC | +10 000 particles / −10 000 particles / quit | `SpawnControlSystem`, `SwarmGame.OnUpdate` |
 | Starguard | ← → or A D / SPACE (hold) / ENTER | Move / fire (one shot in flight) / new match after game over | `ControlsSystem` |
+| Launcher | ↑↓ (W/S, K/J), Home/End / ENTER, SPACE / 1–9 / ESC, Q | Select / start selected / start that entry / quit | `LauncherMenu.HandleKey` |
 
 There is **no** way to skip a TerraForM level, choose a map, reset the score, or enable TerraForM debug mode without a
 code change.
