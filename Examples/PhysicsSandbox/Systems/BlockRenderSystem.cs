@@ -31,16 +31,25 @@ public sealed class BlockRenderSystem(RenderConsole console) : EntitySystem
             var colliders = chunk.GetSpan<Collider>();
             for (var i = 0; i < chunk.Count; i++)
             {
+                // A cell is drawn when its centre is inside the box, so a box covering half of a row doesn't fill the
+                // whole row, where a body resting on it is drawn too.
                 var center = positions[i].Value + colliders[i].Offset;
                 var half = colliders[i].HalfExtents;
-                var left = (int)MathF.Floor(center.X - half.X);
-                var top = (int)MathF.Floor(center.Y - half.Y);
-                var right = (int)MathF.Ceiling(center.X + half.X);
-                var bottom = (int)MathF.Ceiling(center.Y + half.Y);
+                var left = CellFromEdge(center.X - half.X);
+                var top = CellFromEdge(center.Y - half.Y);
+                var right = CellFromEdge(center.X + half.X);
+                var bottom = CellFromEdge(center.Y + half.Y);
                 for (var y = top; y < bottom; y++)
                 for (var x = left; x < right; x++)
                     console.Draw(x, y, blocks[i].Character, blocks[i].Color);
             }
         }
     }
+
+    //**********************************************************
+    //** internals
+    //**********************************************************
+
+    /// <summary>The first cell whose centre lies past <paramref name="edge"/>.</summary>
+    private static int CellFromEdge(float edge) => (int)MathF.Floor(edge + .5f);
 }

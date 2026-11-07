@@ -36,15 +36,16 @@ public sealed class SandboxScene : EcsScene<PhysicsSandboxGame>
         var width = Console.Width;
         var height = Console.Height;
 
-        // Floor, side walls and two ledges: static, drawn as blocks. Positions are centres, sizes are half sizes.
+        // Floor, side walls and two ledges: static, drawn as blocks. Positions are centres, sizes are half sizes. A
+        // 1-row block is centred on a half cell (RowCenter), so it covers exactly one row of the screen.
         CreateWall(new Vector2(width / 2f, height - 1.5f), new Vector2(width / 2f, 1.5f));
         CreateWall(new Vector2(.5f, height / 2f), new Vector2(.5f, height / 2f));
         CreateWall(new Vector2(width - .5f, height / 2f), new Vector2(.5f, height / 2f));
-        CreateWall(new Vector2(width * .25f, height * .45f), new Vector2(width * .15f, .5f));
-        CreateWall(new Vector2(width * .75f, height * .3f), new Vector2(width * .15f, .5f));
+        CreateWall(new Vector2(width * .25f, RowCenter(height * .45f)), new Vector2(width * .15f, .5f));
+        CreateWall(new Vector2(width * .75f, RowCenter(height * .3f)), new Vector2(width * .15f, .5f));
 
         World.Create(
-            new Position(new Vector2(width / 2f, height * .7f)),
+            new Position(new Vector2(width / 2f, RowCenter(height * .7f))),
             new Velocity(new Vector2(PlatformSpeed, 0f)),
             RigidBody.Kinematic(),
             Collider.Box(new Vector2(8f, .5f)),
@@ -65,6 +66,9 @@ public sealed class SandboxScene : EcsScene<PhysicsSandboxGame>
     //**********************************************************
     //** internals
     //**********************************************************
+
+    /// <summary>The centre of the screen row <paramref name="y"/> falls in.</summary>
+    private static float RowCenter(float y) => MathF.Floor(y) + .5f;
 
     private void CreateWall(Vector2 center, Vector2 halfSize) =>
         World.Create(new Position(center), Collider.Box(halfSize), new Block('█', ConsoleColor.DarkGray));
