@@ -109,23 +109,29 @@ public sealed class EffectSpawner(Random random, ScreenShake shake)
     }
 
     /// <summary>One twinkle over an ore vein.</summary>
-    public void Glint(CommandBuffer commands, Vector2 position, TileType ore) =>
+    public void Glint(CommandBuffer commands, Vector2 position, TileType ore)
+    {
+        var variant = ParticleLooks.GlintVariant(ore);
         commands.Create(
             new Position(position),
             new Velocity(Vector2.Zero),
-            new Glyph('·', ConsoleColor.White),
-            new Particle(ParticleStyle.Glint, Range(.5f, .8f)) { Variant = ParticleLooks.GlintVariant(ore) },
+            ParticleLooks.GlyphAt(ParticleStyle.Glint, variant, 0f),
+            new Particle(ParticleStyle.Glint, Range(.5f, .8f)) { Variant = variant },
             new Physics(0f, 0f));
+    }
 
     /// <summary>One slow mist particle drifting through a dug-out cave.</summary>
-    public void Mist(CommandBuffer commands, Vector2 position) =>
+    public void Mist(CommandBuffer commands, Vector2 position)
+    {
+        var variant = RandomVariant();
         commands.Create(
             new Position(position),
             new Velocity(new Vector2(Range(-1.2f, 1.2f), Range(-.4f, .4f))),
-            new Glyph('·', ConsoleColor.DarkGray),
-            new Particle(ParticleStyle.Mist, Range(4f, 8f)) { Variant = (byte)random.Next(256) },
+            ParticleLooks.GlyphAt(ParticleStyle.Mist, variant, 0f),
+            new Particle(ParticleStyle.Mist, Range(4f, 8f)) { Variant = variant },
             new Physics(0f, 0f),
             new Components.Mist());
+    }
 
     /// <summary>Coins burst up and cascade down onto the grass.</summary>
     public void Coins(CommandBuffer commands, Vector2 origin, int count)
@@ -133,11 +139,12 @@ public sealed class EffectSpawner(Random random, ScreenShake shake)
         for (var i = 0; i < count; i++)
         {
             var velocity = new Vector2(Range(-16f, 16f), -Range(10f, 22f));
+            var variant = RandomVariant();
             commands.Create(
                 new Position(origin + RandomOffset(1.5f, .5f)),
                 new Velocity(velocity),
-                new Glyph('●', ConsoleColor.Yellow),
-                new Particle(ParticleStyle.Coin, Range(1.6f, 2.4f)) { Variant = (byte)random.Next(256) },
+                ParticleLooks.GlyphAt(ParticleStyle.Coin, variant, 0f),
+                new Particle(ParticleStyle.Coin, Range(1.6f, 2.4f)) { Variant = variant },
                 new Physics(CoinGravity, .3f),
                 new TileCollider());
         }
@@ -163,23 +170,31 @@ public sealed class EffectSpawner(Random random, ScreenShake shake)
     //** internals
     //**********************************************************
 
-    private void Debris(CommandBuffer commands, Vector2 position, Vector2 velocity, ParticleStyle style, float lifetime) =>
+    private void Debris(CommandBuffer commands, Vector2 position, Vector2 velocity, ParticleStyle style, float lifetime)
+    {
+        var variant = RandomVariant();
         commands.Create(
             new Position(position),
             new Velocity(velocity),
-            new Glyph('■', ConsoleColor.DarkYellow),
-            new Particle(style, lifetime) { Variant = (byte)random.Next(256) },
+            ParticleLooks.GlyphAt(style, variant, 0f),
+            new Particle(style, lifetime) { Variant = variant },
             new Physics(DebrisGravity, .4f),
             new TileCollider());
+    }
 
     private void Spawn(CommandBuffer commands, Vector2 position, Vector2 velocity, ParticleStyle style,
-        float lifetime, float gravity, float drag) =>
+        float lifetime, float gravity, float drag)
+    {
+        var variant = RandomVariant();
         commands.Create(
             new Position(position),
             new Velocity(velocity),
-            new Glyph(' ', ConsoleColor.Gray),
-            new Particle(style, lifetime) { Variant = (byte)random.Next(256) },
+            ParticleLooks.GlyphAt(style, variant, 0f),
+            new Particle(style, lifetime) { Variant = variant },
             new Physics(gravity, drag));
+    }
+
+    private byte RandomVariant() => (byte)random.Next(256);
 
     private float Range(float min, float max) => min + random.NextSingle() * (max - min);
 

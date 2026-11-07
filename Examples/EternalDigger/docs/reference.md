@@ -25,7 +25,7 @@ Examples/EternalDigger/
 ├── Systems/                    18 systems, listed below
 ├── Effects/
 │   ├── EffectSpawner.cs        creates every particle and floating number
-│   ├── ParticleLooks.cs        characters and colours per style over a lifetime
+│   ├── ParticleLooks.cs        characters and colours per style over a lifetime; GlyphAt
 │   └── ScreenShake.cs          shake strength: Add, Update
 ├── Rendering/
 │   ├── Canvas.cs               draws through RenderConsole and remembers backgrounds

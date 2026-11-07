@@ -18,6 +18,7 @@ CI (`.github/workflows/build-and-test.yml`) runs it with the rest of the solutio
 | `TilesTests` | 24 | `IsSolid`, `IsBreakable`, `IsOre`/`OreValue` tables; deeper ore is worth more; hits grow by one per 25 m; unbreakable tiles need 0 hits |
 | `MinerControlSystemTests` | 11 | Real frames of gameplay with scripted input (below) |
 | `LightMapTests` | 7 | The surface is bright; outside the window is dark; neighbours of the lamp are bright even when solid; a tunnel in the cone is lit and marked seen; rock blocks the lamp; tiles behind the miner stay dark; light falls off with distance (bright → lit → dim → dark) |
+| `ParticleLooksTests` | 2 | No particle style is born blank (which would erase a cell for a frame); `GlyphAt` matches `Character` and `Color` |
 | `ShopTests` | 6 | Delivering pays every ore and empties the bag; an empty bag pays 0; buying a ladder with and without enough gold; collecting each ore; non-ore isn't collected |
 
 Names follow the repository's `Method_State_Expected` style, for example
@@ -77,7 +78,7 @@ empty bag, gold kept); releasing the rescue early resets it.
 |---|---|---|
 | Render systems | They need a `RenderConsole`, which needs a console handler | Frames captured from a real run in a macOS terminal and inspected |
 | `InteractionSystem` | Reads `Input.Instance` directly (`E`), which needs a console | `Shop.Deliver`/`TryBuyLadder` are tested; the spot checks are `Layout` one-liners |
-| `EffectSpawner` and particle systems | Visual; their output is entities in a `World` | Reading and running the game |
+| `EffectSpawner` and particle systems | Visual; their output is entities in a `World`. Only the looks (`ParticleLooks`) are tested | Reading and running the game |
 | `CameraSystem`, `GlintSystem`, `MistSystem` | Need a `World`, a `Camera` and randomness | Reading and running the game |
 | The whole scene | `GameBase` creates a real console handler | — |
 

@@ -145,7 +145,9 @@ flowchart LR
 ```
 
 - **`EffectSpawner`** (`Effects/EffectSpawner.cs`) is the only place that creates particles. Every method takes the
-  calling system's `Commands`, so it is safe to call from inside a query loop.
+  calling system's `Commands`, so it is safe to call from inside a query loop. Each particle is born with
+  `ParticleLooks.GlyphAt(style, variant, 0)`: it is created at the end of the Simulation group, after the lifetime
+  step, so this is the look it has in the frame it appears.
 - **`ParticlePhysicsSystem`:** `v.y += gravity·dt`, `v *= 1 − drag·dt`, `p += v·dt`. Particles with `TileCollider`
   that move into a solid tile: from above, they land on top and stop (faster than 8 cells/s down they bounce once at
   35% speed and lose 40% sideways speed); from the side, they lose their sideways speed and keep falling; anything
@@ -199,9 +201,5 @@ a random amount up to the strength in both directions and decays it by 6 per sec
 
 ## Known rendering quirks
 
-- **First frame of a particle:** particles are created at the end of the Simulation group, after the lifetime step
-  set glyphs, so in their first drawn frame they show the glyph `EffectSpawner` gave them: dust, sparks, stars and
-  glints start as a space (the cell's character is blanked for one frame), and debris starts as a dark yellow `■`
-  whatever its style. Fix by creating each `Glyph` from `ParticleLooks` at progress 0.
 - **Edge columns while shaking:** the terrain is drawn only for the mine's 30 columns, so a sideways shake can leave
   the outermost one or two screen columns black for a moment underground.

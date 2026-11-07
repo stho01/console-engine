@@ -1,4 +1,5 @@
 using System;
+using ConsoleEngine.Ecs.Components;
 using EternalDigger.Components;
 using EternalDigger.Mining;
 
@@ -58,6 +59,13 @@ public static class ParticleLooks
             _ => ConsoleColor.Gray
         };
     }
+
+    /// <summary>
+    /// The glyph for a point in a particle's life. Spawners use it at progress 0, so a particle looks right in the
+    /// frame it is created, before <c>ParticleLifetimeSystem</c> has updated it.
+    /// </summary>
+    public static Glyph GlyphAt(ParticleStyle style, byte variant, float progress) =>
+        new(Character(style, variant, progress), Color(style, variant, progress));
 
     /// <summary>The debris style for a tile type: the colour of the chunks that fly off it.</summary>
     public static ParticleStyle DebrisStyle(TileType type) => type switch
