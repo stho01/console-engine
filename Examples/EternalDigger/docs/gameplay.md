@@ -205,7 +205,8 @@ twinkles and dig towards them.
 | Part | Shows | Identifier |
 |---|---|---|
 | HUD, row 0 | ` ETERNAL DIGGER ` title, gold, ladders, depth, the bag (copper/silver/gold counts with coloured `◆` icons) and what the bag is worth | `HudSystem` |
-| HUD, row 1 | The key help; the rescue bar while `R` is held; the no-ladders warning | `HudSystem` |
+| HUD, row 1 | The key help; the rescue bar while `R` is held; the no-ladders warning. After a save, ` SAVED ` at the right end for 1.5 s (grey, then dark grey), or ` SAVE FAILED` in red | `HudSystem` |
+| Title screen | `ETERNAL DIGGER` logo, `CONTINUE` / `NEW MINE` (selected item black on yellow with `►`), the confirmation, a red message for an unreadable save, `↑↓ choose   E select   ESC quit` | `TitleScene`, `TitleMenu` |
 | Camera | Keeps the miner at 40% of the screen height, eased. Never scrolls above the sky. Shakes on breaks and long falls | `CameraSystem` |
 | Prompts | ` DELIVER [E] ` / ` BUY LADDERS [E] 10g ` in a small bobbing frame above the miner | `PromptRenderSystem` |
 
@@ -220,9 +221,31 @@ twinkles and dig towards them.
 | Lamp range and cone | constants at the top of `Rendering/LightMap.cs` |
 | Glint and mist rates | `Systems/GlintSystem.cs`, `Systems/MistSystem.cs` |
 | Where the house, door, shop and spawn are | `Layout.cs` |
+| Autosave interval underground | `GameSaver.AutosaveInterval` in `Saving/GameSaver.cs` |
+| How long ` SAVED ` shows | `HudSystem.SavedHintSeconds` |
+| Particles drawn around the miner | `ParticleRenderSystem.NearMinerCap` |
 
 Tests pin many of these numbers (`Examples/EternalDigger.Tests`), so update them with the change. See
 [testing.md](testing.md).
+
+<a id="saving"></a>
+## Saving
+
+The game saves itself; there is no save key.
+
+- **When:** after every sale at the door (when it earned gold) and every ladder bought, every 60 s spent underground
+  (`GameSaver.AutosaveInterval`), and on `ESC`, which saves and quits. A NEW MINE is saved as soon as it starts.
+- **What:** the seed, the miner's tile and facing, gold, ladders and the bag, and every tile that differs from what
+  the seed generates (dug, half-dug, ladder placed, seen). The mine itself is regenerated from the seed.
+- **Not saved:** anything mid-action. A continued game starts with the miner standing still on the saved tile (if
+  that tile has no support, they fall), no particles, and the rescue timer at zero.
+- **Title screen:** `CONTINUE` loads the save. `NEW MINE` uses the seed from the command line (or a random one); with
+  a save it asks `Start over? The saved mine will be lost.` with `NO` selected first. `ESC` on the title quits
+  without saving.
+- **Unreadable save** (damaged, or a format version this build doesn't know): the title shows a red message and only
+  `NEW MINE`; the file is moved to `save.dat.bad` so it isn't overwritten.
+- **Where:** `EternalDigger/save.dat` in the user's local app-data folder (`SaveFile.DefaultPath`). The file is written
+  to `save.dat.tmp` and then moved over the old one, so a crash mid-save keeps the previous save.
 
 <a id="known-limitations"></a>
 ## Known limitations
@@ -231,8 +254,7 @@ Tests pin many of these numbers (`Examples/EternalDigger.Tests`), so update them
   covered by frame-by-frame tests, but nobody has played it with a real keyboard or in the Windows console.
 - **Holding keys in a terminal** relies on the engine's terminal input handling (key auto-repeat on macOS/Linux), so
   walking and digging can feel less smooth there than on Windows.
-- **Nothing is saved.** Gold, ladders and the dug mine are gone when the game closes; the seed is the only way to get
-  the same mine back.
+- **One save slot.** Starting a NEW MINE replaces it (after a confirmation).
 - **No goal, no danger.** There is no win condition, no fall damage, no bag limit and no time pressure.
 - **Ladders are permanent** once placed.
 - **Shake at the edges:** while the screen shakes sideways, the outermost one or two columns underground can flash

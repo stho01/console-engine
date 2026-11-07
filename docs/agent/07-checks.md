@@ -99,3 +99,15 @@ git grep -n "RotateMap" -- Examples/TerraForM
 git grep -n "11000\|ConsoleEngine.Logger.exe" -- ConsoleEngine
 dotnet test --no-build
 ```
+
+<a id="q10"></a>
+## Q10 — Is there an EternalDigger save, and was one set aside?
+
+```powershell
+Get-ChildItem "$env:LOCALAPPDATA\EternalDigger" -ErrorAction SilentlyContinue | Select-Object Name, Length, LastWriteTime
+```
+On macOS: `ls -l ~/Library/Application\ Support/EternalDigger`; on Linux: `ls -l ~/.local/share/EternalDigger`.
+`save.dat` is the slot (`SaveFile.DefaultPath`). `save.dat.bad` = a save that couldn't be read and was moved aside;
+`save.dat.tmp` left behind = a save was interrupted (the old `save.dat` is intact). No folder = never saved. →
+[P16](05-triage.md#p16) step 8.
+

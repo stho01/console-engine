@@ -1,4 +1,5 @@
 using System;
+using System.Collections.Generic;
 
 namespace EternalDigger.Mining;
 
@@ -121,6 +122,29 @@ public sealed class Mine
     }
 
     /// <summary>
+    /// Adds every generated tile that differs from what the seed generates (dug, damaged, ladder placed or seen) to
+    /// <paramref name="changes"/>, top row first. Regenerates each row to compare, so it is for saving only, never
+    /// per frame.
+    /// </summary>
+    public void CollectChanges(List<TileChange> changes)
+    {
+        for (var row = 0; row < _generatedRows; row++)
+        for (var column = 0; column < Columns; column++)
+        {
+            var cell = _cells[row * Columns + column];
+            if (!IsSame(cell, Create(column, row)))
+                changes.Add(new TileChange(column, row, cell));
+        }
+    }
+
+    /// <summary>Puts a saved tile back. Generates rows down to it first. Changes outside the mine are ignored.</summary>
+    public void Apply(in TileChange change)
+    {
+        if (IsInside(change.Column, change.Row))
+            At(change.Column, change.Row) = change.Cell;
+    }
+
+    /// <summary>
     /// A value in [0, 1) that only depends on the seed and the arguments. For textures and effects that must not
     /// flicker.
     /// </summary>
@@ -185,6 +209,9 @@ public sealed class Mine
 
         return rock < granite + stone ? TileType.Stone : TileType.Dirt;
     }
+
+    private static bool IsSame(in TileCell a, in TileCell b) =>
+        a.Type == b.Type && a.Damage == b.Damage && a.HasLadder == b.HasLadder && a.Seen == b.Seen;
 
     private bool IsVein(int column, int row, int salt, float chance) =>
         Noise(column >> 1, row >> 1, salt) < chance * 1.6f && Noise(column, row, salt + 1) < .6f;

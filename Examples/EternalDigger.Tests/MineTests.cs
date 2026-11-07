@@ -1,3 +1,4 @@
+using System.Collections.Generic;
 using EternalDigger.Mining;
 using NUnit.Framework;
 
@@ -270,5 +271,43 @@ public class MineTests
         while (result.Outcome == DigOutcome.Damaged);
 
         return result;
+    }
+    [Test]
+    public void CollectChanges_FreshMine_IsEmpty()
+    {
+        var mine = new Mine(Seed);
+        mine.At(0, Mine.SurfaceRow + 300);
+        var changes = new List<TileChange>();
+
+        mine.CollectChanges(changes);
+
+        Assert.That(changes, Is.Empty);
+    }
+
+    [Test]
+    public void CollectChanges_AfterDiggingAndALadder_ListsOnlyThoseTiles()
+    {
+        var mine = new Mine(Seed);
+        var row = Mine.SurfaceRow + 5;
+        mine.At(4, row) = new TileCell { Type = TileType.Air };
+        mine.TryPlaceLadder(4, row);
+        mine.At(5, row).Damage = 1;
+        var changes = new List<TileChange>();
+
+        mine.CollectChanges(changes);
+
+        Assert.That(changes, Has.Count.EqualTo(2));
+        Assert.That(changes[0].Cell.HasLadder, Is.True);
+        Assert.That(changes[1].Cell.Damage, Is.EqualTo(1));
+    }
+
+    [Test]
+    public void Apply_ChangeOutsideTheMine_IsIgnored()
+    {
+        var mine = new Mine(Seed);
+
+        mine.Apply(new TileChange(Mine.Columns, 20, new TileCell { Type = TileType.Air }));
+
+        Assert.That(mine.TypeAt(Mine.Columns, 20), Is.EqualTo(TileType.Bedrock));
     }
 }

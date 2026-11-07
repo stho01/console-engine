@@ -142,11 +142,13 @@ Examples/
   Swarm/                          ECS stress test (no OOP original): Components/, Systems/, Scenes/SwarmScene
   EternalDigger/                  original ECS digging game (no OOP original): Mining/ (Mine grid, Tiles rules),
                                   Components/, Systems/, Effects/ (EffectSpawner, ParticleLooks), Rendering/
-                                  (Canvas, LightMap, TileLooks), Scenes/MineScene, Layout, Shop, MinerInput.
+                                  (Canvas, LightMap, TileLooks), Saving/ (SaveData, SaveFile, GameSaver),
+                                  Scenes/ (TitleScene + TitleMenu, MineScene), Layout, Shop, MinerInput.
                                   README.md + docs/ (gameplay, architecture, rendering-and-effects,
                                   working-with-the-code, testing, reference)
-  EternalDigger.Tests/            Mine, Tiles, Shop, LightMap, ParticleLooks, frame-by-frame MinerControlSystem and
-                                  MinerVisibility (render) tests, Fakes/ (console handler)
+  EternalDigger.Tests/            Mine, Tiles, Shop, LightMap, ParticleLooks, frame-by-frame MinerControlSystem,
+                                  MinerVisibility (render), SaveFile, SaveSystem and TitleMenu tests, Fakes/ (console
+                                  handler)
   TerraForM/Scenes/               GameScene, MenuScene, InputNameScene
   TerraForM/Commands/             Command, Move, Plant, Wait
   TerraForM/Assets/               Maps/*.txt, Sprites.cs, Texts/HudTexts.cs, Story/ (unused)

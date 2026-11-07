@@ -5,7 +5,7 @@ and gold back to the house on the surface, sell it, and buy ladders so you can c
 
 ```text
  ETERNAL DIGGER   GOLD 0g   LADDERS 8   DEPTH 0m   BAG ◆0 ◆0 ◆0 = 0g
- ←→ walk/dig   ↓ dig   ↑ climb ladder   SPACE place ladder   E deliver/buy   hold R rescue   ESC quit
+ ←→ walk/dig   ↓ dig   ↑ climb ladder   SPACE place ladder   E deliver/buy   hold R rescue   ESC save & quit
         ▄▄▀▄▀▄▀▄▀▄▀▄▀▄▀▄▀▄▀▄▀▄▀▄
          ─── EternalDigger ─────
             ▀             ▀     ▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄                                    MINE
@@ -37,12 +37,17 @@ dotnet build Examples/EternalDigger
 cd Examples/EternalDigger/bin/Debug/net10.0 && ./EternalDigger
 ```
 
-On Windows run `EternalDigger.exe`. The optional first argument is the **seed**: the same number always digs the same
-mine. Without it, every run gets a new mine (`Environment.TickCount`).
+On Windows run `EternalDigger.exe`. The optional first argument is the **seed** for a new mine: the same number always
+digs the same mine. Without it, every new mine is different (`Environment.TickCount`).
 
 ```bash
 ./EternalDigger 42
 ```
+
+The game opens on a title menu: `CONTINUE` (when there is a save) or `NEW MINE`, picked with `↑` `↓` and `E`. It
+saves on every sale and ladder purchase, every 60 s underground, and on `ESC`, to one slot:
+`EternalDigger/save.dat` in the user's local app-data folder (`%LOCALAPPDATA%` on Windows,
+`~/Library/Application Support` on macOS, `~/.local/share` on Linux). Delete that file to start over without the menu.
 
 On Windows the game sets a 120 × 48 console with an 8 × 16 font. In a macOS or Linux terminal, make the window at least
 120 columns by 48 rows.
@@ -57,7 +62,7 @@ On Windows the game sets a 120 × 48 console with an 8 × 16 font. In a macOS or
 | `SPACE` | Place a ladder in the tile you stand in |
 | `E` | At the house door: sell your ore. At the shopfront: buy one ladder (10g) |
 | `R` (hold 1.5 s) | Rescue: back to the surface. You keep gold and ladders, but **lose the ore in your bag** |
-| `ESC` | Quit. Nothing is saved |
+| `ESC` | Save and quit |
 
 ## The docs
 
@@ -81,5 +86,5 @@ The original design contract the game was built from is in
   `Position`/`Velocity`/`Glyph` components, `Camera`, `RenderConsole`, `Input`.
 - **Not entities:** the terrain. The mine is a plain grid (`Mining/Mine.cs`) that is drawn from the rows the camera
   can see, so an endless mine costs nothing per frame. Entities are the miner, particles and floating numbers.
-- **Status:** builds with 0 warnings, 84 tests pass. It has been run in a macOS terminal, but has not been played with
+- **Status:** builds with 0 warnings, 114 tests pass. It has been run in a macOS terminal, but has not been played with
   a real keyboard or checked in the Windows console. See [Known limitations](docs/gameplay.md#known-limitations).

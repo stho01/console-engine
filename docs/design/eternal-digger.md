@@ -37,7 +37,7 @@ and its `docs/` folder.
 | `SPACE` (pressed) | Place a ladder in the miner's tile (uses one from the inventory) |
 | `E` (pressed) | At the door: deliver all ore. At the shopfront: buy one ladder |
 | `R` (held 1.5 s) | Rescue: back to the spawn tile, the bag is lost (ore only, not gold or ladders). The way out of a pit without ladders |
-| `ESC` | Quit |
+| `ESC` | Save and quit (on the title screen: quit) |
 
 Keys are read once per frame into a `MinerInput` (`MinerInput.FromKeyboard`); tests pass their own. No input
 except `R` is read while the miner is moving (a move is a slide of one tile). Falling is checked first, every time the
@@ -90,7 +90,7 @@ Timings (`MinerControlSystem` constants, seconds): walk 0.13 per tile, climb 0.1
 Simulation:
 1. `MinerControlSystem(Mine, EffectSpawner)`: `Control(ref Miner, ref Position, in MinerInput, dt, CommandBuffer)`. Falling check, input → move/dig/ladder, rescue, dig effects and ore
    collection (`Shop.Collect`). Starts moves by setting `Miner.MoveFrom/MoveDuration/Motion` and the target tile.
-2. `InteractionSystem(EffectSpawner)`: `E` at the door/shop. Deliver: `Shop.Deliver`, coins (one per 10g, max 30) +
+2. `InteractionSystem(EffectSpawner, GameSaver)`: `E` at the door/shop; every sale or purchase calls `GameSaver.Request`. Deliver: `Shop.Deliver`, coins (one per 10g, max 30) +
    pop + `Number(+earned)` above the door. Buy: `Shop.TryBuyLadder`, pop + `Number(-10)`. Nothing to deliver / not
    enough gold: a small dust puff, no number.
 3. `MinerMotionSystem(Mine, EffectSpawner)`: `Move(ref Miner, ref Position, dt, CommandBuffer)`. Advances `MoveElapsed`, eases `Position` from `MoveFrom` to the target
@@ -110,6 +110,8 @@ Simulation:
    particles that enter a solid tile are put back on top of it and stop (velocity zero; coins bounce once).
 9. `ParticleLifetimeSystem`: ages particles, writes `Glyph` from `Style`, `Variant` and `Progress`, destroys expired.
 10. `FloatingNumberSystem`: moves numbers up, ages and destroys them.
+11. `SaveSystem(GameSaver)`: writes the save when requested this frame, or every `GameSaver.AutosaveInterval` (60) s
+    underground.
 
 Presentation (draw order). Renderers draw through `Canvas` (`Rendering/Canvas.cs`), which wraps the `RenderConsole`
 and remembers each cell's background, so `DrawOver` can put effects over the sky, the house or a tile without a black
@@ -128,10 +130,19 @@ box behind them (the engine has no public way to read a cell back):
 6. `FloatingNumberRenderSystem(Canvas, Camera)`: `+150g` / `-10g`, formatted without allocating.
 7. `PromptRenderSystem(Canvas, Camera)`: small framed `DELIVER [E]` over the door / `BUY LADDERS [E] 10g`
    over the shopfront while the miner stands there.
-8. `HudSystem(Canvas)`: top 2 rows: `ETERNAL DIGGER`, gold, ladders, depth, bag; key help or the rescue
+8. `HudSystem(Canvas, GameSaver)`: top 2 rows (plus a fading ` SAVED ` after each save): `ETERNAL DIGGER`, gold, ladders, depth, bag; key help or the rescue
    progress bar. Strings rebuilt only when a value changes.
 
 ## Performance rules
 
 Everything above runs every frame. No allocations per frame: no LINQ, no closures, no `new` of classes or arrays,
 no string building unless a shown value changed. Effects are spawned through the command buffer only.
+
+## Saving (added in Tier 0 of the feature handover)
+
+Not in the original document. The game starts on `TitleScene` (`CONTINUE` / `NEW MINE`, Up/Down and E; NEW MINE
+over an existing save asks `NO` / `YES, START OVER`). One slot, `SaveFile.DefaultPath`
+(`<LocalApplicationData>/EternalDigger/save.dat`), binary with a format version (`SaveFile.Version`). It holds the
+seed, the miner's tile, facing and inventory, and the tiles that differ from the generated mine
+(`Mine.CollectChanges`), never the whole grid. Saves on a sale or purchase, every 60 s underground and on `ESC`;
+never per frame. An unreadable or unknown-version file is moved to `save.dat.bad` and the title offers only NEW MINE.

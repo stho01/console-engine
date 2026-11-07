@@ -162,5 +162,6 @@ A change isn't finished until its docs match, in the same commit:
 | Tests | [testing.md](testing.md) |
 | A new support complaint or failure mode | `docs/agent/05-triage.md` P16 |
 | Files or folders | [reference.md](reference.md), `AGENTS.md` folder structure |
+| Something that should survive a restart (a new inventory item, upgrade, record) | `SaveData`, `SaveFile.Write`/`Read` with a `SaveFile.Version` bump, `SaveFileTests`; see [architecture.md → Saving](architecture.md#saving) |
 
 `docs/design/eternal-digger.md` is the original design contract; update it when a change goes against it.
