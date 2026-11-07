@@ -1,0 +1,18 @@
+namespace Launcher;
+
+/// <summary>
+/// The games in the menu, in menu order. Each one also needs a build-order <c>ProjectReference</c> in
+/// <c>Launcher.csproj</c>, so building the launcher builds it.
+/// </summary>
+internal static class GameCatalog
+{
+    public static readonly GameEntry[] Games =
+    [
+        new("Snake (ECS)", "Snake.Ecs", "W A S D turn"),
+        new("Asteroids (ECS)", "Asteroids.Ecs", "A D steer, W thrust, Space fire"),
+        new("Platformer (ECS)", "Platformer.Ecs", "A D move, Space jump, F1 debug"),
+        new("TerraForM (ECS)", "TerraForM.Ecs", "Arrows plan, P plant, Space send, R restart"),
+        new("ConsoleGame (ECS)", "ConsoleGame.Ecs", "Esc quit"),
+        new("Swarm", "Swarm", "Space / Backspace +/- 10 000 particles, Esc quit")
+    ];
+}

@@ -154,3 +154,15 @@ Runs inside [F2](#f2) steps "Scenes.Update" and "Scenes.Render". Both are skippe
 | 4 | `Presentation.Update(delta)` runs the render systems into the frame buffer, which `GameBase.Start` cleared at the start of the frame (if `ClearScreenOnEachFrame`) | `EcsScene.OnRender` → `SystemGroup.Update` | `OutlineRenderSystem`: bounding circle off-screen → entity skipped | Drawn cells |
 | 5 | `Presentation` plays back its own `Commands` (normally empty) | `CommandBuffer.Playback` | — | — |
 | 6 | On scene unload: `OnDestroy`, then `World.Dispose()` frees all chunks | `EcsScene.OnUnload` | — | Old entity handles stop being alive |
+
+<a id="f10"></a>
+## F10 — Launcher (`Examples/Launcher/Program.cs` → `LauncherApp.Run`)
+
+| # | Step | Class.method | Stops / skips if | Observable |
+|---|---|---|---|---|
+| 1 | Find `Launcher.csproj` above `AppContext.BaseDirectory`; its parent is `Examples/`, the path between is the output path | `GameLocator.FromLauncherOutput` | No `Launcher.csproj` above the exe (exe copied out of the repo) → `InvalidOperationException` | Message on stderr, exit code 1, no menu |
+| 2 | Compute each game's exe path | `LauncherApp` ctor, `GameLocator.GetExecutablePath` | — | — |
+| 3 | Loop: check which exes exist, draw, `Console.ReadKey` | `LauncherApp.Run`, `RefreshBuilt`, `LauncherScreen.Draw` | Esc/Q → loop ends, screen cleared | Menu; unbuilt games show `(not built)` |
+| 4 | Enter/Space/digit → `Launch(index)` | `LauncherMenu.HandleKey`, `LauncherApp.Launch` | Exe missing → status `LauncherTexts.NotBuilt`, nothing started | Yellow status line |
+| 5 | Start the exe through `conhost.exe` + `cmd.exe` in a new classic console window, working directory = exe folder, and wait | `GameRunner.Run` | `Process.Start` fails → `Win32Exception` caught | Status `LauncherTexts.StartFailed` |
+| 6 | Window closes → status `Closed`, discard buffered keys, back to step 3. A crashing game first stops at `pause` | `DiscardBufferedKeys` | — | `LauncherTexts.Closed` |
