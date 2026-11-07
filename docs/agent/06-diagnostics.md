@@ -56,7 +56,7 @@ Grep these to locate the code path. None of them has a log level.
 | `Component type <Type> is listed more than once.` | `World.Create` (`ArgumentException`) | Same type twice in one `Create` |
 | `Cannot register <Type>: the ECS supports at most 256 component types.` | `ComponentRegistry.Register` (`InvalidOperationException`, wrapped in `TypeInitializationException`) | 257th component type used in the process |
 | `An archetype row needs <n> bytes and does not fit in one 16384-byte chunk.` | `Archetype` ctor (`InvalidOperationException`) | A component set too large for a chunk |
-| Window title = `GameBase.Name` | `GameBase.Initialize` → `SetTitle` | Default `"Game"`. Platformer `"Platformer game"`, Asteroids.Ecs `"Asteroids (ECS)"`, Snake.Ecs `"Snake (ECS)"`, TerraForM.Ecs `"TerraForM (ECS)"`, Platformer.Ecs `"Platformer (ECS)"`, Swarm `"Swarm (ECS)"` |
+| Window title = `GameBase.Name` | `GameBase.Initialize` → `SetTitle` | Default `"Game"`. Platformer `"Platformer game"`, Asteroids.Ecs `"Asteroids (ECS)"`, Snake.Ecs `"Snake (ECS)"`, TerraForM.Ecs `"TerraForM (ECS)"`, Platformer.Ecs `"Platformer (ECS)"`, Swarm `"Swarm (ECS)"`, Starguard `"Starguard"` |
 
 Runtime exceptions without repo-authored text (message comes from .NET and varies): `DllNotFoundException`,
 `SocketException`, `Win32Exception`, `FileNotFoundException`, `DirectoryNotFoundException`, `FormatException`,
@@ -94,6 +94,17 @@ using [04](04-flows.md).
 | `QUEUED COMMANDS ` + `→←↑↓P` | `HudTexts.QueuedCommands`, `Move`/`Plant.GetVisualRepresentation` | Typed, not yet sent with SPACE |
 | `SCORE:` | `HudTexts.Score` | Top-right. **Hidden during game over** |
 | `PRESS R TO RESTART` (inside the GAME OVER art) | `Sprites.GameOver` | `GameScene.GameOver` is true |
+
+### Starguard screen text (`HudTexts`)
+
+| Text | Where | Meaning |
+|---|---|---|
+| `SCORE ` + 6 digits | `HudTexts.Score`, row 0 left | Score of this match, zero-padded (`D6`) |
+| `HI ` + 6 digits | `HudTexts.HighScore`, row 0 centre | Best of `StarguardGame.HighScore` and the current score |
+| `WAVE n` | `HudTexts.Wave`, row 0 right | Current wave, from 1 |
+| `LIVES n` + one `▲` per life in reserve | `HudTexts.Lives`, row below the ground line | Lives left, including the cannon on screen |
+| `G A M E   O V E R` | `HudTexts.GameOver`, screen centre | `Match.IsOver` |
+| `PRESS ENTER TO PLAY AGAIN` | `HudTexts.PlayAgain`, below it | `Match.IsOver` |
 
 ## Reading the screen as state (TerraForM)
 

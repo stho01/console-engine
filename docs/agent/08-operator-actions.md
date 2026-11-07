@@ -38,6 +38,7 @@ team's process differs.
 | ConsoleGame | ESC | Quit (`Stop()`) | `Game.OnUpdate` |
 | ConsoleGame.Ecs | ESC | Quit (`Stop()`) | `ConsoleEcsGame.OnUpdate` |
 | Swarm | SPACE / BACKSPACE / ESC | +10 000 particles / −10 000 particles / quit | `SpawnControlSystem`, `SwarmGame.OnUpdate` |
+| Starguard | ← → or A D / SPACE (hold) / ENTER | Move / fire (one shot in flight) / new match after game over | `ControlsSystem` |
 | Launcher | ↑↓ (W/S, K/J), Home/End / ENTER, SPACE / 1–9 / ESC, Q | Select / start selected / start that entry / quit | `LauncherMenu.HandleKey` |
 
 There is **no** way to skip a TerraForM level, choose a map, reset the score, or enable TerraForM debug mode without a
