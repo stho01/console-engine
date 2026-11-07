@@ -23,7 +23,7 @@ namespace ConsoleEngine.Physics;
 /// (<see cref="Collider.Category"/>/<see cref="Collider.Mask"/>), two static bodies are never tested, two sensors never
 /// detect each other, and a non-sensor pair needs a dynamic body.
 /// </summary>
-public sealed class PhysicsSystem : EntitySystem, IPhysicsEvents
+public sealed partial class PhysicsSystem : EntitySystem, IPhysicsEvents, IPhysicsQueries
 {
     //**********************************************************
     //** fields
@@ -103,6 +103,12 @@ public sealed class PhysicsSystem : EntitySystem, IPhysicsEvents
     /// <summary>Slower impacts than this, cells/s, don't bounce (Box2D's default: 1).</summary>
     public float RestitutionThreshold { get; set; } = 1f;
 
+    /// <summary>
+    /// Solid tiles for the spatial queries and <see cref="CharacterMover"/>. Optional. Dynamic bodies don't collide with it
+    /// yet: give them static box colliders instead.
+    /// </summary>
+    public TileGrid TileGrid { get; set; }
+
     /// <summary>Colliders in the last step.</summary>
     public int BodyCount => _proxies.Count;
 
@@ -160,6 +166,7 @@ public sealed class PhysicsSystem : EntitySystem, IPhysicsEvents
 
         Solve(h);
         Scatter();
+        _queryStateIsCurrent = false;
     }
 
     //**********************************************************

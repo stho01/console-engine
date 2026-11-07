@@ -44,7 +44,7 @@ Tags used throughout:
 | Platformer: "debug text everywhere", "FPS not shown", "player vanishes into walls" | [P14](05-triage.md#p14) |
 | TerraForM: "the story is in English, where's the Norwegian version?" | [P15](05-triage.md#p15) |
 | Launcher: "game says (not built)", "launcher won't start a game", "game window stops at Press any key" | [P16](05-triage.md#p16) |
-| "Things pass through each other", "things sink into the floor", "bullet didn't hit", "hit counted twice", "physics events don't fire" | [P17](05-triage.md#p17) |
+| "Things pass through each other", "things sink into the floor", "bullet didn't hit", "hit counted twice", "physics events don't fire", "raycast misses", "platformer player stuck or falls through" | [P17](05-triage.md#p17) |
 
 ## File index
 

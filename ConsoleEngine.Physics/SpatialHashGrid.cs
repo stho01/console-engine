@@ -20,8 +20,6 @@ internal sealed class SpatialHashGrid
 
     private const int MinTableSize = 64;
 
-    private readonly float _inverseCellSize;
-
     /// <summary>After a build, bucket <c>h</c> is <c>_entries[_bucketStarts[h] .. _bucketStarts[h + 1]]</c>.</summary>
     private int[] _bucketStarts = new int[MinTableSize + 1];
 
@@ -38,7 +36,6 @@ internal sealed class SpatialHashGrid
             throw new ArgumentOutOfRangeException(nameof(cellSize), cellSize, "Must be a positive, finite number.");
 
         CellSize = cellSize;
-        _inverseCellSize = 1f / cellSize;
     }
 
     //**********************************************************
@@ -151,9 +148,21 @@ internal sealed class SpatialHashGrid
         maxY = CellOf(body.Center.Y + bounds.Y);
     }
 
-    private int CellOf(float coordinate) => (int)MathF.Floor(coordinate * _inverseCellSize);
+    /// <summary>Same rounding as <see cref="GridWalker"/> (division, not multiplication by the inverse).</summary>
+    internal int CellOf(float coordinate) => (int)MathF.Floor(coordinate / CellSize);
 
     private int Hash(int x, int y) => (int)(((uint)x * 73856093u) ^ ((uint)y * 19349663u)) & _tableMask;
+
+    /// <summary>
+    /// The entries of the bucket cell (<paramref name="x"/>, <paramref name="y"/>) hashes to, from the last build. Other
+    /// cells can share the bucket: check each entry's cell.
+    /// </summary>
+    internal ReadOnlySpan<Entry> GetBucket(int x, int y)
+    {
+        var bucket = Hash(x, y);
+        var start = _bucketStarts[bucket];
+        return _entries.AsSpan(start, _bucketStarts[bucket + 1] - start);
+    }
 
     /// <summary>Entries fit, and the table has about two buckets per entry so most buckets hold one cell.</summary>
     private void EnsureCapacity(int entryCount)
@@ -172,7 +181,7 @@ internal sealed class SpatialHashGrid
         _tableMask = tableSize - 1;
     }
 
-    private readonly struct Entry(int body, int cellX, int cellY)
+    internal readonly struct Entry(int body, int cellX, int cellY)
     {
         public readonly int Body = body;
         public readonly int CellX = cellX;

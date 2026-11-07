@@ -11,6 +11,7 @@
 
     <ItemGroup>
       <ProjectReference Include="..\..\ConsoleEngine\ConsoleEngine.csproj" />
+      <ProjectReference Include="..\..\ConsoleEngine.Physics\ConsoleEngine.Physics.csproj" />
       <ProjectReference Include="..\..\Libs\Microsoft.Xna.Framework\Microsoft.Xna.Framework.csproj" />
     </ItemGroup>
 

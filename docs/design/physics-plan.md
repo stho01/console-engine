@@ -1,8 +1,9 @@
 # Plan: 2D-fysikk i ConsoleEngine
 
-Status (2026-11-07): fase 0–3 er ferdige: `FixedTimestep` og `EcsScene.FixedSimulation`, deteksjon og hendelser,
-og Soft Step-løseren. Pilotene er Asteroids.Ecs (sensorer, lag) og det nye eksempelet `Examples/PhysicsSandbox`
-(løseren). Fase 4 (tilegrid, spørringer, karakterkontroller) gjenstår. Målingene står i § 12b. Planen er gjennomgått
+Status (2026-11-07): fase 0–4 er ferdige: `FixedTimestep` og `EcsScene.FixedSimulation`, deteksjon og hendelser,
+Soft Step-løseren, `TileGrid`, spørringer (`IPhysicsQueries`) og `CharacterMover.MoveAndSlide`. Pilotene er
+Asteroids.Ecs (sensorer, lag), `Examples/PhysicsSandbox` (løseren) og Platformer.Ecs (tilegrid, karakterkontroller).
+Det som gjenstår står under fase 5. Målingene står i § 12b. Planen er gjennomgått
 mot industristandard (Box2D v3, «Fix Your Timestep», Ericson, Godot/Unity 2D). Avvik fra standarden er markert og
 begrunnet i § 10.
 
@@ -111,7 +112,8 @@ refererer ikke til den. Avhengigheten går bare én vei: fysikken bruker motoren
   komponentene og skriver tilbake posisjon, fart og hendelser. Spillkoden leser hendelsene gjennom `IPhysicsEvents`,
   ett virtuelt kall per steg, ikke per kropp. Et objekt-API i Godot-stil (`IPhysicsWorld.CreateBody` …) er valgt bort:
   virtuelle kall per kropp og synkronisering av håndtak går imot ytelseskravet.
-- `IPhysicsQueries` (`Raycast`, `Overlap*`, `CastBox`) kommer i fase 4, når spørringene finnes.
+- `IPhysicsQueries` (`Raycast`, `Overlap*`, `CastBox`) kom i fase 4. `CharacterMover` tar et `IPhysicsQueries`, så
+  den virker med en annen fysikkmotor bak samme grensesnitt.
 
 ## 5. Ett fysikksteg
 
@@ -147,9 +149,13 @@ etter gruppen, som i dag.
 
 ### Statisk tilegrid
 
-- `CollisionGrid`: én `byte` per tile (tom/vegg, senere enveisplattform osv.), oppslag i O(1), som `TileMap` i
-  Platformer.Ecs. Vegger blir **ikke** kropper.
-- Kropper testes mot tilene de dekker. Raske kropper bruker en DDA-gange gjennom gridet (Amanatides–Woo).
+- `TileGrid` (planlagt som `CollisionGrid`): én `bool` per tile, oppslag i O(1), som `TileMap` i Platformer.Ecs.
+  Vegger blir **ikke** kropper.
+- Raycast går gjennom gridet med DDA (Amanatides–Woo, `GridWalker`). En box cast tester tilene i den sveipede boksen;
+  det holder fordi slike sveip er korte (ett steg).
+- **Utsatt (fase 5):** dynamiske kropper mot tilene i løseren. Det krever kontakter uten entitet i parcachen og
+  filtrering av indre kanter for kontakter, ikke bare for sveip. Til da bruker spill statiske boks-collidere for vegger
+  som kropper skal treffe (som PhysicsSandbox).
 
 ## 7. Narrowphase
 
@@ -279,15 +285,30 @@ ristende kontroll.
   celle). Kollisjon mellom alle gjør den ubrukelig som stresstest, så eier valgte et nytt lite eksempel: baller og
   bokser som slippes i en boks med to hyller og en kinematisk plattform. Spillet ligger i launcheren.
 
-### Fase 4: Tilegrid, spørringer, karakterkontroller (`feat(engine):`)
+### Fase 4: Tilegrid, spørringer, karakterkontroller (`feat(physics):`) — ferdig
 
-- `CollisionGrid`, DDA-gange, `Raycast`, `OverlapBox`/`OverlapCircle`, `CastBox`, `MoveAndSlide`.
-- **Pilot: Platformer.Ecs.** `PlayerPhysicsSystem` beholder spillreglene og bruker `MoveAndSlide` for kollisjon.
-- Vurder TerraForM.Ecs etterpå.
+- `TileGrid`, `IPhysicsQueries` (`Raycast`, `CastBox`, `OverlapBox`, `OverlapCircle`, resultat `CastHit`) implementert
+  av `PhysicsSystem` (`PhysicsSystem.Queries.cs`), og `CharacterMover.MoveAndSlide` med `SlideCollisions`.
+- Spørringene ser verden slik den var på slutten av forrige steg, som i Box2D. Den første spørringen etter et steg
+  flytter proxyene til sluttposisjonene og bygger gridet på nytt uten marginer; et spill som ikke spør betaler ingenting.
+  Hver kropp testes én gang per spørring (stempel per kropp, ingen allokering). Sensorer rapporteres aldri.
+- Box cast er en raycast mot formen utvidet med boksen (Minkowski-sum): boks blir større boks, sirkel blir boks med
+  avrundede hjørner. Starter boksen inni en form, treffes den ved fraction 0 bare hvis bevegelsen går videre inn.
+- Indre kanter i tilegridet (en flate som grenser til en annen solid tile) treffes aldri, så en boks som glir langs en
+  rad med tiles ikke hekter seg på skjøtene. Det er den vanlige løsningen for tilekart; Box2D bruker kjedeformer.
+- `MoveAndSlide` følger Godot: sveip, stopp `SkinWidth` (0,01) før treffet, fjern bevegelsen og farten inn i flaten,
+  gli videre, maks 4 treff. Gulv/tak/vegg skilles med 45° mot `up`.
+- **Pilot: Platformer.Ecs.** `PlayerPhysicsSystem` beholder spillreglene (gravitasjon, hopp, drag, `MinSpeed`, at et
+  hopp i lufta skjer ved landing) og bruker `MoveAndSlide` mot `TileMap.ToTileGrid()`. Den gamle kollisjonskoden med
+  hjørneprober, `MaxStep`-substeg og `RectangleF` er borte. Spilleren går nå i det faste steget; input låses hver frame
+  i `PlayerBody.RunDirection` (erstatter `Acceleration`, som summerte per frame) og `JumpRequested`.
+- TerraForM.Ecs er ikke flyttet: roveren går i ruter med kommandoer, ikke med fysikk.
 
-### Fase 5: Bare når målinger viser behov
+### Fase 5: Bare når målinger eller spill viser behov
 
+- Dynamiske kropper mot `TileGrid` i løseren (se § 6).
 - Sleeping/øyer, render-interpolering, flere former, multithreading av narrowphase og løser.
+- `IPhysicsQueries` med flere treff per spørring (Box2D sine callback-varianter), hvis et spill trenger det.
 
 Hver fase oppdaterer `docs/agent/` og `AGENTS.md` i samme PR, og legger målingene inn i denne filen.
 
@@ -343,6 +364,34 @@ fra steg til steg. Samme maskin og oppsett.
 
 Løseren omtrent dobler steget. 10 000 kropper i kontakt tar 2 ms av et 16,7 ms-steg ved 60 Hz. Feilmarginene er store
 (`--job short`).
+
+### Fase 4: spørringer, og stabile målinger (2026-11-07)
+
+To ting gjorde fysikkmålingene ustabile; begge er rettet:
+- `PhysicsStepBenchmarks` startet med overlappende kropper, og tilstanden endret seg mens BenchmarkDotNet varmet opp.
+  Resultatet hang da av antall oppvarmingssteg (2,0 eller 3,2 ms for 10 000). Nå får kroppene sette seg i 600 steg
+  (10 s) i oppsettet, og målingen er en stabil tilstand.
+- På denne maskinen havner prosessen på raske eller trege kjerner (hybrid-CPU): 100 og 1 000 kropper varierte opptil
+  1,8× mellom kjøringer. Med `--affinity 1` er kjøringene like innen få prosent. Bruk det når to målinger skal
+  sammenlignes.
+
+`--job short --affinity 1`, samme maskin:
+
+| Kropper | Fysikksteg (stabil tilstand) | Allokert |
+|---|---|---|
+| 100 | 7,0 µs | 0 B |
+| 1 000 | 136 µs | 0 B |
+| 10 000 | 2,1 ms | 1 B per steg i snitt (BenchmarkDotNet runder opp en sjelden allokering; 0 B uten affinity) |
+
+`PhysicsQueryBenchmarks` (uten affinity), 1 000 spørringer per operasjon blant statiske sirkler:
+
+| Kropper | 1 000 raycasts (20 celler) | 1 000 box casts (2 celler) | Steg + første spørring | Allokert |
+|---|---|---|---|---|
+| 1 000 | 85 µs | 125 µs | 89 µs | 0 B |
+| 10 000 | 159 µs | 226 µs | 1,87 ms | 0 B |
+
+En spørring koster 0,1–0,2 µs. Den første spørringen etter et steg bygger gridet på nytt; med statiske kropper er
+det det meste av «steg + første spørring».
 
 ## 13. Åpne spørsmål til eier
 

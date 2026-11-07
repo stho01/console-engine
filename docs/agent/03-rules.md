@@ -189,6 +189,19 @@ is square, as in PhysicsSandbox).
   Friction per pair = `sqrt(a.Friction * b.Friction)`, restitution = `max(a.Restitution, b.Restitution)`; impacts
   slower than `RestitutionThreshold` don't bounce. Contacts start before the shapes touch (speculative: when the gap
   is less than how far both can move this step), so fast bodies don't tunnel through thin walls.
+- **Tile grid**: `PhysicsSystem.TileGrid` (optional `TileGrid`: columns × rows of solid/empty tiles, `TileSize`, `Origin`,
+  `Category`). Queries and `CharacterMover` collide with it; **dynamic bodies don't** (phase 4 limit: use static box
+  colliders for them). Outside the grid is empty. Touching a tile's edge is not overlapping it.
+- **Queries** (`IPhysicsQueries`, implemented by `PhysicsSystem`): `Raycast` (closest collider or tile; shapes that
+  contain the origin are ignored; a ray starting inside solid tiles hits the first solid tile after it leaves them),
+  `CastBox` (an axis-aligned box swept along a translation; a shape it already overlaps is hit at fraction 0 when moving
+  further in and ignored when moving out; tile faces that touch another solid tile are never hit, so boxes don't catch on
+  seams), `OverlapBox`/`OverlapCircle` (colliders only, up to the span's length). A collider is reported if its
+  `Category` has a bit in the query mask; sensors never. Queries see the world **as at the end of the last physics step**.
+- **`CharacterMover.MoveAndSlide`** (Godot `move_and_slide`): sweeps a box by `velocity * delta` with `CastBox`, stops
+  `SkinWidth` (0.01 cells) before what it hits, removes the velocity part into the surface and slides with the rest, at
+  most `MaxSlides` (4) hits per move. Returns `SlideCollisions`: `Floor` (normal within 45° of `up`, default
+  `(0, -1)`), `Ceiling`, `Wall`. A character has no `RigidBody`, so the physics never moves it.
 - "Touching" (for events and `TouchingPairCount`) = separation below `TouchDistance` (0.02 cells), so a resting
   contact stays touching instead of flickering.
 - Events (`ContactBeginEvents`, `ContactEndEvents`, `SensorBeginEvents`, `SensorEndEvents`) hold the last step's
@@ -352,8 +365,8 @@ files, so every rule above applies, except:
 | Snake.Ecs | Differs from Snake: when no food exists, new food is placed on a uniformly random **free** on-screen cell (never on the snake, any column/row). It appears after the simulation group's playback. The whole screen is redrawn each frame | `FoodSpawnSystem` |
 | Platformer | `F1` toggles `IsDebugMode`, which **starts true** (`Program.cs`). Draws the player **before** the world, so tiles overwrite the player | `PlatformerGame.OnUpdate`, `OnRender` |
 | Platformer | `ShowFps = true` but no `EnableLogger`, so no FPS anywhere | `PlatformerGame.OnInitialize` |
-| Platformer.Ecs | Same keys, start state (debug on) and draw order (debug text, player, then tiles on top) as Platformer. Velocity is in cells/s and scaled by `Delta`: gravity 200, run 150, air 75 cells/s², drag (3, 0.1)/s, jump speed 50 cells/s (about 6 cells high at any FPS) | `PlayerControlSystem`, `PlayerPhysicsSystem`, `PlatformerScene` |
-| Platformer.Ecs | Differs from Platformer: horizontal speed under 1 cell/s is zeroed only when A/D is not held; moves are split into steps of at most 0.5 cells; vertical and horizontal collisions are checked one after the other; moving left/right checks the corners on that side; screen positions are floored. Kept from the original: walking off a ledge does not make the player airborne, and a jump pressed in the air happens on landing | `PlayerPhysicsSystem.ResolveCollisions` |
+| Platformer.Ecs | Same keys, start state (debug on) and draw order (debug text, player, then tiles on top) as Platformer. Velocity is in cells/s: gravity 200, run 150 (ground) / 75 (air) cells/s², drag (3, 0.1)/s, jump speed 50 cells/s (about 6 cells high at any FPS). The player moves in fixed steps of 1/60 s; A/D and SPACE are read every frame and latched (`PlayerBody.RunDirection`, `JumpRequested`) | `PlayerControlSystem`, `PlayerPhysicsSystem`, `PlatformerScene` |
+| Platformer.Ecs | Collisions go through the engine physics: the level is a `TileGrid` (`TileMap.ToTileGrid`, 4×4-cell tiles, outside the map is empty) and the player a 3×3 box moved by `CharacterMover.MoveAndSlide`, which stops at walls and slides along them. Landing (a `Floor` hit) ends `IsAirborne`. Differs from Platformer: horizontal speed under 1 cell/s is zeroed only when A/D is not held; `Position` is rounded to whole cells after every move (the exact remainder is kept in `PlayerBody.SubCell`), so the player is drawn touching walls and floors although the mover stops `SkinWidth` (0.01) before them. Kept from the original: walking off a ledge does not make the player airborne, and a jump pressed in the air happens on landing | `PlayerPhysicsSystem`, `CharacterMover`, `TileGrid` |
 | Asteroids | Steer `A`/`D`, thrust `W`. No collisions, no objective. Logger enabled but nothing is logged | `AsteroidsGame` |
 | Asteroids.Ecs | Steer `A`/`D` (`Ship.SteeringSpeed` 2π rad/s), thrust `W` (`Ship.Thrust` 60 cells/s²), drag `Ship.Drag` 1.5/s. All movement is scaled by `Delta` | `ShipControlSystem` |
 | Asteroids.Ecs | `SPACE` (Pressed) fires one bullet: 80 cells/s plus the ship's velocity, lives 1.5 s | `ShipControlSystem`, `Spawner.CreateBullet`, `LifetimeSystem` |

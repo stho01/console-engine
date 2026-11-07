@@ -36,6 +36,9 @@ Support/user words are **[inferred]**. The team may also use Norwegian terms. Ad
 | soft contact / soft step | Contacts act as stiff, damped springs instead of hard corrections (Box2D v3) | `Softness`, `PhysicsSystem.ContactHertz`, `ContactDampingRatio`, `ContactPushMaxSpeed` |
 | warm starting | Starting the solver with the previous step's impulses, so stacks rest instead of jitter | `PairCache.Add` / `StoreImpulses`, `ContactConstraint.NormalImpulse` |
 | physics events interface | What game code depends on instead of the concrete physics system | `IPhysicsEvents` |
+| tile grid / level collision | Solid and empty tiles the physics queries and characters collide with, without one entity per wall | `TileGrid`, `PhysicsSystem.TileGrid`, Platformer.Ecs `TileMap.ToTileGrid` |
+| raycast / box cast / overlap | Asking the physics what is along a line, in the way of a moving box, or inside an area | `IPhysicsQueries.Raycast`, `CastBox`, `OverlapBox`, `OverlapCircle`, `CastHit` |
+| character controller / move and slide | Moving a player box that stops at walls and slides along them, not pushed by physics | `CharacterMover.MoveAndSlide`, `SlideCollisions` |
 | speculative contact | A contact created before two bodies touch, because they can close the gap this step; stops tunnelling | `BodyProxy.Margin`, `PhysicsSystem.CreateContacts` |
 | moving platform | A kinematic body moved by its velocity; never pushed, carries what stands on it by friction | `BodyType.Kinematic`, PhysicsSandbox `Patrol` / `PatrolSystem` |
 | fixed step / fixed timestep | A simulation step of constant length (default 1/60 s), run 0 or more times per frame so physics doesn't depend on the frame rate | `FixedTimestep`, `EcsScene.FixedSimulation` |

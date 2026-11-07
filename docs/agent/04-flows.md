@@ -184,3 +184,16 @@ Runs once per fixed step, where the scene added it to `FixedSimulation`. Rules: 
 | 7 | `SubstepCount` times: integrate velocities, warm start, solve with soft push-out, integrate positions, relax. Then restitution, and the impulses go back into the cache | `PhysicsSystem.Solve`, `ContactSolver` | Restitution 0, impact slower than `RestitutionThreshold`, or no push during the step → no bounce | Bodies stop at, slide along or bounce off each other |
 | 8 | Write `Position += DeltaPosition` and `Velocity` back, same chunk order as step 2 | `PhysicsSystem.Scatter` | Static bodies → not written | New positions and velocities |
 | 9 | Later systems in `FixedSimulation` read the events and record destroys in `Commands`; playback after the group | game systems (Asteroids.Ecs `CollisionSystem`), `CommandBuffer.Playback` | Destroy of an already-dead entity → skipped silently | Hit entities gone before the frame is drawn |
+
+<a id="f12"></a>
+## F12 — Spatial query and character move (`IPhysicsQueries`, `CharacterMover.MoveAndSlide`)
+
+Called by game systems, normally in `FixedSimulation` after `PhysicsSystem` (Platformer.Ecs `PlayerPhysicsSystem`).
+Rules: [03 § Physics](03-rules.md#physics).
+
+| # | Step | Class.method | Stops / skips if | Observable |
+|---|---|---|---|---|
+| 1 | First query after a step: move every proxy to its end-of-step position and rebuild the body grid without margins | `PhysicsSystem.EnsureQueryState` | Already done since the last step → skipped | Queries see the end of the last step, not later changes by game code |
+| 2 | Raycast: walk the body grid's cells along the ray (`GridWalker`), test each body once, stop when the next cell is further than the best hit; then walk the tile grid to the first solid tile after leaving any the ray starts in | `RaycastBodies`, `RaycastTiles`, `RayCast.Box`/`Circle` | Sensor, category not in the mask, or the origin inside the shape → body skipped silently | `CastHit` (entity or tile, point, normal, fraction) |
+| 3 | Box cast: test every body and solid tile in the swept box against the shape grown by the cast box | `CastBoxBodies`, `CastBoxTiles`, `RayCast.Box`/`RoundedBox` | Ignored entity, sensor, mask; starting inside and moving out; a tile face touching another solid tile → skipped silently | `CastHit` |
+| 4 | `MoveAndSlide`: cast the box by the remaining move; no hit → move all of it and stop; a hit → move to it plus `SkinWidth`, record `Floor`/`Ceiling`/`Wall`, remove the move and velocity parts into the surface, repeat | `CharacterMover.MoveAndSlide` | After `MaxSlides` (4) hits, or when the remaining move is ~0 → stops, the rest of the move is dropped | New centre and velocity, `SlideCollisions` |

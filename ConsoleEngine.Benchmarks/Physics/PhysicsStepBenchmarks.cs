@@ -11,8 +11,8 @@ namespace ConsoleEngine.Benchmarks.Physics;
 /// <summary>
 /// One whole <see cref="PhysicsSystem"/> step (integrate, gather, grid broadphase, narrowphase, pair cache, events,
 /// solver with 4 substeps) on the same bodies as <see cref="BruteForceCollisionBenchmarks"/>: compare the two tables.
-/// The bodies are dynamic circles without gravity that start at random places. Overlapping ones are pushed apart and
-/// then rest against each other, so most contacts persist from step to step (warm started), as in a running game.
+/// The bodies are dynamic circles without gravity that start at random places. Setup lets overlapping ones push apart
+/// and come to rest, so the measured steps are the steady state of a running game: resting, warm-started contacts.
 /// </summary>
 [MemoryDiagnoser]
 public class PhysicsStepBenchmarks
@@ -25,6 +25,7 @@ public class PhysicsStepBenchmarks
     private const float MinRadius = .5f;
     private const float MaxRadius = 1.5f;
     private const float Step = 1f / 60f;
+    private const int SettleSteps = 600;
 
     private World _world;
     private SystemGroup _group;
@@ -58,9 +59,10 @@ public class PhysicsStepBenchmarks
                 Collider.Circle(radius));
         }
 
-        // Grow every buffer before measuring.
-        _group.Update(Step);
-        _group.Update(Step);
+        // Let the overlapping start settle (10 simulated seconds) so every measured step does the same work. Without it,
+        // the result depended on how many warm-up steps BenchmarkDotNet happened to run: 2.0 or 3.2 ms for 10 000.
+        for (var i = 0; i < SettleSteps; i++)
+            _group.Update(Step);
     }
 
     [GlobalCleanup]

@@ -31,7 +31,7 @@ Platform: **Windows only.** Rendering and input go through Win32 P/Invoke (`kern
 | Win32 signatures and structs | `Libs/ConsoleEngine.Windows/LowLevel/` (`Kernel32.cs`, `User32.cs`) |
 | Vector/matrix math | `Libs/Microsoft.Xna.Framework/` (copied from MonoGame, change only with good reason) |
 | ECS (entities, components, archetypes, chunks) | `ConsoleEngine/Ecs/`, design and phases in [`docs/design/ecs-plan.md`](docs/design/ecs-plan.md) |
-| 2D physics (bodies, colliders, broadphase, Soft Step contact solver, contact/sensor events) | `ConsoleEngine.Physics/` (own assembly and NuGet package, optional), rules in [`docs/agent/03-rules.md` § Physics](docs/agent/03-rules.md#physics), design and phases in [`docs/design/physics-plan.md`](docs/design/physics-plan.md). Examples: `Examples/PhysicsSandbox` (solver), `Examples/Asteroids.Ecs` (sensors, layers) |
+| 2D physics (bodies, colliders, broadphase, Soft Step contact solver, contact/sensor events, tile grid, raycasts and box casts, `CharacterMover.MoveAndSlide`) | `ConsoleEngine.Physics/` (own assembly and NuGet package, optional), rules in [`docs/agent/03-rules.md` § Physics](docs/agent/03-rules.md#physics), design and phases in [`docs/design/physics-plan.md`](docs/design/physics-plan.md). Examples: `Examples/PhysicsSandbox` (solver), `Examples/Asteroids.Ecs` (sensors, layers), `Examples/Platformer.Ecs` (tile grid, character controller) |
 | Performance measurements | `ConsoleEngine.Benchmarks/` (BenchmarkDotNet) |
 | How to use the engine | `Examples/Snake` (smallest), `Examples/TerraForM` (scenes, assets, tests), `Examples/<Game>.Ecs` (ECS port of each game: components, systems, queries, `EcsScene`; compare with `Examples/<Game>`. `Snake.Ecs` is the smallest, `TerraForM.Ecs` the fullest), `Examples/Swarm` (ECS at scale, system ordering attributes), `Examples/PhysicsSandbox` (physics: bodies, colliders, fixed step, kinematic platform) |
 | Build/test pipeline | `.github/workflows/build-and-test.yml` |
@@ -82,8 +82,9 @@ dotnet tool restore
 dotnet reportgenerator -reports:"TestResults/**/coverage.cobertura.xml" -targetdir:coverage -reporttypes:Html
 ```
 
-Benchmarks (always `Release`; `--job short` for a quick run; add `--counters CacheMisses+BranchMispredictions` for
-hardware counters, which needs an elevated prompt on Windows):
+Benchmarks (always `Release`; `--job short` for a quick run; `--affinity 1` pins the process to one core, so runs on a
+hybrid CPU are comparable (without it results can vary up to 1.8×); add `--counters CacheMisses+BranchMispredictions`
+for hardware counters, which needs an elevated prompt on Windows):
 
 ```bash
 dotnet run -c Release --project ConsoleEngine.Benchmarks -- --filter "*"
@@ -135,14 +136,16 @@ ConsoleEngine/                    the engine
     Rendering/RenderConsole.cs      frame buffer + Draw* API
     Rendering/Sprite.cs             Pixel[,] sprites, FromString/FromStringArray
     Scenery/Scene.cs, SceneManager.cs  scene stack (Push/Pop/Set)
-ConsoleEngine.Physics/            2D physics (namespace ConsoleEngine.Physics): RigidBody, Collider, PhysicsSystem,
-                                  IPhysicsEvents, ContactEvent/SensorEvent; internal: BodyProxy, Collision
-                                  (narrowphase), SpatialHashGrid (broadphase), PairCache, ContactSolver (+ SolverBody,
-                                  ContactConstraint, Softness), ArrayBuffer
-ConsoleEngine.Physics.Tests/      physics tests (Collision, SpatialHashGrid, PhysicsSystem, PhysicsSolverTests)
+ConsoleEngine.Physics/            2D physics (namespace ConsoleEngine.Physics): RigidBody, Collider, PhysicsSystem
+                                  (+ .Queries.cs), IPhysicsEvents, IPhysicsQueries/CastHit, TileGrid, CharacterMover/
+                                  SlideCollisions, ContactEvent/SensorEvent; internal: BodyProxy, Collision (narrowphase),
+                                  SpatialHashGrid (broadphase), PairCache, ContactSolver (+ SolverBody, ContactConstraint,
+                                  Softness), RayCast, GridWalker, ArrayBuffer
+ConsoleEngine.Physics.Tests/      physics tests (Collision, SpatialHashGrid, PhysicsSystem, PhysicsSolverTests, TileGrid,
+                                  PhysicsQueryTests, CharacterMoverTests)
 ConsoleEngine.Tests/              engine unit tests (mirrors ConsoleEngine/ folders), Fakes/ (console handler, scene)
 ConsoleEngine.Benchmarks/         BenchmarkDotNet: Baseline/ (OOP vs. struct arrays), Ecs/ (World, Query),
-                                  Physics/ (brute-force baseline, whole PhysicsSystem step)
+                                  Physics/ (brute-force baseline, whole PhysicsSystem step, queries)
 ConsoleEngine.Abstractions/
   Inputs/  IInputHandler, Key, KeyState
   Rendering/  IConsoleHandler, Pixel, FontInfo
