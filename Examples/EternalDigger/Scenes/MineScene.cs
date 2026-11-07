@@ -69,7 +69,7 @@ public sealed class MineScene(SaveData start, string savePath) : EcsScene<Eterna
         Simulation.Add(new MistSystem(mine, light, Camera, effects, random));
         Simulation.Add(new ParticlePhysicsSystem(mine));
         Simulation.Add(new ParticleLifetimeSystem());
-        Simulation.Add(new FloatingNumberSystem());
+        Simulation.Add(new FloatingTextSystem());
         Simulation.Add(new SaveSystem(_saver));
 
         Presentation.Add(new SkyRenderSystem(canvas, Camera));
@@ -78,7 +78,7 @@ public sealed class MineScene(SaveData start, string savePath) : EcsScene<Eterna
         Presentation.Add(new ParticleRenderSystem(canvas, Camera, light));
         // After the particles, so debris, dust and sparks never cover the miner.
         Presentation.Add(new MinerRenderSystem(canvas, Camera));
-        Presentation.Add(new FloatingNumberRenderSystem(canvas, Camera));
+        Presentation.Add(new FloatingTextRenderSystem(canvas, Camera));
         Presentation.Add(new PromptRenderSystem(canvas, Camera));
         Presentation.Add(new HudSystem(canvas, _saver));
     }

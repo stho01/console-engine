@@ -87,7 +87,7 @@ Why a grid and not one entity per tile:
 | Per-frame light | `LightMap` (`byte` per on-screen tile) | Recomputed every frame |
 | The miner | Entity: `Position` + `Miner` | Moves, has state, drawn and queried by several systems |
 | Particles | Entities: `Position`, `Velocity`, `Glyph`, `Particle`, `Physics` (+ `TileCollider` or `Mist`) | Hundreds at a time, short-lived, iterated in bulk |
-| Floating numbers | Entities: `Position`, `Velocity`, `FloatingNumber` | Short-lived |
+| Floating texts | Entities: `Position`, `Velocity`, `FloatingText` | Short-lived |
 | Rules (prices, hits, depths) | `const`s on static classes: `Tiles`, `Shop`, `Layout` | Shared, testable, no state |
 
 ### Archetypes in play
@@ -100,7 +100,7 @@ Because components are grouped by their exact set, the world holds five archetyp
 | `Position, Velocity, Glyph, Particle, Physics` | `EffectSpawner` (dust, sparks, pops, glints) |
 | … + `TileCollider` | `EffectSpawner` (debris chunks, coins) |
 | … + `Mist` | `EffectSpawner.Mist` |
-| `Position, Velocity, FloatingNumber` | `EffectSpawner.Number` |
+| `Position, Velocity, FloatingText` | `EffectSpawner.Number` |
 
 Systems pick the parts they need with queries, for example `Query.With<Particle, Position, Velocity>().With<Physics>()`
 matches all three particle archetypes, and `chunk.Has<TileCollider>()` tells a chunk loop whether to run collisions.
@@ -123,13 +123,13 @@ Scenes.Update → MineScene.OnUpdate → Simulation.Update(dt)
   MistSystem              keep up to 40 mist particles in lit caves
   ParticlePhysicsSystem   gravity, drag, move, land on rock
   ParticleLifetimeSystem  age, pick the glyph for the age, destroy expired
-  FloatingNumberSystem    drift up, destroy expired
+  FloatingTextSystem      drift up, destroy expired
   SaveSystem              a sale/purchase asked for a save, or 60 s underground → GameSaver.Save
   ── Commands.Playback: the particles recorded above are created, expired ones destroyed
 OnUpdate (game)           ESC → MineScene.Save(), Stop()
 Scenes.Render → MineScene.OnRender → Presentation.Update(dt)
   SkyRenderSystem → TerrainRenderSystem → HouseRenderSystem → ParticleRenderSystem
-  → MinerRenderSystem → FloatingNumberRenderSystem → PromptRenderSystem → HudSystem
+  → MinerRenderSystem → FloatingTextRenderSystem → PromptRenderSystem → HudSystem
 Display                   the frame goes to the console in one write
 ```
 

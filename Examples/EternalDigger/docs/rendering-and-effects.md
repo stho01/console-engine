@@ -14,7 +14,7 @@ The Presentation group draws in `Add` order, each layer over the last:
 | 3 | `HouseRenderSystem` | House, sign, chimney smoke, ladder shop, `MINE` frame | Fixed spots on the surface |
 | 4 | `ParticleRenderSystem` | Every particle glyph, except on the miner's cells | Over the world, keeping its background |
 | 5 | `MinerRenderSystem` | The 4 × 2 miner and the lamp glow | Over the world and the particles |
-| 6 | `FloatingNumberRenderSystem` | `+150g` / `-10g` | Over everything so far |
+| 6 | `FloatingTextRenderSystem` | `+150g` / `-10g` | Over everything so far |
 | 7 | `PromptRenderSystem` | `DELIVER [E]` / `BUY LADDERS [E] 10g` | Above the miner |
 | 8 | `HudSystem` | The two top rows | Screen rows 0–1 |
 
@@ -204,7 +204,7 @@ a random amount up to the strength in both directions and decays it by 6 per sec
 
 ## Text: numbers, prompts, HUD
 
-- **`FloatingNumberRenderSystem`** formats `+123g` or `-10g` into a reused `char[16]` with `int.TryFormat`, so a
+- **`FloatingTextRenderSystem`** formats `+123g` or `-10g` into a reused `char[24]` with `int.TryFormat`, so a
   number allocates nothing per frame. Positive yellow, negative red, darker for the last 30% of its life.
 - **`PromptRenderSystem`** draws a three-row box (`┌─┐ │ │ └─┘`, yellow on dark blue) with the text, a `▼` pointer
   just above the miner's head, and a small bob. `[E]` is yellow. The text strings are `PromptRenderSystem.DeliverText`

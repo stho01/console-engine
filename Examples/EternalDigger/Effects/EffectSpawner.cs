@@ -164,7 +164,7 @@ public sealed class EffectSpawner(Random random, ScreenShake shake)
 
     /// <summary>Floating <c>+150g</c> / <c>-10g</c> that drifts up.</summary>
     public void Number(CommandBuffer commands, Vector2 position, int amount) =>
-        commands.Create(new Position(position), new Velocity(new Vector2(0f, -5f)), new FloatingNumber(amount, 1.4f));
+        commands.Create(new Position(position), new Velocity(new Vector2(0f, -5f)), new FloatingText(FloatingTextKind.Gold, amount, 1.4f));
 
     //**********************************************************
     //** internals

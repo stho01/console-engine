@@ -29,7 +29,7 @@ Examples/EternalDigger/
 │   └── DigResult.cs            what a hit did: DigOutcome (Nothing, Damaged, Broken), Type, Hits
 ├── Components/
 │   ├── Miner.cs                the player: grid position, motion, lamp, dig timers, inventory
-│   └── Particle.cs             Particle, ParticleStyle, Physics, TileCollider, Mist, FloatingNumber
+│   └── Particle.cs             Particle, ParticleStyle, Physics, TileCollider, Mist, FloatingText
 ├── Systems/                    19 systems, listed below
 ├── Effects/
 │   ├── EffectSpawner.cs        creates every particle and floating number
@@ -58,7 +58,7 @@ Examples/EternalDigger/
 | 7 | `MistSystem` | `Mine`, `LightMap`, `Camera`, `EffectSpawner`, `Random` | `Mist` | Keeps up to 40 mist particles in lit caves |
 | 8 | `ParticlePhysicsSystem` | `Mine` | `Particle, Position, Velocity, Physics` | Gravity, drag, movement, landing on rock (`TileCollider`) |
 | 9 | `ParticleLifetimeSystem` | — | `Particle, Glyph` | Ages particles, sets their glyph, destroys expired ones |
-| 10 | `FloatingNumberSystem` | — | `FloatingNumber, Position, Velocity` | Moves numbers up, destroys expired ones |
+| 10 | `FloatingTextSystem` | — | `FloatingText, Position, Velocity` | Moves floating texts up, destroys expired ones |
 | 11 | `SaveSystem` | `GameSaver` | `Miner` | Saves on request, or after `GameSaver.AutosaveInterval` s underground |
 
 ### Presentation (`MineScene.Presentation`)
@@ -70,7 +70,7 @@ Examples/EternalDigger/
 | 3 | `HouseRenderSystem` | `Canvas`, `Camera` | — | House, sign, smoke, shop, mine frame |
 | 4 | `ParticleRenderSystem` | `Canvas`, `Camera`, `LightMap` | `Particle, Position, Glyph`; `Miner, Position` | Particles (dust and mist only where lit; none on the miner, capped and dimmed around him) |
 | 5 | `MinerRenderSystem` | `Canvas`, `Camera` | `Miner, Position` | The miner and lamp glow, over the particles |
-| 6 | `FloatingNumberRenderSystem` | `Canvas`, `Camera` | `FloatingNumber, Position` | `+150g` / `-10g` |
+| 6 | `FloatingTextRenderSystem` | `Canvas`, `Camera` | `FloatingText, Position` | `+150g` / `-10g` |
 | 7 | `PromptRenderSystem` | `Canvas`, `Camera` | `Miner, Position` | Door and shop prompts |
 | 8 | `HudSystem` | `Canvas`, `GameSaver` | `Miner` | Rows 0–1, the save hint |
 
@@ -83,7 +83,7 @@ Examples/EternalDigger/
 | `Physics` | `Gravity` (cells/s²), `Drag` (per second) | Every particle |
 | `TileCollider` | tag | Debris, coins |
 | `Mist` | tag | Mist |
-| `FloatingNumber` | `Amount`, `Age`, `Lifetime` | Floating numbers |
+| `FloatingText` | `Kind` (`FloatingTextKind`: `Gold`), `Amount`, `Age`, `Lifetime` | Floating texts |
 | `Position`, `Velocity`, `Glyph` | engine components (`ConsoleEngine.Ecs.Components`) | Miner (`Position` only), particles, numbers (no `Glyph`) |
 
 ## Services

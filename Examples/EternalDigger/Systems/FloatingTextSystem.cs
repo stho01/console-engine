@@ -5,8 +5,8 @@ using EternalDigger.Components;
 
 namespace EternalDigger.Systems;
 
-/// <summary>Floats <see cref="FloatingNumber"/>s upwards, slowing down, and destroys them when their time is up.</summary>
-public sealed class FloatingNumberSystem : EntitySystem
+/// <summary>Floats <see cref="FloatingText"/>s upwards, slowing down, and destroys them when their time is up.</summary>
+public sealed class FloatingTextSystem : EntitySystem
 {
     //**********************************************************
     //** fields
@@ -14,27 +14,27 @@ public sealed class FloatingNumberSystem : EntitySystem
 
     private const float Drag = 1.2f;
 
-    private Query _numbers;
+    private Query _texts;
 
     //**********************************************************
     //** lifecycle
     //**********************************************************
 
-    protected override void OnCreate() => _numbers = World.Query(Query.With<FloatingNumber, Position, Velocity>());
+    protected override void OnCreate() => _texts = World.Query(Query.With<FloatingText, Position, Velocity>());
 
     protected override void OnUpdate(float deltaSeconds)
     {
-        foreach (var chunk in _numbers.GetChunks())
+        foreach (var chunk in _texts.GetChunks())
         {
             var entities = chunk.Entities;
-            var numbers = chunk.GetSpan<FloatingNumber>();
+            var texts = chunk.GetSpan<FloatingText>();
             var positions = chunk.GetSpan<Position>();
             var velocities = chunk.GetSpan<Velocity>();
             for (var i = 0; i < chunk.Count; i++)
             {
-                ref var number = ref numbers[i];
-                number.Age += deltaSeconds;
-                if (number.Age >= number.Lifetime)
+                ref var text = ref texts[i];
+                text.Age += deltaSeconds;
+                if (text.Age >= text.Lifetime)
                 {
                     Commands.Destroy(entities[i]);
                     continue;

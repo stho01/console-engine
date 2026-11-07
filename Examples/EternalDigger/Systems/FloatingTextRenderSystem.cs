@@ -8,35 +8,35 @@ using EternalDigger.Rendering;
 namespace EternalDigger.Systems;
 
 /// <summary>
-/// Draws <see cref="FloatingNumber"/>s as <c>+150g</c> (yellow) or <c>-10g</c> (red), centred on their position and
-/// fading at the end. Formatted into a reused buffer, so nothing is allocated.
+/// Draws <see cref="FloatingText"/>s centred on their position, fading at the end: gold as <c>+150g</c> (yellow) or
+/// <c>-10g</c> (red). Formatted into a reused buffer, so nothing is allocated.
 /// </summary>
-public sealed class FloatingNumberRenderSystem(Canvas canvas, Camera camera) : EntitySystem
+public sealed class FloatingTextRenderSystem(Canvas canvas, Camera camera) : EntitySystem
 {
     //**********************************************************
     //** fields
     //**********************************************************
 
-    /// <summary>The share of its life after which a number starts to fade.</summary>
+    /// <summary>The share of its life after which a text starts to fade.</summary>
     private const float FadeStart = .7f;
 
-    private readonly char[] _text = new char[16];
-    private Query _numbers;
+    private readonly char[] _buffer = new char[24];
+    private Query _texts;
 
     //**********************************************************
     //** lifecycle
     //**********************************************************
 
-    protected override void OnCreate() => _numbers = World.Query(Query.With<FloatingNumber, Position>());
+    protected override void OnCreate() => _texts = World.Query(Query.With<FloatingText, Position>());
 
     protected override void OnUpdate(float deltaSeconds)
     {
-        foreach (var chunk in _numbers.GetChunks())
+        foreach (var chunk in _texts.GetChunks())
         {
-            var numbers = chunk.GetSpan<FloatingNumber>();
+            var texts = chunk.GetSpan<FloatingText>();
             var positions = chunk.GetSpan<Position>();
             for (var i = 0; i < chunk.Count; i++)
-                Draw(numbers[i], positions[i].Value.X, positions[i].Value.Y);
+                Draw(texts[i], positions[i].Value.X, positions[i].Value.Y);
         }
     }
 
@@ -44,26 +44,26 @@ public sealed class FloatingNumberRenderSystem(Canvas canvas, Camera camera) : E
     //** internals
     //**********************************************************
 
-    private void Draw(in FloatingNumber number, float worldX, float worldY)
+    private void Draw(in FloatingText text, float worldX, float worldY)
     {
-        var length = Format(number.Amount);
-        var fading = number.Age > number.Lifetime * FadeStart;
-        var color = number.Amount >= 0
+        var length = FormatGold(text.Amount);
+        var fading = text.Age > text.Lifetime * FadeStart;
+        var color = text.Amount >= 0
             ? fading ? ConsoleColor.DarkYellow : ConsoleColor.Yellow
             : fading ? ConsoleColor.DarkRed : ConsoleColor.Red;
 
         var x = (int)MathF.Floor(worldX - camera.Position.X - length / 2f);
         var y = (int)MathF.Floor(worldY - camera.Position.Y);
         for (var i = 0; i < length; i++)
-            canvas.DrawOver(x + i, y, _text[i], color);
+            canvas.DrawOver(x + i, y, _buffer[i], color);
     }
 
     /// <summary>Writes "+123g" or "-10g" into the buffer and returns its length.</summary>
-    private int Format(int amount)
+    private int FormatGold(int amount)
     {
-        _text[0] = amount >= 0 ? '+' : '-';
-        Math.Abs(amount).TryFormat(_text.AsSpan(1), out var digits);
-        _text[digits + 1] = 'g';
+        _buffer[0] = amount >= 0 ? '+' : '-';
+        Math.Abs(amount).TryFormat(_buffer.AsSpan(1), out var digits);
+        _buffer[digits + 1] = 'g';
         return digits + 2;
     }
 }
