@@ -120,9 +120,11 @@ box behind them (the engine has no public way to read a cell back):
    black.
 3. `HouseRenderSystem(Canvas, Camera)`: house with the `EternalDigger` wooden sign, door, shopfront, mine
    entrance frame over the shaft.
-4. `MinerRenderSystem(Canvas, Camera)`: 4 x 2 sprite, facing, swing animation, headlamp.
-5. `ParticleRenderSystem(Canvas, Camera, LightMap)`: particle glyphs, keeps the background colour of the cell
-   underneath. Mist only where lit.
+4. `ParticleRenderSystem(Canvas, Camera, LightMap)`: particle glyphs, keeps the background colour of the cell
+   underneath. Mist only where lit. Nothing on the miner's 4 x 2 cells; at most 6 particles, dimmed, in the tile
+   ring around him.
+5. `MinerRenderSystem(Canvas, Camera)`: 4 x 2 sprite, facing, swing animation, headlamp. Drawn after the particles
+   so the miner is readable on every frame.
 6. `FloatingNumberRenderSystem(Canvas, Camera)`: `+150g` / `-10g`, formatted without allocating.
 7. `PromptRenderSystem(Canvas, Camera)`: small framed `DELIVER [E]` over the door / `BUY LADDERS [E] 10g`
    over the shopfront while the miner stands there.

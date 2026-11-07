@@ -50,7 +50,7 @@ Every name in `docs/agent/` is grep-able. Search for the identifier you are inte
 | `Microsoft.Xna.Framework` | `Libs/Microsoft.Xna.Framework/` | Library: math types | — |
 | `TerraForM`, `Snake`, `Asteroids`, `Platformer`, `ConsoleGame`, their ports `<Game>.Ecs`, `Swarm` (ECS stress test) and `EternalDigger` (ECS game) | `Examples/*` | Exe | ConsoleEngine |
 | `TerraForM.Tests` | `Examples/TerraForM.Tests/` | NUnit 5 + NSubstitute | TerraForM |
-| `EternalDigger.Tests` | `Examples/EternalDigger.Tests/` | NUnit 5 | EternalDigger |
+| `EternalDigger.Tests` | `Examples/EternalDigger.Tests/` | NUnit 5, hand-written `Fakes/FakeConsoleHandler` | EternalDigger |
 | `ConsoleEngine.Tests` | `ConsoleEngine.Tests/` | NUnit 5, hand-written fakes in `Fakes/` | ConsoleEngine |
 | `ConsoleEngine.Benchmarks` | `ConsoleEngine.Benchmarks/` | Exe: BenchmarkDotNet 0.15.8 | ConsoleEngine |
 
@@ -145,7 +145,8 @@ Examples/
                                   (Canvas, LightMap, TileLooks), Scenes/MineScene, Layout, Shop, MinerInput.
                                   README.md + docs/ (gameplay, architecture, rendering-and-effects,
                                   working-with-the-code, testing, reference)
-  EternalDigger.Tests/            Mine, Tiles, Shop, LightMap, ParticleLooks and frame-by-frame MinerControlSystem tests
+  EternalDigger.Tests/            Mine, Tiles, Shop, LightMap, ParticleLooks, frame-by-frame MinerControlSystem and
+                                  MinerVisibility (render) tests, Fakes/ (console handler)
   TerraForM/Scenes/               GameScene, MenuScene, InputNameScene
   TerraForM/Commands/             Command, Move, Plant, Wait
   TerraForM/Assets/               Maps/*.txt, Sprites.cs, Texts/HudTexts.cs, Story/ (unused)

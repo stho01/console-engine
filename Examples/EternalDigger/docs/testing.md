@@ -1,8 +1,9 @@
 # Testing
 
-`Examples/EternalDigger.Tests` is an NUnit 5 project that references the game. It needs no console, no keyboard and
-no ECS `World`: the rules live in plain classes (`Mine`, `Tiles`, `Shop`, `LightMap`) and in two public system
-methods that take their input as arguments.
+`Examples/EternalDigger.Tests` is an NUnit 5 project that references the game. It needs no console and no keyboard:
+the rules live in plain classes (`Mine`, `Tiles`, `Shop`, `LightMap`) and in two public system methods that take
+their input as arguments. Rendering is tested by drawing into a `RenderConsole` over `Fakes/FakeConsoleHandler` and
+reading cells back with `GetCharAt` (characters only; the engine can't read colours back).
 
 ```bash
 dotnet test Examples/EternalDigger.Tests
@@ -19,6 +20,7 @@ CI (`.github/workflows/build-and-test.yml`) runs it with the rest of the solutio
 | `MinerControlSystemTests` | 11 | Real frames of gameplay with scripted input (below) |
 | `LightMapTests` | 7 | The surface is bright; outside the window is dark; neighbours of the lamp are bright even when solid; a tunnel in the cone is lit and marked seen; rock blocks the lamp; tiles behind the miner stay dark; light falls off with distance (bright → lit → dim → dark) |
 | `ParticleLooksTests` | 2 | No particle style is born blank (which would erase a cell for a frame); `GlyphAt` matches `Character` and `Color` |
+| `MinerVisibilityTests` | 4 | Holding a dig key on gold at 100 m (right, left, down) with the real particle systems and renderers: on every frame the face `☻` and the lamp are on screen and the miner's empty back column has no particle; the tile breaks and digging made particles. `ParticleRenderSystem.Dim` maps bright colours to their dark twins |
 | `ShopTests` | 6 | Delivering pays every ore and empties the bag; an empty bag pays 0; buying a ladder with and without enough gold; collecting each ore; non-ore isn't collected |
 
 Names follow the repository's `Method_State_Expected` style, for example
@@ -76,9 +78,9 @@ empty bag, gold kept); releasing the rescue early resets it.
 
 | Not tested | Why | How it was checked |
 |---|---|---|
-| Render systems | They need a `RenderConsole`, which needs a console handler | Frames captured from a real run in a macOS terminal and inspected |
+| Render systems other than particles and miner | Not written yet; `MinerVisibilityTests` shows how (`Fakes/FakeConsoleHandler`) | Frames captured from a real run in a macOS terminal and inspected |
 | `InteractionSystem` | Reads `Input.Instance` directly (`E`), which needs a console | `Shop.Deliver`/`TryBuyLadder` are tested; the spot checks are `Layout` one-liners |
-| `EffectSpawner` and particle systems | Visual; their output is entities in a `World`. Only the looks (`ParticleLooks`) are tested | Reading and running the game |
+| `EffectSpawner` and particle systems | Visual; their output is entities in a `World`. The looks (`ParticleLooks`) are tested; `MinerVisibilityTests` runs physics and lifetime, but only checks the miner's cells | Reading and running the game |
 | `CameraSystem`, `GlintSystem`, `MistSystem` | Need a `World`, a `Camera` and randomness | Reading and running the game |
 | The whole scene | `GameBase` creates a real console handler | — |
 

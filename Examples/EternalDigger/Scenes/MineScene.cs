@@ -41,8 +41,9 @@ public sealed class MineScene(int seed) : EcsScene<EternalDiggerGame>
         Presentation.Add(new SkyRenderSystem(canvas, Camera));
         Presentation.Add(new TerrainRenderSystem(canvas, Camera, mine, light));
         Presentation.Add(new HouseRenderSystem(canvas, Camera));
-        Presentation.Add(new MinerRenderSystem(canvas, Camera));
         Presentation.Add(new ParticleRenderSystem(canvas, Camera, light));
+        // After the particles, so debris, dust and sparks never cover the miner.
+        Presentation.Add(new MinerRenderSystem(canvas, Camera));
         Presentation.Add(new FloatingNumberRenderSystem(canvas, Camera));
         Presentation.Add(new PromptRenderSystem(canvas, Camera));
         Presentation.Add(new HudSystem(canvas));
