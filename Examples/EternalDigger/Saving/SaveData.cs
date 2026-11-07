@@ -31,6 +31,12 @@ public sealed class SaveData
     public int GemOre { get; init; }
     public bool HasBlastingKit { get; init; }
 
+    /// <summary>Upgrade tiers, 0 to <see cref="Upgrades.MaxTier"/>.</summary>
+    public int ShovelTier { get; init; }
+    public int LampTier { get; init; }
+    public int BagTier { get; init; }
+    public int DetectorTier { get; init; }
+
     /// <summary>Sticks carried. Sticks whose fuse was burning when the game saved are counted back in.</summary>
     public int Dynamite { get; init; }
 
@@ -76,6 +82,10 @@ public sealed class SaveData
             GoldOre = miner.GoldOre,
             GemOre = miner.GemOre,
             HasBlastingKit = miner.HasBlastingKit,
+            ShovelTier = miner.ShovelTier,
+            LampTier = miner.LampTier,
+            BagTier = miner.BagTier,
+            DetectorTier = miner.DetectorTier,
             Dynamite = miner.Dynamite + miner.LitDynamite,
             ElevatorSegments = elevator.Segments,
             ElevatorCarRow = elevator.CarTargetRow,
@@ -98,7 +108,11 @@ public sealed class SaveData
         GoldOre = GoldOre,
         GemOre = GemOre,
         HasBlastingKit = HasBlastingKit,
-        Dynamite = Dynamite
+        Dynamite = Dynamite,
+        ShovelTier = ShovelTier,
+        LampTier = LampTier,
+        BagTier = BagTier,
+        DetectorTier = DetectorTier
     };
 
     /// <summary>Puts the saved tiles back into a mine made from <see cref="Seed"/>, and the lift back.</summary>

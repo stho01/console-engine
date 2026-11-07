@@ -23,8 +23,12 @@ public sealed class MinerRenderSystem(Canvas canvas, Camera camera) : EntitySyst
     private const ConsoleColor Skin = ConsoleColor.White;
     private const ConsoleColor Overalls = ConsoleColor.Blue;
     private const ConsoleColor Pack = ConsoleColor.DarkYellow;
-    private const ConsoleColor Lamp = ConsoleColor.Yellow;
-    private const ConsoleColor Tool = ConsoleColor.Gray;
+    /// <summary>The shovel's colour per shovel tier, and the lamp's per lamp tier.</summary>
+    private static readonly ConsoleColor[] ToolColors =
+        [ConsoleColor.Gray, ConsoleColor.White, ConsoleColor.Cyan, ConsoleColor.Yellow];
+
+    private static readonly ConsoleColor[] LampColors =
+        [ConsoleColor.Yellow, ConsoleColor.Yellow, ConsoleColor.White, ConsoleColor.White];
 
     /// <summary>Leg frames while walking, switched twice per step.</summary>
     private const string WalkLegs = "▙▟";
@@ -66,13 +70,14 @@ public sealed class MinerRenderSystem(Canvas canvas, Camera camera) : EntitySyst
         var lamp = miner.LampDirection.Y < -.5f ? '▲' : miner.LampDirection.Y > .5f ? '▼' : '•';
         DrawCell(x, y, facingRight, 1, '▄', Pack);
         DrawCell(x, y, facingRight, 2, '☻', Skin);
-        DrawCell(x, y, facingRight, 3, lamp, Lamp);
+        DrawCell(x, y, facingRight, 3, lamp, LampColors[Math.Clamp(miner.LampTier, 0, LampColors.Length - 1)]);
 
         if (miner.Dynamite > 0)
             DrawCell(x, y + 1, facingRight, 0, '¡', ConsoleColor.Red);
         DrawCell(x, y + 1, facingRight, 1, '▐', Overalls);
         DrawCell(x, y + 1, facingRight, 2, Legs(miner), Overalls);
-        DrawCell(x, y + 1, facingRight, 3, swinging ? SwingTool(miner, facingRight) : facingRight ? '/' : '\\', Tool);
+        DrawCell(x, y + 1, facingRight, 3, swinging ? SwingTool(miner, facingRight) : facingRight ? '/' : '\\',
+            ToolColors[Math.Clamp(miner.ShovelTier, 0, ToolColors.Length - 1)]);
 
         if (Mine.Depth((int)MathF.Floor(position.Value.Y / Layout.TileHeight)) > 0)
             DrawGlow(miner, x, y);

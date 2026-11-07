@@ -36,7 +36,8 @@ public sealed class LightingSystem(Mine mine, LightMap light, Camera camera) : E
         {
             var position = chunk.GetSpan<Position>()[0].Value;
             var lamp = new Vector2(position.X / Layout.TileWidth + .5f, position.Y / Layout.TileHeight + .5f);
-            light.Compute(mine, firstRow, VisibleRows, lamp, chunk.GetSpan<Miner>()[0].LampDirection);
+            var miner = chunk.GetSpan<Miner>()[0];
+            light.Compute(mine, firstRow, VisibleRows, lamp, miner.LampDirection, Upgrades.LampReach(miner.LampTier));
             return;
         }
     }

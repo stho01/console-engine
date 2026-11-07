@@ -148,7 +148,8 @@ miner's back:
 Legs: `█` standing, `▙`/`▟` alternating while walking, `╫`/`║` alternating while climbing (twice per tile, so a fast climb moves them faster), `╨` falling. The shovel is `/` (or `\` facing
 left) at rest; mid-swing it is `│` for up/down digs, or `─` then a tilt for side digs. Underground, two dots (`∙`
 `·`) glow in front of the lamp. All miner cells use `DrawOver`, so the sky or the tunnel shows around the sprite. While he carries dynamite a red `¡`
-sits in the back cell of the bottom row (his belt).
+sits in the back cell of the bottom row (his belt). Upgrades colour him: the shovel by shovel tier (grey, white,
+cyan, yellow: `ToolColors`), the lamp glyph by lamp tier (yellow, then white from tier 2: `LampColors`).
 
 **Keeping him readable.** Digging throws debris, dust and sparks straight at the miner, so three rules keep his face
 `☻` and lamp visible on every frame:
@@ -244,7 +245,8 @@ a random amount up to the strength in both directions and decays it by 6 per sec
 - **`PromptRenderSystem`** draws a three-row box (`┌─┐ │ │ └─┘`, yellow on dark blue) with the text, a `▼` pointer
   just above the miner's head, and a small bob. `[E]` is yellow. The text strings are `PromptRenderSystem.DeliverText`,
   `CallLiftText`, `BoardLiftText`, `RideText`, and the lift sign's text, rebuilt only when the price changes. At the
-  counter the box has three lines (`DrawCounterPanel`): the item with `↑ ↓`, what the miner has, and the price; its
+  counter the box has three lines (`DrawCounterPanel`): the item with `↑ ↓`, what the miner has (tier pips `●●○` for
+  upgrades), and the price (`MAX` at the top tier); its
   strings are rebuilt only when one of them changes.
 - **`HudSystem`** fills rows 0–1. The status line is a string rebuilt **only when a shown value changes** (gold,
   ladders, depth, the three ore counts); the `◆` icons are coloured by position. Row 1 is the key help, the rescue

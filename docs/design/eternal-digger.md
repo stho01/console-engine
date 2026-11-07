@@ -182,3 +182,9 @@ The shopfront (columns 8–11) is one counter for everything sold: `ShopCounter`
 the miner (`PromptRenderSystem.DrawCounterPanel`) shows the item, what the miner has of it, and the price. The
 `BLASTING` shed is scenery.
 
+## Upgrades (Tier 2)
+
+`Upgrades.cs`: shovel (−15% dig interval per tier), lamp (+2 tiles reach), bag (+10 carried weight), detector (+3
+glint radius, ×0.8 glint interval), three tiers each at the handover's prices, bought at the counter. Tiers are on
+the `Miner` and saved from format version 5. The shovel and lamp glyph colours follow the tiers.
+

@@ -13,7 +13,9 @@ Examples/EternalDigger/
 ├── Shop.cs                     prices and start inventory; BagValue, Deliver, EmptyBag, TryBuyLadder,
 │                               BlastingPrice, TryBuyBlasting, Price, Owned, TryBuy, Collect
 ├── MinerInput.cs               one frame of miner keys (also Use / UsePressed for E, Up/DownPressed); FromKeyboard
-├── ShopCounter.cs              the counter's selection (Previous, Next, Select, Name); ShopItem
+├── ShopCounter.cs              the counter's selection (Previous, Next, Select, Name, IsUpgrade, Line); ShopItem
+├── Upgrades.cs                 upgrade prices and effects per tier: NextPrice, TryBuy, DigInterval, LampReach,
+│                               GlintRadius, GlintInterval; UpgradeLine
 ├── Scenes/
 │   ├── MineScene.cs            services, the miner entity, systems in run order; Save() for Esc
 │   ├── TitleScene.cs           loads the save, draws the title menu, starts MineScene
@@ -87,7 +89,7 @@ Examples/EternalDigger/
 
 | Component | Fields | On |
 |---|---|---|
-| `Miner` | `Column`, `Row` (tile; the target while moving), `MoveFrom` (tile, `Vector2`), `MoveElapsed`, `MoveDuration` (0 = idle), `Motion` (`Idle`, `Walking`, `Climbing`, `Falling`), `ClimbStreak`, `IsRiding`, `FallRows`, `FacingX` (−1/1), `LampDirection`, `DigCooldown`, `SwingTime`, `SwingDirection` (`Point`), `RescueHold`, `PlantHold`, `HasBlastingKit`, `Dynamite`, `LitDynamite`, `Gold`, `Ladders`, `CopperOre`, `SilverOre`, `GoldOre`, `GemOre`. Read-only: `IsMoving`, `OreCount` | The miner |
+| `Miner` | `Column`, `Row` (tile; the target while moving), `MoveFrom` (tile, `Vector2`), `MoveElapsed`, `MoveDuration` (0 = idle), `Motion` (`Idle`, `Walking`, `Climbing`, `Falling`), `ClimbStreak`, `IsRiding`, `FallRows`, `FacingX` (−1/1), `LampDirection`, `DigCooldown`, `SwingTime`, `SwingDirection` (`Point`), `RescueHold`, `PlantHold`, `HasBlastingKit`, `Dynamite`, `LitDynamite`, `ShovelTier`, `LampTier`, `BagTier`, `DetectorTier`, `Gold`, `Ladders`, `CopperOre`, `SilverOre`, `GoldOre`, `GemOre`. Read-only: `IsMoving`, `OreCount` | The miner |
 | `Particle` | `Age`, `Lifetime`, `Style` (`ParticleStyle`), `Variant` (random byte). Read-only: `Progress` | Every particle |
 | `Physics` | `Gravity` (cells/s²), `Drag` (per second) | Every particle |
 | `TileCollider` | tag | Debris, coins |
@@ -110,7 +112,7 @@ Examples/EternalDigger/
 | `ShopCounter` | `MineScene` | interaction, prompts | `Selected`, `Previous`, `Next`, `Select`; static `Items`, `Name` |
 | `GameSaver` | `MineScene` | interaction, `SaveSystem`, HUD, `MineScene.Save` | `Request`, `Save`, `IsRequested`, `Saves`, `LastSaveFailed`, `Path`, `Seed` |
 
-Static rule classes: `Tiles`, `Shop`, `Layout`, `TileLooks`, `ParticleLooks`, `SaveFile`.
+Static rule classes: `Tiles`, `Shop`, `Upgrades`, `Layout`, `TileLooks`, `ParticleLooks`, `SaveFile`.
 
 ## Constants
 
@@ -139,6 +141,9 @@ Static rule classes: `Tiles`, `Shop`, `Layout`, `TileLooks`, `ParticleLooks`, `S
 | `Tiles.DepthPerExtraHit` | 25 | Metres per extra hit |
 | `Shop.LadderPrice` | 10 | Gold per ladder |
 | `Shop.BlastingKitPrice` / `DynamitePrice` | 2500 / 100 | The kit (once), one stick |
+| `Upgrades` prices (shovel / lamp / bag / detector) | 300-900-2500 / 250-750-2000 / 200-600-1500 / 400-1200-3000 | Per tier |
+| `Upgrades.ShovelSpeedPerTier` / `LampReachPerTier` / `LampBurnPerTier` / `BagCapacityPerTier` / `DetectorRadiusPerTier` / `DetectorIntervalPerTier` | 15% / 2 tiles / ×0.8 / 10 / 3 tiles / ×0.8 | Effect per tier |
+| `GlintSystem.Interval` / `Radius` | 0.08 s / 9 tiles | Starting detector |
 | `MinerControlSystem.PlantDuration` / `FuseDuration` | 0.5 / 2 s | Hold to plant, fuse |
 | `DynamiteSystem.BlastRadius` / `ChainDelay` / `PushDuration` | 1 tile (3 × 3) / 0.12 s / 0.1 s | Blast size, fuse left on a stick a blast reaches, push slide |
 | `Layout.BlastingFirstColumn`…`BlastingLastColumn` | 26–28 | Blasting shed (scenery) |
@@ -148,14 +153,14 @@ Static rule classes: `Tiles`, `Shop`, `Layout`, `TileLooks`, `ParticleLooks`, `S
 | `MinerControlSystem.DigInterval` / `SwingDuration` | 0.16 / 0.12 s | Time between hits / swing animation |
 | `MinerControlSystem.RescueDuration` | 1.5 s | Hold time for a rescue |
 | `LightMap.NearRadius` | 1.5 tiles | Always-bright radius |
-| `LightMap.LampRange` / `BrightRange` / `LitRange` | 8 / 4 / 6 tiles | Lamp reach and fall-off |
+| `LightMap.LampRange` / `BrightRange` / `LitRange` | 8 / 4 / 6 tiles | Starting lamp reach and fall-off (bright and lit scale with the reach: ½ and ¾) |
 | `LightMap.ConeHalfAngle` | 40° | Half the lamp cone |
 | `MistSystem.MaxMist` | 40 | Mist particles at most |
 | `ParticleRenderSystem.NearMinerCap` | 6 | Particles drawn per frame in the one-tile ring around the miner |
 | `ScreenShake.MaxStrength` / `Decay` | 2 cells / 6 per s | Shake cap and fade |
 | `GameSaver.AutosaveInterval` | 60 s | Time underground between autosaves (0 = off) |
 | `HudSystem.SavedHintSeconds` | 1.5 s | How long ` SAVED ` shows |
-| `SaveFile.Version` / `OldestVersion` | 4 / 1 | Save-format version written / oldest still read |
+| `SaveFile.Version` / `OldestVersion` | 5 / 1 | Save-format version written / oldest still read |
 | `Elevator.SegmentMetres` | 10 m | Lift length per purchase |
 | `Elevator.FirstSegmentPrice` / `SegmentPriceStep` | 200g / 100g | First segment price, increase per segment |
 | `Elevator.RideDuration` | 0.04 s | Car time per tile |
@@ -178,7 +183,7 @@ Static rule classes: `Tiles`, `Shop`, `Layout`, `TileLooks`, `ParticleLooks`, `S
 | ` DELIVER [E] ` | `PromptRenderSystem.DeliverText` |
 | ` BUILD LIFT +10m [E] <price>g ` | `PromptRenderSystem.BuildLiftText` |
 | ` LIFT BLOCKED BY OBSIDIAN ` | `PromptRenderSystem.LiftBlockedText` |
-| ` ↑ <ITEM> ↓ ` / `HAVE <n>` or `UNLOCKS DYNAMITE` / `<price>g [E]` or `SOLD OUT` (counter panel) | `PromptRenderSystem.DrawCounterPanel`, `KitUnlocksText`, `SoldOutText`; item names `Shop.LadderName`, `BlastingKitName`, `DynamiteName` |
+| ` ↑ <ITEM> ↓ ` / `HAVE <n>` or `UNLOCKS DYNAMITE` / `<price>g [E]` or `SOLD OUT` (counter panel) | `PromptRenderSystem.DrawCounterPanel`, `KitUnlocksText`, `SoldOutText`, `MaxTierText` (`MAX`), pips `TierOn`/`TierOff` (`●`/`○`); item names `Shop.LadderName`, `BlastingKitName`, `DynamiteName`, `Upgrades.ShovelName`, `LampName`, `BagName`, `DetectorName` |
 | ` LIGHTING FUSE ` + bar | `HudSystem.PlantLabel` |
 | `   DYNAMITE <n>` (HUD row 0) | `HudSystem.DrawStatus` |
 | `BLASTING`, ` ¡ ¡ ¡ ` (shed) | `HouseRenderSystem.BlastingText`, `BlastingDisplay` |

@@ -33,6 +33,7 @@ public sealed class MinerControlSystem(Mine mine, Elevator elevator, EffectSpawn
     public const float TopClimbDuration = .06f;
 
     public const float FallDuration = .06f;
+    /// <summary>Seconds between shovel hits with the starting shovel (<see cref="Upgrades.DigInterval"/>).</summary>
     public const float DigInterval = .16f;
     public const float SwingDuration = .12f;
     public const float RescueDuration = 1.5f;
@@ -232,7 +233,7 @@ public sealed class MinerControlSystem(Mine mine, Elevator elevator, EffectSpawn
         if (miner.DigCooldown > 0f || !Tiles.IsBreakable(type) && !Tiles.IsBlastOnly(type))
             return;
 
-        miner.DigCooldown = DigInterval;
+        miner.DigCooldown = Upgrades.DigInterval(miner.ShovelTier);
         miner.SwingTime = SwingDuration;
         miner.SwingDirection = new Point(dx, dy);
         if (Tiles.IsBlastOnly(type))

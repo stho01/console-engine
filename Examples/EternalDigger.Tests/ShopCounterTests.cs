@@ -61,16 +61,24 @@ public class ShopCounterTests
     }
 
     [Test]
-    public void Interact_DownThenE_BuysTheBlastingKit()
+    public void Interact_UpThenE_WrapsToTheBlastingKitAndBuysIt()
     {
         _miner.Gold = Shop.BlastingKitPrice;
 
-        Press(new MinerInput { DownPressed = true });
+        Press(new MinerInput { UpPressed = true });
         Press(new MinerInput { UsePressed = true });
 
         Assert.That(_counter.Selected, Is.EqualTo(ShopItem.Blasting));
         Assert.That(_miner.HasBlastingKit, Is.True);
         Assert.That(_miner.Ladders, Is.Zero);
+    }
+
+    [Test]
+    public void Interact_Down_SelectsTheNextItem()
+    {
+        Press(new MinerInput { DownPressed = true });
+
+        Assert.That(_counter.Selected, Is.EqualTo(ShopCounter.Items[1]));
     }
 
     [Test]

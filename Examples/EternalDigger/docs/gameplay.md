@@ -189,6 +189,10 @@ The counter sells (`ShopCounter.Items`, prices in `Shop`):
 | Item | Price | Notes |
 |---|---|---|
 | Ladder | 10g | One per press |
+| Shovel | 300 / 900 / 2500g | Each tier digs 15% faster ([Upgrades](#upgrades)) |
+| Lamp | 250 / 750 / 2000g | Each tier: +2 tiles of reach (and −20% oil burn, with lamp oil) |
+| Bag | 200 / 600 / 1500g | Each tier: +10 weight carried before the climb slows (with bag weight) |
+| Detector | 400 / 1200 / 3000g | Each tier: +3 tiles of glint radius, glints 20% more often |
 | Blasting kit, then dynamite | 2500g once, then 100g a stick | The same slot: it sells the kit until you own it |
 
 The panel above the miner shows ` ↑ <ITEM> ↓ `, what you have (`HAVE <n>`, or `UNLOCKS DYNAMITE` for the kit) and
@@ -196,6 +200,21 @@ The panel above the miner shows ` ↑ <ITEM> ↓ `, what you have (`HAVE <n>`, o
 
 You start with 0 gold and 8 ladders (`Shop.StartGold`, `Shop.StartLadders`), standing at column 15 on the surface
 (`Layout.SpawnColumn`).
+
+<a id="upgrades"></a>
+## Upgrades
+
+Four lines, three tiers each, bought at the counter (`Upgrades.cs`, tiers on the `Miner`). The panel shows tier pips
+(`●●○`) and `MAX` at the top tier.
+
+| Line | Per tier | At tier 3 | Identifier |
+|---|---|---|---|
+| Shovel | 15% less time between hits | 0.088 s instead of 0.16 s | `Upgrades.DigInterval`, `ShovelSpeedPerTier` |
+| Lamp | +2 tiles of cone reach (the bright and lit bands scale with it: half and three quarters of the reach) | 14 tiles | `Upgrades.LampReach`, `LampReachPerTier` |
+| Bag | +10 weight before the climb slows | +30 | `BagCapacityPerTier` |
+| Detector | +3 tiles of glint radius; samples 20% more often | 18 tiles, every 0.041 s | `Upgrades.GlintRadius`, `GlintInterval` |
+
+On the miner: the shovel turns white, cyan, then yellow per tier; the lamp glyph turns white from lamp tier 2.
 
 <a id="the-lift"></a>
 ## The lift
@@ -288,6 +307,7 @@ twinkles and dig towards them.
 | Ladder price, starting gold and ladders | `Shop.cs` |
 | Lift prices, segment length, ride speed | constants at the top of `Mining/Elevator.cs` |
 | Kit and dynamite prices | `Shop.cs` |
+| Upgrade prices and effects | `Upgrades.cs` |
 | Plant time, fuse length | `MinerControlSystem.PlantDuration`, `FuseDuration` |
 | Blast size, chain delay, push | constants at the top of `Systems/DynamiteSystem.cs` |
 | Move speeds, the climb ramp, dig speed, rescue time | constants at the top of `Systems/MinerControlSystem.cs` |
@@ -309,7 +329,7 @@ The game saves itself; there is no save key.
 - **When:** after every sale at the door (when it earned gold) and every ladder bought, every 60 s spent underground
   (`GameSaver.AutosaveInterval`), and on `ESC`, which saves and quits. A NEW MINE is saved as soon as it starts.
 - **What:** the seed, the miner's tile and facing, gold, ladders and the bag, the lift (segments and the car's
-  landing), the blasting kit and the dynamite stock (lit sticks counted back in), and every tile that differs from what
+  landing), the blasting kit and the dynamite stock (lit sticks counted back in), the upgrade tiers, and every tile that differs from what
   the seed generates (dug, half-dug, ladder placed, seen). The mine itself is regenerated from the seed.
 - **Not saved:** anything mid-action. A continued game starts with the miner standing still on the saved tile (if
   that tile has no support, they fall), no particles, and the rescue timer at zero.

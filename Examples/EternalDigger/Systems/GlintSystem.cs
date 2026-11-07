@@ -22,9 +22,11 @@ public sealed class GlintSystem(Mine mine, LightMap light, Camera camera, Effect
     //** fields
     //**********************************************************
 
-    private const float Interval = .08f;
+    /// <summary>Seconds between glint samples, and their radius in tiles, with the starting detector.</summary>
+    public const float Interval = .08f;
+    public const int Radius = 9;
+
     private const int SamplesPerTick = 6;
-    private const int Radius = 9;
 
     /// <summary>Extra gem samples per tick once the miner is past <see cref="Tiles.HintDepth"/>.</summary>
     private const int HintSamplesPerTick = 3;
@@ -47,9 +49,11 @@ public sealed class GlintSystem(Mine mine, LightMap light, Camera camera, Effect
         foreach (var chunk in _miners.GetChunks())
         {
             var miner = chunk.GetSpan<Miner>()[0];
-            for (; _elapsed >= Interval; _elapsed -= Interval)
+            var interval = Upgrades.GlintInterval(miner.DetectorTier);
+            var radius = Upgrades.GlintRadius(miner.DetectorTier);
+            for (; _elapsed >= interval; _elapsed -= interval)
             {
-                Sample(miner.Column, miner.Row);
+                Sample(miner.Column, miner.Row, radius);
                 if (Mine.Depth(miner.Row) >= Tiles.HintDepth)
                     SampleBelowTheWall();
             }
@@ -62,14 +66,14 @@ public sealed class GlintSystem(Mine mine, LightMap light, Camera camera, Effect
     //** internals
     //**********************************************************
 
-    private void Sample(int minerColumn, int minerRow)
+    private void Sample(int minerColumn, int minerRow, int radius)
     {
         var firstRow = (int)MathF.Floor(camera.Position.Y / Layout.TileHeight);
         var lastRow = firstRow + Layout.ScreenHeight / Layout.TileHeight;
         for (var i = 0; i < SamplesPerTick; i++)
         {
-            var column = minerColumn + random.Next(-Radius, Radius + 1);
-            var row = minerRow + random.Next(-Radius, Radius + 1);
+            var column = minerColumn + random.Next(-radius, radius + 1);
+            var row = minerRow + random.Next(-radius, radius + 1);
             if (row < firstRow || row > lastRow || !Mine.IsInside(column, row))
                 continue;
 

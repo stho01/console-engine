@@ -28,6 +28,9 @@ public sealed class PromptRenderSystem(
     public const string LiftBlockedText = " LIFT BLOCKED BY OBSIDIAN ";
     public const string KitUnlocksText = "UNLOCKS DYNAMITE";
     public const string SoldOutText = "SOLD OUT";
+    public const string MaxTierText = "MAX";
+    public const char TierOn = '●';
+    public const char TierOff = '○';
 
     private const string KeyHint = "[E]";
     private const float BobSpeed = 3f;
@@ -108,14 +111,19 @@ public sealed class PromptRenderSystem(
             _shownOwned = owned;
             _shownKit = miner.HasBlastingKit;
             _panelName = $" ↑ {ShopCounter.Name(item, miner)} ↓ ";
-            _panelOwned = owned >= 0 ? $"HAVE {owned}" : KitUnlocksText;
-            _panelPrice = price == Shop.SoldOut ? SoldOutText : $"{price}g {KeyHint}";
+            var upgrade = ShopCounter.IsUpgrade(item);
+            _panelOwned = upgrade ? Pips(owned) : owned >= 0 ? $"HAVE {owned}" : KitUnlocksText;
+            _panelPrice = price != Shop.SoldOut ? $"{price}g {KeyHint}" : upgrade ? MaxTierText : SoldOutText;
         }
 
         var priceColor = price == Shop.SoldOut ? ConsoleColor.DarkGray : PriceColor(miner.Gold, price);
         DrawBox(minerX, minerY, _panelName, ConsoleColor.White, _panelOwned, ConsoleColor.Gray, _panelPrice,
             priceColor);
     }
+
+    /// <summary>Tier pips like <c>●●○</c>.</summary>
+    private static string Pips(int tier) =>
+        new string(TierOn, tier) + new string(TierOff, Math.Max(0, Upgrades.MaxTier - tier));
 
     /// <summary>A one-line box with a pointer, its bottom rows above the miner's head.</summary>
     private void Draw(string text, float minerX, float minerY, ConsoleColor textColor) =>

@@ -5,7 +5,7 @@ namespace EternalDigger;
 
 /// <summary>
 /// The surface trade: buys the ore in the miner's bag at the door, and sells what the counter offers
-/// (<see cref="ShopItem"/>): ladders, the blasting kit and dynamite.
+/// (<see cref="ShopItem"/>): ladders, the four <see cref="Upgrades"/>, the blasting kit and dynamite.
 /// </summary>
 public static class Shop
 {
@@ -63,13 +63,18 @@ public static class Shop
     /// <summary>What an item at the counter costs the miner now, or <see cref="SoldOut"/>.</summary>
     public static int Price(ShopItem item, in Miner miner) => item switch
     {
+        _ when ShopCounter.IsUpgrade(item) => Upgrades.NextPrice(ShopCounter.Line(item), miner),
         ShopItem.Blasting => BlastingPrice(miner),
         _ => LadderPrice
     };
 
-    /// <summary>How many of an item the miner has, for the panel. -1 when a count makes no sense (the kit).</summary>
+    /// <summary>
+    /// How many of an item the miner has, for the panel: the tier for upgrades, -1 when a count makes no sense (the
+    /// kit).
+    /// </summary>
     public static int Owned(ShopItem item, in Miner miner) => item switch
     {
+        _ when ShopCounter.IsUpgrade(item) => Upgrades.Tier(ShopCounter.Line(item), miner),
         ShopItem.Blasting => miner.HasBlastingKit ? miner.Dynamite : -1,
         _ => miner.Ladders
     };
@@ -77,6 +82,7 @@ public static class Shop
     /// <summary>Buys one of the item. False if it is sold out or the miner can't afford it.</summary>
     public static bool TryBuy(ShopItem item, ref Miner miner) => item switch
     {
+        _ when ShopCounter.IsUpgrade(item) => Upgrades.TryBuy(ShopCounter.Line(item), ref miner),
         ShopItem.Blasting => TryBuyBlasting(ref miner),
         _ => TryBuyLadder(ref miner)
     };

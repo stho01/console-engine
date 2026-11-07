@@ -23,9 +23,13 @@ public sealed class LightMap
     /// <summary>Tiles this close to the lamp are always <see cref="Bright"/>, solid or not.</summary>
     public const float NearRadius = 1.5f;
 
+    /// <summary>The starting lamp's reach in tiles. Tiles within half the reach are bright, within 3/4 lit.</summary>
     public const float LampRange = 8f;
-    public const float BrightRange = 4f;
-    public const float LitRange = 6f;
+    public const float BrightRange = LampRange * BrightShare;
+    public const float LitRange = LampRange * LitShare;
+
+    private const float BrightShare = .5f;
+    private const float LitShare = .75f;
 
     /// <summary>Half the cone's opening angle, in degrees.</summary>
     public const float ConeHalfAngle = 40f;
@@ -65,7 +69,11 @@ public sealed class LightMap
     /// Lights <paramref name="rows"/> rows from <paramref name="firstRow"/> (at most the ctor's maximum).
     /// <paramref name="lampOrigin"/> is in tile coordinates (the miner's tile centre is column + .5, row + .5).
     /// </summary>
-    public void Compute(Mine mine, int firstRow, int rows, Vector2 lampOrigin, Vector2 lampDirection)
+    public void Compute(Mine mine, int firstRow, int rows, Vector2 lampOrigin, Vector2 lampDirection) =>
+        Compute(mine, firstRow, rows, lampOrigin, lampDirection, LampRange);
+
+    /// <summary>The same, with the cone reaching <paramref name="reach"/> tiles (0: only the close radius).</summary>
+    public void Compute(Mine mine, int firstRow, int rows, Vector2 lampOrigin, Vector2 lampDirection, float reach)
     {
         FirstRow = Math.Max(0, firstRow);
         Rows = Math.Clamp(rows, 0, _maxRows);
@@ -76,7 +84,7 @@ public sealed class LightMap
         for (var column = 0; column < _columns; column++)
         {
             var row = FirstRow + r;
-            var level = Math.Max(Daylight(mine, column, row), Lamp(mine, column, row, lampOrigin, direction));
+            var level = Math.Max(Daylight(mine, column, row), Lamp(mine, column, row, lampOrigin, direction, reach));
             _levels[r * _columns + column] = level;
             if (level > Dark)
                 mine.At(column, row).Seen = true;
@@ -114,21 +122,21 @@ public sealed class LightMap
         !mine.IsSolid(column, row) || !mine.IsSolid(column - 1, row) || !mine.IsSolid(column + 1, row) ||
         !mine.IsSolid(column, row - 1);
 
-    private static byte Lamp(Mine mine, int column, int row, Vector2 origin, Vector2 direction)
+    private static byte Lamp(Mine mine, int column, int row, Vector2 origin, Vector2 direction, float reach)
     {
         var toTile = new Vector2(column + .5f, row + .5f) - origin;
         var distance = toTile.Length();
         if (distance <= NearRadius)
             return Bright;
 
-        if (distance > LampRange || Vector2.Dot(toTile / distance, direction) < ConeCos ||
+        if (distance > reach || Vector2.Dot(toTile / distance, direction) < ConeCos ||
             IsBlocked(mine, origin, toTile, distance, column, row))
             return Dark;
 
-        if (distance < BrightRange)
+        if (distance < reach * BrightShare)
             return Bright;
 
-        return distance < LitRange ? Lit : Dim;
+        return distance < reach * LitShare ? Lit : Dim;
     }
 
     /// <summary>Whether a solid tile lies between the lamp and the target tile (not counting those two).</summary>

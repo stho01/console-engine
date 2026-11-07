@@ -6,6 +6,10 @@ namespace EternalDigger;
 public enum ShopItem : byte
 {
     Ladder,
+    Shovel,
+    Lamp,
+    Bag,
+    Detector,
     Blasting
 }
 
@@ -21,7 +25,8 @@ public sealed class ShopCounter
     //**********************************************************
 
     /// <summary>The counter's items, top to bottom.</summary>
-    public static readonly ShopItem[] Items = [ShopItem.Ladder, ShopItem.Blasting];
+    public static readonly ShopItem[] Items =
+        [ShopItem.Ladder, ShopItem.Shovel, ShopItem.Lamp, ShopItem.Bag, ShopItem.Detector, ShopItem.Blasting];
 
     private int _selected;
 
@@ -49,9 +54,15 @@ public sealed class ShopCounter
         }
     }
 
+    public static bool IsUpgrade(ShopItem item) => item is >= ShopItem.Shovel and <= ShopItem.Detector;
+
+    /// <summary>The upgrade line an upgrade item buys. Only for <see cref="IsUpgrade"/> items.</summary>
+    public static UpgradeLine Line(ShopItem item) => (UpgradeLine)(item - ShopItem.Shovel);
+
     /// <summary>The selected item's name on the panel.</summary>
     public static string Name(ShopItem item, in Miner miner) => item switch
     {
+        _ when IsUpgrade(item) => Upgrades.Name(Line(item)),
         ShopItem.Blasting => miner.HasBlastingKit ? Shop.DynamiteName : Shop.BlastingKitName,
         _ => Shop.LadderName
     };

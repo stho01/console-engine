@@ -64,6 +64,8 @@ public class SaveFileTests
         Assert.That(miner.HasBlastingKit, Is.True);
         Assert.That(miner.Dynamite, Is.EqualTo(6), "lit sticks are put back");
         Assert.That(miner.LitDynamite, Is.Zero);
+        Assert.That(miner.LampTier, Is.EqualTo(2));
+        Assert.That(miner.BagTier, Is.EqualTo(3));
         Assert.That(miner.IsMoving, Is.False);
         Assert.That(elevator.Segments, Is.EqualTo(2));
         Assert.That(elevator.IsCarAt(elevator.BottomRow), Is.True);
@@ -175,6 +177,25 @@ public class SaveFileTests
     }
 
     [Test]
+    public void Read_Version4Save_LoadsDynamiteWithoutUpgrades()
+    {
+        var status = SaveFile.Read(OldSave(4), out var loaded);
+
+        Assert.That(status, Is.EqualTo(SaveStatus.Loaded));
+        Assert.That(loaded.HasBlastingKit, Is.True);
+        Assert.That(loaded.Dynamite, Is.EqualTo(5));
+        Assert.That(loaded.ShovelTier + loaded.LampTier + loaded.BagTier + loaded.DetectorTier, Is.Zero);
+    }
+
+    [Test]
+    public void Read_UpgradeTierAboveTheTop_ReturnsCorrupt()
+    {
+        var data = new SaveData { Seed = Seed, Column = 1, Row = 9, LampTier = Upgrades.MaxTier + 1 };
+
+        Assert.That(SaveFile.Read(Written(data), out _), Is.EqualTo(SaveStatus.Corrupt));
+    }
+
+    [Test]
     public void Read_CarOffItsLandings_ReturnsCorrupt()
     {
         var data = new SaveData { Seed = Seed, Column = 1, Row = 9, ElevatorSegments = 2, ElevatorCarRow = 15 };
@@ -277,7 +298,11 @@ public class SaveFileTests
             GemOre = 7,
             HasBlastingKit = true,
             Dynamite = 4,
-            LitDynamite = 2
+            LitDynamite = 2,
+            ShovelTier = 1,
+            LampTier = 2,
+            BagTier = 3,
+            DetectorTier = 1
         };
         var elevator = new Elevator();
         var rich = new Miner { Gold = 10_000 };
@@ -288,7 +313,7 @@ public class SaveFileTests
         return SaveData.Capture(Seed, miner, mine, elevator, new List<TileChange>());
     }
 
-    /// <summary>A save written by hand in an older format: gold 55, one tile; v2 adds a 30 m lift, v3 9 gems.</summary>
+    /// <summary>A hand-written old save: gold 55, one tile; v2 adds a 30 m lift, v3 9 gems, v4 the kit and 5 sticks.</summary>
     private static MemoryStream OldSave(int version)
     {
         var stream = new MemoryStream();
@@ -309,6 +334,12 @@ public class SaveFileTests
 
             if (version >= 3)
                 writer.Write(9);
+
+            if (version >= 4)
+            {
+                writer.Write((byte)1);
+                writer.Write(5);
+            }
 
             writer.Write(1);
             writer.Write(13);
@@ -344,6 +375,10 @@ public class SaveFileTests
         Assert.That(actual.GemOre, Is.EqualTo(expected.GemOre));
         Assert.That(actual.HasBlastingKit, Is.EqualTo(expected.HasBlastingKit));
         Assert.That(actual.Dynamite, Is.EqualTo(expected.Dynamite));
+        Assert.That(actual.ShovelTier, Is.EqualTo(expected.ShovelTier));
+        Assert.That(actual.LampTier, Is.EqualTo(expected.LampTier));
+        Assert.That(actual.BagTier, Is.EqualTo(expected.BagTier));
+        Assert.That(actual.DetectorTier, Is.EqualTo(expected.DetectorTier));
         Assert.That(actual.ElevatorSegments, Is.EqualTo(expected.ElevatorSegments));
         Assert.That(actual.ElevatorCarRow, Is.EqualTo(expected.ElevatorCarRow));
         Assert.That(actual.Changes, Is.EqualTo(expected.Changes));

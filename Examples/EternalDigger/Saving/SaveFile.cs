@@ -18,11 +18,11 @@ public enum SaveStatus : byte
 }
 
 /// <summary>
-/// The save file: one slot, binary, versioned. Layout (little-endian): magic <c>EDSV</c>, format version, seed,
-/// miner column, row and facing, gold, ladders, copper, silver and gold ore, (version 2+) lift segments and car row,
-/// (version 3+) gem ore, (version 4+) blasting kit and dynamite, then the changed tiles (count, then row, column,
-/// type, damage, flags each). Older versions are still read. Writing goes to a temp file first, so a crash never
-/// leaves half a save.
+/// The save file: one slot, binary, versioned, little-endian. Fields in order, each from the version in brackets:
+/// magic <c>EDSV</c>, format version, seed, miner column, row and facing, gold, ladders, copper, silver and gold ore
+/// (1); lift segments and car row (2); gem ore (3); blasting kit and dynamite (4); the four upgrade tiers (5); then
+/// the changed tiles (count, then row, column, type, damage, flags each). Older versions are still read: missing
+/// fields get their defaults. Writing goes to a temp file first, so a crash never leaves half a save.
 /// </summary>
 public static class SaveFile
 {
@@ -31,7 +31,7 @@ public static class SaveFile
     //**********************************************************
 
     /// <summary>The save-format version written. Bump it whenever the layout changes, and keep reading older ones.</summary>
-    public const int Version = 4;
+    public const int Version = 5;
 
     /// <summary>The oldest save-format version this build still reads.</summary>
     public const int OldestVersion = 1;
@@ -123,6 +123,10 @@ public static class SaveFile
         writer.Write(data.GemOre);
         writer.Write(data.HasBlastingKit);
         writer.Write(data.Dynamite);
+        writer.Write((byte)data.ShovelTier);
+        writer.Write((byte)data.LampTier);
+        writer.Write((byte)data.BagTier);
+        writer.Write((byte)data.DetectorTier);
 
         writer.Write(data.Changes.Count);
         for (var i = 0; i < data.Changes.Count; i++)
@@ -199,6 +203,13 @@ public static class SaveFile
         if (gems < 0 || kit > 1 || dynamite < 0)
             return SaveStatus.Corrupt;
 
+        var shovel = version >= 5 ? reader.ReadByte() : 0;
+        var lamp = version >= 5 ? reader.ReadByte() : 0;
+        var bag = version >= 5 ? reader.ReadByte() : 0;
+        var detector = version >= 5 ? reader.ReadByte() : 0;
+        if (Math.Max(Math.Max(shovel, lamp), Math.Max(bag, detector)) > Upgrades.MaxTier)
+            return SaveStatus.Corrupt;
+
         var count = reader.ReadInt32();
         if ((uint)count > (MaxRow + 1L) * Mine.Columns)
             return SaveStatus.Corrupt;
@@ -241,6 +252,10 @@ public static class SaveFile
             GemOre = gems,
             HasBlastingKit = kit == 1,
             Dynamite = dynamite,
+            ShovelTier = shovel,
+            LampTier = lamp,
+            BagTier = bag,
+            DetectorTier = detector,
             ElevatorSegments = segments,
             ElevatorCarRow = carRow,
             Changes = changes
