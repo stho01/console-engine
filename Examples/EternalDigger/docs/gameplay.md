@@ -330,6 +330,15 @@ Moody but forgiving: nothing here hurts the miner. The worst outcome is lost lig
 | Blasts | A blast sets off every pocket within 3 tiles of the stick (up to 6 pockets) as a bigger flare. Harmless: the lamp stays lit | `DynamiteSystem.GasReach`, `DynamiteSystem.IgniteGas` |
 | Saving | Burnt gas is a changed tile (flag bit 2 from format version 11) | `SaveFile` |
 
+### Darkness
+
+| Rule | Value | Identifier |
+|---|---|---|
+| Act 2 rock | Below the wall (deeper than the column's last obsidian row) the cone reaches 2 tiles less (never under 1 while lit) | `LampOil.ActTwoAbsorb`, `LampOil.DarkReach`, `Mine.IsBelowTheWall` |
+| Black damp | Bad air in rare 4 × 4 areas below the wall (12% of them): their open tiles, caves and your own tunnels alike. Standing in it halves the cone (after the act 2 cut) and burns twice the oil. A grey `BLACK DAMP` floats up as you step in | `Tiles.BlackDampChance`, `Mine.IsBlackDamp`, `LampOil.BlackDampReachShare`, `BlackDampBurn`, `LampSystem.InBlackDamp` |
+| Its look | No mist in black damp. Lit rock around it is drawn as dark-grey `░` (ore specks still show) | `MistSystem`, `Mine.IsBlackDampEdge`, `TileLooks.BlackDampEdge`, `TerrainRenderSystem` |
+| Never lost | Glints and remembered outlines show as everywhere, so the way back is always visible | `GlintSystem`, `TerrainRenderSystem` |
+
 ## The rescue
 
 Hold `R` for 1.5 s (`MinerControlSystem.RescueDuration`) and the miner is pulled back to the spawn tile. It works

@@ -38,6 +38,12 @@ public static class Tiles
     /// <summary>Share of 2 x 2 cave areas from <see cref="GasDepth"/> whose air tiles hold gas.</summary>
     public const float GasChance = .3f;
 
+    /// <summary>
+    /// Share of the 4 x 4 areas below the wall that are black damp: bad air that halves the lamp's cone and doubles its
+    /// oil burn in their open tiles (<see cref="Mine.IsBlackDamp"/>).
+    /// </summary>
+    public const float BlackDampChance = .12f;
+
     /// <summary>Depth of the top of the obsidian wall, the end of act 1.</summary>
     public const int WallDepth = 110;
 

@@ -175,6 +175,23 @@ public sealed class Mine
         return Tiles.WallDepth + thickness - 1;
     }
 
+    /// <summary>Below the wall in this column: act 2, whose rock swallows some of the lamp's light.</summary>
+    public bool IsBelowTheWall(int column, int row) => Depth(row) > WallBottomDepth(column);
+
+    /// <summary>
+    /// An open tile in a black damp area: 4 x 4 areas below the wall picked by the noise
+    /// (<see cref="Tiles.BlackDampChance"/>). Its caves, and tunnels dug through it, hold bad air.
+    /// </summary>
+    public bool IsBlackDamp(int column, int row) =>
+        Depth(row) > Tiles.WallDepth && !IsSolid(column, row) && IsInside(column, row) &&
+        Noise(column >> 2, row >> 2, 83) < Tiles.BlackDampChance && IsBelowTheWall(column, row);
+
+    /// <summary>A solid tile touching black damp: drawn as a dark-grey <c>░</c> edge when lit.</summary>
+    public bool IsBlackDampEdge(int column, int row) =>
+        Depth(row) > Tiles.WallDepth && IsSolid(column, row) &&
+        (IsBlackDamp(column - 1, row) || IsBlackDamp(column + 1, row) || IsBlackDamp(column, row - 1) ||
+         IsBlackDamp(column, row + 1));
+
     /// <summary>
     /// A value in [0, 1) that only depends on the seed and the arguments. For textures and effects that must not
     /// flicker.

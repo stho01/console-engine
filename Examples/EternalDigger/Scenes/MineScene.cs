@@ -72,7 +72,7 @@ public sealed class MineScene(SaveData start, string savePath) : EcsScene<Eterna
         Simulation.Add(new DynamiteSystem(mine, effects, gas));
         Simulation.Add(new GasSystem(mine, gas, effects, random));
         Simulation.Add(new CameraSystem(Camera, Console, effects.Shake, random));
-        Simulation.Add(new LampSystem(headlamp, effects, random));
+        Simulation.Add(new LampSystem(headlamp, effects, random, mine));
         Simulation.Add(new LightingSystem(mine, light, Camera, headlamp));
         Simulation.Add(new GlintSystem(mine, light, Camera, effects, random));
         Simulation.Add(new MistSystem(mine, light, Camera, effects, random));

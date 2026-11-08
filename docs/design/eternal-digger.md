@@ -225,6 +225,13 @@ when the lit lamp comes within 2 tiles, burns the pocket (`GasPockets.Ignite`, p
 Nothing kills; glints and remembered outlines still show. Burnt gas is saved as a changed tile (flag bit 2, format
 version 11).
 
+## Hazards: darkness (Tier 3)
+
+Below the wall the headlamp reaches 2 tiles less (`LampOil.ActTwoAbsorb`). Black damp is a property of the place, not
+a saved tile: open tiles below the wall in 4 × 4 noise areas (`Mine.IsBlackDamp`, 12%). Inside, `LampSystem` halves
+the cone and doubles the burn and floats `BLACK DAMP` on entry; `MistSystem` spawns no mist there; `TerrainRenderSystem`
+draws lit rock around it as dark-grey `░` (`Mine.IsBlackDampEdge`). Glints and outlines are untouched.
+
 ## Bag weight (Tier 2)
 
 `Shop.BagWeight`: copper 1, silver 1, gold 2, gem 2, rare finds 3. Over the capacity (20 + 10 per bag tier) every 10

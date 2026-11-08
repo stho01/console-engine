@@ -28,6 +28,7 @@ public sealed class FloatingTextRenderSystem(Canvas canvas, Camera camera) : Ent
     public const string RelicText = "RELIC!";
     public const string OilLabel = "OIL +";
     public const string GasText = "GAS!";
+    public const string BlackDampText = "BLACK DAMP";
 
     private readonly char[] _buffer = new char[24];
     private Query _texts;
@@ -62,10 +63,12 @@ public sealed class FloatingTextRenderSystem(Canvas canvas, Camera camera) : Ent
             FloatingTextKind.Oil => Format(OilLabel, text.Amount, ' ') - 1,
             FloatingTextKind.TooHard => Copy(TooHardText),
             FloatingTextKind.Gas => Copy(GasText),
+            FloatingTextKind.BlackDamp => Copy(BlackDampText),
             FloatingTextKind.RareFind => Copy((TileType)text.Amount == TileType.Relic ? RelicText : FossilText),
             _ => FormatGold(text.Amount)
         };
-        var color = text.Kind == FloatingTextKind.RareFind ? fading ? ConsoleColor.Gray : ConsoleColor.White
+        var color = text.Kind == FloatingTextKind.BlackDamp ? fading ? ConsoleColor.DarkGray : ConsoleColor.Gray
+            : text.Kind == FloatingTextKind.RareFind ? fading ? ConsoleColor.Gray : ConsoleColor.White
             : text.Kind == FloatingTextKind.TooHard || text.Kind == FloatingTextKind.Gold && text.Amount < 0
             ? fading ? ConsoleColor.DarkRed : ConsoleColor.Red
             : fading ? ConsoleColor.DarkYellow : ConsoleColor.Yellow;

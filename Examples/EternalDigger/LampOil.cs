@@ -31,6 +31,15 @@ public static class LampOil
 
     public const string FillName = "FILL LAMP";
 
+    /// <summary>Tiles of cone reach the act 2 rock below the wall swallows.</summary>
+    public const float ActTwoAbsorb = 2f;
+
+    /// <summary>In black damp the cone keeps this share of its reach…</summary>
+    public const float BlackDampReachShare = .5f;
+
+    /// <summary>…and the lamp burns this many times the oil.</summary>
+    public const float BlackDampBurn = 2f;
+
     /// <summary>A flask of oil carried in the pack: poured into the lamp by itself when the tank runs low.</summary>
     public const string FlaskName = "OIL FLASK";
 
@@ -66,6 +75,21 @@ public static class LampOil
 
         var share = oil / (TankSize * LowShare);
         return LowReach + (full - LowReach) * share;
+    }
+
+    /// <summary>
+    /// The cone's reach where the miner stands: <see cref="ActTwoAbsorb"/> tiles shorter below the wall (never under one
+    /// tile while lit), then halved in black damp. An empty lamp stays 0.
+    /// </summary>
+    public static float DarkReach(float reach, bool belowTheWall, bool inBlackDamp)
+    {
+        if (reach <= 0f)
+            return 0f;
+
+        if (belowTheWall)
+            reach = Math.Max(1f, reach - ActTwoAbsorb);
+
+        return inBlackDamp ? Math.Max(1f, reach * BlackDampReachShare) : reach;
     }
 
     /// <summary>

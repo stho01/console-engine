@@ -230,6 +230,9 @@ Rules: [03 § EternalDigger](03-rules.md#eternal-digger). Flows: [04 § F11](04-
 14. "My lamp went out", "something exploded", "GAS!" → **Cause:** a gas pocket (green shimmer, caves from 50 m) flared
     because the lit lamp came within 2 tiles. By design: the lamp relights after 3 s and loses 5 oil; nothing is hurt.
     Stop.
-15. "Debris or sparks disappear right next to the miner" → **Cause:** by design. No particle is drawn on his 4 × 2
+15. "The lamp is weaker below 110 m", "oil runs out fast down there" → **Cause:** darkness by design: act 2 rock cuts the
+    cone by 2 tiles; black damp (`BLACK DAMP` floated up, `░` grey walls) halves it and doubles the burn. Leave the area.
+    Stop.
+16. "Debris or sparks disappear right next to the miner" → **Cause:** by design. No particle is drawn on his 4 × 2
    cells, and at most 6 (dimmed) are drawn in the tile around him, so he stays readable (`ParticleRenderSystem`). Stop.
 

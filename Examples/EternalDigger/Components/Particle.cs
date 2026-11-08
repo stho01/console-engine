@@ -88,6 +88,8 @@ public enum FloatingTextKind : byte
     RareFind,
     /// <summary><c>GAS!</c> (yellow): a gas pocket flared. No amount.</summary>
     Gas,
+    /// <summary><c>BLACK DAMP</c> (grey): the miner walked into bad air. No amount.</summary>
+    BlackDamp,
     /// <summary><c>OIL +40</c> (yellow): a flask went into the lamp, <see cref="FloatingText.Amount"/> in units.</summary>
     Oil
 }

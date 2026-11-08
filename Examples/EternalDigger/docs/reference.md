@@ -30,7 +30,8 @@ Examples/EternalDigger/
 │   └── GameSaver.cs            the running mine's slot: Request, Save, Saves, LastSaveFailed
 ├── Mining/
 │   ├── Mine.cs                 the endless seeded grid: At, Hit, TryPlaceLadder, TryTakeLadder, IsSupported,
-│   │                           WallBottomDepth, Noise; generates gas in caves
+│   │                           WallBottomDepth, IsBelowTheWall, IsBlackDamp, IsBlackDampEdge, Noise;
+│   │                           generates gas in caves
 │   ├── Tiles.cs                per-type rules: solid, breakable, ore value, hits, start depths
 │   ├── TileType.cs             Air, Grass, Dirt, Stone, Granite, Copper, Silver, Gold, Bedrock, then (act 2)
 │   │                           Obsidian, Slate, Quartzite, Gem, then Fossil, Relic. New types go at the end (saves
@@ -71,7 +72,7 @@ Examples/EternalDigger/
 | 5 | `DynamiteSystem` | `Mine`, `EffectSpawner`, `GasPockets` | `Dynamite, Position`; `Miner` | Fuses, sparks and smoke; blasts (clear 3 × 3, bag ore, destroy ladders, push, chain, big gas flares within 3 tiles). Public `Blast(...)` |
 | 6 | `GasSystem` | `Mine`, `GasPockets`, `EffectSpawner`, `Random` | `Miner`; `Gas` | Gas shimmer near the miner; a lit lamp within 2 tiles flares the pocket (`GAS!`, lamp out 3 s, −5 oil). Public `Check(...)` |
 | 7 | `CameraSystem` | `Camera`, `RenderConsole`, `ScreenShake`, `Random` | `Miner, Position` | Vertical follow, shake, whole-cell `Camera.Position` |
-| 8 | `LampSystem` | `Headlamp`, `EffectSpawner`, `Random` | `Miner, Position` | Burns oil underground; pours a carried flask into a low lamp (`OIL +40`); sets the `Headlamp`; lamp smoke when low. Public static `Burn(...)` |
+| 8 | `LampSystem` | `Headlamp`, `EffectSpawner`, `Random`, `Mine` | `Miner, Position` | Burns oil underground (×2 in black damp, none while blown out); shortens the cone below the wall and halves it in black damp (`BLACK DAMP` on entry); pours a carried flask into a low lamp (`OIL +40`); sets the `Headlamp`; lamp smoke when low. Public static `Burn(...)` |
 | 9 | `LightingSystem` | `Mine`, `LightMap`, `Camera`, `Headlamp` | `Miner, Position` | `LightMap.Compute` for the rows on screen |
 | 10 | `GlintSystem` | `Mine`, `LightMap`, `Camera`, `EffectSpawner`, `Random` | `Miner` | Ore glints near the miner, at a fixed rate |
 | 11 | `MistSystem` | `Mine`, `LightMap`, `Camera`, `EffectSpawner`, `Random` | `Mist` | Keeps up to 40 mist particles in lit caves |
@@ -166,6 +167,7 @@ Static rule classes: `Tiles`, `Shop`, `Upgrades`, `Layout`, `TileLooks`, `Partic
 | `LampOil.TankSize` / `SecondsPerUnit` / `LowShare` / `LowReach` / `PricePerUnit` | 100 / 3 s / 30% / 3 tiles / 2g | The tank |
 | `LampOil.FlaskPrice` / `FlaskUnits` / `MaxFlasks` | 60g / 40 / 5 | Oil flasks: price, units poured, pack size |
 | `Tiles.GasDepth` / `GasChance` | 50 m / 30% | Where gas pockets are |
+| `Tiles.BlackDampChance`, `LampOil.ActTwoAbsorb` / `BlackDampReachShare` / `BlackDampBurn` | 12%, 2 tiles / ×0.5 / ×2 | Darkness below the wall |
 | `GasSystem.TriggerRadius` / `LampOutSeconds` / `OilDrain` / `MaxShimmer` / `ShimmerRange` | 2 tiles / 3 s / 5 / 30 / 9 tiles | Gas flare and shimmer |
 | `DynamiteSystem.GasReach`, `GasPockets.MaxPocket` | 3 tiles, 24 tiles | Gas set off by a blast; most tiles one flare burns |
 | `DeepCamp.Price` / `Depth` / `SaleShare` / `Markup` / `LanternRadius` | 1500g / 100 m / 70% / ×1.5 / 2.6 tiles | The deep camp |
@@ -219,6 +221,7 @@ Static rule classes: `Tiles`, `Shop`, `Upgrades`, `Layout`, `TileLooks`, `Partic
 | `BLASTING`, ` ¡ ¡ ¡ ` (shed) | `HouseRenderSystem.BlastingText`, `BlastingDisplay` |
 | `OIL +<n>` (floating) | `FloatingTextRenderSystem.OilLabel` |
 | `GAS!` (floating) | `FloatingTextRenderSystem.GasText` |
+| `BLACK DAMP` (floating) | `FloatingTextRenderSystem.BlackDampText` |
 | `TOO HARD` (floating) | `FloatingTextRenderSystem.TooHardText` |
 | `FOSSIL!` / `RELIC!` (floating) | `FloatingTextRenderSystem.FossilText`, `RelicText` |
 | ` CALL LIFT [E] ` / ` GET IN [E] ` / ` ↑↓ RIDE   ←→ GET OUT ` | `PromptRenderSystem.CallLiftText`, `BoardLiftText`, `RideText` |

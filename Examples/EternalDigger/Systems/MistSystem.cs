@@ -11,7 +11,7 @@ namespace EternalDigger.Systems;
 
 /// <summary>
 /// Keeps up to <see cref="MaxMist"/> mist particles drifting through dug-out tiles on screen. Tries a few random
-/// tiles per frame and spawns in lit ones first, so the mist shows where the lamp shines.
+/// tiles per frame and spawns in lit ones first, so the mist shows where the lamp shines. Black damp has no mist.
 /// </summary>
 public sealed class MistSystem(Mine mine, LightMap light, Camera camera, EffectSpawner effects, Random random)
     : EntitySystem
@@ -52,7 +52,7 @@ public sealed class MistSystem(Mine mine, LightMap light, Camera camera, EffectS
         {
             var column = random.Next(1, Mine.Columns - 1);
             var row = random.Next(firstRow, lastRow + 1);
-            if (mine.IsSolid(column, row) || light.Get(column, row) == LightMap.Dark)
+            if (mine.IsSolid(column, row) || light.Get(column, row) == LightMap.Dark || mine.IsBlackDamp(column, row))
                 continue;
 
             var cell = Layout.TileToWorld(column, row) +

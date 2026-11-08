@@ -198,7 +198,8 @@ granite, toughness growing with depth, screen shake.
 
 - No goal, ending, or progression beyond "go deeper and earn more".
 - No real danger: no fall damage, no enemies, no stamina, no time pressure. Gas pockets in deep caves shimmer green
-  and flare when the lamp gets close, blowing it out for a few seconds; they never hurt. The lamp burns oil underground:
+  and flare when the lamp gets close, blowing it out for a few seconds; they never hurt. Below the wall the rock
+  swallows light (shorter cone), and rare black damp halves the cone and doubles the oil burn. The lamp burns oil underground:
   low oil shrinks and flickers the light, empty leaves only a dim glow (it never kills). Refill at the counter, or carry oil flasks (60g, up to 5) that pour themselves in when the lamp runs low.
 - Upgrades at the counter: shovel (digs faster), pickaxe (fewer hits per tile), lamp (reaches further), bag (carries more) and detector (glints from
   further), three tiers each.
