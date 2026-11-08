@@ -11,7 +11,7 @@ namespace EternalDigger.Systems;
 /// <summary>
 /// Slides the miner's <c>Position</c> one tile per move (two in an arc for a jump) started by
 /// <see cref="MinerControlSystem"/>, kicks up dust from the feet and on landing, and counts down the dig cooldown and
-/// swing animation.
+/// swing animation. Keeps the depth record (<see cref="Progress.Track"/>).
 /// </summary>
 public sealed class MinerMotionSystem(Mine mine, EffectSpawner effects) : EntitySystem
 {
@@ -46,6 +46,10 @@ public sealed class MinerMotionSystem(Mine mine, EffectSpawner effects) : Entity
     /// <summary>One frame of motion. Effects are recorded in <paramref name="commands"/>.</summary>
     public void Move(ref Miner miner, ref Position position, float deltaSeconds, CommandBuffer commands)
     {
+        if (Progress.Track(ref miner, mine))
+            effects.Text(commands, Layout.TileCenter(miner.Column, miner.Row) - new Vector2(0f, 3f),
+                FloatingTextKind.ToolShopOpen, 0);
+
         miner.DigCooldown = Math.Max(0f, miner.DigCooldown - deltaSeconds);
         miner.SwingTime = Math.Max(0f, miner.SwingTime - deltaSeconds);
 

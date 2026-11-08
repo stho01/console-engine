@@ -21,9 +21,10 @@ public enum SaveStatus : byte
 /// The save file: one slot, binary, versioned, little-endian. Fields in order, each from the version in brackets:
 /// magic <c>EDSV</c>, format version, seed, miner column, row and facing, gold, ladders, copper, silver and gold ore
 /// (1); lift segments and car row (2); gem ore (3); blasting kit and dynamite (4); the four upgrade tiers (5); lamp
-/// oil (6); rare finds in the bag and ever found (7); oil flasks (8); pickaxe tier (9); deep camp (10); then the
-/// changed tiles (count, then row, column, type, damage, flags each; the gas flag from 11). Older versions are still
-/// read: missing fields get their defaults. Writing goes to a temp file first, so a crash never leaves half a save.
+/// oil (6); rare finds in the bag and ever found (7); oil flasks (8); pickaxe tier (9); deep camp (10); depth record,
+/// gold earned and wall passed (12); then the changed tiles (count, then row, column, type, damage, flags each; the
+/// gas flag from 11). Older versions are still read: missing fields get their defaults. Writing goes to a temp file
+/// first, so a crash never leaves half a save.
 /// </summary>
 public static class SaveFile
 {
@@ -32,7 +33,7 @@ public static class SaveFile
     //**********************************************************
 
     /// <summary>The save-format version written. Bump it whenever the layout changes, and keep reading older ones.</summary>
-    public const int Version = 11;
+    public const int Version = 12;
 
     /// <summary>The oldest save-format version this build still reads.</summary>
     public const int OldestVersion = 1;
@@ -137,6 +138,9 @@ public static class SaveFile
         writer.Write(data.OilFlasks);
         writer.Write((byte)data.PickaxeTier);
         writer.Write(data.HasDeepCamp);
+        writer.Write(data.DepthRecord);
+        writer.Write(data.GoldEarned);
+        writer.Write(data.PassedTheWall);
 
         writer.Write(data.Changes.Count);
         for (var i = 0; i < data.Changes.Count; i++)
@@ -244,6 +248,13 @@ public static class SaveFile
         if (camp > 1)
             return SaveStatus.Corrupt;
 
+        // Older saves start the record at the saved depth and count the gold in hand as earned.
+        var record = version >= 12 ? reader.ReadInt32() : Math.Max(0, Mine.Depth(row));
+        var earned = version >= 12 ? reader.ReadInt32() : gold;
+        var passed = version >= 12 ? reader.ReadByte() : (byte)0;
+        if (record < 0 || earned < 0 || passed > 1)
+            return SaveStatus.Corrupt;
+
         var count = reader.ReadInt32();
         if ((uint)count > (MaxRow + 1L) * Mine.Columns)
             return SaveStatus.Corrupt;
@@ -296,6 +307,9 @@ public static class SaveFile
             OilFlasks = flasks,
             PickaxeTier = pickaxe,
             HasDeepCamp = camp == 1,
+            DepthRecord = record,
+            GoldEarned = earned,
+            PassedTheWall = passed == 1,
             Fossils = fossils,
             Relics = relics,
             FossilsFound = fossilsFound,

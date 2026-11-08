@@ -99,7 +99,7 @@ using [04](04-flows.md).
 | ` DELIVER [E] ` | `PromptRenderSystem.DeliverText` | Standing at the door |
 | ` BUILD LIFT +10m [E] <price>g ` (red when short) | `PromptRenderSystem.BuildLiftText` | Standing at the lift sign |
 | ` ↑ LADDER ↓ ` / ` ↑ BLASTING KIT ↓ ` / ` ↑ DYNAMITE ↓ `, (or ` ↑ FILL LAMP ↓ `, ` ↑ OIL FLASK ↓ `, ` ↑ DEEP CAMP ↓ ` with `AT 100m BY THE LIFT` / `BUILT`, ` ↑ SHOVEL ↓ ` / `PICKAXE` / `LAMP` / `BAG` / `DETECTOR`), then `HAVE <n>`, `OIL <n>%`, `UNLOCKS DYNAMITE` or tier pips `●●○`, then `<price>g [E]` (red when short), `FULL`, `MAX` or `SOLD OUT` | `PromptRenderSystem.DrawCounterPanel`, `Shop.LadderName`/`BlastingKitName`/`DynamiteName`, `KitUnlocksText`, `SoldOutText` | At the shop counter |
-| ` INVENTORY ` / ` TAB close ` (black on yellow, panel top), `PAUSED` (panel bottom), `GOLD`, `OIL`, `FLASKS`, `DYNAMITE` (`no blasting kit`), `LIFT` (`not built`), `BAG` (`HEAVY`), `weight <w>/<capacity>`, `worth <n>g`, `UPGRADES` with pips, `CAMP` (`built at 100m` / `not built`), `FOUND FOR GOOD   §<n> fossils   ¥<n> relics` | `InventorySystem` | `TAB` was pressed: the game is paused until `TAB` again |
+| ` INVENTORY ` / ` TAB close ` (black on yellow, panel top), `PAUSED` (panel bottom), `GOLD`, `OIL`, `FLASKS`, `DYNAMITE` (`no blasting kit`), `LIFT` (`not built`), `BAG` (`HEAVY`), `weight <w>/<capacity>`, `worth <n>g`, `UPGRADES` with pips, `CAMP` (`built at 100m` / `not built`), `RECORD <n>m`, `FOUND FOR GOOD   §<n> fossils   ¥<n> relics` | `InventorySystem` | `TAB` was pressed: the game is paused until `TAB` again |
 | ` ↑ SELL BAG ↓ ` / `HOME PAYS <n>g` or `BAG IS EMPTY` / `+<n>g [E]` (yellow) or `SOLD OUT`; other items as at the surface at camp prices, `KIT: SURFACE ONLY` for sticks without the kit | `PromptRenderSystem.DrawCounterPanel` (`atCamp`), `DeepCamp.SellBagName`, `EmptyBagText`, `KitAtSurfaceText` | At the deep camp's counter (row 110, columns 22–24) |
 | `CAMP` (plank), `¤` lantern, `/▀\` tent | `CampRenderSystem.SignText`, `Lantern`, `Tent` | The deep camp at 100 m, once bought |
 | ` LIGHTING FUSE ` + bar | `HudSystem.PlantLabel`, row 1 | `E` held underground to plant |
@@ -119,6 +119,11 @@ using [04](04-flows.md).
 | `  LIFT <n>m` | `HudSystem.DrawStatus`, row 0, after the ladders | Once a lift is built |
 | ` LIFT ` | `HouseRenderSystem.LiftText` (sign beside the mine entrance) | Scenery |
 | `+<n>g` / `-10g` (floating) | `FloatingTextRenderSystem` | Delivery / purchase |
+| ` RECORD <n>m ` (white on dark yellow, over the `MINE` frame) | `HouseRenderSystem.DrawRecordSign` | The deepest depth reached (`Miner.DepthRecord`) |
+| `TOOLS`, `CLOSED` (stall at columns 13–14) | `HouseRenderSystem.ToolsText`, `ClosedText` | The tool shop; `CLOSED` until the miner has been below the wall |
+| ` TOOL SHOP: OPENS PAST THE WALL ` (grey) | `PromptRenderSystem.ToolShopClosedText` | At column 13 while the tool shop is closed |
+| ` ↑ DYNAMITE x5 ↓ ` / ` ↑ LADDERS x10 ↓ `, `HAVE <n>` or `NEEDS THE KIT`, `<price>g [E]` | `Shop.DynamiteBundleName`, `LadderBundleName`, `PromptRenderSystem.NeedsKitText` | The open tool shop's counter |
+| `HOUSE UPGRADE!` / `TOOL SHOP OPEN` (yellow, floating) | `FloatingTextRenderSystem.HouseUpgradeText`, `ToolShopOpenText` | A sale reached a gold milestone / first time below the wall |
 | ` EternalDigger `, `SHOP`, `MINE` | `HouseRenderSystem` (house sign, shop, shaft frame) | Scenery |
 
 ### TerraForM screen text (`HudTexts`, `Sprites`)

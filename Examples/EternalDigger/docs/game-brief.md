@@ -114,6 +114,7 @@ Ore comes in **veins** (small clusters with gaps), not single scattered tiles. C
 | E (hold 0.5 s) | Underground: plant a lit stick of dynamite in the rock you face, or aim it with an arrow held at the same time (2 s fuse, 3 × 3 blast). Also on the lift's bottom landing, where a quick tap of E is the lift |
 | Up / Down in the lift | Ride to the top / the bottom |
 | R (hold 1.5 s) | Rescue: teleported back to the surface, **but your bag of ore is lost** (gold and ladders kept) |
+| E at the tool shop | Once you've been below the wall, a toolsmith beside the house sells 5 sticks or 10 ladders at a discount |
 | Tab | Inventory screen: everything carried, the bag's worth and weight, upgrades, finds. Pauses the game |
 | Esc | Save and quit |
 
@@ -203,6 +204,9 @@ granite, toughness growing with depth, screen shake.
   low oil shrinks and flickers the light, empty leaves only a dim glow (it never kills). Refill at the counter, or carry oil flasks (60g, up to 5) that pour themselves in when the lamp runs low.
 - Upgrades at the counter: shovel (digs faster), pickaxe (fewer hits per tile), lamp (reaches further), bag (carries more) and detector (glints from
   further), three tiers each.
+- The surface grows with you: a depth record sign over the mine, a trophy case of every rare find, a flag, lit
+  windows and a second floor at 2000 / 8000 / 20000g earned, and a toolsmith who opens shop once you have been below
+  the wall. A deep camp (1500g) at 100 m trades without the trip home.
 - No hard bag limit; a heavy bag slows the climb up.
 - Ladders are permanent once placed; besides the lift and dynamite there are no other tools (no ropes, supports).
 - One save slot only; no score, no records.

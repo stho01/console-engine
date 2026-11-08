@@ -16,7 +16,7 @@ namespace EternalDigger.Systems;
 /// </summary>
 public sealed class InteractionSystem(
     Mine mine, Elevator elevator, ShopCounter counter, EffectSpawner effects, GameSaver saver,
-    ShopCounter campCounter = null) : EntitySystem
+    ShopCounter campCounter = null, ShopCounter toolCounter = null) : EntitySystem
 {
     //**********************************************************
     //** fields
@@ -36,6 +36,10 @@ public sealed class InteractionSystem(
         (Layout.LiftSignFirstColumn + Layout.LiftSignLastColumn) / 2, Layout.GroundRow) + new Vector2(2f, -6f);
 
     private readonly ShopCounter _campCounter = campCounter ?? new ShopCounter(ShopCounter.CampItems);
+    private readonly ShopCounter _toolCounter = toolCounter ?? new ShopCounter(ShopCounter.ToolShopItems);
+
+    public static readonly Vector2 ToolShopEffectOrigin =
+        Layout.TileCenter(Layout.ToolShopColumn, Layout.GroundRow) + new Vector2(2f, -6f);
     private Query _miners;
 
     //**********************************************************
@@ -72,9 +76,10 @@ public sealed class InteractionSystem(
             return;
 
         var atCamp = DeepCamp.IsAtCounter(miner);
-        if (Layout.IsAtShop(miner.Column, miner.Row) || atCamp)
+        var atTools = Layout.IsAtToolShop(miner.Column, miner.Row) && Progress.IsToolShopOpen(miner);
+        if (Layout.IsAtShop(miner.Column, miner.Row) || atCamp || atTools)
         {
-            var selection = atCamp ? _campCounter : counter;
+            var selection = atCamp ? _campCounter : atTools ? _toolCounter : counter;
             if (input.UpPressed)
                 selection.Previous();
             else if (input.DownPressed)
@@ -97,6 +102,8 @@ public sealed class InteractionSystem(
             Deliver(ref miner, feet, commands);
         else if (Layout.IsAtShop(miner.Column, miner.Row))
             Buy(ref miner, feet, commands);
+        else if (atTools)
+            BuyTools(ref miner, feet, commands);
         else if (Layout.IsAtLiftSign(miner.Column, miner.Row))
             BuildLift(ref miner, feet, commands);
         else if (atCamp)
@@ -119,6 +126,7 @@ public sealed class InteractionSystem(
 
     private void Deliver(ref Miner miner, Vector2 feet, CommandBuffer commands)
     {
+        var houseLevel = Progress.HouseLevel(miner.GoldEarned);
         var earned = Shop.Deliver(ref miner);
         if (earned == 0)
         {
@@ -129,6 +137,24 @@ public sealed class InteractionSystem(
         effects.Coins(commands, DoorEffectOrigin, Math.Clamp(earned / GoldPerCoin, 3, MaxCoins));
         effects.Pop(commands, DoorEffectOrigin);
         effects.Number(commands, DoorEffectOrigin + new Vector2(0f, -2f), earned);
+        if (Progress.HouseLevel(miner.GoldEarned) > houseLevel)
+            effects.Text(commands, DoorEffectOrigin + new Vector2(0f, -4f), FloatingTextKind.HouseUpgrade, 0);
+
+        saver.Request();
+    }
+
+    /// <summary>Buys the tool shop's selected bundle.</summary>
+    private void BuyTools(ref Miner miner, Vector2 feet, CommandBuffer commands)
+    {
+        var price = Shop.Price(_toolCounter.Selected, miner);
+        if (!Shop.TryBuy(_toolCounter.Selected, ref miner))
+        {
+            effects.FootDust(commands, feet, miner.FacingX);
+            return;
+        }
+
+        effects.Pop(commands, ToolShopEffectOrigin);
+        effects.Number(commands, ToolShopEffectOrigin + new Vector2(0f, -2f), -price);
         saver.Request();
     }
 

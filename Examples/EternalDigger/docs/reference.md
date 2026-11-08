@@ -16,6 +16,7 @@ Examples/EternalDigger/
 ├── MinerInput.cs               one frame of miner keys (also Use / UsePressed for E, Up/DownPressed); FromKeyboard
 ├── ShopCounter.cs              a counter's selection (Previous, Next, Select, Name, IsUpgrade, Line); ShopItem;
 │                               Items (surface), CampItems (deep camp)
+├── Progress.cs                 surface progression: HouseLevel, GoldToNextLevel, IsToolShopOpen, Track, Earn
 ├── DeepCamp.cs                 the deep camp: Price, Row, columns, SaleShare, Markup; Build, SellBag, Sale, IsAtCounter
 ├── LampOil.cs                  the tank: TankSize, BurnRate, Reach, IsLow, FillPrice, TryFill; flasks: TryBuyFlask, TryPour
 ├── Upgrades.cs                 upgrade prices and effects per tier: NextPrice, TryBuy, DigInterval, FewerHits, LampReach,
@@ -87,7 +88,7 @@ Examples/EternalDigger/
 |---|---|---|---|---|
 | 1 | `SkyRenderSystem` | `Canvas`, `Camera` | — | Sky, sun, clouds, hills |
 | 2 | `TerrainRenderSystem` | `Canvas`, `Camera`, `Mine`, `LightMap` | — | Tiles by light, ladders, cracks, grass |
-| 3 | `HouseRenderSystem` | `Canvas`, `Camera` | — | House, sign, smoke, shop, mine frame, `LIFT` sign |
+| 3 | `HouseRenderSystem` | `Canvas`, `Camera` | `Miner` | House (flag, lit windows, second floor by gold earned), sign, smoke, trophy case, shop, tool shop stall and toolsmith, mine frame with the `RECORD` plank, `LIFT` sign |
 | 4 | `ElevatorRenderSystem` | `Canvas`, `Camera`, `Elevator` | — | Shaft walls and braces, cable, car, speed lines |
 | 5 | `CampRenderSystem` | `Canvas`, `Camera` | `Miner` | The deep camp once bought: tent, lantern, `CAMP` plank, crate |
 | 6 | `DynamiteRenderSystem` | `Canvas`, `Camera` | `Dynamite` | Planted sticks `¡` and their flickering `*` fuse |
@@ -102,7 +103,7 @@ Examples/EternalDigger/
 
 | Component | Fields | On |
 |---|---|---|
-| `Miner` | `Column`, `Row` (tile; the target while moving), `MoveFrom` (tile, `Vector2`), `MoveElapsed`, `MoveDuration` (0 = idle), `Motion` (`Idle`, `Walking`, `Climbing`, `Falling`, `Jumping`), `ClimbStreak`, `IsRiding`, `FallRows`, `FacingX` (−1/1), `LampDirection`, `DigCooldown`, `SwingTime`, `SwingDirection` (`Point`), `RescueHold`, `PlantHold`, `HasBlastingKit`, `Dynamite`, `LitDynamite`, `Oil`, `OilFlasks`, `LampOut`, `HasDeepCamp`, `ShovelTier`, `LampTier`, `BagTier`, `DetectorTier`, `PickaxeTier`, `Gold`, `Ladders`, `CopperOre`, `SilverOre`, `GoldOre`, `GemOre`, `Fossils`, `Relics`, `FossilsFound`, `RelicsFound`. Read-only also `RareFinds`. Read-only: `IsMoving`, `OreCount` | The miner |
+| `Miner` | `Column`, `Row` (tile; the target while moving), `MoveFrom` (tile, `Vector2`), `MoveElapsed`, `MoveDuration` (0 = idle), `Motion` (`Idle`, `Walking`, `Climbing`, `Falling`, `Jumping`), `ClimbStreak`, `IsRiding`, `FallRows`, `FacingX` (−1/1), `LampDirection`, `DigCooldown`, `SwingTime`, `SwingDirection` (`Point`), `RescueHold`, `PlantHold`, `HasBlastingKit`, `Dynamite`, `LitDynamite`, `Oil`, `OilFlasks`, `LampOut`, `HasDeepCamp`, `DepthRecord`, `GoldEarned`, `PassedTheWall`, `ShovelTier`, `LampTier`, `BagTier`, `DetectorTier`, `PickaxeTier`, `Gold`, `Ladders`, `CopperOre`, `SilverOre`, `GoldOre`, `GemOre`, `Fossils`, `Relics`, `FossilsFound`, `RelicsFound`. Read-only also `RareFinds`. Read-only: `IsMoving`, `OreCount` | The miner |
 | `Particle` | `Age`, `Lifetime`, `Style` (`ParticleStyle`), `Variant` (random byte). Read-only: `Progress` | Every particle |
 | `Physics` | `Gravity` (cells/s²), `Drag` (per second) | Every particle |
 | `TileCollider` | tag | Debris, coins |
@@ -170,6 +171,10 @@ Static rule classes: `Tiles`, `Shop`, `Upgrades`, `Layout`, `TileLooks`, `Partic
 | `Tiles.BlackDampChance`, `LampOil.ActTwoAbsorb` / `BlackDampReachShare` / `BlackDampBurn` | 12%, 2 tiles / ×0.5 / ×2 | Darkness below the wall |
 | `GasSystem.TriggerRadius` / `LampOutSeconds` / `OilDrain` / `MaxShimmer` / `ShimmerRange` | 2 tiles / 3 s / 5 / 30 / 9 tiles | Gas flare and shimmer |
 | `DynamiteSystem.GasReach`, `GasPockets.MaxPocket` | 3 tiles, 24 tiles | Gas set off by a blast; most tiles one flare burns |
+| `Progress.FlagGold` / `LitWindowsGold` / `SecondFloorGold` | 2000 / 8000 / 20000g earned | House levels |
+| `Shop.DynamiteBundleSize`/`Price`, `LadderBundleSize`/`Price` | 5 for 400g, 10 for 80g | Tool shop bundles |
+| `Layout.ToolShopColumn` / `ToolsmithColumn` | 13 / 14 | Tool shop counter spot / the NPC |
+| `HouseRenderSystem.UpperFloorHeight` / `TrophySlots` / `IdleFrameSeconds` | 4 cells / 10 / 0.6 s | Second floor, trophy case, toolsmith frames |
 | `DeepCamp.Price` / `Depth` / `SaleShare` / `Markup` / `LanternRadius` | 1500g / 100 m / 70% / ×1.5 / 2.6 tiles | The deep camp |
 | `HudSystem.OilGaugeCells` | 8 | Oil gauge cells |
 | `MinerControlSystem.PlantDuration` / `FuseDuration` | 0.5 / 2 s | Hold to plant, fuse |
@@ -221,6 +226,9 @@ Static rule classes: `Tiles`, `Shop`, `Upgrades`, `Layout`, `TileLooks`, `Partic
 | `BLASTING`, ` ¡ ¡ ¡ ` (shed) | `HouseRenderSystem.BlastingText`, `BlastingDisplay` |
 | `OIL +<n>` (floating) | `FloatingTextRenderSystem.OilLabel` |
 | `GAS!` (floating) | `FloatingTextRenderSystem.GasText` |
+| `HOUSE UPGRADE!`, `TOOL SHOP OPEN` (floating) | `FloatingTextRenderSystem.HouseUpgradeText`, `ToolShopOpenText` |
+| ` RECORD <n>m `, `TOOLS`, `CLOSED` (surface) | `HouseRenderSystem.DrawRecordSign`, `ToolsText`, `ClosedText` |
+| ` TOOL SHOP: OPENS PAST THE WALL `, `NEEDS THE KIT`, ` ↑ DYNAMITE x5 ↓ `, ` ↑ LADDERS x10 ↓ ` | `PromptRenderSystem.ToolShopClosedText`, `NeedsKitText`, `Shop.DynamiteBundleName`, `LadderBundleName` |
 | `BLACK DAMP` (floating) | `FloatingTextRenderSystem.BlackDampText` |
 | `TOO HARD` (floating) | `FloatingTextRenderSystem.TooHardText` |
 | `FOSSIL!` / `RELIC!` (floating) | `FloatingTextRenderSystem.FossilText`, `RelicText` |

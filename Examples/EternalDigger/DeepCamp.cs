@@ -97,6 +97,7 @@ public static class DeepCamp
             return 0;
 
         miner.Gold += earned;
+        Progress.Earn(ref miner, earned);
         Shop.EmptyBag(ref miner);
         return earned;
     }

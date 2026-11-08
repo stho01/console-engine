@@ -54,6 +54,10 @@ public static class Layout
     public const int BlastingFirstColumn = 26;
     public const int BlastingLastColumn = 28;
 
+    /// <summary>The tool shop's counter spot, once it is open; its toolsmith stands one column right.</summary>
+    public const int ToolShopColumn = 13;
+    public const int ToolsmithColumn = ToolShopColumn + 1;
+
     /// <summary>Where the miner starts and where a rescue brings them back.</summary>
     public const int SpawnColumn = 15;
 
@@ -73,6 +77,8 @@ public static class Layout
 
     public static bool IsAtLiftSign(int column, int row) =>
         row == GroundRow && column >= LiftSignFirstColumn && column <= LiftSignLastColumn;
+
+    public static bool IsAtToolShop(int column, int row) => row == GroundRow && column == ToolShopColumn;
 
     public static bool IsAtShop(int column, int row) =>
         row == GroundRow && column >= ShopFirstColumn && column <= ShopLastColumn;

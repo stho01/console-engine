@@ -29,6 +29,8 @@ public sealed class FloatingTextRenderSystem(Canvas canvas, Camera camera) : Ent
     public const string OilLabel = "OIL +";
     public const string GasText = "GAS!";
     public const string BlackDampText = "BLACK DAMP";
+    public const string HouseUpgradeText = "HOUSE UPGRADE!";
+    public const string ToolShopOpenText = "TOOL SHOP OPEN";
 
     private readonly char[] _buffer = new char[24];
     private Query _texts;
@@ -64,6 +66,8 @@ public sealed class FloatingTextRenderSystem(Canvas canvas, Camera camera) : Ent
             FloatingTextKind.TooHard => Copy(TooHardText),
             FloatingTextKind.Gas => Copy(GasText),
             FloatingTextKind.BlackDamp => Copy(BlackDampText),
+            FloatingTextKind.HouseUpgrade => Copy(HouseUpgradeText),
+            FloatingTextKind.ToolShopOpen => Copy(ToolShopOpenText),
             FloatingTextKind.RareFind => Copy((TileType)text.Amount == TileType.Relic ? RelicText : FossilText),
             _ => FormatGold(text.Amount)
         };

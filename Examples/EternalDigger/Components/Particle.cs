@@ -90,6 +90,10 @@ public enum FloatingTextKind : byte
     Gas,
     /// <summary><c>BLACK DAMP</c> (grey): the miner walked into bad air. No amount.</summary>
     BlackDamp,
+    /// <summary><c>HOUSE UPGRADE!</c> (yellow): a sale lifted the house to a new level. No amount.</summary>
+    HouseUpgrade,
+    /// <summary><c>TOOL SHOP OPEN</c> (yellow): the miner got below the wall for the first time. No amount.</summary>
+    ToolShopOpen,
     /// <summary><c>OIL +40</c> (yellow): a flask went into the lamp, <see cref="FloatingText.Amount"/> in units.</summary>
     Oil
 }

@@ -12,12 +12,12 @@ namespace EternalDigger.Systems;
 /// A small framed prompt above the miner's head while they stand at the house door (<c>DELIVER [E]</c>), the lift
 /// sign (<c>BUILD LIFT +10m [E] 200g</c>) or a lift landing (call, get in, ride). At the shop counter it is a
 /// three-line panel: the selected item with the Up/Down hint, what the miner has of it, and its price; the deep camp's
-/// counter shows the same panel with its own items and prices. It bobs gently. A price turns red when the miner can't
-/// pay.
+/// counter and the tool shop show the same panel with their own items and prices. It bobs gently. A price turns red
+/// when the miner can't pay.
 /// </summary>
 public sealed class PromptRenderSystem(
-    Canvas canvas, Camera camera, Mine mine, Elevator elevator, ShopCounter counter, ShopCounter campCounter)
-    : EntitySystem
+    Canvas canvas, Camera camera, Mine mine, Elevator elevator, ShopCounter counter, ShopCounter campCounter,
+    ShopCounter toolCounter) : EntitySystem
 {
     //**********************************************************
     //** fields
@@ -38,6 +38,8 @@ public sealed class PromptRenderSystem(
     public const string CampBuiltText = "BUILT";
     public const string EmptyBagText = "BAG IS EMPTY";
     public const string KitAtSurfaceText = "KIT: SURFACE ONLY";
+    public const string NeedsKitText = "NEEDS THE KIT";
+    public const string ToolShopClosedText = " TOOL SHOP: OPENS PAST THE WALL ";
     public const char TierOn = '●';
     public const char TierOff = '○';
 
@@ -76,9 +78,13 @@ public sealed class PromptRenderSystem(
             else if (Layout.IsAtDeliverSpot(miner.Column, miner.Row))
                 Draw(DeliverText, position.X, position.Y, ConsoleColor.White);
             else if (Layout.IsAtShop(miner.Column, miner.Row))
-                DrawCounterPanel(miner, position.X, position.Y, false);
+                DrawCounterPanel(miner, position.X, position.Y, counter, false);
             else if (DeepCamp.IsAtCounter(miner))
-                DrawCounterPanel(miner, position.X, position.Y, true);
+                DrawCounterPanel(miner, position.X, position.Y, campCounter, true);
+            else if (Layout.IsAtToolShop(miner.Column, miner.Row) && Progress.IsToolShopOpen(miner))
+                DrawCounterPanel(miner, position.X, position.Y, toolCounter, false);
+            else if (Layout.IsAtToolShop(miner.Column, miner.Row))
+                Draw(ToolShopClosedText, position.X, position.Y, ConsoleColor.Gray);
             else if (Layout.IsAtLiftSign(miner.Column, miner.Row) && !elevator.CanBuildNext(mine))
                 Draw(LiftBlockedText, position.X, position.Y, ConsoleColor.Red);
             else if (Layout.IsAtLiftSign(miner.Column, miner.Row))
@@ -135,9 +141,9 @@ public sealed class PromptRenderSystem(
     /// A counter's panel for the selected item: the surface counter, or the deep camp's (<paramref name="atCamp"/>)
     /// with its prices and the bag sale. Its strings are rebuilt only when a value changes.
     /// </summary>
-    private void DrawCounterPanel(in Miner miner, float minerX, float minerY, bool atCamp)
+    private void DrawCounterPanel(in Miner miner, float minerX, float minerY, ShopCounter selection, bool atCamp)
     {
-        var item = atCamp ? campCounter.Selected : counter.Selected;
+        var item = selection.Selected;
         var price = atCamp ? Shop.CampPrice(item, miner) : Shop.Price(item, miner);
         var owned = Shop.Owned(item, miner);
         if (item != _shownItem || price != _shownPrice || owned != _shownOwned || miner.HasBlastingKit != _shownKit ||
@@ -179,7 +185,8 @@ public sealed class PromptRenderSystem(
         var upgrade = ShopCounter.IsUpgrade(item);
         _panelOwned = upgrade ? Pips(owned)
             : item == ShopItem.LampOil ? $"OIL {owned}%"
-            : owned >= 0 ? $"HAVE {owned}" : KitUnlocksText;
+            : owned >= 0 ? $"HAVE {owned}"
+            : item == ShopItem.Blasting ? KitUnlocksText : NeedsKitText;
         _panelPrice = price != Shop.SoldOut ? $"{price}g {KeyHint}"
             : upgrade ? MaxTierText
             : item is ShopItem.LampOil or ShopItem.OilFlask ? FullText

@@ -297,6 +297,24 @@ shaft, beside the lift's bottom landing once the lift reaches 100 m (its last se
 | Look | A tent `/▀\` at column 24, a flickering lantern `¤` on a pole at column 22, a `CAMP` plank and a crate. The lantern lights the tiles within 2.6 tiles (`Lit`), dim to 3.9 | `CampRenderSystem`, `LightMap.AddLantern`, `DeepCamp.LanternRadius` |
 | Saving | Every sale and purchase there saves. The camp is saved from format version 10; its dug tiles are ordinary changed tiles | `SaveData.HasDeepCamp` |
 
+<a id="surface-progression"></a>
+## Surface progression
+
+The surface shows how far you've come (`Progress.cs`). All of it is kept on the miner and saved (format version 12).
+
+| Rule | Value | Identifier |
+|---|---|---|
+| Depth record | The deepest depth reached, on a ` RECORD <n>m ` plank over the `MINE` frame (from the first metre underground). The inventory shows it too | `Miner.DepthRecord`, `Progress.Track` (every frame in `MinerMotionSystem`) |
+| Gold earned | Every sale, at the door or the deep camp, adds to a lifetime total that spending never lowers | `Miner.GoldEarned`, `Progress.Earn` |
+| House level 1 | 2000g earned: a yellow flag flutters on a pole on the roof's peak | `Progress.FlagGold`, `HouseRenderSystem.DrawFlag` |
+| House level 2 | 8000g earned: the windows glow yellow | `Progress.LitWindowsGold` |
+| House level 3 | 20000g earned: a second floor (4 cells, two more windows) lifts the roof, chimney and flag | `Progress.SecondFloorGold`, `HouseRenderSystem.UpperFloorHeight` |
+| Upgrade text | The sale that reaches a level floats `HOUSE UPGRADE!` above the door | `InteractionSystem.Deliver` |
+| Trophy case | Left of the door: two shelves of 5, one glyph per rare find ever dug up, relics `¥` (yellow) first, then fossils `§` (white). More than 10: the last slot shows `+` | `HouseRenderSystem.DrawTrophyCase`, `Miner.FossilsFound`, `RelicsFound` |
+| Tool shop | A stall with a green-striped awning and a `TOOLS` board at columns 13–14. Boarded up (`CLOSED`) until the miner has stood below the wall; the first time, `TOOL SHOP OPEN` floats up. Then a toolsmith (4 × 2, `☺` over a green body, arms swapping every 0.6 s) stands at column 14 | `Miner.PassedTheWall`, `Progress.IsToolShopOpen`, `HouseRenderSystem.DrawToolShop` |
+| Tool shop counter | Stand at column 13: `↑`/`↓` choose, `E` buys. `DYNAMITE x5` for 400g (kit needed: `NEEDS THE KIT`), `LADDERS x10` for 80g, both cheaper than one by one. Closed: ` TOOL SHOP: OPENS PAST THE WALL ` | `ShopCounter.ToolShopItems`, `Shop.TryBuyBundle`, `InteractionSystem.BuyTools` |
+| Older saves | Start the record at the saved depth and count the gold in hand as earned | `SaveFile.ReadFields` |
+
 <a id="dynamite"></a>
 ## Dynamite
 

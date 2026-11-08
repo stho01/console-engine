@@ -50,6 +50,7 @@ The only other persistent inputs are the TerraForM map files ([§ Map file forma
 | `Miner` component | `ShovelTier`, `LampTier`, `BagTier`, `DetectorTier`, `PickaxeTier` | Upgrade tiers 0–3 | Never (saved) |
 | `Miner` component | `Fossils`, `Relics`, `FossilsFound`, `RelicsFound` | Rare finds in the bag; ever dug up | Bag: delivery or rescue. Found: never (saved) |
 | `Miner` component | `LampOut` | Seconds the lamp stays blown out after a gas flare | Counts down; not saved |
+| `Miner` component | `DepthRecord`, `GoldEarned`, `PassedTheWall` | Surface progression: deepest metres, lifetime sales, been below the wall (tool shop open) | Never (saved) |
 | `Miner` component | `HasDeepCamp` | The deep camp was bought (its tiles are changed tiles) | Never (saved) |
 | `Miner` component | `Oil`, `OilFlasks` | Lamp oil 0–100, burns underground; flasks carried (0–5), poured when low | Refilled at the counter or from a flask (saved) |
 | `Headlamp` (one per `MineScene`) | `Reach`, `IsDimmed`, `IsLow`, `IsEmpty` | This frame's lamp, from the oil and lamp tier | Every frame (`LampSystem`) |
@@ -62,12 +63,12 @@ The only other persistent inputs are the TerraForM map files ([§ Map file forma
 
 One slot: `SaveFile.DefaultPath` = `<LocalApplicationData>/EternalDigger/save.dat` (`%LOCALAPPDATA%` on Windows,
 `~/Library/Application Support` on macOS, `~/.local/share` on Linux). Written by `SaveFile.Save` through
-`save.dat.tmp`, then moved over the old file. Little-endian binary, `SaveFile.Version` = 11 (versions 1–10 are still read; fields they lack get the defaults):
+`save.dat.tmp`, then moved over the old file. Little-endian binary, `SaveFile.Version` = 12 (versions 1–11 are still read; fields they lack get the defaults):
 
 | Field | Type | Check on load |
 |---|---|---|
 | magic `EDSV` | int `0x56534445` | else `Corrupt` |
-| version | int | not 1–11 (`OldestVersion`…`Version`) → `Unsupported` |
+| version | int | not 1–12 (`OldestVersion`…`Version`) → `Unsupported` |
 | seed | int | — |
 | column, row | int, int | column 0–29, row 0–100 000 |
 | facing | sbyte | −1 or 1 |
@@ -81,6 +82,7 @@ One slot: `SaveFile.DefaultPath` = `<LocalApplicationData>/EternalDigger/save.da
 | oil flasks (version 8+) | int | 0–5 (`LampOil.MaxFlasks`) |
 | pickaxe tier (version 9+) | byte | 0–3 |
 | deep camp (version 10+) | byte | 0 or 1 |
+| depth record, gold earned, wall passed (version 12+) | int, int, byte | ≥ 0, ≥ 0, 0 or 1. Older saves: record = the saved depth (≥ 0), earned = the saved gold, not passed |
 | change count | int | ≤ 100 001 × 30 |
 | per change: row, column, type, damage, flags | int, byte, byte, byte, byte | row 0–100 000, column < 30, type a `TileType` (its byte: new types are only ever appended), flags only bit 0 (ladder) and bit 1 (seen), from version 11 also bit 2 (gas) |
 

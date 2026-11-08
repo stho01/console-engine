@@ -18,7 +18,10 @@ public enum ShopItem : byte
     /// <summary>The deep camp at 100 m, bought once at the surface (<see cref="EternalDigger.DeepCamp"/>).</summary>
     DeepCamp,
     /// <summary>The camp's counter buys the bag (<see cref="EternalDigger.DeepCamp.SellBag"/>).</summary>
-    SellBag
+    SellBag,
+    /// <summary>The tool shop's bundles (<see cref="Shop.TryBuyBundle"/>).</summary>
+    DynamiteBundle,
+    LadderBundle
 }
 
 /// <summary>
@@ -42,6 +45,9 @@ public sealed class ShopCounter
     /// <summary>The deep camp's counter: the bag first, then supplies at a markup.</summary>
     public static readonly ShopItem[] CampItems =
         [ShopItem.SellBag, ShopItem.Ladder, ShopItem.LampOil, ShopItem.OilFlask, ShopItem.Blasting];
+
+    /// <summary>The tool shop's counter, open once the miner has been below the wall.</summary>
+    public static readonly ShopItem[] ToolShopItems = [ShopItem.DynamiteBundle, ShopItem.LadderBundle];
 
     private readonly ShopItem[] _items;
 
@@ -97,6 +103,8 @@ public sealed class ShopCounter
         ShopItem.OilFlask => LampOil.FlaskName,
         ShopItem.DeepCamp => DeepCamp.Name,
         ShopItem.SellBag => DeepCamp.SellBagName,
+        ShopItem.DynamiteBundle => Shop.DynamiteBundleName,
+        ShopItem.LadderBundle => Shop.LadderBundleName,
         ShopItem.Blasting => miner.HasBlastingKit ? Shop.DynamiteName : Shop.BlastingKitName,
         _ => Shop.LadderName
     };

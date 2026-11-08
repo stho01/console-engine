@@ -107,6 +107,15 @@ public struct Miner
     public int Fossils;
     public int Relics;
 
+    /// <summary>The deepest depth reached, in metres: the <c>RECORD</c> sign on the mine entrance.</summary>
+    public int DepthRecord;
+
+    /// <summary>Gold earned from sales in all (never spent): the house grows at milestones.</summary>
+    public int GoldEarned;
+
+    /// <summary>Has stood below the wall: the tool shop is open.</summary>
+    public bool PassedTheWall;
+
     /// <summary>Rare finds ever dug up, kept for the trophy shelf.</summary>
     public int FossilsFound;
     public int RelicsFound;

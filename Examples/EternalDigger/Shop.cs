@@ -24,6 +24,14 @@ public static class Shop
     public const string BlastingKitName = "BLASTING KIT";
     public const string DynamiteName = "DYNAMITE";
 
+    /// <summary>The tool shop's bundles: sticks (kit needed) and ladders, cheaper than one by one.</summary>
+    public const int DynamiteBundleSize = 5;
+    public const int DynamiteBundlePrice = 400;
+    public const int LadderBundleSize = 10;
+    public const int LadderBundlePrice = 80;
+    public const string DynamiteBundleName = "DYNAMITE x5";
+    public const string LadderBundleName = "LADDERS x10";
+
     /// <summary>Bag weight of one piece of each ore, and of a rare find.</summary>
     public const int CopperWeight = 1;
     public const int SilverWeight = 1;
@@ -84,6 +92,7 @@ public static class Shop
     {
         var earned = BagValue(miner);
         miner.Gold += earned;
+        Progress.Earn(ref miner, earned);
         EmptyBag(ref miner);
         return earned;
     }
@@ -118,6 +127,8 @@ public static class Shop
         ShopItem.OilFlask => LampOil.FlaskPriceFor(miner),
         ShopItem.DeepCamp => miner.HasDeepCamp ? SoldOut : DeepCamp.Price,
         ShopItem.SellBag => DeepCamp.Sale(miner),
+        ShopItem.DynamiteBundle => miner.HasBlastingKit ? DynamiteBundlePrice : SoldOut,
+        ShopItem.LadderBundle => LadderBundlePrice,
         ShopItem.Blasting => BlastingPrice(miner),
         _ => LadderPrice
     };
@@ -133,6 +144,8 @@ public static class Shop
         ShopItem.OilFlask => miner.OilFlasks,
         ShopItem.DeepCamp => miner.HasDeepCamp ? 1 : 0,
         ShopItem.SellBag => BagValue(miner),
+        ShopItem.DynamiteBundle => miner.HasBlastingKit ? miner.Dynamite : -1,
+        ShopItem.LadderBundle => miner.Ladders,
         ShopItem.Blasting => miner.HasBlastingKit ? miner.Dynamite : -1,
         _ => miner.Ladders
     };
@@ -145,6 +158,7 @@ public static class Shop
         ShopItem.OilFlask => LampOil.TryBuyFlask(ref miner),
         ShopItem.DeepCamp => TryBuyDeepCamp(ref miner),
         ShopItem.SellBag => false,
+        ShopItem.DynamiteBundle or ShopItem.LadderBundle => TryBuyBundle(item, ref miner),
         ShopItem.Blasting => TryBuyBlasting(ref miner),
         _ => TryBuyLadder(ref miner)
     };
@@ -177,6 +191,22 @@ public static class Shop
             case ShopItem.OilFlask: miner.OilFlasks++; break;
             default: miner.Dynamite++; break;
         }
+
+        return true;
+    }
+
+    /// <summary>A tool shop bundle: <see cref="DynamiteBundleSize"/> sticks (with the kit) or ladders.</summary>
+    public static bool TryBuyBundle(ShopItem item, ref Miner miner)
+    {
+        var price = Price(item, miner);
+        if (price == SoldOut || miner.Gold < price)
+            return false;
+
+        miner.Gold -= price;
+        if (item == ShopItem.DynamiteBundle)
+            miner.Dynamite += DynamiteBundleSize;
+        else
+            miner.Ladders += LadderBundleSize;
 
         return true;
     }

@@ -49,6 +49,11 @@ public sealed class SaveData
     /// <summary>The deep camp was bought (its dug-out tiles are in <see cref="Changes"/>).</summary>
     public bool HasDeepCamp { get; init; }
 
+    /// <summary>Surface progression: the depth record, gold earned in all, and whether the wall was passed.</summary>
+    public int DepthRecord { get; init; }
+    public int GoldEarned { get; init; }
+    public bool PassedTheWall { get; init; }
+
     /// <summary>Lamp oil. Saves from before lamp oil load with a full tank.</summary>
     public float Oil { get; init; } = LampOil.TankSize;
 
@@ -113,6 +118,9 @@ public sealed class SaveData
             OilFlasks = miner.OilFlasks,
             PickaxeTier = miner.PickaxeTier,
             HasDeepCamp = miner.HasDeepCamp,
+            DepthRecord = miner.DepthRecord,
+            GoldEarned = miner.GoldEarned,
+            PassedTheWall = miner.PassedTheWall,
             Dynamite = miner.Dynamite + miner.LitDynamite,
             ElevatorSegments = elevator.Segments,
             ElevatorCarRow = elevator.CarTargetRow,
@@ -147,7 +155,10 @@ public sealed class SaveData
         Oil = Oil,
         OilFlasks = OilFlasks,
         PickaxeTier = PickaxeTier,
-        HasDeepCamp = HasDeepCamp
+        HasDeepCamp = HasDeepCamp,
+        DepthRecord = DepthRecord,
+        GoldEarned = GoldEarned,
+        PassedTheWall = PassedTheWall
     };
 
     /// <summary>Puts the saved tiles back into a mine made from <see cref="Seed"/>, and the lift back.</summary>

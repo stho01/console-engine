@@ -148,7 +148,8 @@ public sealed class InventorySystem(Canvas canvas, Elevator elevator, SystemGrou
         _lines[1] = $" GOLD      {miner.Gold,8:N0}g        LADDERS   {miner.Ladders}";
         _lines[2] = $" OIL       {LampOil.Percent(miner.Oil),8}%        FLASKS    δ{miner.OilFlasks}/{LampOil.MaxFlasks}";
         _lines[3] = $" DYNAMITE  {dynamite,-17} LIFT      {lift}";
-        _lines[4] = $" CAMP      {(miner.HasDeepCamp ? $"built at {DeepCamp.Depth}m" : "not built")}";
+        var camp = miner.HasDeepCamp ? $"built at {DeepCamp.Depth}m" : "not built";
+        _lines[4] = $" CAMP      {camp,-17} RECORD    {miner.DepthRecord}m";
         _lines[5] = $"BAG{(Shop.IsHeavy(miner) ? "  HEAVY" : ""),-30}weight {weight}/{capacity}";
         _lines[6] = BagLine(OreIcon, "copper", miner.CopperOre, Tiles.CopperValue);
         _lines[7] = BagLine(OreIcon, "silver", miner.SilverOre, Tiles.SilverValue);
@@ -181,5 +182,5 @@ public sealed class InventorySystem(Canvas canvas, Elevator elevator, SystemGrou
         HashCode.Combine(miner.CopperOre, miner.SilverOre, miner.GoldOre, miner.GemOre, miner.Fossils, miner.Relics,
             miner.BagTier),
         HashCode.Combine(miner.ShovelTier, miner.PickaxeTier, miner.LampTier, miner.DetectorTier, miner.FossilsFound,
-            miner.RelicsFound));
+            miner.RelicsFound, miner.DepthRecord));
 }
