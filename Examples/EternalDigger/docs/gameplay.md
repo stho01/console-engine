@@ -201,6 +201,7 @@ The counter sells (`ShopCounter.Items`, prices in `Shop`):
 | Fill lamp | 2g per missing unit | Fills the tank; `FULL` when it is ([Lamp oil](#lamp-oil)) |
 | Oil flask | 60g | One flask for the pack, up to 5; poured in by itself when the lamp runs low |
 | Shovel | 300 / 900 / 2500g | Each tier digs 15% faster ([Upgrades](#upgrades)) |
+| Pickaxe | 350 / 1000 / 2800g | Each tier takes one hit off every tile, never below 1 ([Upgrades](#upgrades)) |
 | Lamp | 250 / 750 / 2000g | Each tier: +2 tiles of reach and −20% oil burn |
 | Bag | 200 / 600 / 1500g | Each tier: +10 weight carried before the climb slows ([Bag weight](#bag-weight)) |
 | Detector | 400 / 1200 / 3000g | Each tier: +3 tiles of glint radius, glints 20% more often |
@@ -245,12 +246,13 @@ The rescue still empties the bag, so greed costs more the heavier it gets.
 <a id="upgrades"></a>
 ## Upgrades
 
-Four lines, three tiers each, bought at the counter (`Upgrades.cs`, tiers on the `Miner`). The panel shows tier pips
+Five lines, three tiers each, bought at the counter (`Upgrades.cs`, tiers on the `Miner`). The panel shows tier pips
 (`●●○`) and `MAX` at the top tier.
 
 | Line | Per tier | At tier 3 | Identifier |
 |---|---|---|---|
 | Shovel | 15% less time between hits | 0.088 s instead of 0.16 s | `Upgrades.DigInterval`, `ShovelSpeedPerTier` |
+| Pickaxe | 1 hit less for every breakable tile (at least 1 hit stays); cracks follow the shorter count | 3 hits less: dirt at 0 m breaks in 1, gold at 100 m in 9 instead of 12 | `Upgrades.FewerHits`, `PickaxeHitsPerTier`, `Tiles.HitsToBreak`, `Mine.Hit` |
 | Lamp | +2 tiles of cone reach (the bright and lit bands scale with it: half and three quarters of the reach), oil burn ×0.8 | 14 tiles, ×0.51 burn | `Upgrades.LampReach`, `LampReachPerTier` |
 | Bag | +10 weight before the climb slows | +30 (capacity 50) | `BagCapacityPerTier` |
 | Detector | +3 tiles of glint radius; samples 20% more often | 18 tiles, every 0.041 s | `Upgrades.GlintRadius`, `GlintInterval` |

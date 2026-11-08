@@ -98,7 +98,7 @@ using [04](04-flows.md).
 | ` NO LADDERS LEFT!  Hold R to be rescued (the bag is lost) ` (blinking) | `HudSystem.NoLaddersWarning` | 0 ladders and below the surface |
 | ` DELIVER [E] ` | `PromptRenderSystem.DeliverText` | Standing at the door |
 | ` BUILD LIFT +10m [E] <price>g ` (red when short) | `PromptRenderSystem.BuildLiftText` | Standing at the lift sign |
-| ` ↑ LADDER ↓ ` / ` ↑ BLASTING KIT ↓ ` / ` ↑ DYNAMITE ↓ `, (or ` ↑ FILL LAMP ↓ `, ` ↑ OIL FLASK ↓ `, ` ↑ SHOVEL ↓ ` / `LAMP` / `BAG` / `DETECTOR`), then `HAVE <n>`, `OIL <n>%`, `UNLOCKS DYNAMITE` or tier pips `●●○`, then `<price>g [E]` (red when short), `FULL`, `MAX` or `SOLD OUT` | `PromptRenderSystem.DrawCounterPanel`, `Shop.LadderName`/`BlastingKitName`/`DynamiteName`, `KitUnlocksText`, `SoldOutText` | At the shop counter |
+| ` ↑ LADDER ↓ ` / ` ↑ BLASTING KIT ↓ ` / ` ↑ DYNAMITE ↓ `, (or ` ↑ FILL LAMP ↓ `, ` ↑ OIL FLASK ↓ `, ` ↑ SHOVEL ↓ ` / `PICKAXE` / `LAMP` / `BAG` / `DETECTOR`), then `HAVE <n>`, `OIL <n>%`, `UNLOCKS DYNAMITE` or tier pips `●●○`, then `<price>g [E]` (red when short), `FULL`, `MAX` or `SOLD OUT` | `PromptRenderSystem.DrawCounterPanel`, `Shop.LadderName`/`BlastingKitName`/`DynamiteName`, `KitUnlocksText`, `SoldOutText` | At the shop counter |
 | ` LIGHTING FUSE ` + bar | `HudSystem.PlantLabel`, row 1 | `E` held underground to plant |
 | `  ¡<n>` (red `¡`) | `HudSystem.DrawStatus`, row 0, after the lift | Dynamite, once the kit is bought |
 | `BLASTING`, ` ¡ ¡ ¡ ` | `HouseRenderSystem.BlastingText`, `BlastingDisplay` (shed) | Scenery |

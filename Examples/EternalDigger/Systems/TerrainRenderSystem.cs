@@ -1,6 +1,7 @@
 using System;
 using ConsoleEngine.Ecs;
 using ConsoleEngine.Ecs.Rendering;
+using EternalDigger.Components;
 using EternalDigger.Mining;
 using EternalDigger.Rendering;
 
@@ -22,12 +23,26 @@ public sealed class TerrainRenderSystem(Canvas canvas, Camera camera, Mine mine,
     private const int SpeckSalt = 103;
     private const int CrackSalt = 107;
 
+    private Query _miners;
+
+    /// <summary>Hits the miner's pickaxe takes off every tile, so the cracks show how close a tile is to breaking.</summary>
+    private int _fewerHits;
+
     //**********************************************************
     //** lifecycle
     //**********************************************************
 
+    protected override void OnCreate() => _miners = World.Query(Query.With<Miner>());
+
     protected override void OnUpdate(float deltaSeconds)
     {
+        _fewerHits = 0;
+        foreach (var chunk in _miners.GetChunks())
+        {
+            _fewerHits = Upgrades.FewerHits(chunk.GetSpan<Miner>()[0].PickaxeTier);
+            break;
+        }
+
         var originX = (int)MathF.Floor(camera.Position.X);
         var originY = (int)MathF.Floor(camera.Position.Y);
         var firstRow = Math.Max(Mine.SurfaceRow, FloorDiv(originY, Layout.TileHeight));
@@ -58,7 +73,7 @@ public sealed class TerrainRenderSystem(Canvas canvas, Camera camera, Mine mine,
         }
 
         var look = TileLooks.For(cell.Type);
-        var hitsToBreak = Tiles.HitsToBreak(cell.Type, Mine.Depth(row));
+        var hitsToBreak = Tiles.HitsToBreak(cell.Type, Mine.Depth(row), _fewerHits);
         var cracks = hitsToBreak > 0 ? (cell.Damage * 8 + hitsToBreak - 1) / hitsToBreak : 0;
         for (var dy = 0; dy < Layout.TileHeight; dy++)
         for (var dx = 0; dx < Layout.TileWidth; dx++)

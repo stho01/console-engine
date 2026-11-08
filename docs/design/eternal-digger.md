@@ -184,9 +184,9 @@ the miner (`PromptRenderSystem.DrawCounterPanel`) shows the item, what the miner
 
 ## Upgrades (Tier 2)
 
-`Upgrades.cs`: shovel (−15% dig interval per tier), lamp (+2 tiles reach), bag (+10 carried weight), detector (+3
+`Upgrades.cs`: shovel (−15% dig interval per tier), pickaxe (−1 hit per tile per tier, min 1; added in Tier 2b from player feedback), lamp (+2 tiles reach), bag (+10 carried weight), detector (+3
 glint radius, ×0.8 glint interval), three tiers each at the handover's prices, bought at the counter. Tiers are on
-the `Miner` and saved from format version 5. The shovel and lamp glyph colours follow the tiers.
+the `Miner` and saved from format version 5 (the pickaxe from 9). The shovel and lamp glyph colours follow the tiers.
 
 ## Lamp oil (Tier 2)
 

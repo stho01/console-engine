@@ -19,6 +19,7 @@ public class UpgradesTests
     [TestCase(UpgradeLine.Lamp, 250, 750, 2000)]
     [TestCase(UpgradeLine.Bag, 200, 600, 1500)]
     [TestCase(UpgradeLine.Detector, 400, 1200, 3000)]
+    [TestCase(UpgradeLine.Pickaxe, 350, 1000, 2800)]
     public void TryBuy_ThreeTimes_PaysEachTierThenIsMaxed(UpgradeLine line, int first, int second, int third)
     {
         var miner = new Miner { Gold = first + second + third };
@@ -55,6 +56,39 @@ public class UpgradesTests
         Assert.That(miner.DetectorTier, Is.EqualTo(1));
         Assert.That(Shop.Owned(ShopItem.Detector, miner), Is.EqualTo(1));
     }
+
+    [Test]
+    public void ShopTryBuy_Pickaxe_BuysThePickaxeLine()
+    {
+        var miner = new Miner { Gold = 350 };
+
+        Assert.That(ShopCounter.IsUpgrade(ShopItem.Pickaxe), Is.True);
+        Assert.That(Shop.TryBuy(ShopItem.Pickaxe, ref miner), Is.True);
+        Assert.That(miner.PickaxeTier, Is.EqualTo(1));
+        Assert.That(miner.ShovelTier, Is.Zero);
+        Assert.That(ShopCounter.Name(ShopItem.Pickaxe, miner), Is.EqualTo(Upgrades.PickaxeName));
+    }
+
+    [Test]
+    public void Hit_BestPickaxe_BreaksStoneInThreeFewerHits()
+    {
+        var mine = new Mine(Seed);
+        var row = Mine.SurfaceRow + 30;
+        mine.At(5, row) = new TileCell { Type = TileType.Stone };
+        var normal = Tiles.HitsToBreak(TileType.Stone, Mine.Depth(row));
+        var fewer = Upgrades.FewerHits(Upgrades.MaxTier);
+
+        var hits = 0;
+        while (mine.Hit(5, row, fewer).Outcome != DigOutcome.Broken)
+            hits++;
+
+        Assert.That(fewer, Is.EqualTo(3));
+        Assert.That(hits + 1, Is.EqualTo(normal - 3));
+    }
+
+    [Test]
+    public void HitsToBreak_PickaxeBetterThanTheTile_NeedsOneHit() =>
+        Assert.That(Tiles.HitsToBreak(TileType.Dirt, 0, fewerHits: 10), Is.EqualTo(1));
 
     [Test]
     public void Effects_ByTier_MatchTheRules()

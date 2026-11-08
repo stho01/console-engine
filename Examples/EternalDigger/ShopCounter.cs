@@ -13,7 +13,8 @@ public enum ShopItem : byte
     Detector,
     Blasting,
     /// <summary>A flask of lamp oil carried in the pack (<see cref="LampOil.TryPour"/>).</summary>
-    OilFlask
+    OilFlask,
+    Pickaxe
 }
 
 /// <summary>
@@ -30,7 +31,7 @@ public sealed class ShopCounter
     /// <summary>The counter's items, top to bottom.</summary>
     public static readonly ShopItem[] Items =
     [
-        ShopItem.Ladder, ShopItem.LampOil, ShopItem.OilFlask, ShopItem.Shovel, ShopItem.Lamp, ShopItem.Bag,
+        ShopItem.Ladder, ShopItem.LampOil, ShopItem.OilFlask, ShopItem.Shovel, ShopItem.Pickaxe, ShopItem.Lamp, ShopItem.Bag,
         ShopItem.Detector, ShopItem.Blasting
     ];
 
@@ -60,10 +61,11 @@ public sealed class ShopCounter
         }
     }
 
-    public static bool IsUpgrade(ShopItem item) => item is >= ShopItem.Shovel and <= ShopItem.Detector;
+    public static bool IsUpgrade(ShopItem item) => item is >= ShopItem.Shovel and <= ShopItem.Detector or ShopItem.Pickaxe;
 
     /// <summary>The upgrade line an upgrade item buys. Only for <see cref="IsUpgrade"/> items.</summary>
-    public static UpgradeLine Line(ShopItem item) => (UpgradeLine)(item - ShopItem.Shovel);
+    public static UpgradeLine Line(ShopItem item) =>
+        item == ShopItem.Pickaxe ? UpgradeLine.Pickaxe : (UpgradeLine)(item - ShopItem.Shovel);
 
     /// <summary>The selected item's name on the panel.</summary>
     public static string Name(ShopItem item, in Miner miner) => item switch

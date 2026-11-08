@@ -5,7 +5,7 @@ using EternalDigger.Systems;
 
 namespace EternalDigger;
 
-/// <summary>The four upgrade lines sold at the shop counter, three tiers each.</summary>
+/// <summary>The five upgrade lines sold at the shop counter, three tiers each.</summary>
 public enum UpgradeLine : byte
 {
     /// <summary>Digs faster.</summary>
@@ -15,7 +15,9 @@ public enum UpgradeLine : byte
     /// <summary>Carries more before the weight slows the climb.</summary>
     Bag,
     /// <summary>Ore glints from further away, and more often.</summary>
-    Detector
+    Detector,
+    /// <summary>Every tile takes fewer hits.</summary>
+    Pickaxe
 }
 
 /// <summary>Upgrade prices and what each tier does. The tiers live on the <see cref="Miner"/>.</summary>
@@ -29,6 +31,9 @@ public static class Upgrades
 
     /// <summary>Each shovel tier takes this share off <c>MinerControlSystem.DigInterval</c>.</summary>
     public const float ShovelSpeedPerTier = .15f;
+
+    /// <summary>Each pickaxe tier takes this many hits off every breakable tile (never below 1 hit).</summary>
+    public const int PickaxeHitsPerTier = 1;
 
     /// <summary>Each lamp tier adds this many tiles to the cone's reach.</summary>
     public const float LampReachPerTier = 2f;
@@ -49,11 +54,13 @@ public static class Upgrades
     public const string LampName = "LAMP";
     public const string BagName = "BAG";
     public const string DetectorName = "DETECTOR";
+    public const string PickaxeName = "PICKAXE";
 
     private static readonly int[] ShovelPrices = [300, 900, 2500];
     private static readonly int[] LampPrices = [250, 750, 2000];
     private static readonly int[] BagPrices = [200, 600, 1500];
     private static readonly int[] DetectorPrices = [400, 1200, 3000];
+    private static readonly int[] PickaxePrices = [350, 1000, 2800];
 
     //**********************************************************
     //** public methods
@@ -64,6 +71,7 @@ public static class Upgrades
         UpgradeLine.Shovel => miner.ShovelTier,
         UpgradeLine.Lamp => miner.LampTier,
         UpgradeLine.Bag => miner.BagTier,
+        UpgradeLine.Pickaxe => miner.PickaxeTier,
         _ => miner.DetectorTier
     };
 
@@ -87,6 +95,7 @@ public static class Upgrades
             case UpgradeLine.Shovel: miner.ShovelTier++; break;
             case UpgradeLine.Lamp: miner.LampTier++; break;
             case UpgradeLine.Bag: miner.BagTier++; break;
+            case UpgradeLine.Pickaxe: miner.PickaxeTier++; break;
             default: miner.DetectorTier++; break;
         }
 
@@ -98,12 +107,16 @@ public static class Upgrades
         UpgradeLine.Shovel => ShovelName,
         UpgradeLine.Lamp => LampName,
         UpgradeLine.Bag => BagName,
+        UpgradeLine.Pickaxe => PickaxeName,
         _ => DetectorName
     };
 
     /// <summary>Seconds between shovel hits at a shovel tier.</summary>
     public static float DigInterval(int shovelTier) =>
         MinerControlSystem.DigInterval * (1f - ShovelSpeedPerTier * Math.Clamp(shovelTier, 0, MaxTier));
+
+    /// <summary>Hits a pickaxe tier takes off every tile (<see cref="Tiles.HitsToBreak"/>).</summary>
+    public static int FewerHits(int pickaxeTier) => PickaxeHitsPerTier * Math.Clamp(pickaxeTier, 0, MaxTier);
 
     /// <summary>Tiles the headlamp reaches at a lamp tier, with a full tank.</summary>
     public static float LampReach(int lampTier) =>
@@ -126,6 +139,7 @@ public static class Upgrades
         UpgradeLine.Shovel => ShovelPrices,
         UpgradeLine.Lamp => LampPrices,
         UpgradeLine.Bag => BagPrices,
+        UpgradeLine.Pickaxe => PickaxePrices,
         _ => DetectorPrices
     };
 }

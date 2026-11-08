@@ -273,7 +273,7 @@ public sealed class MinerControlSystem(Mine mine, Elevator elevator, EffectSpawn
             return;
         }
 
-        var result = mine.Hit(column, row);
+        var result = mine.Hit(column, row, Upgrades.FewerHits(miner.PickaxeTier));
         effects.DigHit(commands, column, row, result.Type, miner.SwingDirection);
 
         if (result.Outcome != DigOutcome.Broken)

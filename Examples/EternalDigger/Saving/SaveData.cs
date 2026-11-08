@@ -43,6 +43,9 @@ public sealed class SaveData
     public int BagTier { get; init; }
     public int DetectorTier { get; init; }
 
+    /// <summary>Pickaxe tier, 0 to <see cref="Upgrades.MaxTier"/>. Saves from before the pickaxe load with 0.</summary>
+    public int PickaxeTier { get; init; }
+
     /// <summary>Lamp oil. Saves from before lamp oil load with a full tank.</summary>
     public float Oil { get; init; } = LampOil.TankSize;
 
@@ -105,6 +108,7 @@ public sealed class SaveData
             DetectorTier = miner.DetectorTier,
             Oil = miner.Oil,
             OilFlasks = miner.OilFlasks,
+            PickaxeTier = miner.PickaxeTier,
             Dynamite = miner.Dynamite + miner.LitDynamite,
             ElevatorSegments = elevator.Segments,
             ElevatorCarRow = elevator.CarTargetRow,
@@ -137,7 +141,8 @@ public sealed class SaveData
         BagTier = BagTier,
         DetectorTier = DetectorTier,
         Oil = Oil,
-        OilFlasks = OilFlasks
+        OilFlasks = OilFlasks,
+        PickaxeTier = PickaxeTier
     };
 
     /// <summary>Puts the saved tiles back into a mine made from <see cref="Seed"/>, and the lift back.</summary>

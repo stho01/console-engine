@@ -87,8 +87,11 @@ public sealed class Mine
     public bool IsSupported(int column, int row) =>
         HasLadder(column, row) || IsSolid(column, row + 1) || HasLadder(column, row + 1);
 
-    /// <summary>One shovel hit. The tile breaks (becomes air) on its last hit.</summary>
-    public DigResult Hit(int column, int row)
+    /// <summary>
+    /// One shovel hit. The tile breaks (becomes air) on its last hit; a better pickaxe needs
+    /// <paramref name="fewerHits"/> fewer (<see cref="Tiles.HitsToBreak"/>).
+    /// </summary>
+    public DigResult Hit(int column, int row, int fewerHits = 0)
     {
         if (!IsInside(column, row))
             return DigResult.Nothing;
@@ -98,7 +101,7 @@ public sealed class Mine
             return DigResult.Nothing;
 
         var type = cell.Type;
-        var hitsToBreak = Tiles.HitsToBreak(type, Depth(row));
+        var hitsToBreak = Tiles.HitsToBreak(type, Depth(row), fewerHits);
         cell.Damage++;
         if (cell.Damage < hitsToBreak)
             return new DigResult(DigOutcome.Damaged, type, cell.Damage, hitsToBreak);

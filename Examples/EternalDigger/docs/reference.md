@@ -16,7 +16,7 @@ Examples/EternalDigger/
 ├── MinerInput.cs               one frame of miner keys (also Use / UsePressed for E, Up/DownPressed); FromKeyboard
 ├── ShopCounter.cs              the counter's selection (Previous, Next, Select, Name, IsUpgrade, Line); ShopItem
 ├── LampOil.cs                  the tank: TankSize, BurnRate, Reach, IsLow, FillPrice, TryFill; flasks: TryBuyFlask, TryPour
-├── Upgrades.cs                 upgrade prices and effects per tier: NextPrice, TryBuy, DigInterval, LampReach,
+├── Upgrades.cs                 upgrade prices and effects per tier: NextPrice, TryBuy, DigInterval, FewerHits, LampReach,
 │                               GlintRadius, GlintInterval; UpgradeLine
 ├── Scenes/
 │   ├── MineScene.cs            services, the miner entity, systems in run order; Save() for Esc
@@ -94,7 +94,7 @@ Examples/EternalDigger/
 
 | Component | Fields | On |
 |---|---|---|
-| `Miner` | `Column`, `Row` (tile; the target while moving), `MoveFrom` (tile, `Vector2`), `MoveElapsed`, `MoveDuration` (0 = idle), `Motion` (`Idle`, `Walking`, `Climbing`, `Falling`), `ClimbStreak`, `IsRiding`, `FallRows`, `FacingX` (−1/1), `LampDirection`, `DigCooldown`, `SwingTime`, `SwingDirection` (`Point`), `RescueHold`, `PlantHold`, `HasBlastingKit`, `Dynamite`, `LitDynamite`, `Oil`, `OilFlasks`, `ShovelTier`, `LampTier`, `BagTier`, `DetectorTier`, `Gold`, `Ladders`, `CopperOre`, `SilverOre`, `GoldOre`, `GemOre`, `Fossils`, `Relics`, `FossilsFound`, `RelicsFound`. Read-only also `RareFinds`. Read-only: `IsMoving`, `OreCount` | The miner |
+| `Miner` | `Column`, `Row` (tile; the target while moving), `MoveFrom` (tile, `Vector2`), `MoveElapsed`, `MoveDuration` (0 = idle), `Motion` (`Idle`, `Walking`, `Climbing`, `Falling`), `ClimbStreak`, `IsRiding`, `FallRows`, `FacingX` (−1/1), `LampDirection`, `DigCooldown`, `SwingTime`, `SwingDirection` (`Point`), `RescueHold`, `PlantHold`, `HasBlastingKit`, `Dynamite`, `LitDynamite`, `Oil`, `OilFlasks`, `ShovelTier`, `LampTier`, `BagTier`, `DetectorTier`, `PickaxeTier`, `Gold`, `Ladders`, `CopperOre`, `SilverOre`, `GoldOre`, `GemOre`, `Fossils`, `Relics`, `FossilsFound`, `RelicsFound`. Read-only also `RareFinds`. Read-only: `IsMoving`, `OreCount` | The miner |
 | `Particle` | `Age`, `Lifetime`, `Style` (`ParticleStyle`), `Variant` (random byte). Read-only: `Progress` | Every particle |
 | `Physics` | `Gravity` (cells/s²), `Drag` (per second) | Every particle |
 | `TileCollider` | tag | Debris, coins |
@@ -152,7 +152,8 @@ Static rule classes: `Tiles`, `Shop`, `Upgrades`, `Layout`, `TileLooks`, `Partic
 | `Shop.CopperWeight` / `SilverWeight` / `GoldWeight` / `GemWeight` / `RareFindWeight` | 1 / 1 / 2 / 2 / 3 | Bag weight per piece |
 | `Shop.BaseBagCapacity` / `WeightStep` | 20 / 10 | Weight before the climb slows; weight per slowdown step |
 | `Shop.ClimbSlowdownPerStep` / `MaxClimbSlowdown` / `OilPerStep` | 20% / 3× / +50% | Per step: slower climb up (capped), more oil while climbing up |
-| `Upgrades` prices (shovel / lamp / bag / detector) | 300-900-2500 / 250-750-2000 / 200-600-1500 / 400-1200-3000 | Per tier |
+| `Upgrades` prices (shovel / pickaxe / lamp / bag / detector) | 300-900-2500 / 350-1000-2800 / 250-750-2000 / 200-600-1500 / 400-1200-3000 | Per tier |
+| `Upgrades.PickaxeHitsPerTier` | 1 hit | Pickaxe: hits off every tile per tier (min 1 left) |
 | `Upgrades.ShovelSpeedPerTier` / `LampReachPerTier` / `LampBurnPerTier` / `BagCapacityPerTier` / `DetectorRadiusPerTier` / `DetectorIntervalPerTier` | 15% / 2 tiles / ×0.8 / 10 / 3 tiles / ×0.8 | Effect per tier |
 | `GlintSystem.Interval` / `Radius` | 0.08 s / 9 tiles | Starting detector |
 | `LampOil.TankSize` / `SecondsPerUnit` / `LowShare` / `LowReach` / `PricePerUnit` | 100 / 3 s / 30% / 3 tiles / 2g | The tank |
@@ -198,7 +199,7 @@ Static rule classes: `Tiles`, `Shop`, `Upgrades`, `Layout`, `TileLooks`, `Partic
 | ` BUILD LIFT +10m [E] <price>g ` | `PromptRenderSystem.BuildLiftText` |
 | ` LIFT BLOCKED BY OBSIDIAN ` | `PromptRenderSystem.LiftBlockedText` |
 | ` HOLD [E] + ARROW: DYNAMITE ` / ` TOO HARD: DYNAMITE AT THE SHOP ` | `PromptRenderSystem.PlantHintText`, `NeedDynamiteText` |
-| ` ↑ <ITEM> ↓ ` / `HAVE <n>` or `UNLOCKS DYNAMITE` / `<price>g [E]` or `SOLD OUT` (counter panel) | `PromptRenderSystem.DrawCounterPanel`, `KitUnlocksText`, `SoldOutText`, `MaxTierText` (`MAX`), `FullText` (`FULL`), `OIL <n>%`, pips `TierOn`/`TierOff` (`●`/`○`); item names `Shop.LadderName`, `BlastingKitName`, `DynamiteName`, `Upgrades.ShovelName`, `LampName`, `BagName`, `DetectorName`, `LampOil.FillName` (`FILL LAMP`), `FlaskName` (`OIL FLASK`) |
+| ` ↑ <ITEM> ↓ ` / `HAVE <n>` or `UNLOCKS DYNAMITE` / `<price>g [E]` or `SOLD OUT` (counter panel) | `PromptRenderSystem.DrawCounterPanel`, `KitUnlocksText`, `SoldOutText`, `MaxTierText` (`MAX`), `FullText` (`FULL`), `OIL <n>%`, pips `TierOn`/`TierOff` (`●`/`○`); item names `Shop.LadderName`, `BlastingKitName`, `DynamiteName`, `Upgrades.ShovelName`, `PickaxeName`, `LampName`, `BagName`, `DetectorName`, `LampOil.FillName` (`FILL LAMP`), `FlaskName` (`OIL FLASK`) |
 | ` LIGHTING FUSE ` + bar | `HudSystem.PlantLabel` |
 | `  ¡<n>` (dynamite), `  OIL ▮▮▮▮▮▯▯▯`, `╟╢<n>` (ladders) (HUD row 0) | `HudSystem.DrawStatus` |
 | `BLASTING`, ` ¡ ¡ ¡ ` (shed) | `HouseRenderSystem.BlastingText`, `BlastingDisplay` |

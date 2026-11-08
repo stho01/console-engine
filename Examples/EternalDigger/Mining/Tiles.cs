@@ -73,8 +73,11 @@ public static class Tiles
         _ => 0
     };
 
-    /// <summary>Shovel hits to break a tile at a depth in metres (<see cref="Mine.Depth"/>). 0 if unbreakable.</summary>
-    public static int HitsToBreak(TileType type, int depth)
+    /// <summary>
+    /// Shovel hits to break a tile at a depth in metres (<see cref="Mine.Depth"/>), <paramref name="fewerHits"/> fewer
+    /// with a better pickaxe (<see cref="Upgrades.FewerHits"/>) but never under 1. 0 if unbreakable.
+    /// </summary>
+    public static int HitsToBreak(TileType type, int depth, int fewerHits = 0)
     {
         var baseHits = type switch
         {
@@ -92,6 +95,6 @@ public static class Tiles
             _ => 0
         };
 
-        return baseHits == 0 ? 0 : baseHits + Math.Max(0, depth) / DepthPerExtraHit;
+        return baseHits == 0 ? 0 : Math.Max(1, baseHits + Math.Max(0, depth) / DepthPerExtraHit - fewerHits);
     }
 }

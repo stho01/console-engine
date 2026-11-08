@@ -85,6 +85,7 @@ public struct Miner
     public int LampTier;
     public int BagTier;
     public int DetectorTier;
+    public int PickaxeTier;
 
     // Inventory
     public int Gold;

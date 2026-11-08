@@ -220,6 +220,16 @@ public class SaveFileTests
 
         Assert.That(status, Is.EqualTo(SaveStatus.Loaded));
         Assert.That(loaded.OilFlasks, Is.EqualTo(2));
+        Assert.That(loaded.PickaxeTier, Is.Zero);
+    }
+
+    [Test]
+    public void Read_Version9Save_LoadsThePickaxe()
+    {
+        var status = SaveFile.Read(OldSave(9), out var loaded);
+
+        Assert.That(status, Is.EqualTo(SaveStatus.Loaded));
+        Assert.That(loaded.PickaxeTier, Is.EqualTo(2));
     }
 
     [Test]
@@ -351,7 +361,8 @@ public class SaveFileTests
             Relics = 1,
             FossilsFound = 5,
             RelicsFound = 3,
-            OilFlasks = 2
+            OilFlasks = 2,
+            PickaxeTier = 3
         };
         var elevator = new Elevator();
         var rich = new Miner { Gold = 10_000 };
@@ -364,7 +375,7 @@ public class SaveFileTests
 
     /// <summary>
     /// A hand-written old save: gold 55, one tile; v2 a 30 m lift, v3 9 gems, v4 the kit and 5 sticks, v5 tiers 1-2-0-3,
-    /// v6 25 oil, v7 a fossil in the bag and 2 found, v8 2 oil flasks.
+    /// v6 25 oil, v7 a fossil in the bag and 2 found, v8 2 oil flasks, v9 pickaxe tier 2.
     /// </summary>
     private static MemoryStream OldSave(int version)
     {
@@ -407,6 +418,9 @@ public class SaveFileTests
 
             if (version >= 8)
                 writer.Write(2);
+
+            if (version >= 9)
+                writer.Write((byte)2);
 
             writer.Write(1);
             writer.Write(13);
@@ -452,6 +466,7 @@ public class SaveFileTests
         Assert.That(actual.FossilsFound, Is.EqualTo(expected.FossilsFound));
         Assert.That(actual.RelicsFound, Is.EqualTo(expected.RelicsFound));
         Assert.That(actual.OilFlasks, Is.EqualTo(expected.OilFlasks));
+        Assert.That(actual.PickaxeTier, Is.EqualTo(expected.PickaxeTier));
         Assert.That(actual.ElevatorSegments, Is.EqualTo(expected.ElevatorSegments));
         Assert.That(actual.ElevatorCarRow, Is.EqualTo(expected.ElevatorCarRow));
         Assert.That(actual.Changes, Is.EqualTo(expected.Changes));
