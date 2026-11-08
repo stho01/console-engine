@@ -56,6 +56,7 @@ Support/user words are **[inferred]**. The team may also use Norwegian terms. Ad
 | act 1 / act 2 (EternalDigger) | The layers above and below the wall: dirt/stone/granite with copper/silver/gold, then slate/quartzite with gems | `Mine.Underground`, `Mine.BelowTheWall` |
 | gem (EternalDigger) | The act 2 ore, 250g, glints magenta | `TileType.Gem`, `Miner.GemOre` |
 | deep camp / camp / tent / trading post (EternalDigger) | The 1500g camp at 100 m beside the lift's bottom landing: sells the bag at 70%, supplies at ×1.5 | `DeepCamp`, `Miner.HasDeepCamp`, `CampRenderSystem` |
+| gas / gas pocket / flare / shimmer (EternalDigger) | Gas in deep caves: a lit lamp within 2 tiles makes it flare and blows the lamp out for 3 s; harmless | `TileCell.HasGas`, `GasPockets`, `GasSystem`, `Miner.LampOut` |
 | dynamite / stick / kit / blast (EternalDigger) | The tool through the wall: the kit unlocks buying sticks; a planted stick blows up 3 × 3 | `Miner.HasBlastingKit`, `Miner.Dynamite`, `Dynamite`, `DynamiteSystem` |
 | oil / lamp oil / tank (EternalDigger) | What the headlamp burns underground; low oil shrinks the light | `LampOil`, `Miner.Oil`, `Headlamp` |
 | rare find / fossil / relic / trophy (EternalDigger) | Very rare single tiles that sell high: `§` fossils in act 1, `¥` relics below the wall | `TileType.Fossil`/`Relic`, `Tiles.IsRareFind`, `Miner.FossilsFound` |

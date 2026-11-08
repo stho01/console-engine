@@ -1,6 +1,6 @@
 namespace EternalDigger.Mining;
 
-/// <summary>One tile of the <see cref="Mine"/>. 4 bytes.</summary>
+/// <summary>One tile of the <see cref="Mine"/>. 5 bytes.</summary>
 public struct TileCell
 {
     public TileType Type;
@@ -13,4 +13,7 @@ public struct TileCell
 
     /// <summary>The headlamp or daylight has lit this tile once. Seen tiles stay faintly visible in the dark.</summary>
     public bool Seen;
+
+    /// <summary>A gas pocket fills this (air) tile: a lit lamp nearby makes it flare (<see cref="GasPockets"/>).</summary>
+    public bool HasGas;
 }

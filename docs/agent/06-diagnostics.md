@@ -110,6 +110,7 @@ using [04](04-flows.md).
 | ` TOO HARD: DYNAMITE AT THE SHOP ` (red) | `PromptRenderSystem.NeedDynamiteText` | Idle underground facing obsidian without the kit or sticks |
 | `FOSSIL!` / `RELIC!` (white, floating) | `FloatingTextRenderSystem.FossilText`, `RelicText` | A rare find was dug out |
 | `OIL +<n>` (yellow, floating) | `FloatingTextRenderSystem.OilLabel` | A carried oil flask poured itself into a low lamp |
+| `GAS!` (yellow, floating) | `FloatingTextRenderSystem.GasText` | A gas pocket flared; the lamp is out for 3 s |
 | `TOO HARD` (red, floating) | `FloatingTextRenderSystem.TooHardText` | The shovel hit obsidian (at most once a second) |
 | ` CALL LIFT [E] ` / ` GET IN [E] ` | `PromptRenderSystem.CallLiftText`, `BoardLiftText` | On a lift landing, car away / there |
 | ` ↑↓ RIDE   ←→ GET OUT ` | `PromptRenderSystem.RideText` | In the stopped car |

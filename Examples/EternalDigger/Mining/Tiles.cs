@@ -32,6 +32,12 @@ public static class Tiles
     public const int GraniteDepth = 40;
     public const int CaveDepth = 6;
 
+    /// <summary>Gas pockets fill caves from this depth down (act 1's deep caves and act 2).</summary>
+    public const int GasDepth = 50;
+
+    /// <summary>Share of 2 x 2 cave areas from <see cref="GasDepth"/> whose air tiles hold gas.</summary>
+    public const float GasChance = .3f;
+
     /// <summary>Depth of the top of the obsidian wall, the end of act 1.</summary>
     public const int WallDepth = 110;
 

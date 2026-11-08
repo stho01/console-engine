@@ -279,6 +279,27 @@ public class SaveFileTests
     }
 
     [Test]
+    public void Read_GasFlagInAVersion10Save_ReturnsCorrupt()
+    {
+        var bytes = OldSave(10).ToArray();
+        bytes[^1] |= 4;
+
+        Assert.That(SaveFile.Read(new MemoryStream(bytes), out _), Is.EqualTo(SaveStatus.Corrupt));
+    }
+
+    [Test]
+    public void Read_Version11Save_LoadsGasOnAChangedTile()
+    {
+        var bytes = OldSave(11).ToArray();
+        bytes[^1] |= 4;
+
+        var status = SaveFile.Read(new MemoryStream(bytes), out var loaded);
+
+        Assert.That(status, Is.EqualTo(SaveStatus.Loaded));
+        Assert.That(loaded.Changes[0].Cell.HasGas, Is.True);
+    }
+
+    [Test]
     public void Read_OutOfRangeValues_ReturnsCorrupt()
     {
         var badColumn = new SaveData { Seed = Seed, Column = Mine.Columns, Row = Layout.GroundRow };
@@ -348,6 +369,7 @@ public class SaveFileTests
         mine.TryPlaceLadder(5, row);
         mine.At(6, row) = new TileCell { Type = TileType.Gold, Damage = 3, Seen = true };
         mine.At(7, row + 70).Seen = true;
+        mine.At(8, row + 2) = new TileCell { Type = TileType.Air, HasGas = true };
         var miner = new Miner
         {
             Column = 5,

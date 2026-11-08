@@ -29,12 +29,14 @@ Examples/EternalDigger/
 │   ├── SaveFile.cs             binary versioned file: Save, Load, Read, Write, SaveStatus, DefaultPath
 │   └── GameSaver.cs            the running mine's slot: Request, Save, Saves, LastSaveFailed
 ├── Mining/
-│   ├── Mine.cs                 the endless seeded grid: At, Hit, TryPlaceLadder, IsSupported, WallBottomDepth, Noise
+│   ├── Mine.cs                 the endless seeded grid: At, Hit, TryPlaceLadder, TryTakeLadder, IsSupported,
+│   │                           WallBottomDepth, Noise; generates gas in caves
 │   ├── Tiles.cs                per-type rules: solid, breakable, ore value, hits, start depths
 │   ├── TileType.cs             Air, Grass, Dirt, Stone, Granite, Copper, Silver, Gold, Bedrock, then (act 2)
 │   │                           Obsidian, Slate, Quartzite, Gem, then Fossil, Relic. New types go at the end (saves
 │   │                           store the byte)
-│   ├── TileCell.cs             one tile: Type, Damage, HasLadder, Seen
+│   ├── TileCell.cs             one tile: Type, Damage, HasLadder, Seen, HasGas
+│   ├── GasPockets.cs           gas pockets: TryFindNear, Ignite (flood fill, preallocated), Burned
 │   ├── TileChange.cs           a saved tile: Column, Row, Cell
 │   └── Elevator.cs             the lift: TryBuild, Send, Update, landings, car, Restore; ElevatorBuild
 │   ├── DigResult.cs            what a hit did: DigOutcome (Nothing, Damaged, Broken), Type, Hits
@@ -42,7 +44,7 @@ Examples/EternalDigger/
 │   ├── Miner.cs                the player: grid position, motion, lamp, dig timers, dynamite, inventory
 │   ├── Dynamite.cs             a planted, lit stick: Column, Row, Fuse, SparkTimer
 │   └── Particle.cs             Particle, ParticleStyle, Physics, TileCollider, Mist, FloatingText
-├── Systems/                    26 systems, listed below
+├── Systems/                    27 systems, listed below
 ├── Effects/
 │   ├── EffectSpawner.cs        creates every particle and floating number
 │   ├── ParticleLooks.cs        characters and colours per style over a lifetime; GlyphAt
@@ -66,16 +68,17 @@ Examples/EternalDigger/
 | 2 | `InteractionSystem` | `Mine`, `Elevator`, `ShopCounter`, `EffectSpawner`, `GameSaver`, camp `ShopCounter` | `Miner` | `E` at the door, the counter (Up/Down choose), lift sign, a landing or the deep camp counter (sell the bag, camp prices; buying `DEEP CAMP` runs `DeepCamp.Build`): `Shop.Deliver`/`TryBuy`, `Elevator.TryBuild`, call/get in; coins, pops, texts; asks for a save. Public `Interact(...)` |
 | 3 | `MinerMotionSystem` | `Mine`, `EffectSpawner` | `Miner, Position` | Slides `Position`, ends moves, foot and landing dust, counts down `DigCooldown`/`SwingTime`. Public `Move(...)` |
 | 4 | `ElevatorSystem` | `Elevator` | `Miner, Position` | `Elevator.Update`; carries the rider, picks up a caller. Public `Carry(...)` |
-| 5 | `DynamiteSystem` | `Mine`, `EffectSpawner` | `Dynamite, Position`; `Miner` | Fuses, sparks and smoke; blasts (clear 3 × 3, bag ore, destroy ladders, push, chain). Public `Blast(...)` |
-| 6 | `CameraSystem` | `Camera`, `RenderConsole`, `ScreenShake`, `Random` | `Miner, Position` | Vertical follow, shake, whole-cell `Camera.Position` |
-| 7 | `LampSystem` | `Headlamp`, `EffectSpawner`, `Random` | `Miner, Position` | Burns oil underground; pours a carried flask into a low lamp (`OIL +40`); sets the `Headlamp`; lamp smoke when low. Public static `Burn(...)` |
-| 8 | `LightingSystem` | `Mine`, `LightMap`, `Camera`, `Headlamp` | `Miner, Position` | `LightMap.Compute` for the rows on screen |
-| 9 | `GlintSystem` | `Mine`, `LightMap`, `Camera`, `EffectSpawner`, `Random` | `Miner` | Ore glints near the miner, at a fixed rate |
-| 10 | `MistSystem` | `Mine`, `LightMap`, `Camera`, `EffectSpawner`, `Random` | `Mist` | Keeps up to 40 mist particles in lit caves |
-| 11 | `ParticlePhysicsSystem` | `Mine` | `Particle, Position, Velocity, Physics` | Gravity, drag, movement, landing on rock (`TileCollider`) |
-| 12 | `ParticleLifetimeSystem` | — | `Particle, Glyph` | Ages particles, sets their glyph, destroys expired ones |
-| 13 | `FloatingTextSystem` | — | `FloatingText, Position, Velocity` | Moves floating texts up, destroys expired ones |
-| 14 | `SaveSystem` | `GameSaver` | `Miner` | Saves on request, or after `GameSaver.AutosaveInterval` s underground |
+| 5 | `DynamiteSystem` | `Mine`, `EffectSpawner`, `GasPockets` | `Dynamite, Position`; `Miner` | Fuses, sparks and smoke; blasts (clear 3 × 3, bag ore, destroy ladders, push, chain, big gas flares within 3 tiles). Public `Blast(...)` |
+| 6 | `GasSystem` | `Mine`, `GasPockets`, `EffectSpawner`, `Random` | `Miner`; `Gas` | Gas shimmer near the miner; a lit lamp within 2 tiles flares the pocket (`GAS!`, lamp out 3 s, −5 oil). Public `Check(...)` |
+| 7 | `CameraSystem` | `Camera`, `RenderConsole`, `ScreenShake`, `Random` | `Miner, Position` | Vertical follow, shake, whole-cell `Camera.Position` |
+| 8 | `LampSystem` | `Headlamp`, `EffectSpawner`, `Random` | `Miner, Position` | Burns oil underground; pours a carried flask into a low lamp (`OIL +40`); sets the `Headlamp`; lamp smoke when low. Public static `Burn(...)` |
+| 9 | `LightingSystem` | `Mine`, `LightMap`, `Camera`, `Headlamp` | `Miner, Position` | `LightMap.Compute` for the rows on screen |
+| 10 | `GlintSystem` | `Mine`, `LightMap`, `Camera`, `EffectSpawner`, `Random` | `Miner` | Ore glints near the miner, at a fixed rate |
+| 11 | `MistSystem` | `Mine`, `LightMap`, `Camera`, `EffectSpawner`, `Random` | `Mist` | Keeps up to 40 mist particles in lit caves |
+| 12 | `ParticlePhysicsSystem` | `Mine` | `Particle, Position, Velocity, Physics` | Gravity, drag, movement, landing on rock (`TileCollider`) |
+| 13 | `ParticleLifetimeSystem` | — | `Particle, Glyph` | Ages particles, sets their glyph, destroys expired ones |
+| 14 | `FloatingTextSystem` | — | `FloatingText, Position, Velocity` | Moves floating texts up, destroys expired ones |
+| 15 | `SaveSystem` | `GameSaver` | `Miner` | Saves on request, or after `GameSaver.AutosaveInterval` s underground |
 
 ### Presentation (`MineScene.Presentation`)
 
@@ -98,7 +101,7 @@ Examples/EternalDigger/
 
 | Component | Fields | On |
 |---|---|---|
-| `Miner` | `Column`, `Row` (tile; the target while moving), `MoveFrom` (tile, `Vector2`), `MoveElapsed`, `MoveDuration` (0 = idle), `Motion` (`Idle`, `Walking`, `Climbing`, `Falling`, `Jumping`), `ClimbStreak`, `IsRiding`, `FallRows`, `FacingX` (−1/1), `LampDirection`, `DigCooldown`, `SwingTime`, `SwingDirection` (`Point`), `RescueHold`, `PlantHold`, `HasBlastingKit`, `Dynamite`, `LitDynamite`, `Oil`, `OilFlasks`, `ShovelTier`, `LampTier`, `BagTier`, `DetectorTier`, `PickaxeTier`, `Gold`, `Ladders`, `CopperOre`, `SilverOre`, `GoldOre`, `GemOre`, `Fossils`, `Relics`, `FossilsFound`, `RelicsFound`. Read-only also `RareFinds`. Read-only: `IsMoving`, `OreCount` | The miner |
+| `Miner` | `Column`, `Row` (tile; the target while moving), `MoveFrom` (tile, `Vector2`), `MoveElapsed`, `MoveDuration` (0 = idle), `Motion` (`Idle`, `Walking`, `Climbing`, `Falling`, `Jumping`), `ClimbStreak`, `IsRiding`, `FallRows`, `FacingX` (−1/1), `LampDirection`, `DigCooldown`, `SwingTime`, `SwingDirection` (`Point`), `RescueHold`, `PlantHold`, `HasBlastingKit`, `Dynamite`, `LitDynamite`, `Oil`, `OilFlasks`, `LampOut`, `HasDeepCamp`, `ShovelTier`, `LampTier`, `BagTier`, `DetectorTier`, `PickaxeTier`, `Gold`, `Ladders`, `CopperOre`, `SilverOre`, `GoldOre`, `GemOre`, `Fossils`, `Relics`, `FossilsFound`, `RelicsFound`. Read-only also `RareFinds`. Read-only: `IsMoving`, `OreCount` | The miner |
 | `Particle` | `Age`, `Lifetime`, `Style` (`ParticleStyle`), `Variant` (random byte). Read-only: `Progress` | Every particle |
 | `Physics` | `Gravity` (cells/s²), `Drag` (per second) | Every particle |
 | `TileCollider` | tag | Debris, coins |
@@ -162,6 +165,9 @@ Static rule classes: `Tiles`, `Shop`, `Upgrades`, `Layout`, `TileLooks`, `Partic
 | `GlintSystem.Interval` / `Radius` | 0.08 s / 9 tiles | Starting detector |
 | `LampOil.TankSize` / `SecondsPerUnit` / `LowShare` / `LowReach` / `PricePerUnit` | 100 / 3 s / 30% / 3 tiles / 2g | The tank |
 | `LampOil.FlaskPrice` / `FlaskUnits` / `MaxFlasks` | 60g / 40 / 5 | Oil flasks: price, units poured, pack size |
+| `Tiles.GasDepth` / `GasChance` | 50 m / 30% | Where gas pockets are |
+| `GasSystem.TriggerRadius` / `LampOutSeconds` / `OilDrain` / `MaxShimmer` / `ShimmerRange` | 2 tiles / 3 s / 5 / 30 / 9 tiles | Gas flare and shimmer |
+| `DynamiteSystem.GasReach`, `GasPockets.MaxPocket` | 3 tiles, 24 tiles | Gas set off by a blast; most tiles one flare burns |
 | `DeepCamp.Price` / `Depth` / `SaleShare` / `Markup` / `LanternRadius` | 1500g / 100 m / 70% / ×1.5 / 2.6 tiles | The deep camp |
 | `HudSystem.OilGaugeCells` | 8 | Oil gauge cells |
 | `MinerControlSystem.PlantDuration` / `FuseDuration` | 0.5 / 2 s | Hold to plant, fuse |
@@ -212,6 +218,7 @@ Static rule classes: `Tiles`, `Shop`, `Upgrades`, `Layout`, `TileLooks`, `Partic
 | `  ¡<n>` (dynamite), `  OIL ▮▮▮▮▮▯▯▯`, `╟╢<n>` (ladders) (HUD row 0) | `HudSystem.DrawStatus` |
 | `BLASTING`, ` ¡ ¡ ¡ ` (shed) | `HouseRenderSystem.BlastingText`, `BlastingDisplay` |
 | `OIL +<n>` (floating) | `FloatingTextRenderSystem.OilLabel` |
+| `GAS!` (floating) | `FloatingTextRenderSystem.GasText` |
 | `TOO HARD` (floating) | `FloatingTextRenderSystem.TooHardText` |
 | `FOSSIL!` / `RELIC!` (floating) | `FloatingTextRenderSystem.FossilText`, `RelicText` |
 | ` CALL LIFT [E] ` / ` GET IN [E] ` / ` ↑↓ RIDE   ←→ GET OUT ` | `PromptRenderSystem.CallLiftText`, `BoardLiftText`, `RideText` |

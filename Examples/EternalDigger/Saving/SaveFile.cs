@@ -22,8 +22,8 @@ public enum SaveStatus : byte
 /// magic <c>EDSV</c>, format version, seed, miner column, row and facing, gold, ladders, copper, silver and gold ore
 /// (1); lift segments and car row (2); gem ore (3); blasting kit and dynamite (4); the four upgrade tiers (5); lamp
 /// oil (6); rare finds in the bag and ever found (7); oil flasks (8); pickaxe tier (9); deep camp (10); then the
-/// changed tiles (count, then row, column, type, damage, flags each). Older versions are still read: missing fields
-/// get their defaults. Writing goes to a temp file first, so a crash never leaves half a save.
+/// changed tiles (count, then row, column, type, damage, flags each; the gas flag from 11). Older versions are still
+/// read: missing fields get their defaults. Writing goes to a temp file first, so a crash never leaves half a save.
 /// </summary>
 public static class SaveFile
 {
@@ -32,7 +32,7 @@ public static class SaveFile
     //**********************************************************
 
     /// <summary>The save-format version written. Bump it whenever the layout changes, and keep reading older ones.</summary>
-    public const int Version = 10;
+    public const int Version = 11;
 
     /// <summary>The oldest save-format version this build still reads.</summary>
     public const int OldestVersion = 1;
@@ -45,6 +45,7 @@ public static class SaveFile
 
     private const byte LadderFlag = 1;
     private const byte SeenFlag = 2;
+    private const byte GasFlag = 4;
 
     //**********************************************************
     //** props
@@ -145,7 +146,8 @@ public static class SaveFile
             writer.Write((byte)change.Column);
             writer.Write((byte)change.Cell.Type);
             writer.Write(change.Cell.Damage);
-            writer.Write((byte)((change.Cell.HasLadder ? LadderFlag : 0) | (change.Cell.Seen ? SeenFlag : 0)));
+            writer.Write((byte)((change.Cell.HasLadder ? LadderFlag : 0) | (change.Cell.Seen ? SeenFlag : 0) |
+                                (change.Cell.HasGas ? GasFlag : 0)));
         }
     }
 
@@ -246,6 +248,7 @@ public static class SaveFile
         if ((uint)count > (MaxRow + 1L) * Mine.Columns)
             return SaveStatus.Corrupt;
 
+        var flagMask = version >= 11 ? LadderFlag | SeenFlag | GasFlag : LadderFlag | SeenFlag;
         var changes = new List<TileChange>(Math.Min(count, 1 << 16));
         for (var i = 0; i < count; i++)
         {
@@ -255,7 +258,7 @@ public static class SaveFile
             var damage = reader.ReadByte();
             var flags = reader.ReadByte();
             if ((uint)changeRow > MaxRow || changeColumn >= Mine.Columns || !Enum.IsDefined(type) ||
-                (flags & ~(LadderFlag | SeenFlag)) != 0)
+                (flags & ~flagMask) != 0)
                 return SaveStatus.Corrupt;
 
             changes.Add(new TileChange(changeColumn, changeRow, new TileCell
@@ -263,7 +266,8 @@ public static class SaveFile
                 Type = type,
                 Damage = damage,
                 HasLadder = (flags & LadderFlag) != 0,
-                Seen = (flags & SeenFlag) != 0
+                Seen = (flags & SeenFlag) != 0,
+                HasGas = (flags & GasFlag) != 0
             }));
         }
 

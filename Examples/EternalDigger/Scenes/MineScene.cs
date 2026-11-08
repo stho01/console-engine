@@ -58,6 +58,7 @@ public sealed class MineScene(SaveData start, string savePath) : EcsScene<Eterna
         var light = new LightMap(Mine.Columns, Layout.ScreenHeight / Layout.TileHeight + 2);
         var canvas = new Canvas(Console);
         var headlamp = new Headlamp();
+        var gas = new GasPockets(mine);
         _saver = new GameSaver(savePath, start.Seed, mine, elevator);
         _miners = World.Query(Query.With<Miner>());
 
@@ -68,7 +69,8 @@ public sealed class MineScene(SaveData start, string savePath) : EcsScene<Eterna
         Simulation.Add(new InteractionSystem(mine, elevator, counter, effects, _saver, campCounter));
         Simulation.Add(new MinerMotionSystem(mine, effects));
         Simulation.Add(new ElevatorSystem(elevator));
-        Simulation.Add(new DynamiteSystem(mine, effects));
+        Simulation.Add(new DynamiteSystem(mine, effects, gas));
+        Simulation.Add(new GasSystem(mine, gas, effects, random));
         Simulation.Add(new CameraSystem(Camera, Console, effects.Shake, random));
         Simulation.Add(new LampSystem(headlamp, effects, random));
         Simulation.Add(new LightingSystem(mine, light, Camera, headlamp));

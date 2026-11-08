@@ -227,6 +227,9 @@ Rules: [03 § EternalDigger](03-rules.md#eternal-digger). Flows: [04 § F11](04-
     one that holds you up drops you to the next floor. Stop.
 13. "Fell all the way down the shaft" → **Cause:** a built lift digs out the shaft; without ladders there a step into it
     falls to the bottom landing. No damage. Stop.
-14. "Debris or sparks disappear right next to the miner" → **Cause:** by design. No particle is drawn on his 4 × 2
+14. "My lamp went out", "something exploded", "GAS!" → **Cause:** a gas pocket (green shimmer, caves from 50 m) flared
+    because the lit lamp came within 2 tiles. By design: the lamp relights after 3 s and loses 5 oil; nothing is hurt.
+    Stop.
+15. "Debris or sparks disappear right next to the miner" → **Cause:** by design. No particle is drawn on his 4 × 2
    cells, and at most 6 (dimmed) are drawn in the tile around him, so he stays readable (`ParticleRenderSystem`). Stop.
 

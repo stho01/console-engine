@@ -216,6 +216,15 @@ bottom landing above the wall) and floors them. Its counter (`ShopCounter.CampIt
 sells the bag at 70% and ladders, oil, flasks and sticks at ×1.5. `CampRenderSystem` (after `ElevatorRenderSystem`)
 draws a tent with a lantern; `LightMap.AddLantern` lights the camp.
 
+## Hazards: gas (Tier 3)
+
+Gas pockets: `TileCell.HasGas` on generated cave air from 50 m (`Tiles.GasDepth`), in 2 × 2 noise areas. `GasSystem`
+(Simulation, after `DynamiteSystem`, before `LampSystem`) keeps a dark-green shimmer over gas near the miner and,
+when the lit lamp comes within 2 tiles, burns the pocket (`GasPockets.Ignite`, preallocated flood fill): fire, a shake,
+`GAS!`, the lamp blown out 3 s (`Miner.LampOut`) and 5 oil. A blast within 3 tiles flares gas bigger, harmlessly.
+Nothing kills; glints and remembered outlines still show. Burnt gas is saved as a changed tile (flag bit 2, format
+version 11).
+
 ## Bag weight (Tier 2)
 
 `Shop.BagWeight`: copper 1, silver 1, gold 2, gem 2, rare finds 3. Over the capacity (20 + 10 per bag tier) every 10

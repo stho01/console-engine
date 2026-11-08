@@ -76,6 +76,9 @@ public struct Miner
     /// <summary>Sticks planted whose fuse still burns. A save puts them back into <see cref="Dynamite"/>.</summary>
     public int LitDynamite;
 
+    /// <summary>Seconds the lamp stays blown out after a gas flare. Not saved.</summary>
+    public float LampOut;
+
     /// <summary>Bought the deep camp: its tiles are dug out and its counter trades at <c>DeepCamp.Row</c>.</summary>
     public bool HasDeepCamp;
 

@@ -11,8 +11,9 @@ namespace EternalDigger.Systems;
 
 /// <summary>
 /// Burns the lamp's oil while the miner is underground and works out this frame's <see cref="Headlamp"/>: the reach
-/// from the oil (a carried flask is poured in when it runs low), flicker frames when low (on a timer, so the rate
-/// doesn't depend on the FPS), and smoke rising from a low lamp. Runs before <see cref="LightingSystem"/>.
+/// from the oil (a carried flask is poured in when it runs low; no light and no burning while a gas flare has blown the
+/// lamp out), flicker frames when low (on a timer, so the rate doesn't depend on the FPS), and smoke rising from a low
+/// lamp. Runs before <see cref="LightingSystem"/>.
 /// </summary>
 public sealed class LampSystem(Headlamp headlamp, EffectSpawner effects, Random random) : EntitySystem
 {
@@ -40,7 +41,11 @@ public sealed class LampSystem(Headlamp headlamp, EffectSpawner effects, Random 
         foreach (var chunk in _miners.GetChunks())
         {
             ref var miner = ref chunk.GetSpan<Miner>()[0];
-            Burn(ref miner, deltaSeconds, LoadFactor(miner));
+            if (miner.LampOut > 0f)
+                miner.LampOut = Math.Max(0f, miner.LampOut - deltaSeconds);
+            else
+                Burn(ref miner, deltaSeconds, LoadFactor(miner));
+
             var poured = LampOil.TryPour(ref miner);
             if (poured > 0f)
                 Pour(miner, chunk.GetSpan<Position>()[0].Value, poured);
@@ -83,8 +88,10 @@ public sealed class LampSystem(Headlamp headlamp, EffectSpawner effects, Random 
 
     private void Update(in Miner miner, Vector2 position, float deltaSeconds)
     {
-        headlamp.Reach = LampOil.Reach(miner.LampTier, miner.Oil);
-        headlamp.IsEmpty = LampOil.IsEmpty(miner.Oil);
+        // Blown out by a gas flare: dark like an empty lamp until it relights.
+        var blownOut = miner.LampOut > 0f;
+        headlamp.Reach = blownOut ? 0f : LampOil.Reach(miner.LampTier, miner.Oil);
+        headlamp.IsEmpty = blownOut || LampOil.IsEmpty(miner.Oil);
         headlamp.IsLow = LampOil.IsLow(miner.Oil) && Mine.Depth(miner.Row) > 0;
         if (!headlamp.IsLow || headlamp.IsEmpty)
         {

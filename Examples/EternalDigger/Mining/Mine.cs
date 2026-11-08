@@ -213,12 +213,18 @@ public sealed class Mine
         if (column == 0 || column == Columns - 1)
             return new TileCell { Type = TileType.Bedrock };
 
+        TileType type;
         if (depth < Tiles.WallDepth)
-            return new TileCell { Type = Underground(column, row, depth) };
+        {
+            type = Underground(column, row, depth);
+        }
+        else
+        {
+            var wallBottom = WallBottomDepth(column);
+            type = depth <= wallBottom ? TileType.Obsidian : BelowTheWall(column, row, depth - wallBottom);
+        }
 
-        var wallBottom = WallBottomDepth(column);
-        var type = depth <= wallBottom ? TileType.Obsidian : BelowTheWall(column, row, depth - wallBottom);
-        return new TileCell { Type = type };
+        return new TileCell { Type = type, HasGas = type == TileType.Air && IsGasPocket(column, row, depth) };
     }
 
     private TileType Underground(int column, int row, int depth)
@@ -249,7 +255,12 @@ public sealed class Mine
     }
 
     private static bool IsSame(in TileCell a, in TileCell b) =>
-        a.Type == b.Type && a.Damage == b.Damage && a.HasLadder == b.HasLadder && a.Seen == b.Seen;
+        a.Type == b.Type && a.Damage == b.Damage && a.HasLadder == b.HasLadder && a.Seen == b.Seen &&
+        a.HasGas == b.HasGas;
+
+    /// <summary>Caves from <see cref="Tiles.GasDepth"/> hold gas in 2 x 2 areas picked by the noise.</summary>
+    private bool IsGasPocket(int column, int row, int depth) =>
+        depth >= Tiles.GasDepth && Noise(column >> 1, row >> 1, 71) < Tiles.GasChance;
 
     /// <summary>Act 2: slate with quartzite blobs, gem veins, rare relics and caves. No act 1 rock or ore.</summary>
     private TileType BelowTheWall(int column, int row, int depthBelowWall)

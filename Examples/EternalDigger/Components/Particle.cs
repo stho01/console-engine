@@ -35,7 +35,11 @@ public enum ParticleStyle : byte
     /// <summary>A puff rising from a lamp low on oil.</summary>
     LampSmoke,
     /// <summary>The slow pulsing glint of a rare find.</summary>
-    Pulse
+    Pulse,
+    /// <summary>Faint green shimmer over a gas pocket.</summary>
+    GasShimmer,
+    /// <summary>Fire flaring out of a burning gas pocket.</summary>
+    GasFlare
 }
 
 /// <summary>
@@ -68,6 +72,9 @@ public struct TileCollider;
 /// <summary>Tag: an ambient mist particle, counted to keep the mist population steady.</summary>
 public struct Mist;
 
+/// <summary>Tag: a gas shimmer particle, counted to keep the shimmer population steady.</summary>
+public struct Gas;
+
 /// <summary>What a <see cref="FloatingText"/> says.</summary>
 public enum FloatingTextKind : byte
 {
@@ -79,6 +86,8 @@ public enum FloatingTextKind : byte
     TooHard,
     /// <summary><c>FOSSIL!</c> or <c>RELIC!</c>: a find was dug up. <see cref="FloatingText.Amount"/> is its type.</summary>
     RareFind,
+    /// <summary><c>GAS!</c> (yellow): a gas pocket flared. No amount.</summary>
+    Gas,
     /// <summary><c>OIL +40</c> (yellow): a flask went into the lamp, <see cref="FloatingText.Amount"/> in units.</summary>
     Oil
 }

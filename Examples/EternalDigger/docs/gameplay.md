@@ -314,6 +314,22 @@ The way through the obsidian wall, and a fast but costly way to dig anywhere.
 A 4-tile wall needs about 4–6 sticks. A stick in a lit fuse that is saved (sale, purchase, autosave, `ESC`) goes back
 into the stock.
 
+<a id="hazards"></a>
+## Hazards
+
+Moody but forgiving: nothing here hurts the miner. The worst outcome is lost light, and a rescue if you give up.
+
+### Gas pockets
+
+| Rule | Value | Identifier |
+|---|---|---|
+| Where | Caves from 50 m down (act 1's deep caves and act 2): 30% of the 2 × 2 cave areas hold gas in their air tiles. Dug or blasted tiles never do | `Tiles.GasDepth`, `GasChance`, `Mine.IsGasPocket`, `TileCell.HasGas` |
+| Shimmer | Faint dark-green `~` `∙` drifting over gas tiles within 9 tiles of the miner, also in the dark (gas warns, it never ambushes). At most 30, 10 new per second | `GasSystem`, `ParticleStyle.GasShimmer`, `Gas` tag |
+| Flare | A lit lamp (not dry, not blown out) within 2 tiles of gas sets the pocket off: up to 24 connected gas tiles burn with yellow-red `*` fire, a shake and a floating `GAS!`. The gas is gone for good | `GasSystem.Check`, `GasPockets.Ignite`, `EffectSpawner.GasFlare` |
+| The lamp | A flare blows the lamp out for 3 s (dark like an empty lamp, no oil burns) and burns 5 oil. Then it relights by itself | `GasSystem.LampOutSeconds`, `OilDrain`, `Miner.LampOut`, `LampSystem` |
+| Blasts | A blast sets off every pocket within 3 tiles of the stick (up to 6 pockets) as a bigger flare. Harmless: the lamp stays lit | `DynamiteSystem.GasReach`, `DynamiteSystem.IgniteGas` |
+| Saving | Burnt gas is a changed tile (flag bit 2 from format version 11) | `SaveFile` |
+
 ## The rescue
 
 Hold `R` for 1.5 s (`MinerControlSystem.RescueDuration`) and the miner is pulled back to the spawn tile. It works

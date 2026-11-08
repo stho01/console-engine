@@ -28,6 +28,8 @@ public static class ParticleLooks
     private const string SmokeRamp = "·˙";
     private const string LampSmokeRamp = "°°·";
     private const string PulseRamp = "·∙•●•∙·";
+    private const string GasRamp = "~∙~·";
+    private const string FlareRamp = "✶**+·";
 
     //**********************************************************
     //** public methods
@@ -48,6 +50,8 @@ public static class ParticleLooks
         ParticleStyle.Smoke => Ramp(SmokeRamp, progress),
         ParticleStyle.LampSmoke => Ramp(LampSmokeRamp, progress),
         ParticleStyle.Pulse => Ramp(PulseRamp, progress),
+        ParticleStyle.GasShimmer => GasRamp[(variant + (int)(progress * 6f)) % GasRamp.Length],
+        ParticleStyle.GasFlare => Ramp(FlareRamp, progress),
         _ => ChunkRamp[Math.Min(ChunkRamp.Length - 1, (int)(progress * ChunkRamp.Length) + (variant & 1))]
     };
 
@@ -77,6 +81,9 @@ public static class ParticleLooks
             ParticleStyle.Blast => progress < .3f ? ConsoleColor.Yellow
                 : faded ? ConsoleColor.DarkGray : ConsoleColor.DarkYellow,
             ParticleStyle.Pulse => PulseColor(variant, progress),
+            ParticleStyle.GasShimmer => ConsoleColor.DarkGreen,
+            ParticleStyle.GasFlare => progress < .3f ? ConsoleColor.Yellow
+                : faded ? ConsoleColor.DarkRed : ConsoleColor.Red,
             ParticleStyle.Smoke or ParticleStyle.LampSmoke => faded ? ConsoleColor.DarkGray : ConsoleColor.Gray,
             _ => ConsoleColor.Gray
         };

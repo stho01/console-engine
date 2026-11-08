@@ -12,9 +12,9 @@ namespace EternalDigger.Systems;
 /// Burns the fuses of planted <see cref="Dynamite"/> (sparks and smoke at a fixed rate) and blows them up. A blast
 /// clears the 3 x 3 tiles around the stick: any rock, obsidian included, but not bedrock, the grass or the sky. Ore in
 /// it goes into the bag, ladders in it are destroyed, other sticks in it go off right after, and a miner inside is
-/// pushed one tile away from the stick. The miner is never hurt.
+/// pushed one tile away from the stick. Gas within <see cref="GasReach"/> flares up big. The miner is never hurt.
 /// </summary>
-public sealed class DynamiteSystem(Mine mine, EffectSpawner effects) : EntitySystem
+public sealed class DynamiteSystem(Mine mine, EffectSpawner effects, GasPockets gas = null) : EntitySystem
 {
     //**********************************************************
     //** fields
@@ -30,6 +30,14 @@ public sealed class DynamiteSystem(Mine mine, EffectSpawner effects) : EntitySys
     public const float PushDuration = .1f;
 
     private const float SparkInterval = .07f;
+
+    /// <summary>Tiles from the stick within which a blast sets gas off (a bigger flare, still harmless).</summary>
+    public const float GasReach = 3f;
+
+    /// <summary>Pockets one blast can set off.</summary>
+    private const int MaxPocketsPerBlast = 6;
+
+    private readonly GasPockets _gas = gas ?? new GasPockets(mine);
 
     private Query _sticks;
     private Query _miners;
@@ -85,7 +93,23 @@ public sealed class DynamiteSystem(Mine mine, EffectSpawner effects) : EntitySys
 
         Push(ref miner, column, row);
         effects.Blast(commands, column, row, BlastRadius);
+        IgniteGas(column, row, commands);
         return cleared;
+    }
+
+    /// <summary>Gas near a blast flares up big: no lamp is blown out and nobody is hurt.</summary>
+    private void IgniteGas(int column, int row, CommandBuffer commands)
+    {
+        for (var pocket = 0; pocket < MaxPocketsPerBlast; pocket++)
+        {
+            if (!_gas.TryFindNear(column, row, GasReach, out var found))
+                return;
+
+            _gas.Ignite(found.X, found.Y);
+            var tiles = _gas.Burned;
+            for (var i = 0; i < tiles.Length; i++)
+                effects.GasFlare(commands, tiles[i].X, tiles[i].Y, big: true);
+        }
     }
 
     //**********************************************************
