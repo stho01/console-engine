@@ -203,6 +203,26 @@ public class SaveFileTests
     }
 
     [Test]
+    public void Read_Version7Save_LoadsRareFindsWithoutFlasks()
+    {
+        var status = SaveFile.Read(OldSave(7), out var loaded);
+
+        Assert.That(status, Is.EqualTo(SaveStatus.Loaded));
+        Assert.That(loaded.Fossils, Is.EqualTo(1));
+        Assert.That(loaded.FossilsFound, Is.EqualTo(2));
+        Assert.That(loaded.OilFlasks, Is.Zero);
+    }
+
+    [Test]
+    public void Read_Version8Save_LoadsOilFlasks()
+    {
+        var status = SaveFile.Read(OldSave(8), out var loaded);
+
+        Assert.That(status, Is.EqualTo(SaveStatus.Loaded));
+        Assert.That(loaded.OilFlasks, Is.EqualTo(2));
+    }
+
+    [Test]
     public void Read_OilOverTheTank_ReturnsCorrupt()
     {
         var data = new SaveData { Seed = Seed, Column = 1, Row = 9, Oil = LampOil.TankSize + 1f };
@@ -330,7 +350,8 @@ public class SaveFileTests
             Fossils = 2,
             Relics = 1,
             FossilsFound = 5,
-            RelicsFound = 3
+            RelicsFound = 3,
+            OilFlasks = 2
         };
         var elevator = new Elevator();
         var rich = new Miner { Gold = 10_000 };
@@ -343,7 +364,7 @@ public class SaveFileTests
 
     /// <summary>
     /// A hand-written old save: gold 55, one tile; v2 a 30 m lift, v3 9 gems, v4 the kit and 5 sticks, v5 tiers 1-2-0-3,
-    /// v6 25 oil.
+    /// v6 25 oil, v7 a fossil in the bag and 2 found, v8 2 oil flasks.
     /// </summary>
     private static MemoryStream OldSave(int version)
     {
@@ -377,6 +398,15 @@ public class SaveFileTests
 
             if (version >= 6)
                 writer.Write(25f);
+
+            if (version >= 7)
+            {
+                foreach (var value in new[] { 1, 0, 2, 0 })
+                    writer.Write(value);
+            }
+
+            if (version >= 8)
+                writer.Write(2);
 
             writer.Write(1);
             writer.Write(13);
@@ -421,6 +451,7 @@ public class SaveFileTests
         Assert.That(actual.Relics, Is.EqualTo(expected.Relics));
         Assert.That(actual.FossilsFound, Is.EqualTo(expected.FossilsFound));
         Assert.That(actual.RelicsFound, Is.EqualTo(expected.RelicsFound));
+        Assert.That(actual.OilFlasks, Is.EqualTo(expected.OilFlasks));
         Assert.That(actual.ElevatorSegments, Is.EqualTo(expected.ElevatorSegments));
         Assert.That(actual.ElevatorCarRow, Is.EqualTo(expected.ElevatorCarRow));
         Assert.That(actual.Changes, Is.EqualTo(expected.Changes));

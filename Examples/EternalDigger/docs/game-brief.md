@@ -196,7 +196,7 @@ granite, toughness growing with depth, screen shake.
 
 - No goal, ending, or progression beyond "go deeper and earn more".
 - No danger: no fall damage, no hazards, no enemies, no stamina, no time pressure. The lamp burns oil underground:
-  low oil shrinks and flickers the light, empty leaves only a dim glow (it never kills). Refill at the counter.
+  low oil shrinks and flickers the light, empty leaves only a dim glow (it never kills). Refill at the counter, or carry oil flasks (60g, up to 5) that pour themselves in when the lamp runs low.
 - Upgrades at the counter: shovel (digs faster), lamp (reaches further), bag (carries more) and detector (glints from
   further), three tiers each.
 - No hard bag limit; a heavy bag slows the climb up.

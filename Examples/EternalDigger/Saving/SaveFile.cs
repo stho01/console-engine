@@ -21,9 +21,9 @@ public enum SaveStatus : byte
 /// The save file: one slot, binary, versioned, little-endian. Fields in order, each from the version in brackets:
 /// magic <c>EDSV</c>, format version, seed, miner column, row and facing, gold, ladders, copper, silver and gold ore
 /// (1); lift segments and car row (2); gem ore (3); blasting kit and dynamite (4); the four upgrade tiers (5); lamp
-/// oil (6); rare finds in the bag and ever found (7); then the changed tiles (count, then row, column, type, damage,
-/// flags each). Older versions are still read: missing fields get their defaults. Writing goes to a temp file first,
-/// so a crash never leaves half a save.
+/// oil (6); rare finds in the bag and ever found (7); oil flasks (8); then the changed tiles (count, then row, column,
+/// type, damage, flags each). Older versions are still read: missing fields get their defaults. Writing goes to a temp
+/// file first, so a crash never leaves half a save.
 /// </summary>
 public static class SaveFile
 {
@@ -32,7 +32,7 @@ public static class SaveFile
     //**********************************************************
 
     /// <summary>The save-format version written. Bump it whenever the layout changes, and keep reading older ones.</summary>
-    public const int Version = 7;
+    public const int Version = 8;
 
     /// <summary>The oldest save-format version this build still reads.</summary>
     public const int OldestVersion = 1;
@@ -133,6 +133,7 @@ public static class SaveFile
         writer.Write(data.Relics);
         writer.Write(data.FossilsFound);
         writer.Write(data.RelicsFound);
+        writer.Write(data.OilFlasks);
 
         writer.Write(data.Changes.Count);
         for (var i = 0; i < data.Changes.Count; i++)
@@ -227,6 +228,10 @@ public static class SaveFile
         if ((fossils | relics | fossilsFound | relicsFound) < 0)
             return SaveStatus.Corrupt;
 
+        var flasks = version >= 8 ? reader.ReadInt32() : 0;
+        if ((uint)flasks > LampOil.MaxFlasks)
+            return SaveStatus.Corrupt;
+
         var count = reader.ReadInt32();
         if ((uint)count > (MaxRow + 1L) * Mine.Columns)
             return SaveStatus.Corrupt;
@@ -274,6 +279,7 @@ public static class SaveFile
             BagTier = bag,
             DetectorTier = detector,
             Oil = oil,
+            OilFlasks = flasks,
             Fossils = fossils,
             Relics = relics,
             FossilsFound = fossilsFound,

@@ -11,7 +11,9 @@ public enum ShopItem : byte
     Lamp,
     Bag,
     Detector,
-    Blasting
+    Blasting,
+    /// <summary>A flask of lamp oil carried in the pack (<see cref="LampOil.TryPour"/>).</summary>
+    OilFlask
 }
 
 /// <summary>
@@ -28,8 +30,8 @@ public sealed class ShopCounter
     /// <summary>The counter's items, top to bottom.</summary>
     public static readonly ShopItem[] Items =
     [
-        ShopItem.Ladder, ShopItem.LampOil, ShopItem.Shovel, ShopItem.Lamp, ShopItem.Bag, ShopItem.Detector,
-        ShopItem.Blasting
+        ShopItem.Ladder, ShopItem.LampOil, ShopItem.OilFlask, ShopItem.Shovel, ShopItem.Lamp, ShopItem.Bag,
+        ShopItem.Detector, ShopItem.Blasting
     ];
 
     private int _selected;
@@ -68,6 +70,7 @@ public sealed class ShopCounter
     {
         _ when IsUpgrade(item) => Upgrades.Name(Line(item)),
         ShopItem.LampOil => LampOil.FillName,
+        ShopItem.OilFlask => LampOil.FlaskName,
         ShopItem.Blasting => miner.HasBlastingKit ? Shop.DynamiteName : Shop.BlastingKitName,
         _ => Shop.LadderName
     };

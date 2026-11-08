@@ -31,6 +31,18 @@ public static class LampOil
 
     public const string FillName = "FILL LAMP";
 
+    /// <summary>A flask of oil carried in the pack: poured into the lamp by itself when the tank runs low.</summary>
+    public const string FlaskName = "OIL FLASK";
+
+    /// <summary>Gold for one flask at the counter.</summary>
+    public const int FlaskPrice = 60;
+
+    /// <summary>Units one flask pours into the lamp.</summary>
+    public const float FlaskUnits = 40f;
+
+    /// <summary>Flasks the pack holds.</summary>
+    public const int MaxFlasks = 5;
+
     //**********************************************************
     //** public methods
     //**********************************************************
@@ -79,6 +91,36 @@ public static class LampOil
         miner.Gold -= price;
         miner.Oil = TankSize;
         return true;
+    }
+
+    /// <summary>Gold for one more flask, or <see cref="Shop.SoldOut"/> with <see cref="MaxFlasks"/> in the pack.</summary>
+    public static int FlaskPriceFor(in Miner miner) => miner.OilFlasks >= MaxFlasks ? Shop.SoldOut : FlaskPrice;
+
+    /// <summary>Buys a flask. False if the pack is full or the miner can't afford it.</summary>
+    public static bool TryBuyFlask(ref Miner miner)
+    {
+        var price = FlaskPriceFor(miner);
+        if (price == Shop.SoldOut || miner.Gold < price)
+            return false;
+
+        miner.Gold -= price;
+        miner.OilFlasks++;
+        return true;
+    }
+
+    /// <summary>
+    /// Pours a carried flask into a low lamp (below <see cref="LowShare"/>), up to a full tank. Returns the units
+    /// poured, 0 when the lamp isn't low or there is no flask.
+    /// </summary>
+    public static float TryPour(ref Miner miner)
+    {
+        if (miner.OilFlasks <= 0 || !IsLow(miner.Oil))
+            return 0f;
+
+        var poured = Math.Min(FlaskUnits, TankSize - miner.Oil);
+        miner.Oil += poured;
+        miner.OilFlasks--;
+        return poured;
     }
 
     /// <summary>The tank in whole percent, for the counter panel.</summary>

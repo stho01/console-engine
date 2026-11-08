@@ -213,7 +213,7 @@ Saving lives in `Saving/` and never runs per frame:
 
 | Piece | Does |
 |---|---|
-| `SaveData` | What a save holds: seed, miner tile and facing, gold, ladders, bag (with gems and rare finds), rare finds ever found, blasting kit and dynamite, upgrade tiers, oil, lift segments and car row, `List<TileChange>`. `NewMine(seed)`, `Capture(seed, miner, mine, changes)`, `ToMiner()`, `ApplyTo(mine)` |
+| `SaveData` | What a save holds: seed, miner tile and facing, gold, ladders, bag (with gems and rare finds), rare finds ever found, blasting kit and dynamite, upgrade tiers, oil and oil flasks, lift segments and car row, `List<TileChange>`. `NewMine(seed)`, `Capture(seed, miner, mine, changes)`, `ToMiner()`, `ApplyTo(mine)` |
 | `SaveFile` | The binary, versioned file (`Version` = 7, reads back to `OldestVersion` = 1, magic `EDSV`). `Save` (temp file, then move), `Load` (never throws; returns `SaveStatus` `Missing`/`Loaded`/`Corrupt`/`Unsupported`, moves an unreadable file to `save.dat.bad`), `Write`/`Read` on a stream, `DefaultPath` |
 | `GameSaver` | The running mine's slot: `Request()` from gameplay, `Save(miner)` builds the data and writes it, catching I/O errors (`LastSaveFailed`); `Saves` counts attempts for the HUD |
 | `SaveSystem` | Last in Simulation: saves when requested (`InteractionSystem` after a sale or purchase) or after `AutosaveInterval` s underground |

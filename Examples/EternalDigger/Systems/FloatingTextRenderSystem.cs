@@ -26,6 +26,7 @@ public sealed class FloatingTextRenderSystem(Canvas canvas, Camera camera) : Ent
     public const string TooHardText = "TOO HARD";
     public const string FossilText = "FOSSIL!";
     public const string RelicText = "RELIC!";
+    public const string OilLabel = "OIL +";
 
     private readonly char[] _buffer = new char[24];
     private Query _texts;
@@ -57,6 +58,7 @@ public sealed class FloatingTextRenderSystem(Canvas canvas, Camera camera) : Ent
         var length = text.Kind switch
         {
             FloatingTextKind.Elevator => Format(ElevatorLabel, text.Amount, 'm'),
+            FloatingTextKind.Oil => Format(OilLabel, text.Amount, ' ') - 1,
             FloatingTextKind.TooHard => Copy(TooHardText),
             FloatingTextKind.RareFind => Copy((TileType)text.Amount == TileType.Relic ? RelicText : FossilText),
             _ => FormatGold(text.Amount)

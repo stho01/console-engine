@@ -77,6 +77,9 @@ public struct Miner
     /// <summary>Lamp oil, 0 to <see cref="LampOil.TankSize"/>. Burns underground only.</summary>
     public float Oil;
 
+    /// <summary>Oil flasks in the pack, poured by themselves when the lamp runs low.</summary>
+    public int OilFlasks;
+
     // Upgrades (0 to Upgrades.MaxTier)
     public int ShovelTier;
     public int LampTier;

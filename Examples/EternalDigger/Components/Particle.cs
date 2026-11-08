@@ -78,7 +78,9 @@ public enum FloatingTextKind : byte
     /// <summary><c>TOO HARD</c> (red): the shovel hit obsidian. No amount.</summary>
     TooHard,
     /// <summary><c>FOSSIL!</c> or <c>RELIC!</c>: a find was dug up. <see cref="FloatingText.Amount"/> is its type.</summary>
-    RareFind
+    RareFind,
+    /// <summary><c>OIL +40</c> (yellow): a flask went into the lamp, <see cref="FloatingText.Amount"/> in units.</summary>
+    Oil
 }
 
 /// <summary>

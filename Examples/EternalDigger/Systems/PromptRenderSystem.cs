@@ -142,7 +142,7 @@ public sealed class PromptRenderSystem(
                 : owned >= 0 ? $"HAVE {owned}" : KitUnlocksText;
             _panelPrice = price != Shop.SoldOut ? $"{price}g {KeyHint}"
                 : upgrade ? MaxTierText
-                : item == ShopItem.LampOil ? FullText : SoldOutText;
+                : item is ShopItem.LampOil or ShopItem.OilFlask ? FullText : SoldOutText;
         }
 
         var priceColor = price == Shop.SoldOut ? ConsoleColor.DarkGray : PriceColor(miner.Gold, price);

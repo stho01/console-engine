@@ -6,7 +6,7 @@ namespace EternalDigger;
 
 /// <summary>
 /// The surface trade: buys the ore in the miner's bag at the door, and sells what the counter offers
-/// (<see cref="ShopItem"/>): ladders, lamp oil, the four <see cref="Upgrades"/>, the blasting kit and dynamite.
+/// (<see cref="ShopItem"/>): ladders, lamp oil, oil flasks, the four <see cref="Upgrades"/>, the blasting kit and dynamite.
 /// </summary>
 public static class Shop
 {
@@ -115,6 +115,7 @@ public static class Shop
     {
         _ when ShopCounter.IsUpgrade(item) => Upgrades.NextPrice(ShopCounter.Line(item), miner),
         ShopItem.LampOil => LampOil.FillPrice(miner),
+        ShopItem.OilFlask => LampOil.FlaskPriceFor(miner),
         ShopItem.Blasting => BlastingPrice(miner),
         _ => LadderPrice
     };
@@ -127,6 +128,7 @@ public static class Shop
     {
         _ when ShopCounter.IsUpgrade(item) => Upgrades.Tier(ShopCounter.Line(item), miner),
         ShopItem.LampOil => LampOil.Percent(miner.Oil),
+        ShopItem.OilFlask => miner.OilFlasks,
         ShopItem.Blasting => miner.HasBlastingKit ? miner.Dynamite : -1,
         _ => miner.Ladders
     };
@@ -136,6 +138,7 @@ public static class Shop
     {
         _ when ShopCounter.IsUpgrade(item) => Upgrades.TryBuy(ShopCounter.Line(item), ref miner),
         ShopItem.LampOil => LampOil.TryFill(ref miner),
+        ShopItem.OilFlask => LampOil.TryBuyFlask(ref miner),
         ShopItem.Blasting => TryBuyBlasting(ref miner),
         _ => TryBuyLadder(ref miner)
     };

@@ -84,7 +84,7 @@ using [04](04-flows.md).
 | Text | Where | Meaning |
 |---|---|---|
 | ` ETERNAL DIGGER ` | `HudSystem.Title`, row 0 | Title |
-| `  GOLD <n>g  ╟╢<ladders>[  LIFT <n>m][  ¡<dynamite>]  OIL ▮▮▮▮▮▯▯▯  DEPTH <n>m  BAG ◆<copper> ◆<silver> ◆<gold> ◆<gem> ✦<finds> = <value>g` (gem `◆` magenta, `✦` yellow, the bag value yellow when the bag is heavy, `╟╢` yellow, `¡` red; the gauge white, yellow below half, blinking red when low) | `HudSystem.DrawStatus`, row 0. `N0` formatting in the user's culture | Inventory and depth |
+| `  GOLD <n>g  ╟╢<ladders>[  LIFT <n>m][  ¡<dynamite>]  OIL ▮▮▮▮▮▯▯▯[ δ<flasks>]  DEPTH <n>m  BAG ◆<copper> ◆<silver> ◆<gold> ◆<gem> ✦<finds> = <value>g` (gem `◆` magenta, `✦` yellow, the bag value yellow when the bag is heavy, `╟╢` yellow, `¡` red; the gauge white, yellow below half, blinking red when low) | `HudSystem.DrawStatus`, row 0. `N0` formatting in the user's culture | Inventory and depth |
 | ` ←→ walk/dig   ↓ dig   ↑ climb   SPACE ladder   E use/buy   hold E+arrow dynamite   hold R rescue   ESC save & quit` | `HudSystem.KeyHelp`, row 1 | Default help line |
 | ` SAVED ` (grey, then dark grey, 1.5 s) | `HudSystem.SavedText`, right end of row 1 | The game was just saved |
 | ` SAVE FAILED` (red, 1.5 s) | `HudSystem.SaveFailedText`, right end of row 1 | The save file couldn't be written (`GameSaver.LastSaveFailed`); play goes on |
@@ -98,7 +98,7 @@ using [04](04-flows.md).
 | ` NO LADDERS LEFT!  Hold R to be rescued (the bag is lost) ` (blinking) | `HudSystem.NoLaddersWarning` | 0 ladders and below the surface |
 | ` DELIVER [E] ` | `PromptRenderSystem.DeliverText` | Standing at the door |
 | ` BUILD LIFT +10m [E] <price>g ` (red when short) | `PromptRenderSystem.BuildLiftText` | Standing at the lift sign |
-| ` ↑ LADDER ↓ ` / ` ↑ BLASTING KIT ↓ ` / ` ↑ DYNAMITE ↓ `, (or ` ↑ FILL LAMP ↓ `, ` ↑ SHOVEL ↓ ` / `LAMP` / `BAG` / `DETECTOR`), then `HAVE <n>`, `OIL <n>%`, `UNLOCKS DYNAMITE` or tier pips `●●○`, then `<price>g [E]` (red when short), `FULL`, `MAX` or `SOLD OUT` | `PromptRenderSystem.DrawCounterPanel`, `Shop.LadderName`/`BlastingKitName`/`DynamiteName`, `KitUnlocksText`, `SoldOutText` | At the shop counter |
+| ` ↑ LADDER ↓ ` / ` ↑ BLASTING KIT ↓ ` / ` ↑ DYNAMITE ↓ `, (or ` ↑ FILL LAMP ↓ `, ` ↑ OIL FLASK ↓ `, ` ↑ SHOVEL ↓ ` / `LAMP` / `BAG` / `DETECTOR`), then `HAVE <n>`, `OIL <n>%`, `UNLOCKS DYNAMITE` or tier pips `●●○`, then `<price>g [E]` (red when short), `FULL`, `MAX` or `SOLD OUT` | `PromptRenderSystem.DrawCounterPanel`, `Shop.LadderName`/`BlastingKitName`/`DynamiteName`, `KitUnlocksText`, `SoldOutText` | At the shop counter |
 | ` LIGHTING FUSE ` + bar | `HudSystem.PlantLabel`, row 1 | `E` held underground to plant |
 | `  ¡<n>` (red `¡`) | `HudSystem.DrawStatus`, row 0, after the lift | Dynamite, once the kit is bought |
 | `BLASTING`, ` ¡ ¡ ¡ ` | `HouseRenderSystem.BlastingText`, `BlastingDisplay` (shed) | Scenery |
@@ -106,6 +106,7 @@ using [04](04-flows.md).
 | ` HOLD [E] + ARROW: DYNAMITE ` | `PromptRenderSystem.PlantHintText` | Idle underground facing obsidian with the kit and a stick; also the second line on the lift's bottom landing while carrying dynamite |
 | ` TOO HARD: DYNAMITE AT THE SHOP ` (red) | `PromptRenderSystem.NeedDynamiteText` | Idle underground facing obsidian without the kit or sticks |
 | `FOSSIL!` / `RELIC!` (white, floating) | `FloatingTextRenderSystem.FossilText`, `RelicText` | A rare find was dug out |
+| `OIL +<n>` (yellow, floating) | `FloatingTextRenderSystem.OilLabel` | A carried oil flask poured itself into a low lamp |
 | `TOO HARD` (red, floating) | `FloatingTextRenderSystem.TooHardText` | The shovel hit obsidian (at most once a second) |
 | ` CALL LIFT [E] ` / ` GET IN [E] ` | `PromptRenderSystem.CallLiftText`, `BoardLiftText` | On a lift landing, car away / there |
 | ` ↑↓ RIDE   ←→ GET OUT ` | `PromptRenderSystem.RideText` | In the stopped car |

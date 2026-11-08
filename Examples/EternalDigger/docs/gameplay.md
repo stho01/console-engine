@@ -199,6 +199,7 @@ The counter sells (`ShopCounter.Items`, prices in `Shop`):
 |---|---|---|
 | Ladder | 10g | One per press |
 | Fill lamp | 2g per missing unit | Fills the tank; `FULL` when it is ([Lamp oil](#lamp-oil)) |
+| Oil flask | 60g | One flask for the pack, up to 5; poured in by itself when the lamp runs low |
 | Shovel | 300 / 900 / 2500g | Each tier digs 15% faster ([Upgrades](#upgrades)) |
 | Lamp | 250 / 750 / 2000g | Each tier: +2 tiles of reach and −20% oil burn |
 | Bag | 200 / 600 / 1500g | Each tier: +10 weight carried before the climb slows ([Bag weight](#bag-weight)) |
@@ -223,6 +224,7 @@ The headlamp burns oil (`LampOil.cs`, `Miner.Oil`, `LampSystem`). It never hurts
 | Low (below 30 units) | The cone shortens with the oil, from the full reach down to 3 tiles; the lamp flickers (some 0.04–0.12 s stretches are one light level darker, more of them the emptier it gets); the lamp glyph turns dark yellow and grey `°` smoke rises from it every 0.45 s | `LowShare`, `LowReach`, `LampOil.Reach`, `Headlamp` |
 | Empty | No cone: only the close radius, one level darker. The lamp glyph is dark grey, no glow dots. Remembered outlines and glints still show, so the way home can be found, or hold `R` | `LampOil.IsEmpty` |
 | Refill | `FILL LAMP` at the counter: 2g per missing unit (`OIL <n>%` on the panel) | `LampOil.FillPrice`, `TryFill` |
+| Oil flasks | `OIL FLASK` at the counter: 60g each, up to 5 in the pack (`FULL` then). Underground, when the tank drops below 30 units a flask pours itself in: +40 units (never past full), a puff of smoke and a floating `OIL +40`. The HUD shows `δ<n>` after the gauge while you carry any | `LampOil.FlaskPrice`, `FlaskUnits`, `MaxFlasks`, `TryBuyFlask`, `TryPour`, `LampSystem` |
 | HUD | `OIL ▮▮▮▮▮▯▯▯` on row 0: white, yellow below half, blinking red when low | `HudSystem.OilCells` |
 
 <a id="bag-weight"></a>
@@ -331,7 +333,7 @@ twinkles and dig towards them.
 
 | Part | Shows | Identifier |
 |---|---|---|
-| HUD, row 0 | ` ETERNAL DIGGER ` title, gold, ladders (`╟╢<n>`), `LIFT <n>m` once a lift is built, dynamite (`¡<n>`) once the kit is bought, the oil gauge, depth, the bag (copper/silver/gold/gem counts with coloured `◆` icons, and `✦` rare finds) and what the bag is worth | `HudSystem` |
+| HUD, row 0 | ` ETERNAL DIGGER ` title, gold, ladders (`╟╢<n>`), `LIFT <n>m` once a lift is built, dynamite (`¡<n>`) once the kit is bought, the oil gauge (then `δ<n>` oil flasks while carrying any), depth, the bag (copper/silver/gold/gem counts with coloured `◆` icons, and `✦` rare finds) and what the bag is worth | `HudSystem` |
 | HUD, row 1 | The key help; the rescue bar while `R` is held; the ` LIGHTING FUSE ` bar while `E` is held to plant; the no-ladders warning. After a save, ` SAVED ` at the right end for 1.5 s (grey, then dark grey), or ` SAVE FAILED` in red | `HudSystem` |
 | Title screen | `ETERNAL DIGGER` logo, `CONTINUE` / `NEW MINE` (selected item black on yellow with `►`), the confirmation, a red message for an unreadable save, `↑↓ choose   E select   ESC quit` | `TitleScene`, `TitleMenu` |
 | Camera | Keeps the miner at 40% of the screen height, eased. Never scrolls above the sky. Shakes on breaks and long falls | `CameraSystem` |
@@ -370,7 +372,7 @@ The game saves itself; there is no save key.
 - **When:** after every sale at the door (when it earned gold) and every ladder bought, every 60 s spent underground
   (`GameSaver.AutosaveInterval`), and on `ESC`, which saves and quits. A NEW MINE is saved as soon as it starts.
 - **What:** the seed, the miner's tile and facing, gold, ladders and the bag, the lift (segments and the car's
-  landing), the blasting kit and the dynamite stock (lit sticks counted back in), the upgrade tiers, the lamp oil, rare finds (in the bag and ever found), and every tile that differs from what
+  landing), the blasting kit and the dynamite stock (lit sticks counted back in), the upgrade tiers, the lamp oil and oil flasks, rare finds (in the bag and ever found), and every tile that differs from what
   the seed generates (dug, half-dug, ladder placed, seen). The mine itself is regenerated from the seed.
 - **Not saved:** anything mid-action. A continued game starts with the miner standing still on the saved tile (if
   that tile has no support, they fall), no particles, and the rescue timer at zero.

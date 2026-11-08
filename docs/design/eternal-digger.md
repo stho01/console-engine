@@ -194,6 +194,8 @@ the `Miner` and saved from format version 5. The shovel and lamp glyph colours f
 (before `LightingSystem`) sets the `Headlamp`: full reach above 30%, then shrinking to 3 tiles, timed flicker frames
 one light level darker, `°` smoke and a dark-yellow lamp glyph; empty, only the close radius one level darker.
 Refilled at the counter (`FILL LAMP`, 2g a unit). The HUD shows an 8-cell gauge. Saved from format version 6.
+Tier 2b: `OIL FLASK`s (60g, up to 5) ride in the pack and pour themselves in below 30% (+40), so a trip can be
+stretched without walking home (`LampOil.TryPour`; saved from format version 8).
 
 ## Gems and rare finds (Tier 2)
 
