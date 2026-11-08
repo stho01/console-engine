@@ -567,9 +567,10 @@ public sealed partial class PhysicsSystem : EntitySystem, IPhysicsEvents, IPhysi
     }
 
     /// <summary>
-    /// Contacts between awake dynamic bodies and the solid tiles under their grown bounds. A contact whose tile face
-    /// touches another solid tile is inside the wall and skipped, so bodies slide over tile seams instead of catching on
-    /// them. Tile contacts have no events.
+    /// Contacts between awake dynamic bodies and the solid tiles under their grown bounds. A tile face that touches
+    /// another solid tile is inside the wall and never pushes, so bodies slide over tile seams instead of catching on
+    /// them: boxes and polygons only use the tile's open faces (<see cref="Collision.PolygonTile"/>), and a circle's
+    /// contact is skipped when it pushes out of a closed face. Tile contacts have no events.
     /// </summary>
     private void CreateTileContacts(Softness staticSoftness)
     {
@@ -589,6 +590,12 @@ public sealed partial class PhysicsSystem : EntitySystem, IPhysicsEvents, IPhysi
             if (!CollidesWithTiles(proxy) || _sims[i].IsSleeping)
                 continue;
 
+            var speculative = proxy.Margin + TouchDistance;
+            var isCircle = shapes[i].Shape == ShapeType.Circle;
+            var polygon = default(ConvexPolygon);
+            if (!isCircle)
+                shapes[i].ToWorldPolygon(Polygons, out polygon);
+
             TileRange(proxy, out var firstColumn, out var firstRow, out var lastColumn, out var lastRow);
             for (var row = firstRow; row <= lastRow; row++)
             for (var column = firstColumn; column <= lastColumn; column++)
@@ -597,9 +604,20 @@ public sealed partial class PhysicsSystem : EntitySystem, IPhysicsEvents, IPhysi
                     continue;
 
                 tileShape.Position = tiles.TileMin(column, row) + tileHalf;
-                Collision.Collide(shapes[i], tileShape, Polygons, proxy.Margin + TouchDistance, out var manifold);
-                if (manifold.PointCount == 0 || IsInternalFace(tiles, column, row, manifold.Normal))
-                    continue;
+                Manifold manifold;
+                if (isCircle)
+                {
+                    Collision.Collide(shapes[i], tileShape, Polygons, speculative, out manifold);
+                    if (manifold.PointCount == 0 || IsInternalFace(tiles, column, row, manifold.Normal))
+                        continue;
+                }
+                else
+                {
+                    var tile = ConvexPolygon.Box(tileShape.Position, tileHalf);
+                    Collision.PolygonTile(polygon, tile, OpenFaces(tiles, column, row), speculative, out manifold);
+                    if (manifold.PointCount == 0)
+                        continue;
+                }
 
                 var touching = manifold.MinSeparation < TouchDistance;
                 var slot = _pairCache.Add(_entities[i], Entity.Null, PairCache.KeyOfTile(row * tiles.Columns + column),
@@ -626,6 +644,16 @@ public sealed partial class PhysicsSystem : EntitySystem, IPhysicsEvents, IPhysi
         lastColumn = Math.Min(tiles.ColumnOf(proxy.Center.X + reach.X), tiles.Columns - 1);
         lastRow = Math.Min(tiles.RowOf(proxy.Center.Y + reach.Y), tiles.Rows - 1);
     }
+
+    /// <summary>
+    /// The faces of a tile that don't touch another solid tile, as bits in <see cref="ConvexPolygon.Box"/>'s face order:
+    /// up, right, down, left.
+    /// </summary>
+    private static int OpenFaces(TileGrid tiles, int column, int row) =>
+        (tiles.IsSolid(column, row - 1) ? 0 : 1) |
+        (tiles.IsSolid(column + 1, row) ? 0 : 2) |
+        (tiles.IsSolid(column, row + 1) ? 0 : 4) |
+        (tiles.IsSolid(column - 1, row) ? 0 : 8);
 
     /// <summary>
     /// Whether the tile face the contact pushes out of touches another solid tile. <paramref name="normal"/> points from

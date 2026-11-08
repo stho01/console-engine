@@ -154,8 +154,11 @@ etter gruppen, som i dag.
   det holder fordi slike sveip er korte (ett steg).
 - **Fase 5:** dynamiske kropper mot tilene i løseren. Hver våken dynamisk kropp får kontakter med de solide tilene
   under sine voksne bounds; en tile er en statisk boks. Parcachen har 64-bits nøkler, så par kropp–tile
-  (`PairCache.KeyOfTile`) lagres ved siden av par entitet–entitet, og alle tiles deler én statisk løserkropp. En kontakt
-  der tileflaten grenser til en annen solid tile, hoppes over, så kropper glir over skjøter. Tile-kontakter har ingen
+  (`PairCache.KeyOfTile`) lagres ved siden av par entitet–entitet, og alle tiles deler én statisk løserkropp. En
+  tileflate som grenser til en annen solid tile, dytter aldri, så kropper glir over skjøter. Bokser og polygoner bruker
+  bare tilens åpne flater som referanseflate (`Collision.PolygonTile`): mot én tile gir polygonets egne, skrå flater ofte
+  størst separasjon, og den normalen pekte inn i nabotilen, så kontakten ble kastet og spissen av en trekant gikk rett
+  gjennom et tynt tak. Sirkler hoppes over når de ville dyttes ut gjennom en lukket flate. Tile-kontakter har ingen
   hendelser.
 
 ## 7. Narrowphase

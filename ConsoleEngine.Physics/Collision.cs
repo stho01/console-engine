@@ -217,6 +217,39 @@ internal static class Collision
             manifold.Normal = -manifold.Normal;
     }
 
+    /// <summary>
+    /// A polygon against one tile (a box) of a solid region: the reference face is always one of the tile's faces in
+    /// <paramref name="openFaces"/> (bit <c>i</c> for <c>tile.Normals[i]</c>), the one that separates them most. Faces
+    /// that touch another solid tile are never used, and neither are the polygon's own faces, whose tilted normals would
+    /// point into the region. So a body is always pushed out through open space, and a tilted body against a flat wall
+    /// gets the wall's normal. The normal points from the polygon to the tile.
+    /// </summary>
+    public static void PolygonTile(in ConvexPolygon polygon, in ConvexPolygon tile, int openFaces, float speculative,
+        out Manifold manifold)
+    {
+        manifold = default;
+        if (openFaces == 0 || MaxSeparation(polygon, tile, out _) > speculative)
+            return;
+
+        var face = -1;
+        var best = float.MinValue;
+        for (var i = 0; i < tile.Count; i++)
+        {
+            var separation = FaceSeparation(tile, i, polygon);
+            if (separation > speculative)
+                return;
+
+            if ((openFaces & 1 << i) != 0 && separation > best)
+            {
+                best = separation;
+                face = i;
+            }
+        }
+
+        Clip(tile, polygon, face, speculative, 1 << 8, ref manifold);
+        manifold.Normal = -manifold.Normal;
+    }
+
     //**********************************************************
     //** internals
     //**********************************************************
@@ -238,12 +271,7 @@ internal static class Collision
         var best = float.MinValue;
         for (var i = 0; i < a.Count; i++)
         {
-            var normal = a.Normals[i];
-            var origin = a.Points[i];
-            var deepest = float.MaxValue;
-            for (var j = 0; j < b.Count; j++)
-                deepest = MathF.Min(deepest, Vector2.Dot(normal, b.Points[j] - origin));
-
+            var deepest = FaceSeparation(a, i, b);
             if (deepest > best)
             {
                 best = deepest;
@@ -252,6 +280,17 @@ internal static class Collision
         }
 
         return best;
+    }
+
+    /// <summary>How far <paramref name="b"/> lies outside face <paramref name="face"/> of <paramref name="a"/>.</summary>
+    private static float FaceSeparation(in ConvexPolygon a, int face, in ConvexPolygon b)
+    {
+        var normal = a.Normals[face];
+        var origin = a.Points[face];
+        var deepest = float.MaxValue;
+        for (var j = 0; j < b.Count; j++)
+            deepest = MathF.Min(deepest, Vector2.Dot(normal, b.Points[j] - origin));
+        return deepest;
     }
 
     /// <summary>

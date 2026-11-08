@@ -132,6 +132,28 @@ public class TileContactTests
         Assert.That(MathF.Abs(MathF.Sin(2f * angle)), Is.LessThan(.02f), $"angle {angle}");
     }
 
+    [TestCase(0f)]
+    [TestCase(.3f)]
+    [TestCase(-.3f)]
+    public void Update_TriangleTipRisingIntoCeilingSeam_StaysBelow(float angle)
+    {
+        // A ceiling one tile thick on row 1 and gravity pointing up. The tip pokes into the seam between two tiles,
+        // where each tile alone separates most along its side face, which touches the other tile. The tip must still be
+        // pushed back down, not ignored.
+        var tiles = new TileGrid(30, 12, Vector2.One);
+        for (var column = 0; column < 30; column++)
+            tiles.SetSolid(column, 1);
+        _physics.TileGrid = tiles;
+        _physics.Gravity = new Vector2(0, -50);
+        var triangle = _physics.Polygons.Add([new Vector2(0, -1.6f), new Vector2(1.5f, 1f), new Vector2(-1.5f, 1f)]);
+        var body = _world.Create(new Position(new Vector2(15f, 9)), new Velocity(new Vector2(0f, -15f)),
+            new Rotation(angle), new AngularVelocity(0f), RigidBody.Dynamic(2f), Collider.Polygon(triangle));
+
+        RunSeconds(3f);
+
+        Assert.That(_world.Get<Position>(body).Value.Y, Is.GreaterThan(2f));
+    }
+
     private void RunSeconds(float seconds)
     {
         var steps = (int)MathF.Round(seconds / Step);
