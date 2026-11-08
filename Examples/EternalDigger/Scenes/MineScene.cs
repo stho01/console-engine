@@ -89,5 +89,7 @@ public sealed class MineScene(SaveData start, string savePath) : EcsScene<Eterna
         Presentation.Add(new FloatingTextRenderSystem(canvas, Camera));
         Presentation.Add(new PromptRenderSystem(canvas, Camera, mine, elevator, counter));
         Presentation.Add(new HudSystem(canvas, _saver, elevator));
+        // Last, over everything: TAB pauses the simulation and shows the inventory.
+        Presentation.Add(new InventorySystem(canvas, elevator, Simulation));
     }
 }

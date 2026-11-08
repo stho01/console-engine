@@ -140,7 +140,7 @@ OnUpdate (game)           ESC → MineScene.Save(), Stop()
 Scenes.Render → MineScene.OnRender → Presentation.Update(dt)
   SkyRenderSystem → TerrainRenderSystem → HouseRenderSystem → ElevatorRenderSystem → DynamiteRenderSystem
   → ParticleRenderSystem
-  → MinerRenderSystem → FloatingTextRenderSystem → PromptRenderSystem → HudSystem
+  → MinerRenderSystem → FloatingTextRenderSystem → PromptRenderSystem → HudSystem → InventorySystem
 Display                   the frame goes to the console in one write
 ```
 

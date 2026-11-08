@@ -23,7 +23,7 @@ The start screen, without colours:
 
 ```text
  ETERNAL DIGGER   GOLD 0g   LADDERS 8   DEPTH 0m   BAG ◆0 ◆0 ◆0 = 0g
- ←→ walk/dig  ↓ dig  ↑ climb  ↑+←→ jump  SPACE ladder  E use/buy  hold E+arrow dynamite  hold R rescue  ESC save & quit
+ ←→↓ walk/dig  ↑ climb  ↑+←→ jump  SPACE ladder  E use  hold E+arrow dynamite  TAB inventory  hold R rescue  ESC quit
         ▄▄▀▄▀▄▀▄▀▄▀▄▀▄▀▄▀▄▀▄▀▄▀▄
          ─── EternalDigger ─────
             ▀             ▀     ▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄                                    MINE
@@ -114,6 +114,7 @@ Ore comes in **veins** (small clusters with gaps), not single scattered tiles. C
 | E (hold 0.5 s) | Underground: plant a lit stick of dynamite in the rock you face, or aim it with an arrow held at the same time (2 s fuse, 3 × 3 blast). Also on the lift's bottom landing, where a quick tap of E is the lift |
 | Up / Down in the lift | Ride to the top / the bottom |
 | R (hold 1.5 s) | Rescue: teleported back to the surface, **but your bag of ore is lost** (gold and ladders kept) |
+| Tab | Inventory screen: everything carried, the bag's worth and weight, upgrades, finds. Pauses the game |
 | Esc | Save and quit |
 
 ### Movement rules

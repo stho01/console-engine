@@ -5,7 +5,7 @@ and gold back to the house on the surface, sell it, and buy ladders so you can c
 
 ```text
  ETERNAL DIGGER   GOLD 0g  ╟╢8  OIL ▮▮▮▮▮▮▮▮  DEPTH 0m  BAG ◆0 ◆0 ◆0 ◆0 = 0g
- ←→ walk/dig  ↓ dig  ↑ climb  ↑+←→ jump  SPACE ladder  E use/buy  hold E+arrow dynamite  hold R rescue  ESC save & quit
+ ←→↓ walk/dig  ↑ climb  ↑+←→ jump  SPACE ladder  E use  hold E+arrow dynamite  TAB inventory  hold R rescue  ESC quit
         ▄▄▀▄▀▄▀▄▀▄▀▄▀▄▀▄▀▄▀▄▀▄▀▄
          ─── EternalDigger ─────
             ▀             ▀     ▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄                                    MINE
@@ -66,6 +66,7 @@ On Windows the game sets a 120 × 48 console with an 8 × 16 font. In a macOS or
 | `↑` / `↓` at the shop counter | Choose what to buy. The panel above the miner shows the item, what you have and the price |
 | `↑` / `↓` in the lift car | Ride to the top / the bottom. `←` `→` (or `↓` at the bottom) gets out |
 | `R` (hold 1.5 s) | Rescue: back to the surface. You keep gold and ladders, but **lose the ore in your bag** |
+| `TAB` | Inventory: everything you carry, the bag's worth and weight, your upgrades and finds. The game pauses while it is open; `TAB` again closes it |
 | `ESC` | Save and quit |
 
 ## The docs

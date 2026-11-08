@@ -40,7 +40,7 @@ Examples/EternalDigger/
 │   ├── Miner.cs                the player: grid position, motion, lamp, dig timers, dynamite, inventory
 │   ├── Dynamite.cs             a planted, lit stick: Column, Row, Fuse, SparkTimer
 │   └── Particle.cs             Particle, ParticleStyle, Physics, TileCollider, Mist, FloatingText
-├── Systems/                    24 systems, listed below
+├── Systems/                    25 systems, listed below
 ├── Effects/
 │   ├── EffectSpawner.cs        creates every particle and floating number
 │   ├── ParticleLooks.cs        characters and colours per style over a lifetime; GlyphAt
@@ -89,6 +89,7 @@ Examples/EternalDigger/
 | 8 | `FloatingTextRenderSystem` | `Canvas`, `Camera` | `FloatingText, Position` | `+150g` / `-10g` / `ELEVATOR +10m` / `TOO HARD` |
 | 9 | `PromptRenderSystem` | `Canvas`, `Camera`, `Mine`, `Elevator`, `ShopCounter` | `Miner, Position` | Door, shop, lift sign and landing prompts |
 | 10 | `HudSystem` | `Canvas`, `GameSaver`, `Elevator` | `Miner` | Rows 0–1, the save hint |
+| 11 | `InventorySystem` | `Canvas`, `Elevator`, `SystemGroup` (the Simulation) | `Miner` | `TAB` toggles; while open the Simulation systems are disabled (paused) and a centred panel lists gold, ladders, oil, flasks, dynamite, lift, the bag (count × price = worth, weight/capacity), upgrade pips and finds ever found |
 
 ## Components
 
@@ -188,7 +189,7 @@ Static rule classes: `Tiles`, `Shop`, `Upgrades`, `Layout`, `TileLooks`, `Partic
 | Text | Constant |
 |---|---|
 | ` ETERNAL DIGGER ` | `HudSystem.Title` |
-| ` ←→ walk/dig  ↓ dig  ↑ climb  ↑+←→ jump  SPACE ladder  E use/buy  hold E+arrow dynamite  hold R rescue  ESC save & quit` | `HudSystem.KeyHelp` |
+| ` ←→↓ walk/dig  ↑ climb  ↑+←→ jump  SPACE ladder  E use  hold E+arrow dynamite  TAB inventory  hold R rescue  ESC quit` | `HudSystem.KeyHelp` |
 | ` SAVED ` / ` SAVE FAILED` | `HudSystem.SavedText`, `SaveFailedText` |
 | `CONTINUE`, `NEW MINE`, `Start over? The saved mine will be lost.`, `NO`, `YES, START OVER` | `TitleMenu` (`ContinueText`, `NewMineText`, `ConfirmQuestion`, `NoText`, `YesText`) |
 | `↑↓ choose   E select   ESC quit` | `TitleScene.KeyHelp` |
@@ -202,6 +203,7 @@ Static rule classes: `Tiles`, `Shop`, `Upgrades`, `Layout`, `TileLooks`, `Partic
 | ` HOLD [E] + ARROW: DYNAMITE ` / ` TOO HARD: DYNAMITE AT THE SHOP ` | `PromptRenderSystem.PlantHintText`, `NeedDynamiteText` |
 | ` ↑ <ITEM> ↓ ` / `HAVE <n>` or `UNLOCKS DYNAMITE` / `<price>g [E]` or `SOLD OUT` (counter panel) | `PromptRenderSystem.DrawCounterPanel`, `KitUnlocksText`, `SoldOutText`, `MaxTierText` (`MAX`), `FullText` (`FULL`), `OIL <n>%`, pips `TierOn`/`TierOff` (`●`/`○`); item names `Shop.LadderName`, `BlastingKitName`, `DynamiteName`, `Upgrades.ShovelName`, `PickaxeName`, `LampName`, `BagName`, `DetectorName`, `LampOil.FillName` (`FILL LAMP`), `FlaskName` (`OIL FLASK`) |
 | ` LIGHTING FUSE ` + bar | `HudSystem.PlantLabel` |
+| ` INVENTORY `, ` TAB close `, `PAUSED`, `BAG`, `HEAVY`, `UPGRADES`, `FOUND FOR GOOD` (inventory panel) | `InventorySystem.Title`, `CloseHint`, `PausedText`, `InventorySystem.Build` |
 | `  ¡<n>` (dynamite), `  OIL ▮▮▮▮▮▯▯▯`, `╟╢<n>` (ladders) (HUD row 0) | `HudSystem.DrawStatus` |
 | `BLASTING`, ` ¡ ¡ ¡ ` (shed) | `HouseRenderSystem.BlastingText`, `BlastingDisplay` |
 | `OIL +<n>` (floating) | `FloatingTextRenderSystem.OilLabel` |

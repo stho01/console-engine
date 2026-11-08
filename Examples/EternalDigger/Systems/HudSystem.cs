@@ -23,8 +23,8 @@ public sealed class HudSystem(Canvas canvas, GameSaver saver, Elevator elevator)
 
     public const string Title = " ETERNAL DIGGER ";
     public const string KeyHelp =
-        " ←→ walk/dig  ↓ dig  ↑ climb  ↑+←→ jump  SPACE ladder  E use/buy  " +
-        "hold E+arrow dynamite  hold R rescue  ESC save & quit";
+        " ←→↓ walk/dig  ↑ climb  ↑+←→ jump  SPACE ladder  E use  " +
+        "hold E+arrow dynamite  TAB inventory  hold R rescue  ESC quit";
     public const string RescueLabel = " RESCUE ";
     public const string RescueNote = " the bag is lost";
     public const string NoLaddersWarning = " NO LADDERS LEFT!  Hold R to be rescued (the bag is lost) ";

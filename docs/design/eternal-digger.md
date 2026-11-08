@@ -38,6 +38,7 @@ and its `docs/` folder.
 | `SPACE` (pressed) | Place a ladder in the miner's tile (uses one from the inventory) |
 | `E` (pressed) | At the door: deliver all ore. At the shop counter: buy the selected item (Up/Down choose; Tier 2) |
 | `R` (held 1.5 s) | Rescue: back to the spawn tile, the bag is lost (ore only, not gold or ladders). The way out of a pit without ladders |
+| `TAB` (pressed) | Inventory screen on/off; the game pauses while it is open (Tier 2b, player feedback: the one new key) |
 | `ESC` | Save and quit (on the title screen: quit) |
 
 Keys are read once per frame into a `MinerInput` (`MinerInput.FromKeyboard`); tests pass their own. No input
@@ -133,6 +134,8 @@ box behind them (the engine has no public way to read a cell back):
    panel at the shop, and the lift prompts, while the miner stands there.
 8. `HudSystem(Canvas, GameSaver)`: top 2 rows (plus a fading ` SAVED ` after each save): `ETERNAL DIGGER`, gold, ladders, depth, bag; key help or the rescue
    progress bar. Strings rebuilt only when a value changes.
+9. `InventorySystem(Canvas, Elevator, SystemGroup)` (Tier 2b): `TAB` opens and closes the inventory panel; while
+   open every Simulation system is disabled, so the game pauses. Lines rebuilt only when a shown value changes.
 
 ## Performance rules
 
