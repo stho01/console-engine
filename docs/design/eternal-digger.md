@@ -112,7 +112,9 @@ Simulation:
    particles that enter a solid tile are put back on top of it and stop (velocity zero; coins bounce once).
 9. `ParticleLifetimeSystem`: ages particles, writes `Glyph` from `Style`, `Variant` and `Progress`, destroys expired.
 10. `FloatingTextSystem`: moves floating texts up, ages and destroys them.
-11. `SaveSystem(GameSaver)`: writes the save when requested this frame, or every `GameSaver.AutosaveInterval` (60) s
+11. `GasSystem(Mine, GasPockets, EffectSpawner, Random)` (Tier 3, runs right after `DynamiteSystem`): gas shimmer and
+    flares near a lit lamp.
+12. `SaveSystem(GameSaver)`: writes the save when requested this frame, or every `GameSaver.AutosaveInterval` (60) s
     underground.
 
 Presentation (draw order). Renderers draw through `Canvas` (`Rendering/Canvas.cs`), which wraps the `RenderConsole`
