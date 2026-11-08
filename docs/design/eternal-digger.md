@@ -208,6 +208,14 @@ The Tier 1 gem already matched the handover (250g, magenta glint, a bag slot). R
 double star burst and a floating name when dug out, sold at the door, counted in the HUD as `✦n` and for good in
 `Miner.FossilsFound`/`RelicsFound` for the Tier 3 trophy shelf. Saved from format version 7.
 
+## Deep camp (Tier 3)
+
+`DeepCamp.cs`. Bought once at the surface counter (`DEEP CAMP`, 1500g; `Miner.HasDeepCamp`, saved from format
+version 10). Building digs out columns 22–24 on rows 109–110 (100 m, right of the shaft, so beside the lift's last
+bottom landing above the wall) and floors them. Its counter (`ShopCounter.CampItems`, the same Up/Down/E controls)
+sells the bag at 70% and ladders, oil, flasks and sticks at ×1.5. `CampRenderSystem` (after `ElevatorRenderSystem`)
+draws a tent with a lantern; `LightMap.AddLantern` lights the camp.
+
 ## Bag weight (Tier 2)
 
 `Shop.BagWeight`: copper 1, silver 1, gold 2, gem 2, rare finds 3. Over the capacity (20 + 10 per bag tier) every 10

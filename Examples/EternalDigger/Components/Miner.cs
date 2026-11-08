@@ -76,6 +76,9 @@ public struct Miner
     /// <summary>Sticks planted whose fuse still burns. A save puts them back into <see cref="Dynamite"/>.</summary>
     public int LitDynamite;
 
+    /// <summary>Bought the deep camp: its tiles are dug out and its counter trades at <c>DeepCamp.Row</c>.</summary>
+    public bool HasDeepCamp;
+
     /// <summary>Lamp oil, 0 to <see cref="LampOil.TankSize"/>. Burns underground only.</summary>
     public float Oil;
 

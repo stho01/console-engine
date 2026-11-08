@@ -148,7 +148,7 @@ public sealed class InventorySystem(Canvas canvas, Elevator elevator, SystemGrou
         _lines[1] = $" GOLD      {miner.Gold,8:N0}g        LADDERS   {miner.Ladders}";
         _lines[2] = $" OIL       {LampOil.Percent(miner.Oil),8}%        FLASKS    δ{miner.OilFlasks}/{LampOil.MaxFlasks}";
         _lines[3] = $" DYNAMITE  {dynamite,-17} LIFT      {lift}";
-        _lines[4] = "";
+        _lines[4] = $" CAMP      {(miner.HasDeepCamp ? $"built at {DeepCamp.Depth}m" : "not built")}";
         _lines[5] = $"BAG{(Shop.IsHeavy(miner) ? "  HEAVY" : ""),-30}weight {weight}/{capacity}";
         _lines[6] = BagLine(OreIcon, "copper", miner.CopperOre, Tiles.CopperValue);
         _lines[7] = BagLine(OreIcon, "silver", miner.SilverOre, Tiles.SilverValue);
@@ -177,7 +177,7 @@ public sealed class InventorySystem(Canvas canvas, Elevator elevator, SystemGrou
     /// <summary>A hash of every value the panel shows; computed every frame while open, without allocating.</summary>
     private int Signature(in Miner miner) => HashCode.Combine(
         HashCode.Combine(miner.Gold, miner.Ladders, LampOil.Percent(miner.Oil), miner.OilFlasks, miner.Dynamite,
-            miner.HasBlastingKit, elevator.Depth),
+            miner.HasBlastingKit, elevator.Depth, miner.HasDeepCamp),
         HashCode.Combine(miner.CopperOre, miner.SilverOre, miner.GoldOre, miner.GemOre, miner.Fossils, miner.Relics,
             miner.BagTier),
         HashCode.Combine(miner.ShovelTier, miner.PickaxeTier, miner.LampTier, miner.DetectorTier, miner.FossilsFound,

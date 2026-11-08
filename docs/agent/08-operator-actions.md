@@ -47,6 +47,7 @@ team's process differs.
 | EternalDigger | R (hold 1.5 s) / ESC | Rescue to the surface (the bag is lost) / save and quit | `MinerControlSystem`, `EternalDiggerGame.OnUpdate` |
 | EternalDigger (counter) | ↑↓ / E at the shop counter | Choose an item / buy one (ladder, fill lamp, an upgrade tier, the kit or a stick) | `InteractionSystem`, `ShopCounter` |
 | EternalDigger (dynamite) | hold E 0.5 s underground facing rock (+ an arrow to aim: ↓ below, ↑ above, ←→ sides); on the lift's bottom landing tap E for the lift, hold it to plant | plant a lit stick (2 s fuse, 3 × 3 blast) | `InteractionSystem`, `MinerControlSystem.UpdatePlanting`, `DynamiteSystem` |
+| EternalDigger (deep camp) | ↑↓ / E at the camp counter (100 m, right of the lift shaft) | Choose / sell the bag at 70% or buy ladders, oil, flasks, sticks at ×1.5 | `InteractionSystem`, `DeepCamp`, `ShopCounter.CampItems` |
 | EternalDigger (lift) | E at the `LIFT` sign / E on a landing / ↑↓ in the car / ←→ | Build 10 m / get in or call / ride to the top or bottom / get out | `InteractionSystem`, `MinerControlSystem` |
 | EternalDigger (title) | ↑↓ (or W S) / E / ESC | Choose / pick CONTINUE, NEW MINE or the confirmation / quit without saving | `TitleScene`, `TitleMenu` |
 | EternalDigger (no code) | Delete `<LocalApplicationData>/EternalDigger/save.dat` | Start fresh without the confirmation | `SaveFile.DefaultPath` |

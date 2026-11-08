@@ -138,7 +138,7 @@ Scenes.Update → MineScene.OnUpdate → Simulation.Update(dt)
   ── Commands.Playback: the particles recorded above are created, expired ones destroyed
 OnUpdate (game)           ESC → MineScene.Save(), Stop()
 Scenes.Render → MineScene.OnRender → Presentation.Update(dt)
-  SkyRenderSystem → TerrainRenderSystem → HouseRenderSystem → ElevatorRenderSystem → DynamiteRenderSystem
+  SkyRenderSystem → TerrainRenderSystem → HouseRenderSystem → ElevatorRenderSystem → CampRenderSystem → DynamiteRenderSystem
   → ParticleRenderSystem
   → MinerRenderSystem → FloatingTextRenderSystem → PromptRenderSystem → HudSystem → InventorySystem
 Display                   the frame goes to the console in one write

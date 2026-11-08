@@ -205,6 +205,7 @@ The counter sells (`ShopCounter.Items`, prices in `Shop`):
 | Oil flask | 60g | One flask for the pack, up to 5; poured in by itself when the lamp runs low |
 | Shovel | 300 / 900 / 2500g | Each tier digs 15% faster ([Upgrades](#upgrades)) |
 | Pickaxe | 350 / 1000 / 2800g | Each tier takes one hit off every tile, never below 1 ([Upgrades](#upgrades)) |
+| Deep camp | 1500g, once | A trading post at 100 m by the lift ([The deep camp](#deep-camp)) |
 | Lamp | 250 / 750 / 2000g | Each tier: +2 tiles of reach and −20% oil burn |
 | Bag | 200 / 600 / 1500g | Each tier: +10 weight carried before the climb slows ([Bag weight](#bag-weight)) |
 | Detector | 400 / 1200 / 3000g | Each tier: +3 tiles of glint radius, glints 20% more often |
@@ -279,6 +280,22 @@ the mine entrance.
 
 The shaft below the surface is open once the lift is built: stepping into it without a ladder or the car means a
 fall to the bottom landing (no fall damage).
+
+<a id="deep-camp"></a>
+## The deep camp
+
+A trading post at 100 m (`DeepCamp.cs`), so a deep trip doesn't have to end at the house. It sits right of the lift
+shaft, beside the lift's bottom landing once the lift reaches 100 m (its last segment above the wall).
+
+| Rule | Value | Identifier |
+|---|---|---|
+| Buying | `DEEP CAMP` at the surface counter (between the detector and the blasting slot): 1500g, once. The panel shows `AT 100m BY THE LIFT`, then `BUILT` | `DeepCamp.Price`, `Shop.TryBuyDeepCamp`, `Miner.HasDeepCamp` |
+| Building | Buying digs out columns 22–24 on row 110 (100 m) and the row above; ore there goes into the bag. Every open tile under them becomes stone, so the camp has a floor | `DeepCamp.Build` |
+| Counter | Standing on row 110 at columns 22–24 once it is built. `↑`/`↓` choose (they don't climb or dig there), `E` buys or sells. Holding `E` there doesn't plant dynamite | `DeepCamp.IsAtCounter`, `ShopCounter.CampItems` |
+| Selling | `SELL BAG` (first): the bag for 70% of what the house pays, rounded down. Coins, stars and `+<n>g` above the tent | `DeepCamp.SaleShare`, `DeepCamp.SellBag` |
+| Buying there | Ladders 15g, `FILL LAMP` 3g per missing unit, `OIL FLASK` 90g, dynamite 150g a stick: the surface price × 1.5, rounded up. Sticks only with the kit (`KIT: SURFACE ONLY`); no upgrades | `DeepCamp.Markup`, `Shop.CampPrice`, `Shop.TryBuyAtCamp` |
+| Look | A tent `/▀\` at column 24, a flickering lantern `¤` on a pole at column 22, a `CAMP` plank and a crate. The lantern lights the tiles within 2.6 tiles (`Lit`), dim to 3.9 | `CampRenderSystem`, `LightMap.AddLantern`, `DeepCamp.LanternRadius` |
+| Saving | Every sale and purchase there saves. The camp is saved from format version 10; its dug tiles are ordinary changed tiles | `SaveData.HasDeepCamp` |
 
 <a id="dynamite"></a>
 ## Dynamite

@@ -116,6 +116,8 @@ public static class Shop
         _ when ShopCounter.IsUpgrade(item) => Upgrades.NextPrice(ShopCounter.Line(item), miner),
         ShopItem.LampOil => LampOil.FillPrice(miner),
         ShopItem.OilFlask => LampOil.FlaskPriceFor(miner),
+        ShopItem.DeepCamp => miner.HasDeepCamp ? SoldOut : DeepCamp.Price,
+        ShopItem.SellBag => DeepCamp.Sale(miner),
         ShopItem.Blasting => BlastingPrice(miner),
         _ => LadderPrice
     };
@@ -129,6 +131,8 @@ public static class Shop
         _ when ShopCounter.IsUpgrade(item) => Upgrades.Tier(ShopCounter.Line(item), miner),
         ShopItem.LampOil => LampOil.Percent(miner.Oil),
         ShopItem.OilFlask => miner.OilFlasks,
+        ShopItem.DeepCamp => miner.HasDeepCamp ? 1 : 0,
+        ShopItem.SellBag => BagValue(miner),
         ShopItem.Blasting => miner.HasBlastingKit ? miner.Dynamite : -1,
         _ => miner.Ladders
     };
@@ -139,9 +143,54 @@ public static class Shop
         _ when ShopCounter.IsUpgrade(item) => Upgrades.TryBuy(ShopCounter.Line(item), ref miner),
         ShopItem.LampOil => LampOil.TryFill(ref miner),
         ShopItem.OilFlask => LampOil.TryBuyFlask(ref miner),
+        ShopItem.DeepCamp => TryBuyDeepCamp(ref miner),
+        ShopItem.SellBag => false,
         ShopItem.Blasting => TryBuyBlasting(ref miner),
         _ => TryBuyLadder(ref miner)
     };
+
+    /// <summary>
+    /// What an item at the deep camp's counter costs: the surface price with <see cref="DeepCamp.Markup"/>. Sticks
+    /// only with the kit; <see cref="ShopItem.SellBag"/> is what the camp pays for the bag. Anything else isn't sold
+    /// there (<see cref="SoldOut"/>).
+    /// </summary>
+    public static int CampPrice(ShopItem item, in Miner miner) => item switch
+    {
+        ShopItem.SellBag => DeepCamp.Sale(miner),
+        ShopItem.Blasting => miner.HasBlastingKit ? DeepCamp.MarkedUp(DynamitePrice) : SoldOut,
+        ShopItem.Ladder or ShopItem.LampOil or ShopItem.OilFlask => DeepCamp.MarkedUp(Price(item, miner)),
+        _ => SoldOut
+    };
+
+    /// <summary>Buys one of an item at the deep camp. False if it isn't sold there, is sold out or is too dear.</summary>
+    public static bool TryBuyAtCamp(ShopItem item, ref Miner miner)
+    {
+        var price = CampPrice(item, miner);
+        if (item == ShopItem.SellBag || price == SoldOut || miner.Gold < price)
+            return false;
+
+        miner.Gold -= price;
+        switch (item)
+        {
+            case ShopItem.Ladder: miner.Ladders++; break;
+            case ShopItem.LampOil: miner.Oil = LampOil.TankSize; break;
+            case ShopItem.OilFlask: miner.OilFlasks++; break;
+            default: miner.Dynamite++; break;
+        }
+
+        return true;
+    }
+
+    /// <summary>Pays for the deep camp once. The tiles are dug out by <see cref="DeepCamp.Build"/>.</summary>
+    public static bool TryBuyDeepCamp(ref Miner miner)
+    {
+        if (miner.HasDeepCamp || miner.Gold < DeepCamp.Price)
+            return false;
+
+        miner.Gold -= DeepCamp.Price;
+        miner.HasDeepCamp = true;
+        return true;
+    }
 
     /// <summary>The price of the blasting slot: the kit, then sticks.</summary>
     public static int BlastingPrice(in Miner miner) => miner.HasBlastingKit ? DynamitePrice : BlastingKitPrice;

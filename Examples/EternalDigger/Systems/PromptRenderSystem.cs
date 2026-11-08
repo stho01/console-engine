@@ -11,11 +11,13 @@ namespace EternalDigger.Systems;
 /// <summary>
 /// A small framed prompt above the miner's head while they stand at the house door (<c>DELIVER [E]</c>), the lift
 /// sign (<c>BUILD LIFT +10m [E] 200g</c>) or a lift landing (call, get in, ride). At the shop counter it is a
-/// three-line panel: the selected item with the Up/Down hint, what the miner has of it, and its price. It bobs gently.
-/// A price turns red when the miner can't pay.
+/// three-line panel: the selected item with the Up/Down hint, what the miner has of it, and its price; the deep camp's
+/// counter shows the same panel with its own items and prices. It bobs gently. A price turns red when the miner can't
+/// pay.
 /// </summary>
 public sealed class PromptRenderSystem(
-    Canvas canvas, Camera camera, Mine mine, Elevator elevator, ShopCounter counter) : EntitySystem
+    Canvas canvas, Camera camera, Mine mine, Elevator elevator, ShopCounter counter, ShopCounter campCounter)
+    : EntitySystem
 {
     //**********************************************************
     //** fields
@@ -32,6 +34,10 @@ public sealed class PromptRenderSystem(
     public const string SoldOutText = "SOLD OUT";
     public const string MaxTierText = "MAX";
     public const string FullText = "FULL";
+    public const string CampNotBuiltText = "AT 100m BY THE LIFT";
+    public const string CampBuiltText = "BUILT";
+    public const string EmptyBagText = "BAG IS EMPTY";
+    public const string KitAtSurfaceText = "KIT: SURFACE ONLY";
     public const char TierOn = '●';
     public const char TierOff = '○';
 
@@ -47,7 +53,7 @@ public sealed class PromptRenderSystem(
     private string _panelName = string.Empty, _panelOwned = string.Empty, _panelPrice = string.Empty;
     private ShopItem _shownItem;
     private int _shownPrice = int.MinValue, _shownOwned = int.MinValue;
-    private bool _shownKit;
+    private bool _shownKit, _shownCamp;
 
     //**********************************************************
     //** lifecycle
@@ -70,7 +76,9 @@ public sealed class PromptRenderSystem(
             else if (Layout.IsAtDeliverSpot(miner.Column, miner.Row))
                 Draw(DeliverText, position.X, position.Y, ConsoleColor.White);
             else if (Layout.IsAtShop(miner.Column, miner.Row))
-                DrawCounterPanel(miner, position.X, position.Y);
+                DrawCounterPanel(miner, position.X, position.Y, false);
+            else if (DeepCamp.IsAtCounter(miner))
+                DrawCounterPanel(miner, position.X, position.Y, true);
             else if (Layout.IsAtLiftSign(miner.Column, miner.Row) && !elevator.CanBuildNext(mine))
                 Draw(LiftBlockedText, position.X, position.Y, ConsoleColor.Red);
             else if (Layout.IsAtLiftSign(miner.Column, miner.Row))
@@ -123,31 +131,59 @@ public sealed class PromptRenderSystem(
         return _buildLiftText;
     }
 
-    /// <summary>The counter's panel for the selected item. Its strings are rebuilt only when a value changes.</summary>
-    private void DrawCounterPanel(in Miner miner, float minerX, float minerY)
+    /// <summary>
+    /// A counter's panel for the selected item: the surface counter, or the deep camp's (<paramref name="atCamp"/>)
+    /// with its prices and the bag sale. Its strings are rebuilt only when a value changes.
+    /// </summary>
+    private void DrawCounterPanel(in Miner miner, float minerX, float minerY, bool atCamp)
     {
-        var item = counter.Selected;
-        var price = Shop.Price(item, miner);
+        var item = atCamp ? campCounter.Selected : counter.Selected;
+        var price = atCamp ? Shop.CampPrice(item, miner) : Shop.Price(item, miner);
         var owned = Shop.Owned(item, miner);
-        if (item != _shownItem || price != _shownPrice || owned != _shownOwned || miner.HasBlastingKit != _shownKit)
+        if (item != _shownItem || price != _shownPrice || owned != _shownOwned || miner.HasBlastingKit != _shownKit ||
+            atCamp != _shownCamp)
         {
             _shownItem = item;
             _shownPrice = price;
             _shownOwned = owned;
             _shownKit = miner.HasBlastingKit;
+            _shownCamp = atCamp;
             _panelName = $" ↑ {ShopCounter.Name(item, miner)} ↓ ";
-            var upgrade = ShopCounter.IsUpgrade(item);
-            _panelOwned = upgrade ? Pips(owned)
-                : item == ShopItem.LampOil ? $"OIL {owned}%"
-                : owned >= 0 ? $"HAVE {owned}" : KitUnlocksText;
-            _panelPrice = price != Shop.SoldOut ? $"{price}g {KeyHint}"
-                : upgrade ? MaxTierText
-                : item is ShopItem.LampOil or ShopItem.OilFlask ? FullText : SoldOutText;
+            BuildPanelLines(item, price, owned, atCamp, miner.HasBlastingKit);
         }
 
-        var priceColor = price == Shop.SoldOut ? ConsoleColor.DarkGray : PriceColor(miner.Gold, price);
+        var sale = item == ShopItem.SellBag;
+        var priceColor = sale ? owned > 0 ? ConsoleColor.Yellow : ConsoleColor.DarkGray
+            : price == Shop.SoldOut ? ConsoleColor.DarkGray : PriceColor(miner.Gold, price);
         DrawBox(minerX, minerY, _panelName, ConsoleColor.White, _panelOwned, ConsoleColor.Gray, _panelPrice,
             priceColor);
+    }
+
+    /// <summary>The panel's second and third lines: what the miner has, then the price (or why not).</summary>
+    private void BuildPanelLines(ShopItem item, int price, int owned, bool atCamp, bool hasKit)
+    {
+        if (item == ShopItem.SellBag)
+        {
+            _panelOwned = owned > 0 ? $"HOME PAYS {owned}g" : EmptyBagText;
+            _panelPrice = owned > 0 ? $"+{price}g {KeyHint}" : SoldOutText;
+            return;
+        }
+
+        if (item == ShopItem.DeepCamp)
+        {
+            _panelOwned = owned > 0 ? CampBuiltText : CampNotBuiltText;
+            _panelPrice = price != Shop.SoldOut ? $"{price}g {KeyHint}" : CampBuiltText;
+            return;
+        }
+
+        var upgrade = ShopCounter.IsUpgrade(item);
+        _panelOwned = upgrade ? Pips(owned)
+            : item == ShopItem.LampOil ? $"OIL {owned}%"
+            : owned >= 0 ? $"HAVE {owned}" : KitUnlocksText;
+        _panelPrice = price != Shop.SoldOut ? $"{price}g {KeyHint}"
+            : upgrade ? MaxTierText
+            : item is ShopItem.LampOil or ShopItem.OilFlask ? FullText
+            : atCamp && item == ShopItem.Blasting && !hasKit ? KitAtSurfaceText : SoldOutText;
     }
 
     /// <summary>Tier pips like <c>●●○</c>.</summary>

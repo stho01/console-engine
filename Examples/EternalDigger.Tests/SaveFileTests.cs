@@ -230,6 +230,16 @@ public class SaveFileTests
 
         Assert.That(status, Is.EqualTo(SaveStatus.Loaded));
         Assert.That(loaded.PickaxeTier, Is.EqualTo(2));
+        Assert.That(loaded.HasDeepCamp, Is.False);
+    }
+
+    [Test]
+    public void Read_Version10Save_LoadsTheDeepCamp()
+    {
+        var status = SaveFile.Read(OldSave(10), out var loaded);
+
+        Assert.That(status, Is.EqualTo(SaveStatus.Loaded));
+        Assert.That(loaded.HasDeepCamp, Is.True);
     }
 
     [Test]
@@ -362,7 +372,8 @@ public class SaveFileTests
             FossilsFound = 5,
             RelicsFound = 3,
             OilFlasks = 2,
-            PickaxeTier = 3
+            PickaxeTier = 3,
+            HasDeepCamp = true
         };
         var elevator = new Elevator();
         var rich = new Miner { Gold = 10_000 };
@@ -375,7 +386,7 @@ public class SaveFileTests
 
     /// <summary>
     /// A hand-written old save: gold 55, one tile; v2 a 30 m lift, v3 9 gems, v4 the kit and 5 sticks, v5 tiers 1-2-0-3,
-    /// v6 25 oil, v7 a fossil in the bag and 2 found, v8 2 oil flasks, v9 pickaxe tier 2.
+    /// v6 25 oil, v7 a fossil in the bag and 2 found, v8 2 oil flasks, v9 pickaxe tier 2, v10 the deep camp.
     /// </summary>
     private static MemoryStream OldSave(int version)
     {
@@ -422,6 +433,9 @@ public class SaveFileTests
             if (version >= 9)
                 writer.Write((byte)2);
 
+            if (version >= 10)
+                writer.Write(true);
+
             writer.Write(1);
             writer.Write(13);
             writer.Write((byte)7);
@@ -467,6 +481,7 @@ public class SaveFileTests
         Assert.That(actual.RelicsFound, Is.EqualTo(expected.RelicsFound));
         Assert.That(actual.OilFlasks, Is.EqualTo(expected.OilFlasks));
         Assert.That(actual.PickaxeTier, Is.EqualTo(expected.PickaxeTier));
+        Assert.That(actual.HasDeepCamp, Is.EqualTo(expected.HasDeepCamp));
         Assert.That(actual.ElevatorSegments, Is.EqualTo(expected.ElevatorSegments));
         Assert.That(actual.ElevatorCarRow, Is.EqualTo(expected.ElevatorCarRow));
         Assert.That(actual.Changes, Is.EqualTo(expected.Changes));

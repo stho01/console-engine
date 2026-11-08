@@ -14,7 +14,9 @@ Examples/EternalDigger/
 │                               IsHeavy, ClimbLoad, OilLoad, Deliver, EmptyBag, TryBuyLadder,
 │                               BlastingPrice, TryBuyBlasting, Price, Owned, TryBuy, Collect
 ├── MinerInput.cs               one frame of miner keys (also Use / UsePressed for E, Up/DownPressed); FromKeyboard
-├── ShopCounter.cs              the counter's selection (Previous, Next, Select, Name, IsUpgrade, Line); ShopItem
+├── ShopCounter.cs              a counter's selection (Previous, Next, Select, Name, IsUpgrade, Line); ShopItem;
+│                               Items (surface), CampItems (deep camp)
+├── DeepCamp.cs                 the deep camp: Price, Row, columns, SaleShare, Markup; Build, SellBag, Sale, IsAtCounter
 ├── LampOil.cs                  the tank: TankSize, BurnRate, Reach, IsLow, FillPrice, TryFill; flasks: TryBuyFlask, TryPour
 ├── Upgrades.cs                 upgrade prices and effects per tier: NextPrice, TryBuy, DigInterval, FewerHits, LampReach,
 │                               GlintRadius, GlintInterval; UpgradeLine
@@ -40,7 +42,7 @@ Examples/EternalDigger/
 │   ├── Miner.cs                the player: grid position, motion, lamp, dig timers, dynamite, inventory
 │   ├── Dynamite.cs             a planted, lit stick: Column, Row, Fuse, SparkTimer
 │   └── Particle.cs             Particle, ParticleStyle, Physics, TileCollider, Mist, FloatingText
-├── Systems/                    25 systems, listed below
+├── Systems/                    26 systems, listed below
 ├── Effects/
 │   ├── EffectSpawner.cs        creates every particle and floating number
 │   ├── ParticleLooks.cs        characters and colours per style over a lifetime; GlyphAt
@@ -61,7 +63,7 @@ Examples/EternalDigger/
 | # | System | Constructor | Queries | Does |
 |---|---|---|---|---|
 | 1 | `MinerControlSystem` | `Mine`, `Elevator`, `EffectSpawner` | `Miner, Position` | Reads `MinerInput`; rescue, ride keys, fall, ladder, walk/dig; `Mine.Hit`, `Shop.Collect`, dig effects. Public `Control(...)` |
-| 2 | `InteractionSystem` | `Mine`, `Elevator`, `ShopCounter`, `EffectSpawner`, `GameSaver` | `Miner` | `E` at the door, the counter (Up/Down choose), lift sign or a landing: `Shop.Deliver`/`TryBuy`, `Elevator.TryBuild`, call/get in; coins, pops, texts; asks for a save. Public `Interact(...)` |
+| 2 | `InteractionSystem` | `Mine`, `Elevator`, `ShopCounter`, `EffectSpawner`, `GameSaver`, camp `ShopCounter` | `Miner` | `E` at the door, the counter (Up/Down choose), lift sign, a landing or the deep camp counter (sell the bag, camp prices; buying `DEEP CAMP` runs `DeepCamp.Build`): `Shop.Deliver`/`TryBuy`, `Elevator.TryBuild`, call/get in; coins, pops, texts; asks for a save. Public `Interact(...)` |
 | 3 | `MinerMotionSystem` | `Mine`, `EffectSpawner` | `Miner, Position` | Slides `Position`, ends moves, foot and landing dust, counts down `DigCooldown`/`SwingTime`. Public `Move(...)` |
 | 4 | `ElevatorSystem` | `Elevator` | `Miner, Position` | `Elevator.Update`; carries the rider, picks up a caller. Public `Carry(...)` |
 | 5 | `DynamiteSystem` | `Mine`, `EffectSpawner` | `Dynamite, Position`; `Miner` | Fuses, sparks and smoke; blasts (clear 3 × 3, bag ore, destroy ladders, push, chain). Public `Blast(...)` |
@@ -83,13 +85,14 @@ Examples/EternalDigger/
 | 2 | `TerrainRenderSystem` | `Canvas`, `Camera`, `Mine`, `LightMap` | — | Tiles by light, ladders, cracks, grass |
 | 3 | `HouseRenderSystem` | `Canvas`, `Camera` | — | House, sign, smoke, shop, mine frame, `LIFT` sign |
 | 4 | `ElevatorRenderSystem` | `Canvas`, `Camera`, `Elevator` | — | Shaft walls and braces, cable, car, speed lines |
-| 5 | `DynamiteRenderSystem` | `Canvas`, `Camera` | `Dynamite` | Planted sticks `¡` and their flickering `*` fuse |
-| 6 | `ParticleRenderSystem` | `Canvas`, `Camera`, `LightMap` | `Particle, Position, Glyph`; `Miner, Position` | Particles (dust and mist only where lit; none on the miner, capped and dimmed around him) |
-| 7 | `MinerRenderSystem` | `Canvas`, `Camera`, `Headlamp` | `Miner, Position` | The miner and lamp glow, over the particles |
-| 8 | `FloatingTextRenderSystem` | `Canvas`, `Camera` | `FloatingText, Position` | `+150g` / `-10g` / `ELEVATOR +10m` / `TOO HARD` |
-| 9 | `PromptRenderSystem` | `Canvas`, `Camera`, `Mine`, `Elevator`, `ShopCounter` | `Miner, Position` | Door, shop, lift sign and landing prompts |
-| 10 | `HudSystem` | `Canvas`, `GameSaver`, `Elevator` | `Miner` | Rows 0–1, the save hint |
-| 11 | `InventorySystem` | `Canvas`, `Elevator`, `SystemGroup` (the Simulation) | `Miner` | `TAB` toggles; while open the Simulation systems are disabled (paused) and a centred panel lists gold, ladders, oil, flasks, dynamite, lift, the bag (count × price = worth, weight/capacity), upgrade pips and finds ever found |
+| 5 | `CampRenderSystem` | `Canvas`, `Camera` | `Miner` | The deep camp once bought: tent, lantern, `CAMP` plank, crate |
+| 6 | `DynamiteRenderSystem` | `Canvas`, `Camera` | `Dynamite` | Planted sticks `¡` and their flickering `*` fuse |
+| 7 | `ParticleRenderSystem` | `Canvas`, `Camera`, `LightMap` | `Particle, Position, Glyph`; `Miner, Position` | Particles (dust and mist only where lit; none on the miner, capped and dimmed around him) |
+| 8 | `MinerRenderSystem` | `Canvas`, `Camera`, `Headlamp` | `Miner, Position` | The miner and lamp glow, over the particles |
+| 9 | `FloatingTextRenderSystem` | `Canvas`, `Camera` | `FloatingText, Position` | `+150g` / `-10g` / `ELEVATOR +10m` / `TOO HARD` |
+| 10 | `PromptRenderSystem` | `Canvas`, `Camera`, `Mine`, `Elevator`, `ShopCounter` (surface), `ShopCounter` (camp) | `Miner, Position` | Door, shop, camp counter, lift sign and landing prompts, dynamite hints |
+| 11 | `HudSystem` | `Canvas`, `GameSaver`, `Elevator` | `Miner` | Rows 0–1, the save hint |
+| 12 | `InventorySystem` | `Canvas`, `Elevator`, `SystemGroup` (the Simulation) | `Miner` | `TAB` toggles; while open the Simulation systems are disabled (paused) and a centred panel lists gold, ladders, oil, flasks, dynamite, lift, the bag (count × price = worth, weight/capacity), upgrade pips and finds ever found |
 
 ## Components
 
@@ -159,6 +162,7 @@ Static rule classes: `Tiles`, `Shop`, `Upgrades`, `Layout`, `TileLooks`, `Partic
 | `GlintSystem.Interval` / `Radius` | 0.08 s / 9 tiles | Starting detector |
 | `LampOil.TankSize` / `SecondsPerUnit` / `LowShare` / `LowReach` / `PricePerUnit` | 100 / 3 s / 30% / 3 tiles / 2g | The tank |
 | `LampOil.FlaskPrice` / `FlaskUnits` / `MaxFlasks` | 60g / 40 / 5 | Oil flasks: price, units poured, pack size |
+| `DeepCamp.Price` / `Depth` / `SaleShare` / `Markup` / `LanternRadius` | 1500g / 100 m / 70% / ×1.5 / 2.6 tiles | The deep camp |
 | `HudSystem.OilGaugeCells` | 8 | Oil gauge cells |
 | `MinerControlSystem.PlantDuration` / `FuseDuration` | 0.5 / 2 s | Hold to plant, fuse |
 | `DynamiteSystem.BlastRadius` / `ChainDelay` / `PushDuration` | 1 tile (3 × 3) / 0.12 s / 0.1 s | Blast size, fuse left on a stick a blast reaches, push slide |
@@ -204,6 +208,7 @@ Static rule classes: `Tiles`, `Shop`, `Upgrades`, `Layout`, `TileLooks`, `Partic
 | ` ↑ <ITEM> ↓ ` / `HAVE <n>` or `UNLOCKS DYNAMITE` / `<price>g [E]` or `SOLD OUT` (counter panel) | `PromptRenderSystem.DrawCounterPanel`, `KitUnlocksText`, `SoldOutText`, `MaxTierText` (`MAX`), `FullText` (`FULL`), `OIL <n>%`, pips `TierOn`/`TierOff` (`●`/`○`); item names `Shop.LadderName`, `BlastingKitName`, `DynamiteName`, `Upgrades.ShovelName`, `PickaxeName`, `LampName`, `BagName`, `DetectorName`, `LampOil.FillName` (`FILL LAMP`), `FlaskName` (`OIL FLASK`) |
 | ` LIGHTING FUSE ` + bar | `HudSystem.PlantLabel` |
 | ` INVENTORY `, ` TAB close `, `PAUSED`, `BAG`, `HEAVY`, `UPGRADES`, `FOUND FOR GOOD` (inventory panel) | `InventorySystem.Title`, `CloseHint`, `PausedText`, `InventorySystem.Build` |
+| ` ↑ SELL BAG ↓ `, `HOME PAYS <n>g`, `BAG IS EMPTY`, `AT 100m BY THE LIFT`, `BUILT`, `KIT: SURFACE ONLY`, `CAMP` (plank) | `DeepCamp.SellBagName`, `PromptRenderSystem.EmptyBagText`, `CampNotBuiltText`, `CampBuiltText`, `KitAtSurfaceText`, `CampRenderSystem.SignText`; item name `DeepCamp.Name` (`DEEP CAMP`) |
 | `  ¡<n>` (dynamite), `  OIL ▮▮▮▮▮▯▯▯`, `╟╢<n>` (ladders) (HUD row 0) | `HudSystem.DrawStatus` |
 | `BLASTING`, ` ¡ ¡ ¡ ` (shed) | `HouseRenderSystem.BlastingText`, `BlastingDisplay` |
 | `OIL +<n>` (floating) | `FloatingTextRenderSystem.OilLabel` |

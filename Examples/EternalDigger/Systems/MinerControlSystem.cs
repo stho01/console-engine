@@ -130,14 +130,16 @@ public sealed class MinerControlSystem(Mine mine, Elevator elevator, EffectSpawn
             return;
         }
 
-        if (input.Down)
+        // At the deep camp's counter Up/Down choose an item, so they don't dig the camp's floor.
+        var atCounter = DeepCamp.IsAtCounter(miner);
+        if (input.Down && !atCounter)
         {
             miner.ClimbStreak = 0;
             MoveOrDig(ref miner, 0, 1, ClimbDuration, MinerMotion.Climbing, commands);
             return;
         }
 
-        if (input.Up && mine.HasLadder(miner.Column, miner.Row))
+        if (input.Up && !atCounter && mine.HasLadder(miner.Column, miner.Row))
         {
             var climbing = !mine.IsSolid(miner.Column, miner.Row - 1);
             MoveOrDig(ref miner, 0, -1, ClimbUpDuration(miner.ClimbStreak) * Shop.ClimbLoad(miner),
@@ -205,7 +207,7 @@ public sealed class MinerControlSystem(Mine mine, Elevator elevator, EffectSpawn
             return false;
 
         var onLanding = miner.Column == Elevator.Column && elevator.IsLanding(miner.Row);
-        if (Mine.Depth(miner.Row) <= 0 || onLanding && !CanPlant(miner))
+        if (Mine.Depth(miner.Row) <= 0 || onLanding && !CanPlant(miner) || DeepCamp.IsAtCounter(miner))
         {
             miner.PlantHold = 0f;
             return false;

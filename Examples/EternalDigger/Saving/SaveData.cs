@@ -46,6 +46,9 @@ public sealed class SaveData
     /// <summary>Pickaxe tier, 0 to <see cref="Upgrades.MaxTier"/>. Saves from before the pickaxe load with 0.</summary>
     public int PickaxeTier { get; init; }
 
+    /// <summary>The deep camp was bought (its dug-out tiles are in <see cref="Changes"/>).</summary>
+    public bool HasDeepCamp { get; init; }
+
     /// <summary>Lamp oil. Saves from before lamp oil load with a full tank.</summary>
     public float Oil { get; init; } = LampOil.TankSize;
 
@@ -109,6 +112,7 @@ public sealed class SaveData
             Oil = miner.Oil,
             OilFlasks = miner.OilFlasks,
             PickaxeTier = miner.PickaxeTier,
+            HasDeepCamp = miner.HasDeepCamp,
             Dynamite = miner.Dynamite + miner.LitDynamite,
             ElevatorSegments = elevator.Segments,
             ElevatorCarRow = elevator.CarTargetRow,
@@ -142,7 +146,8 @@ public sealed class SaveData
         DetectorTier = DetectorTier,
         Oil = Oil,
         OilFlasks = OilFlasks,
-        PickaxeTier = PickaxeTier
+        PickaxeTier = PickaxeTier,
+        HasDeepCamp = HasDeepCamp
     };
 
     /// <summary>Puts the saved tiles back into a mine made from <see cref="Seed"/>, and the lift back.</summary>
