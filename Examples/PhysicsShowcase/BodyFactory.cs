@@ -10,7 +10,8 @@ namespace PhysicsShowcase;
 
 /// <summary>
 /// Creates the bodies the player drops. Each shape is registered once in the physics' <see cref="PolygonLibrary"/> and,
-/// with the same corners, in the <see cref="OutlineLibrary"/> that draws it. A body has more components than
+/// with its corners moved half a cell inwards (<see cref="OutlineShape"/>), in the <see cref="OutlineLibrary"/> that
+/// draws it. A body has more components than
 /// <c>Create</c> takes, so the rest are added to the same deferred entity.
 /// </summary>
 public sealed class BodyFactory
@@ -35,13 +36,14 @@ public sealed class BodyFactory
     public BodyFactory(PhysicsSystem physics, OutlineLibrary outlines, Random random)
     {
         _random = random;
-        _boxOutline = outlines.Add([new Vector2(-1, -1), new Vector2(1, -1), new Vector2(1, 1), new Vector2(-1, 1)]);
+        _boxOutline = outlines.Add(OutlineShape.ThroughCellCentres(
+            [new Vector2(-1, -1), new Vector2(1, -1), new Vector2(1, 1), new Vector2(-1, 1)]));
 
         // Corners around the origin (the point bodies turn around), so they spin naturally.
         _triangle = physics.Polygons.Add([new Vector2(0, -1.6f), new Vector2(1.5f, 1f), new Vector2(-1.5f, 1f)]);
-        _triangleOutline = outlines.Add(physics.Polygons.GetVertices(_triangle));
+        _triangleOutline = outlines.Add(OutlineShape.ThroughCellCentres(physics.Polygons.GetVertices(_triangle)));
         _pentagon = physics.Polygons.Add(RegularPolygon(5, 1.7f));
-        _pentagonOutline = outlines.Add(physics.Polygons.GetVertices(_pentagon));
+        _pentagonOutline = outlines.Add(OutlineShape.ThroughCellCentres(physics.Polygons.GetVertices(_pentagon)));
     }
 
     //**********************************************************

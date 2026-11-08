@@ -29,7 +29,7 @@ public static class Level
     public static TileGrid CreateTiles(int width, int height)
     {
         var tiles = new TileGrid(width, height, Vector2.One) { Category = Layers.Tiles };
-        Fill(tiles, 0, Top, width - 1, Top);                    // ceiling
+        Fill(tiles, 0, 0, width - 1, Top);                      // ceiling, under the HUD rows too, so it's thick
         Fill(tiles, 0, height - 3, width - 1, height - 1);      // floor
         Fill(tiles, 0, Top, 0, height - 1);                     // left wall
         Fill(tiles, width - 1, Top, width - 1, height - 1);     // right wall
@@ -104,7 +104,8 @@ public static class Level
     }
 
     private static Vector2[] BoxCorners(Vector2 half) =>
-        [new(-half.X, -half.Y), new(half.X, -half.Y), new(half.X, half.Y), new(-half.X, half.Y)];
+        OutlineShape.ThroughCellCentres([new(-half.X, -half.Y), new(half.X, -half.Y), new(half.X, half.Y),
+            new(-half.X, half.Y)]);
 
     private static void Fill(TileGrid tiles, int left, int top, int right, int bottom)
     {

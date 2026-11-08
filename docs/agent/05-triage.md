@@ -209,11 +209,17 @@ flow: [04 § F11](04-flows.md#f11).
    step; a body created or moved by game code since then shows up after the next step. Sensors are never reported, and
    the query mask must include the collider's `Category`. Stop.
 9. Dynamic bodies fall through a `TileGrid` → the body's `Collider.Mask` must include `TileGrid.Category` (default 1),
-   and it must be dynamic with a `Velocity`. Stop.
+   and it must be dynamic with a `Velocity`. Only through a wall one tile thick: a body pushed more than half a tile
+   into it (a heavy pile, a squeeze) is pushed out through the far face. Make walls at least two tiles thick. Stop.
 10. Bodies hang in the air, don't fall after gravity changed, or don't react → they are asleep (`RigidBody.IsSleeping`,
    drawn dark grey in PhysicsShowcase). Changing `Gravity` doesn't wake them (as Box2D): clear `IsSleeping`. A body that
    never sleeps keeps moving faster than 0.05 cells/s (no damping, a moving platform). Stop.
 11. A box doesn't turn when hit off-centre → it needs both `Rotation` and `AngularVelocity`. Stop.
+11b. An outline is drawn one row inside the floor it rests on → the outline system draws a corner in the cell it lies in,
+   and a resting body sits `LinearSlop` into the floor. Draw outlines through cell centres (PhysicsShowcase:
+   `OutlineShape.ThroughCellCentres`). A character falls through a moving or turning platform → the physics never
+   pushes a character: move it with the platform first (PhysicsShowcase: `PlayerMoveSystem.TryGetPlatformVelocity`).
+   Stop.
 12. Platformer.Ecs: player stuck, falls through the floor, or can't jump → check the debug overlay (F1): `HIT: Floor`
    while standing means landing works and `AIR` should be `False`. A jump pressed in the air waits for the landing (by
    design, as the original). Otherwise escalate with `POS`, `VEL` and `HIT`. Stop.

@@ -39,13 +39,20 @@ public sealed class PatrolSystem : EntitySystem
 /// <summary>
 /// Moves the player with <see cref="CharacterMover.MoveAndSlide"/> against tiles and solid bodies: run, jump, fall with
 /// the world's gravity (also when it points up). The player's own collider makes it a static obstacle for bodies; the
-/// mover ignores it.
+/// mover ignores it. Standing on a kinematic body (the patrolling platform, the windmill), the player first moves along
+/// with the point under its feet, as Godot's moving platforms: the physics never pushes a character, so without this
+/// a platform that turns or rises would move into the player and the player would drop through it.
 /// </summary>
 public sealed class PlayerMoveSystem(PhysicsSystem physics) : EntitySystem
 {
     private const float RunSpeed = 18f;
     private const float RunAcceleration = 120f;
     private const float JumpSpeed = 28f;
+
+    /// <summary>How far below its feet the player looks for the platform it stands on, in cells.</summary>
+    private const float PlatformProbe = .5f;
+
+    private const uint Solids = Layers.Tiles | Layers.Solid;
     private static readonly Vector2 HalfSize = new(.5f, .5f);
 
     private Query _players;
@@ -74,16 +81,44 @@ public sealed class PlayerMoveSystem(PhysicsSystem physics) : EntitySystem
                 player.JumpRequested = false;
                 player.FallSpeed += gravity.Length() * deltaSeconds;
 
-                var velocity = new Vector2(player.Velocity, 0f) + down * player.FallSpeed;
                 var center = positions[i].Value;
+                if (TryGetPlatformVelocity(center, down, entities[i], out var carry))
+                    CharacterMover.MoveAndSlide(physics, ref center, ref carry, HalfSize, deltaSeconds, -down, Solids,
+                        entities[i]);
+
+                var velocity = new Vector2(player.Velocity, 0f) + down * player.FallSpeed;
                 player.Collisions = CharacterMover.MoveAndSlide(physics, ref center, ref velocity, HalfSize,
-                    deltaSeconds, -down, Layers.Tiles | Layers.Solid, entities[i]);
+                    deltaSeconds, -down, Solids, entities[i]);
                 positions[i].Value = center;
                 // Gravity only ever points straight down or up here, so running stays along x.
                 player.Velocity = velocity.X;
                 player.FallSpeed = Vector2.Dot(velocity, down);
             }
         }
+    }
+
+    /// <summary>
+    /// The velocity of the point under the player's feet when it stands on a kinematic body: the body's velocity plus
+    /// its spin around its position (rotation is clockwise on screen, so the point moves by ω × (−r.y, r.x)).
+    /// </summary>
+    private bool TryGetPlatformVelocity(Vector2 center, Vector2 down, Entity self, out Vector2 velocity)
+    {
+        velocity = Vector2.Zero;
+        if (!physics.CastBox(center, HalfSize, down * PlatformProbe, Layers.Solid, self, out var hit) || hit.IsTile)
+            return false;
+
+        var platform = hit.Entity;
+        if (!World.Has<RigidBody>(platform) || World.Get<RigidBody>(platform).Type != BodyType.Kinematic)
+            return false;
+
+        velocity = World.Get<Velocity>(platform).Value;
+        if (World.Has<AngularVelocity>(platform))
+        {
+            var feet = center + down * HalfSize.Y - World.Get<Position>(platform).Value;
+            velocity += World.Get<AngularVelocity>(platform).Value * new Vector2(-feet.Y, feet.X);
+        }
+
+        return velocity != Vector2.Zero;
     }
 }
 

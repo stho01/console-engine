@@ -166,8 +166,8 @@ Examples/
   Swarm/                          ECS stress test (no OOP original): Components/, Systems/, Scenes/SwarmScene
   PhysicsSandbox/                 physics demo (no OOP original): BodySpawner, Components/, Systems/,
                                   Scenes/SandboxScene
-  PhysicsShowcase/                every physics feature in one scene: Level, BodyFactory, Layers, ShowcaseState,
-                                  Components/, Systems/, Scenes/ShowcaseScene
+  PhysicsShowcase/                every physics feature in one scene: Level, BodyFactory, OutlineShape, Layers,
+                                  ShowcaseState, Components/, Systems/, Scenes/ShowcaseScene
   Launcher/                       game launcher: GameCatalog (menu entries), GameLocator (exe paths), LauncherMenu
                                   (keys), LauncherScreen (drawing), GameRunner (Process.Start + wait), LauncherTexts
   Launcher.Tests/                 LauncherMenuTests, GameLocatorTests
