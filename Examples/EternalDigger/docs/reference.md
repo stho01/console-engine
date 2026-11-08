@@ -94,7 +94,7 @@ Examples/EternalDigger/
 
 | Component | Fields | On |
 |---|---|---|
-| `Miner` | `Column`, `Row` (tile; the target while moving), `MoveFrom` (tile, `Vector2`), `MoveElapsed`, `MoveDuration` (0 = idle), `Motion` (`Idle`, `Walking`, `Climbing`, `Falling`), `ClimbStreak`, `IsRiding`, `FallRows`, `FacingX` (−1/1), `LampDirection`, `DigCooldown`, `SwingTime`, `SwingDirection` (`Point`), `RescueHold`, `PlantHold`, `HasBlastingKit`, `Dynamite`, `LitDynamite`, `Oil`, `OilFlasks`, `ShovelTier`, `LampTier`, `BagTier`, `DetectorTier`, `PickaxeTier`, `Gold`, `Ladders`, `CopperOre`, `SilverOre`, `GoldOre`, `GemOre`, `Fossils`, `Relics`, `FossilsFound`, `RelicsFound`. Read-only also `RareFinds`. Read-only: `IsMoving`, `OreCount` | The miner |
+| `Miner` | `Column`, `Row` (tile; the target while moving), `MoveFrom` (tile, `Vector2`), `MoveElapsed`, `MoveDuration` (0 = idle), `Motion` (`Idle`, `Walking`, `Climbing`, `Falling`, `Jumping`), `ClimbStreak`, `IsRiding`, `FallRows`, `FacingX` (−1/1), `LampDirection`, `DigCooldown`, `SwingTime`, `SwingDirection` (`Point`), `RescueHold`, `PlantHold`, `HasBlastingKit`, `Dynamite`, `LitDynamite`, `Oil`, `OilFlasks`, `ShovelTier`, `LampTier`, `BagTier`, `DetectorTier`, `PickaxeTier`, `Gold`, `Ladders`, `CopperOre`, `SilverOre`, `GoldOre`, `GemOre`, `Fossils`, `Relics`, `FossilsFound`, `RelicsFound`. Read-only also `RareFinds`. Read-only: `IsMoving`, `OreCount` | The miner |
 | `Particle` | `Age`, `Lifetime`, `Style` (`ParticleStyle`), `Variant` (random byte). Read-only: `Progress` | Every particle |
 | `Physics` | `Gravity` (cells/s²), `Drag` (per second) | Every particle |
 | `TileCollider` | tag | Debris, coins |
@@ -164,6 +164,7 @@ Static rule classes: `Tiles`, `Shop`, `Upgrades`, `Layout`, `TileLooks`, `Partic
 | `Layout.BlastingFirstColumn`…`BlastingLastColumn` | 26–28 | Blasting shed (scenery) |
 | `Shop.StartGold` / `StartLadders` | 0 / 8 | Start inventory |
 | `MinerControlSystem.WalkDuration` / `ClimbDuration` / `FallDuration` | 0.13 / 0.17 / 0.06 s | Time per tile |
+| `MinerControlSystem.JumpTiles` / `JumpDuration` / `JumpHeight` | 2 tiles / 0.28 s / 2 cells | A jump: distance, time, arc height (half under rock) |
 | `MinerControlSystem.ClimbRampStart` / `ClimbRampTiles` / `TopClimbDuration` | 4 tiles / 10 tiles / 0.06 s | The accelerating climb |
 | `MinerControlSystem.DigInterval` / `SwingDuration` | 0.16 / 0.12 s | Time between hits / swing animation |
 | `MinerControlSystem.RescueDuration` | 1.5 s | Hold time for a rescue |
@@ -187,7 +188,7 @@ Static rule classes: `Tiles`, `Shop`, `Upgrades`, `Layout`, `TileLooks`, `Partic
 | Text | Constant |
 |---|---|
 | ` ETERNAL DIGGER ` | `HudSystem.Title` |
-| ` ←→ walk/dig   ↓ dig   ↑ climb   SPACE ladder   E use/buy   hold E+arrow dynamite   hold R rescue   ESC save & quit` | `HudSystem.KeyHelp` |
+| ` ←→ walk/dig  ↓ dig  ↑ climb  ↑+←→ jump  SPACE ladder  E use/buy  hold E+arrow dynamite  hold R rescue  ESC save & quit` | `HudSystem.KeyHelp` |
 | ` SAVED ` / ` SAVE FAILED` | `HudSystem.SavedText`, `SaveFailedText` |
 | `CONTINUE`, `NEW MINE`, `Start over? The saved mine will be lost.`, `NO`, `YES, START OVER` | `TitleMenu` (`ContinueText`, `NewMineText`, `ConfirmQuestion`, `NoText`, `YesText`) |
 | `↑↓ choose   E select   ESC quit` | `TitleScene.KeyHelp` |

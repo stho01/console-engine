@@ -40,6 +40,7 @@ team's process differs.
 | Swarm | SPACE / BACKSPACE / ESC | +10 000 particles / −10 000 particles / quit | `SpawnControlSystem`, `SwarmGame.OnUpdate` |
 | Launcher | ↑↓ (W/S, K/J), Home/End / ENTER, SPACE / 1–9 / ESC, Q | Select / start selected / start that entry / quit | `LauncherMenu.HandleKey` |
 | EternalDigger | ←→ / A D (held) | Walk, or dig the side tile | `MinerInput`, `MinerControlSystem` |
+| EternalDigger | ↑ + ← or → (held) | Jump two tiles sideways over a one-tile gap (both tiles must be open) | `MinerControlSystem.CanJump` |
 | EternalDigger | ↓ / S (held), ↑ / W (held, on a ladder) | Dig/step down; climb or dig up | same |
 | EternalDigger | SPACE / E | Place a ladder / deliver at the door or buy a ladder at the shop | `MinerControlSystem`, `InteractionSystem` |
 | EternalDigger | R (hold 1.5 s) / ESC | Rescue to the surface (the bag is lost) / save and quit | `MinerControlSystem`, `EternalDiggerGame.OnUpdate` |

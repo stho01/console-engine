@@ -128,6 +128,7 @@ plays** (except `R`, the rescue).
 | Climb or step down one tile | 0.17 s | `ClimbDuration` |
 | Climb up, held | 0.17 s for the first 4 tiles, then faster over the next 10 down to 0.06 s per tile; a 100 m climb takes about 7.5 s. Letting go of Up, stepping off the ladder or anything else starts slow again | `ClimbRampStart`, `ClimbRampTiles`, `TopClimbDuration`, `ClimbUpDuration`, `Miner.ClimbStreak` |
 | Fall one tile | 0.06 s, speeding up | `FallDuration` |
+| Jump | `↑` with `←`/`→`, standing: two tiles sideways in 0.28 s, in an arc 2 cells high (1 under rock), if the tile beside and the one beyond it are both open. Lands with a puff of dust; with no floor there the fall rule takes over, so a jump crosses a one-tile hole to the ground beyond, or into the next hole. Rock in either tile: no jump, the side key walks or digs as usual | `JumpTiles`, `JumpDuration`, `JumpHeight`, `MinerControlSystem.CanJump`, `MinerMotion.Jumping` |
 | One shovel hit | every 0.16 s while the key is held | `DigInterval` |
 
 ### Standing and falling

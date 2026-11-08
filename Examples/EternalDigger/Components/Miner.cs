@@ -7,7 +7,9 @@ public enum MinerMotion : byte
     Idle,
     Walking,
     Climbing,
-    Falling
+    Falling,
+    /// <summary>A hop of <c>MinerControlSystem.JumpTiles</c> tiles sideways over a gap, in an arc.</summary>
+    Jumping
 }
 
 /// <summary>

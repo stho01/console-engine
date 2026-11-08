@@ -23,7 +23,7 @@ The start screen, without colours:
 
 ```text
  ETERNAL DIGGER   GOLD 0g   LADDERS 8   DEPTH 0m   BAG ◆0 ◆0 ◆0 = 0g
- ←→ walk/dig   ↓ dig   ↑ climb   SPACE ladder   E use/buy   hold E+arrow dynamite   hold R rescue   ESC save & quit
+ ←→ walk/dig  ↓ dig  ↑ climb  ↑+←→ jump  SPACE ladder  E use/buy  hold E+arrow dynamite  hold R rescue  ESC save & quit
         ▄▄▀▄▀▄▀▄▀▄▀▄▀▄▀▄▀▄▀▄▀▄▀▄
          ─── EternalDigger ─────
             ▀             ▀     ▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄                                    MINE
@@ -108,6 +108,7 @@ Ore comes in **veins** (small clusters with gaps), not single scattered tiles. C
 | Left / Right (hold) | Walk one tile at a time. If the tile is rock, dig it instead |
 | Down (hold) | Dig the tile below, or step down onto it if it's open |
 | Up (hold) | Climb up, **only while standing on a ladder**. If the tile above is rock, dig it. A long climb speeds up after 4 tiles |
+| Up + Left/Right | Jump two tiles sideways, over a one-tile hole (both tiles must be open) |
 | Space | Place a ladder in the tile you're standing in |
 | E | At the door: sell everything in the bag. At the shop counter: buy the item chosen with Up/Down (ladders, the blasting kit, then dynamite). At the lift sign: 10 m of lift. On a lift landing: call the car or get in |
 | E (hold 0.5 s) | Underground: plant a lit stick of dynamite in the rock you face, or aim it with an arrow held at the same time (2 s fuse, 3 × 3 blast). Also on the lift's bottom landing, where a quick tap of E is the lift |

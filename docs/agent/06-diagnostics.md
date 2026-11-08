@@ -85,7 +85,7 @@ using [04](04-flows.md).
 |---|---|---|
 | ` ETERNAL DIGGER ` | `HudSystem.Title`, row 0 | Title |
 | `  GOLD <n>g  ╟╢<ladders>[  LIFT <n>m][  ¡<dynamite>]  OIL ▮▮▮▮▮▯▯▯[ δ<flasks>]  DEPTH <n>m  BAG ◆<copper> ◆<silver> ◆<gold> ◆<gem> ✦<finds> = <value>g` (gem `◆` magenta, `✦` yellow, the bag value yellow when the bag is heavy, `╟╢` yellow, `¡` red; the gauge white, yellow below half, blinking red when low) | `HudSystem.DrawStatus`, row 0. `N0` formatting in the user's culture | Inventory and depth |
-| ` ←→ walk/dig   ↓ dig   ↑ climb   SPACE ladder   E use/buy   hold E+arrow dynamite   hold R rescue   ESC save & quit` | `HudSystem.KeyHelp`, row 1 | Default help line |
+| ` ←→ walk/dig  ↓ dig  ↑ climb  ↑+←→ jump  SPACE ladder  E use/buy  hold E+arrow dynamite  hold R rescue  ESC save & quit` | `HudSystem.KeyHelp`, row 1 | Default help line |
 | ` SAVED ` (grey, then dark grey, 1.5 s) | `HudSystem.SavedText`, right end of row 1 | The game was just saved |
 | ` SAVE FAILED` (red, 1.5 s) | `HudSystem.SaveFailedText`, right end of row 1 | The save file couldn't be written (`GameSaver.LastSaveFailed`); play goes on |
 | `CONTINUE`, `NEW MINE` | `TitleMenu.ContinueText`, `NewMineText` (title screen) | CONTINUE only with a readable save |

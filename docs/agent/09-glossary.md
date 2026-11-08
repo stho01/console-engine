@@ -49,6 +49,7 @@ Support/user words are **[inferred]**. The team may also use Norwegian terms. Ad
 | launcher / menu / game picker | Text menu that starts the ECS games, one at a time | `Examples/Launcher`: `LauncherApp`, `GameCatalog`, `GameLocator`, `GameRunner` |
 
 | miner / digger | EternalDigger player | `Miner` component, `MinerControlSystem` |
+| jump / hop (EternalDigger) | Up + a side key: two tiles sideways over a one-tile gap | `MinerMotion.Jumping`, `MinerControlSystem.CanJump` |
 | mine / map / world (EternalDigger) | The endless tile grid | `Mine`, `TileCell`, `TileType`. Not the ECS `World` |
 | lift / elevator / car / landing / segment (EternalDigger) | The buyable lift in the mine shaft: 10 m segments, a car that stops at the top and bottom landings | `Elevator`, `ElevatorSystem`, `Miner.IsRiding` |
 | wall / obsidian (EternalDigger) | The unbreakable-by-shovel band at 110 m that ends act 1 | `TileType.Obsidian`, `Tiles.WallDepth`, `Mine.WallBottomDepth` |

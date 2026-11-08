@@ -34,6 +34,7 @@ and its `docs/` folder.
 | `LEFT`/`A`, `RIGHT`/`D` (held) | Walk to the side tile if it is air; otherwise dig it (one hit per `DigInterval`). Turns the miner |
 | `DOWN`/`S` (held) | Below solid → dig it. Below air → step down (climbing if a ladder is there, otherwise the fall rule takes over) |
 | `UP`/`W` (held) | Only on a ladder tile: above air → climb up; above solid → dig it |
+| `UP` + `LEFT`/`RIGHT` (held) | Jump 2 tiles sideways if both are air (Tier 2b, player feedback). Lands and then falls if there is no floor |
 | `SPACE` (pressed) | Place a ladder in the miner's tile (uses one from the inventory) |
 | `E` (pressed) | At the door: deliver all ore. At the shop counter: buy the selected item (Up/Down choose; Tier 2) |
 | `R` (held 1.5 s) | Rescue: back to the spawn tile, the bag is lost (ore only, not gold or ladders). The way out of a pit without ladders |
@@ -44,7 +45,7 @@ except `R` is read while the miner is moving (a move is a slide of one tile). Fa
 miner is idle. Digging also turns the headlamp (`LampDirection`) towards the dug tile; walking turns it to the side,
 climbing up/down points it up/down.
 
-Timings (`MinerControlSystem` constants, seconds): walk 0.13 per tile, climb 0.17 (held Up ramps to 0.06 after 4 tiles, over 10 tiles), fall 0.06 per tile, dig interval
+Timings (`MinerControlSystem` constants, seconds): walk 0.13 per tile, climb 0.17 (held Up ramps to 0.06 after 4 tiles, over 10 tiles), fall 0.06 per tile, jump 0.28 for 2 tiles, dig interval
 0.16, swing animation 0.12, rescue hold 1.5.
 
 ## Components (`Components/`)

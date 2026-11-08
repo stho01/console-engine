@@ -9,8 +9,8 @@ using Microsoft.Xna.Framework;
 namespace EternalDigger.Systems;
 
 /// <summary>
-/// Turns input into moves, digs, ladders, dynamite and rescues while the miner is idle. Falling comes first: an unsupported
-/// miner always falls one tile before any key is read. A miner riding the lift only reads the ride keys.
+/// Turns input into moves, jumps, digs, ladders, dynamite and rescues while the miner is idle. Falling comes first: an
+/// unsupported miner always falls one tile before any key is read. A miner riding the lift only reads the ride keys.
 /// <see cref="MinerMotionSystem"/> plays the moves this starts. The keyboard is read once per frame into a
 /// <see cref="MinerInput"/>; <see cref="Control"/> holds the rules.
 /// </summary>
@@ -33,6 +33,15 @@ public sealed class MinerControlSystem(Mine mine, Elevator elevator, EffectSpawn
     public const float TopClimbDuration = .06f;
 
     public const float FallDuration = .06f;
+
+    /// <summary>Tiles a jump carries the miner sideways: over a one-tile gap to the tile beyond it.</summary>
+    public const int JumpTiles = 2;
+
+    /// <summary>Seconds a jump takes.</summary>
+    public const float JumpDuration = .28f;
+
+    /// <summary>Console cells the miner rises at the top of a jump; half of it under a low ceiling.</summary>
+    public const float JumpHeight = 2f;
     /// <summary>Seconds between shovel hits with the starting shovel (<see cref="Upgrades.DigInterval"/>).</summary>
     public const float DigInterval = .16f;
     public const float SwingDuration = .12f;
@@ -104,6 +113,15 @@ public sealed class MinerControlSystem(Mine mine, Elevator elevator, EffectSpawn
         if (input.PlaceLadder)
             PlaceLadder(ref miner, commands);
 
+        if (input.Horizontal != 0 && input.Up && CanJump(miner.Column, miner.Row, input.Horizontal))
+        {
+            miner.ClimbStreak = 0;
+            miner.FacingX = input.Horizontal;
+            miner.LampDirection = new Vector2(input.Horizontal, 0f);
+            StartMove(ref miner, input.Horizontal * JumpTiles, 0, JumpDuration, MinerMotion.Jumping);
+            return;
+        }
+
         if (input.Horizontal != 0)
         {
             miner.ClimbStreak = 0;
@@ -143,6 +161,22 @@ public sealed class MinerControlSystem(Mine mine, Elevator elevator, EffectSpawn
 
         var ramp = Math.Min(1f, (streak - ClimbRampStart + 1f) / ClimbRampTiles);
         return ClimbDuration + (TopClimbDuration - ClimbDuration) * ramp;
+    }
+
+    /// <summary>
+    /// Whether Up + a side key jumps from this tile: the tile beside and the one beyond it (<see cref="JumpTiles"/>)
+    /// are open. The miner lands there and the fall rule takes over if it has no floor, so a jump reaches the ground
+    /// across a hole, or the next hole.
+    /// </summary>
+    public bool CanJump(int column, int row, int directionX)
+    {
+        for (var step = 1; step <= JumpTiles; step++)
+        {
+            if (mine.IsSolid(column + directionX * step, row))
+                return false;
+        }
+
+        return true;
     }
 
     /// <summary>Whether a climb with this streak is past the start speed (it slides without easing).</summary>
