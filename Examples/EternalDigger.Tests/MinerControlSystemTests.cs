@@ -111,6 +111,39 @@ public class MinerControlSystemTests
     }
 
     [Test]
+    public void Control_LadderKeyOnALadder_TakesItBackAndPlacesItAgain()
+    {
+        FillShaft(TileType.Air, ShaftBottom, ShaftBottom);
+        FillShaft(TileType.Stone, ShaftBottom + 1, ShaftBottom + 1);
+        _mine.TryPlaceLadder(Mine.ShaftColumn, ShaftBottom);
+        PlaceMiner(Mine.ShaftColumn, ShaftBottom);
+
+        Play(new MinerInput { PlaceLadder = true }, seconds: FrameSeconds);
+
+        Assert.That(_mine.HasLadder(Mine.ShaftColumn, ShaftBottom), Is.False);
+        Assert.That(_miner.Ladders, Is.EqualTo(Shop.StartLadders + 1));
+
+        Play(new MinerInput { PlaceLadder = true }, seconds: FrameSeconds);
+
+        Assert.That(_mine.HasLadder(Mine.ShaftColumn, ShaftBottom), Is.True);
+        Assert.That(_miner.Ladders, Is.EqualTo(Shop.StartLadders));
+    }
+
+    [Test]
+    public void Control_TakeTheLadderHoldingTheMiner_Falls()
+    {
+        FillShaft(TileType.Air, ShaftBottom, ShaftBottom + 2);
+        FillShaft(TileType.Stone, ShaftBottom + 3, ShaftBottom + 3);
+        _mine.TryPlaceLadder(Mine.ShaftColumn, ShaftBottom);
+        PlaceMiner(Mine.ShaftColumn, ShaftBottom);
+
+        Play(new MinerInput { PlaceLadder = true }, seconds: FrameSeconds);
+        Play(default, .5f);
+
+        Assert.That(_miner.Row, Is.EqualTo(ShaftBottom + 2));
+    }
+
+    [Test]
     public void Control_PlaceLadderWithoutLadders_PlacesNothing()
     {
         FillShaft(TileType.Air, ShaftBottom, ShaftBottom);

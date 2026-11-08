@@ -342,9 +342,22 @@ public sealed class MinerControlSystem(Mine mine, Elevator elevator, EffectSpawn
         miner.Motion = motion;
     }
 
+    /// <summary>
+    /// The ladder key: takes the ladder in the miner's tile back into the inventory if there is one, otherwise places
+    /// one there. A refused place is a dust puff.
+    /// </summary>
     private void PlaceLadder(ref Miner miner, CommandBuffer commands)
     {
         var feet = Layout.TileCenter(miner.Column, miner.Row) + new Vector2(0, Layout.TileHeight / 2f);
+        if (mine.TryTakeLadder(miner.Column, miner.Row))
+        {
+            miner.Ladders++;
+            miner.ClimbStreak = 0;
+            effects.FootDust(commands, feet, -miner.FacingX);
+            effects.FootDust(commands, feet, miner.FacingX);
+            return;
+        }
+
         if (miner.Ladders > 0 && mine.TryPlaceLadder(miner.Column, miner.Row))
         {
             miner.Ladders--;

@@ -35,7 +35,7 @@ and its `docs/` folder.
 | `DOWN`/`S` (held) | Below solid → dig it. Below air → step down (climbing if a ladder is there, otherwise the fall rule takes over) |
 | `UP`/`W` (held) | Only on a ladder tile: above air → climb up; above solid → dig it |
 | `UP` + `LEFT`/`RIGHT` (held) | Jump 2 tiles sideways if both are air (Tier 2b, player feedback). Lands and then falls if there is no floor |
-| `SPACE` (pressed) | Place a ladder in the miner's tile (uses one from the inventory) |
+| `SPACE` (pressed) | Place a ladder in the miner's tile (uses one from the inventory); on a ladder, take it back (Tier 2b) |
 | `E` (pressed) | At the door: deliver all ore. At the shop counter: buy the selected item (Up/Down choose; Tier 2) |
 | `R` (held 1.5 s) | Rescue: back to the spawn tile, the bag is lost (ore only, not gold or ladders). The way out of a pit without ladders |
 | `TAB` (pressed) | Inventory screen on/off; the game pauses while it is open (Tier 2b, player feedback: the one new key) |

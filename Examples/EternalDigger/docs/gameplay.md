@@ -173,7 +173,9 @@ only works when:
 - you are underground (row 11 or deeper; the surface and sky refuse ladders),
 - the tile is air and has no ladder yet.
 
-Ladders can't be picked up again. To climb up you need a ladder in **every** tile you climb out of: the up key only
+`SPACE` in a tile that already has a ladder **picks it back up** into the inventory (`Mine.TryTakeLadder`), anywhere
+below the grass row; the shaft's grass-row ladder stays. Without a ladder or solid ground under him the miner then
+falls, so take ladders from the bottom up when you leave a shaft. To climb up you need a ladder in **every** tile you climb out of: the up key only
 works on a ladder tile, and the tile you arrive in must be a ladder tile too if you want to keep climbing.
 
 > **Rule of thumb:** a straight shaft down to depth *d* needs *d* − 1 ladders (the shaft's top two tiles come with

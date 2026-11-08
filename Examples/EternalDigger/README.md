@@ -60,7 +60,7 @@ On Windows the game sets a 120 × 48 console with an 8 × 16 font. In a macOS or
 | `↓` or `S` (hold) | Dig down, or step down a ladder |
 | `↑` or `W` (hold) | Climb up. Only works while standing on a ladder |
 | `↑` + `←` / `→` | Jump two tiles to the side: over a one-tile hole to the ground beyond it, or into the next hole. Both tiles must be open |
-| `SPACE` | Place a ladder in the tile you stand in |
+| `SPACE` | Place a ladder in the tile you stand in. Standing in a ladder, pick it back up for reuse (careful: you fall if nothing holds you) |
 | `E` | At the house door: sell your ore. At the shop counter: buy the selected item (ladders, lamp oil, oil flasks that pour themselves into a low lamp, upgrades for the shovel, pickaxe, lamp, bag and detector, the blasting kit, then dynamite). At the `LIFT` sign: build 10 m of lift. On the lift's top or bottom landing: call the car, or get in |
 | `E` (hold 0.5 s) underground | Plant a lit stick of dynamite in the rock you face. Hold an arrow with it to aim: `↓` below you, `↑` above, `←` `→` to a side. The fuse burns 2 s: walk away. The blast clears 3 × 3 tiles of any rock, obsidian too, and bags the ore. On the lift's bottom landing it works too: there a quick tap of `E` is the lift, holding it plants |
 | `↑` / `↓` at the shop counter | Choose what to buy. The panel above the miner shows the item, what you have and the price |

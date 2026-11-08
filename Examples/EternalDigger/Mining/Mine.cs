@@ -125,6 +125,23 @@ public sealed class Mine
     }
 
     /// <summary>
+    /// Takes a placed ladder back out of a tile below the surface (the grass row's shaft ladder stays). False if there
+    /// is none.
+    /// </summary>
+    public bool TryTakeLadder(int column, int row)
+    {
+        if (!IsInside(column, row) || row <= SurfaceRow)
+            return false;
+
+        ref var cell = ref At(column, row);
+        if (!cell.HasLadder)
+            return false;
+
+        cell.HasLadder = false;
+        return true;
+    }
+
+    /// <summary>
     /// Adds every generated tile that differs from what the seed generates (dug, damaged, ladder placed or seen) to
     /// <paramref name="changes"/>, top row first. Regenerates each row to compare, so it is for saving only, never
     /// per frame.

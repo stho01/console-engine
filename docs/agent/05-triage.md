@@ -223,8 +223,10 @@ Rules: [03 § EternalDigger](03-rules.md#eternal-digger). Flows: [04 § F11](04-
 11. "Holding E does nothing", "can't plant dynamite" → **Cause:** one of: no kit or no sticks (HUD `DYNAMITE <n>`), on
     the surface, on a lift landing without sticks (there `E` is the lift), facing air instead of rock (hold an arrow with `E` to aim; else the lamp points the way you last
     moved or dug), moving, or `E` wasn't released since the last stick. A dust puff means it was refused. Stop.
-12. "Fell all the way down the shaft" → **Cause:** a built lift digs out the shaft; without ladders there a step into it
+12. "I want my ladders back" → `SPACE` while standing in a ladder takes it back (not the grass-row one). Taking the
+    one that holds you up drops you to the next floor. Stop.
+13. "Fell all the way down the shaft" → **Cause:** a built lift digs out the shaft; without ladders there a step into it
     falls to the bottom landing. No damage. Stop.
-13. "Debris or sparks disappear right next to the miner" → **Cause:** by design. No particle is drawn on his 4 × 2
+14. "Debris or sparks disappear right next to the miner" → **Cause:** by design. No particle is drawn on his 4 × 2
    cells, and at most 6 (dimmed) are drawn in the tile around him, so he stays readable (`ParticleRenderSystem`). Stop.
 

@@ -128,8 +128,8 @@ Ore comes in **veins** (small clusters with gaps), not single scattered tiles. C
 ### Ladders
 
 - You start with **8 ladders**. A ladder costs **10 gold**.
-- A ladder can only be placed underground, in an open tile that doesn't have one yet. **Ladders can't be picked back
-  up.**
+- A ladder can only be placed underground, in an open tile that doesn't have one yet. `SPACE` in a tile that has a
+  ladder picks it back up for reuse (the miner falls if nothing else holds him).
 - To climb you must be standing **in** a ladder, so a straight shaft down to depth *d* needs *d* − 1 ladders to
   climb out. The 8 starting ladders get you back from 9 m.
 - Sideways tunnels need no ladders.
