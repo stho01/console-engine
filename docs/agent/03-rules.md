@@ -50,7 +50,7 @@ Gotchas:
   call" bit is set **[external]**. The code treats any change without `0x8000` as a release, so `Pressed` never fires.
   More likely at low FPS.
 - `Key` enum (`ConsoleEngine.Abstractions/Inputs/Key.cs`) covers 0–9, A–Z, F1–F12, arrows, ENTER, ESCAPE, SPACE,
-  BACKSPACE, numpad and a few others. **No Shift/Ctrl/Alt/Tab and no OEM keys** (æ, ø, å, punctuation). Raw codes
+  BACKSPACE, TAB (0x09), numpad and a few others. **No Shift/Ctrl/Alt and no OEM keys** (æ, ø, å, punctuation). Raw codes
   0–255 can be read with `GetKey(int)`. 256 or more throws `IndexOutOfRangeException`.
 - `Input.GetPressedKeyCodesSpace09AZ()` returns pressed codes that are `32` or `48..90`, i.e. space, digits and
   upper-case letters only.

@@ -39,6 +39,7 @@ public enum Key : short
     DELETE = 0x2E,
     HELP = 0x2F,
     BACKSPACE = 0x08,
+    TAB = 0x09,
         
     NUMPAD0 = 0x60, NUMPAD1 = 0x61, NUMPAD2 = 0x62, 
     NUMPAD3 = 0x63, NUMPAD4 = 0x64, NUMPAD5 = 0x65, 
