@@ -168,7 +168,7 @@ version 3.
 ## Dynamite (Tier 1)
 
 Not in the original document. The shop counter's blasting slot sells the kit once (2500g), then sticks (100g)
-(`Shop.TryBuyBlasting`). Holding `E` 0.5 s underground, off the lift landings, plants a lit stick in the faced rock
+(`Shop.TryBuyBlasting`). Holding `E` 0.5 s underground plants a lit stick in the faced rock (an arrow held with `E` aims it; on the lift's bottom landing only while carrying sticks, and there a short tap of `E` is the lift: Tier 2b)
 (`MinerControlSystem.UpdatePlanting`; a `Dynamite` entity with a 2 s fuse). `DynamiteSystem` runs after
 `ElevatorSystem`: the blast clears 3 x 3 of any rock including obsidian (not bedrock, grass or sky), bags ore,
 destroys ladders, chains to nearby sticks and pushes the miner one tile away; he is never hurt.

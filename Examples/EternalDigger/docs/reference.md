@@ -185,7 +185,7 @@ Static rule classes: `Tiles`, `Shop`, `Upgrades`, `Layout`, `TileLooks`, `Partic
 | Text | Constant |
 |---|---|
 | ` ETERNAL DIGGER ` | `HudSystem.Title` |
-| ` ←→ walk/dig   ↓ dig   ↑ climb   SPACE ladder   E use/buy   hold E dynamite   hold R rescue   ESC save & quit` | `HudSystem.KeyHelp` |
+| ` ←→ walk/dig   ↓ dig   ↑ climb   SPACE ladder   E use/buy   hold E+arrow dynamite   hold R rescue   ESC save & quit` | `HudSystem.KeyHelp` |
 | ` SAVED ` / ` SAVE FAILED` | `HudSystem.SavedText`, `SaveFailedText` |
 | `CONTINUE`, `NEW MINE`, `Start over? The saved mine will be lost.`, `NO`, `YES, START OVER` | `TitleMenu` (`ContinueText`, `NewMineText`, `ConfirmQuestion`, `NoText`, `YesText`) |
 | `↑↓ choose   E select   ESC quit` | `TitleScene.KeyHelp` |
@@ -196,6 +196,7 @@ Static rule classes: `Tiles`, `Shop`, `Upgrades`, `Layout`, `TileLooks`, `Partic
 | ` DELIVER [E] ` | `PromptRenderSystem.DeliverText` |
 | ` BUILD LIFT +10m [E] <price>g ` | `PromptRenderSystem.BuildLiftText` |
 | ` LIFT BLOCKED BY OBSIDIAN ` | `PromptRenderSystem.LiftBlockedText` |
+| ` HOLD [E] + ARROW: DYNAMITE ` / ` TOO HARD: DYNAMITE AT THE SHOP ` | `PromptRenderSystem.PlantHintText`, `NeedDynamiteText` |
 | ` ↑ <ITEM> ↓ ` / `HAVE <n>` or `UNLOCKS DYNAMITE` / `<price>g [E]` or `SOLD OUT` (counter panel) | `PromptRenderSystem.DrawCounterPanel`, `KitUnlocksText`, `SoldOutText`, `MaxTierText` (`MAX`), `FullText` (`FULL`), `OIL <n>%`, pips `TierOn`/`TierOff` (`●`/`○`); item names `Shop.LadderName`, `BlastingKitName`, `DynamiteName`, `Upgrades.ShovelName`, `LampName`, `BagName`, `DetectorName`, `LampOil.FillName` (`FILL LAMP`) |
 | ` LIGHTING FUSE ` + bar | `HudSystem.PlantLabel` |
 | `  ¡<n>` (dynamite), `  OIL ▮▮▮▮▮▯▯▯`, `╟╢<n>` (ladders) (HUD row 0) | `HudSystem.DrawStatus` |

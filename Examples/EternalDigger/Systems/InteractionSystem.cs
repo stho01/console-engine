@@ -44,7 +44,7 @@ public sealed class InteractionSystem(
     protected override void OnUpdate(float deltaSeconds)
     {
         var input = MinerInput.FromKeyboard();
-        if (!input.UsePressed && !input.UpPressed && !input.DownPressed)
+        if (!input.UsePressed && !input.UseReleased && !input.UpPressed && !input.DownPressed)
             return;
 
         foreach (var chunk in _miners.GetChunks())
@@ -76,10 +76,18 @@ public sealed class InteractionSystem(
                 counter.Next();
         }
 
+        var feet = Layout.TileToWorld(miner.Column, miner.Row + 1) + new Vector2(Layout.TileWidth / 2f, -.1f);
+        if (IsTapToUseLift(miner))
+        {
+            // Holding E here plants dynamite, so the lift answers to a short tap: on release, before the fuse lights.
+            if (input.UseReleased && miner.PlantHold >= 0f && miner.PlantHold < MinerControlSystem.PlantDuration)
+                UseLift(ref miner, feet, commands);
+            return;
+        }
+
         if (!input.UsePressed)
             return;
 
-        var feet = Layout.TileToWorld(miner.Column, miner.Row + 1) + new Vector2(Layout.TileWidth / 2f, -.1f);
         if (Layout.IsAtDeliverSpot(miner.Column, miner.Row))
             Deliver(ref miner, feet, commands);
         else if (Layout.IsAtShop(miner.Column, miner.Row))
@@ -89,6 +97,14 @@ public sealed class InteractionSystem(
         else if (miner.Column == Elevator.Column && elevator.IsLanding(miner.Row))
             UseLift(ref miner, feet, commands);
     }
+
+    /// <summary>
+    /// On a lift landing underground (the bottom one) while carrying dynamite: <c>E</c> held plants a stick, so a tap
+    /// uses the lift.
+    /// </summary>
+    public bool IsTapToUseLift(in Miner miner) =>
+        miner.Column == Elevator.Column && elevator.IsLanding(miner.Row) && Mine.Depth(miner.Row) > 0 &&
+        MinerControlSystem.CanPlant(miner);
 
     //**********************************************************
     //** internals

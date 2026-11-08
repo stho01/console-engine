@@ -221,7 +221,7 @@ Rules: [03 § EternalDigger](03-rules.md#eternal-digger). Flows: [04 § F11](04-
     break it by design. **Fix:** select the blasting slot at the shop counter (`↓`), buy the kit (2500g) and sticks (100g), hold `E` 0.5 s
     facing the wall, walk away. Same reason the lift stops at 100 m (blast column 21 to go deeper). Stop.
 11. "Holding E does nothing", "can't plant dynamite" → **Cause:** one of: no kit or no sticks (HUD `DYNAMITE <n>`), on
-    the surface, on a lift landing (there `E` is the lift), facing air instead of rock (the lamp points the way you last
+    the surface, on a lift landing without sticks (there `E` is the lift), facing air instead of rock (hold an arrow with `E` to aim; else the lamp points the way you last
     moved or dug), moving, or `E` wasn't released since the last stick. A dust puff means it was refused. Stop.
 12. "Fell all the way down the shaft" → **Cause:** a built lift digs out the shaft; without ladders there a step into it
     falls to the bottom landing. No damage. Stop.

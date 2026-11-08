@@ -26,6 +26,8 @@ public sealed class PromptRenderSystem(
     public const string BoardLiftText = " GET IN [E] ";
     public const string RideText = " ↑↓ RIDE   ←→ GET OUT ";
     public const string LiftBlockedText = " LIFT BLOCKED BY OBSIDIAN ";
+    public const string PlantHintText = " HOLD [E] + ARROW: DYNAMITE ";
+    public const string NeedDynamiteText = " TOO HARD: DYNAMITE AT THE SHOP ";
     public const string KitUnlocksText = "UNLOCKS DYNAMITE";
     public const string SoldOutText = "SOLD OUT";
     public const string MaxTierText = "MAX";
@@ -74,8 +76,10 @@ public sealed class PromptRenderSystem(
             else if (Layout.IsAtLiftSign(miner.Column, miner.Row))
                 Draw(BuildLiftText(), position.X, position.Y, PriceColor(miner.Gold, elevator.NextSegmentPrice));
             else if (miner.Column == Elevator.Column && elevator.IsLanding(miner.Row))
-                Draw(elevator.IsCarAt(miner.Row) ? BoardLiftText : CallLiftText, position.X, position.Y,
-                    ConsoleColor.White);
+                DrawLanding(miner, position.X, position.Y);
+            else if (miner.PlantHold == 0f && FacesObsidian(miner))
+                Draw(MinerControlSystem.CanPlant(miner) ? PlantHintText : NeedDynamiteText, position.X, position.Y,
+                    MinerControlSystem.CanPlant(miner) ? ConsoleColor.White : ConsoleColor.Red);
 
             return;
         }
@@ -86,6 +90,26 @@ public sealed class PromptRenderSystem(
     //**********************************************************
 
     private static ConsoleColor PriceColor(int gold, int price) => gold >= price ? ConsoleColor.White : ConsoleColor.Red;
+
+    /// <summary>
+    /// Call or get in; on the bottom landing with dynamite in hand also how to plant there (a tap of <c>E</c> is the
+    /// lift, holding it plants).
+    /// </summary>
+    private void DrawLanding(in Miner miner, float minerX, float minerY)
+    {
+        var lift = elevator.IsCarAt(miner.Row) ? BoardLiftText : CallLiftText;
+        if (Mine.Depth(miner.Row) > 0 && MinerControlSystem.CanPlant(miner) && miner.PlantHold == 0f)
+            DrawBox(minerX, minerY, lift, ConsoleColor.White, PlantHintText, ConsoleColor.Gray, null,
+                ConsoleColor.White);
+        else
+            Draw(lift, minerX, minerY, ConsoleColor.White);
+    }
+
+    /// <summary>The idle miner's lamp points at obsidian underground: the shovel can't go on, dynamite can.</summary>
+    private bool FacesObsidian(in Miner miner) =>
+        Mine.Depth(miner.Row) > 0 && Tiles.IsBlastOnly(mine.TypeAt(
+            miner.Column + (int)MathF.Round(miner.LampDirection.X),
+            miner.Row + (int)MathF.Round(miner.LampDirection.Y)));
 
     /// <summary>The lift sign's text with the next segment's price. Rebuilt only when the price changes.</summary>
     private string BuildLiftText()

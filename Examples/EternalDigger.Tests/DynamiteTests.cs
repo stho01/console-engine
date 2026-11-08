@@ -74,6 +74,17 @@ public class DynamiteTests
     }
 
     [Test]
+    public void Plant_HoldUseWithDown_PlantsBelowTheMiner()
+    {
+        Play(new MinerInput { Use = true, Down = true }, MinerControlSystem.PlantDuration + .05f);
+
+        Assert.That(Sticks(), Is.EqualTo(1));
+        Assert.That(FirstStick().Column, Is.EqualTo(Column));
+        Assert.That(FirstStick().Row, Is.EqualTo(Row + 1));
+        Assert.That(Miner.Row, Is.EqualTo(Row), "holding E keeps the down key from digging");
+    }
+
+    [Test]
     public void Plant_ReleaseEarly_PlantsNothing()
     {
         Play(new MinerInput { Use = true }, MinerControlSystem.PlantDuration / 2f);

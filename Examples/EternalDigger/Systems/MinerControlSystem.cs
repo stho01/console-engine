@@ -77,11 +77,19 @@ public sealed class MinerControlSystem(Mine mine, Elevator elevator, EffectSpawn
         CommandBuffer commands)
     {
         _tooHardCooldown = Math.Max(0f, _tooHardCooldown - deltaSeconds);
+        // The plant timer survives the frame E comes up, so InteractionSystem can tell a tap from a hold.
+        if (!input.Use && !input.UseReleased)
+            miner.PlantHold = 0f;
+
         if (UpdateRescue(ref miner, ref position, input.Rescue, deltaSeconds, commands) || miner.IsMoving)
             return;
 
-        if (miner.IsRiding && Ride(ref miner, input))
-            return;
+        if (miner.IsRiding)
+        {
+            miner.PlantHold = 0f;
+            if (Ride(ref miner, input))
+                return;
+        }
 
         if (!mine.IsSupported(miner.Column, miner.Row))
         {
@@ -147,16 +155,23 @@ public sealed class MinerControlSystem(Mine mine, Elevator elevator, EffectSpawn
     //** internals
     //**********************************************************
 
+    /// <summary>Has the kit and a stick: holding the use key underground plants one.</summary>
+    public static bool CanPlant(in Miner miner) => miner.HasBlastingKit && miner.Dynamite > 0;
+
     /// <summary>
-    /// Holding the use key underground (not on a lift landing) for <see cref="PlantDuration"/> plants a lit stick in
-    /// the tile the lamp faces. Needs the blasting kit, a stick and rock there; otherwise a dust puff. While the key is
-    /// held the miner does nothing else (true). After planting, the key must be released before the next stick.
+    /// Holding the use key underground for <see cref="PlantDuration"/> plants a lit stick in the tile the lamp faces.
+    /// An arrow held with it aims: down, up or to a side (the lamp turns there). On a lift landing only with
+    /// <see cref="CanPlant"/>, because otherwise <c>E</c> there is the lift's key. Needs the blasting kit, a stick and
+    /// rock there; otherwise a dust puff. While the key is held the miner does nothing else (true). After planting, the
+    /// key must be released before the next stick.
     /// </summary>
     private bool UpdatePlanting(ref Miner miner, in MinerInput input, float deltaSeconds, CommandBuffer commands)
     {
-        var canHold = Mine.Depth(miner.Row) > 0 &&
-                      !(miner.Column == Elevator.Column && elevator.IsLanding(miner.Row));
-        if (!input.Use || !canHold)
+        if (!input.Use)
+            return false;
+
+        var onLanding = miner.Column == Elevator.Column && elevator.IsLanding(miner.Row);
+        if (Mine.Depth(miner.Row) <= 0 || onLanding && !CanPlant(miner))
         {
             miner.PlantHold = 0f;
             return false;
@@ -165,6 +180,7 @@ public sealed class MinerControlSystem(Mine mine, Elevator elevator, EffectSpawn
         if (miner.PlantHold < 0f)
             return false;
 
+        Aim(ref miner, input);
         miner.PlantHold += deltaSeconds;
         if (miner.PlantHold < PlantDuration)
             return true;
@@ -185,6 +201,20 @@ public sealed class MinerControlSystem(Mine mine, Elevator elevator, EffectSpawn
         miner.LitDynamite++;
         effects.PlantDynamite(commands, column, row, FuseDuration);
         return true;
+    }
+
+    /// <summary>An arrow held while planting turns the lamp, and so the stick, that way. Down wins, then up.</summary>
+    private static void Aim(ref Miner miner, in MinerInput input)
+    {
+        if (input.Down)
+            miner.LampDirection = Vector2.UnitY;
+        else if (input.Up)
+            miner.LampDirection = -Vector2.UnitY;
+        else if (input.Horizontal != 0)
+        {
+            miner.FacingX = input.Horizontal;
+            miner.LampDirection = new Vector2(input.Horizontal, 0f);
+        }
     }
 
     /// <summary>
