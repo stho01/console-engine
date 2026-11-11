@@ -7,7 +7,9 @@ public enum MinerMotion : byte
     Idle,
     Walking,
     Climbing,
-    Falling
+    Falling,
+    /// <summary>A hop of <c>MinerControlSystem.JumpTiles</c> tiles sideways over a gap, in an arc.</summary>
+    Jumping
 }
 
 /// <summary>
@@ -74,14 +76,24 @@ public struct Miner
     /// <summary>Sticks planted whose fuse still burns. A save puts them back into <see cref="Dynamite"/>.</summary>
     public int LitDynamite;
 
+    /// <summary>Seconds the lamp stays blown out after a gas flare. Not saved.</summary>
+    public float LampOut;
+
+    /// <summary>Bought the deep camp: its tiles are dug out and its counter trades at <c>DeepCamp.Row</c>.</summary>
+    public bool HasDeepCamp;
+
     /// <summary>Lamp oil, 0 to <see cref="LampOil.TankSize"/>. Burns underground only.</summary>
     public float Oil;
+
+    /// <summary>Oil flasks in the pack, poured by themselves when the lamp runs low.</summary>
+    public int OilFlasks;
 
     // Upgrades (0 to Upgrades.MaxTier)
     public int ShovelTier;
     public int LampTier;
     public int BagTier;
     public int DetectorTier;
+    public int PickaxeTier;
 
     // Inventory
     public int Gold;
@@ -94,6 +106,15 @@ public struct Miner
     /// <summary>Rare finds in the bag. Sold at the door like ore.</summary>
     public int Fossils;
     public int Relics;
+
+    /// <summary>The deepest depth reached, in metres: the <c>RECORD</c> sign on the mine entrance.</summary>
+    public int DepthRecord;
+
+    /// <summary>Gold earned from sales in all (never spent): the house grows at milestones.</summary>
+    public int GoldEarned;
+
+    /// <summary>Has stood below the wall: the tool shop is open.</summary>
+    public bool PassedTheWall;
 
     /// <summary>Rare finds ever dug up, kept for the trophy shelf.</summary>
     public int FossilsFound;

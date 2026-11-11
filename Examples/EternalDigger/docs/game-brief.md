@@ -23,7 +23,7 @@ The start screen, without colours:
 
 ```text
  ETERNAL DIGGER   GOLD 0g   LADDERS 8   DEPTH 0m   BAG ◆0 ◆0 ◆0 = 0g
- ←→ walk/dig   ↓ dig   ↑ climb   SPACE ladder   E use/buy   hold E dynamite   hold R rescue   ESC save & quit
+ ←→↓ walk/dig  ↑ climb  ↑+←→ jump  SPACE ladder  E use  hold E+arrow dynamite  TAB inventory  hold R rescue  ESC quit
         ▄▄▀▄▀▄▀▄▀▄▀▄▀▄▀▄▀▄▀▄▀▄▀▄
          ─── EternalDigger ─────
             ▀             ▀     ▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄                                    MINE
@@ -108,11 +108,14 @@ Ore comes in **veins** (small clusters with gaps), not single scattered tiles. C
 | Left / Right (hold) | Walk one tile at a time. If the tile is rock, dig it instead |
 | Down (hold) | Dig the tile below, or step down onto it if it's open |
 | Up (hold) | Climb up, **only while standing on a ladder**. If the tile above is rock, dig it. A long climb speeds up after 4 tiles |
+| Up + Left/Right | Jump two tiles sideways, over a one-tile hole (both tiles must be open) |
 | Space | Place a ladder in the tile you're standing in |
-| E | At the door: sell everything in the bag. At the shop counter: buy the item chosen with Up/Down (ladders, the blasting kit, then dynamite). At the lift sign: 10 m of lift. On a lift landing: call the car or get in |
-| E (hold 0.5 s) | Underground: plant a lit stick of dynamite in the rock you face (2 s fuse, 3 × 3 blast) |
+| E | At the door: sell everything in the bag. At the shop counter: buy the item chosen with Up/Down (ladders, the blasting kit, then dynamite). At the lift sign: 10 m of lift. On a lift landing: call the car or get in. At the deep camp (100 m, 1500g at the shop): sell the bag at 70% or buy ladders, oil and dynamite at a markup |
+| E (hold 0.5 s) | Underground: plant a lit stick of dynamite in the rock you face, or aim it with an arrow held at the same time (2 s fuse, 3 × 3 blast). Also on the lift's bottom landing, where a quick tap of E is the lift |
 | Up / Down in the lift | Ride to the top / the bottom |
 | R (hold 1.5 s) | Rescue: teleported back to the surface, **but your bag of ore is lost** (gold and ladders kept) |
+| E at the tool shop | Once you've been below the wall, a toolsmith beside the house sells 5 sticks or 10 ladders at a discount |
+| Tab | Inventory screen: everything carried, the bag's worth and weight, upgrades, finds. Pauses the game |
 | Esc | Save and quit |
 
 ### Movement rules
@@ -126,8 +129,8 @@ Ore comes in **veins** (small clusters with gaps), not single scattered tiles. C
 ### Ladders
 
 - You start with **8 ladders**. A ladder costs **10 gold**.
-- A ladder can only be placed underground, in an open tile that doesn't have one yet. **Ladders can't be picked back
-  up.**
+- A ladder can only be placed underground, in an open tile that doesn't have one yet. `SPACE` in a tile that has a
+  ladder picks it back up for reuse (the miner falls if nothing else holds him).
 - To climb you must be standing **in** a ladder, so a straight shaft down to depth *d* needs *d* − 1 ladders to
   climb out. The 8 starting ladders get you back from 9 m.
 - Sideways tunnels need no ladders.
@@ -195,10 +198,15 @@ granite, toughness growing with depth, screen shake.
 ## What isn't there (yet)
 
 - No goal, ending, or progression beyond "go deeper and earn more".
-- No danger: no fall damage, no hazards, no enemies, no stamina, no time pressure. The lamp burns oil underground:
-  low oil shrinks and flickers the light, empty leaves only a dim glow (it never kills). Refill at the counter.
-- Upgrades at the counter: shovel (digs faster), lamp (reaches further), bag (carries more) and detector (glints from
+- No real danger: no fall damage, no enemies, no stamina, no time pressure. Gas pockets in deep caves shimmer green
+  and flare when the lamp gets close, blowing it out for a few seconds; they never hurt. Below the wall the rock
+  swallows light (shorter cone), and rare black damp halves the cone and doubles the oil burn. The lamp burns oil underground:
+  low oil shrinks and flickers the light, empty leaves only a dim glow (it never kills). Refill at the counter, or carry oil flasks (60g, up to 5) that pour themselves in when the lamp runs low.
+- Upgrades at the counter: shovel (digs faster), pickaxe (fewer hits per tile), lamp (reaches further), bag (carries more) and detector (glints from
   further), three tiers each.
+- The surface grows with you: a depth record sign over the mine, a trophy case of every rare find, a flag, lit
+  windows and a second floor at 2000 / 8000 / 20000g earned, and a toolsmith who opens shop once you have been below
+  the wall. A deep camp (1500g) at 100 m trades without the trip home.
 - No hard bag limit; a heavy bag slows the climb up.
 - Ladders are permanent once placed; besides the lift and dynamite there are no other tools (no ropes, supports).
 - One save slot only; no score, no records.

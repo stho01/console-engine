@@ -9,11 +9,11 @@ namespace EternalDigger.Systems;
 
 /// <summary>
 /// The top two screen rows. Row 0: the title, gold, ladders, the lift's depth (once built), dynamite (once the kit is
-/// bought), the oil gauge, depth and the bag (ore and find counts and what they are worth, in yellow when the bag is
-/// heavy). Row 1: the keys, the rescue progress bar while <c>R</c> is held, the fuse bar while <c>E</c> is held to
-/// plant dynamite, or a blinking warning when the miner is underground without ladders. After each save, a fading
-/// <c>SAVED</c> (or a red <c>SAVE FAILED</c>) at the right end of row 1. The status text is rebuilt only when a shown
-/// value changes.
+/// bought), the oil gauge and the oil flasks carried (once there are any), depth and the bag (ore and find counts and
+/// what they are worth, in yellow when the bag is heavy). Row 1: the keys, the rescue progress bar while <c>R</c> is
+/// held, the fuse bar while <c>E</c> is held to plant dynamite, or a blinking warning when the miner is underground
+/// without ladders. After each save, a fading <c>SAVED</c> (or a red <c>SAVE FAILED</c>) at the right end of row 1. The
+/// status text is rebuilt only when a shown value changes.
 /// </summary>
 public sealed class HudSystem(Canvas canvas, GameSaver saver, Elevator elevator) : EntitySystem
 {
@@ -23,7 +23,8 @@ public sealed class HudSystem(Canvas canvas, GameSaver saver, Elevator elevator)
 
     public const string Title = " ETERNAL DIGGER ";
     public const string KeyHelp =
-        " ←→ walk/dig   ↓ dig   ↑ climb   SPACE ladder   E use/buy   hold E dynamite   hold R rescue   ESC save & quit";
+        " ←→↓ walk/dig  ↑ climb  ↑+←→ jump  SPACE ladder  E use  " +
+        "hold E+arrow dynamite  TAB inventory  hold R rescue  ESC quit";
     public const string RescueLabel = " RESCUE ";
     public const string RescueNote = " the bag is lost";
     public const string NoLaddersWarning = " NO LADDERS LEFT!  Hold R to be rescued (the bag is lost) ";
@@ -41,6 +42,7 @@ public sealed class HudSystem(Canvas canvas, GameSaver saver, Elevator elevator)
     private const char OilFull = '▮';
     private const char OilEmpty = '▯';
     private const char FindIcon = '✦';
+    private const char FlaskIcon = 'δ';
 
     /// <summary>Cells in the oil gauge.</summary>
     public const int OilGaugeCells = 8;
@@ -54,7 +56,8 @@ public sealed class HudSystem(Canvas canvas, GameSaver saver, Elevator elevator)
     private Query _miners;
     private string _status = string.Empty;
     private int _shownGold = -1, _shownLadders = -1, _shownDepth = -1, _shownCopper = -1, _shownSilver = -1,
-        _shownGoldOre = -1, _shownGems = -1, _shownLift = -1, _shownDynamite = -1, _shownOilCells = -1, _shownFinds = -1;
+        _shownGoldOre = -1, _shownGems = -1, _shownLift = -1, _shownDynamite = -1, _shownOilCells = -1, _shownFinds = -1,
+        _shownFlasks = -1;
     private bool _shownHeavy;
     private float _time;
     private int _shownSaves;
@@ -90,8 +93,9 @@ public sealed class HudSystem(Canvas canvas, GameSaver saver, Elevator elevator)
             miner.CopperOre != _shownCopper || miner.SilverOre != _shownSilver || miner.GoldOre != _shownGoldOre ||
             miner.GemOre != _shownGems || elevator.Depth != _shownLift || DynamiteShown(miner) != _shownDynamite ||
             OilCells(miner.Oil) != _shownOilCells || miner.RareFinds != _shownFinds ||
-            Shop.IsHeavy(miner) != _shownHeavy)
+            Shop.IsHeavy(miner) != _shownHeavy || miner.OilFlasks != _shownFlasks)
         {
+            _shownFlasks = miner.OilFlasks;
             _shownHeavy = Shop.IsHeavy(miner);
             _shownFinds = miner.RareFinds;
             _shownOilCells = OilCells(miner.Oil);
@@ -108,7 +112,9 @@ public sealed class HudSystem(Canvas canvas, GameSaver saver, Elevator elevator)
             var lift = elevator.IsBuilt ? $"  LIFT {elevator.Depth}m" : string.Empty;
             var dynamite = miner.HasBlastingKit ? $"  {DynamiteIcon}{miner.Dynamite}" : string.Empty;
             var gauge = new string(OilFull, _shownOilCells) + new string(OilEmpty, OilGaugeCells - _shownOilCells);
-            _status = $"  GOLD {miner.Gold:N0}g  {LadderIcon}{LadderIconEnd}{miner.Ladders}{lift}{dynamite}  OIL {gauge}" +
+            var flasks = miner.OilFlasks > 0 ? $" {FlaskIcon}{miner.OilFlasks}" : string.Empty;
+            _status = $"  GOLD {miner.Gold:N0}g  {LadderIcon}{LadderIconEnd}{miner.Ladders}{lift}{dynamite}" +
+                      $"  OIL {gauge}{flasks}" +
                       $"  DEPTH {depth}m  BAG {OreIcon}{miner.CopperOre} {OreIcon}{miner.SilverOre} " +
                       $"{OreIcon}{miner.GoldOre} {OreIcon}{miner.GemOre} {FindIcon}{miner.RareFinds} = {bagValue:N0}g";
         }
@@ -128,7 +134,7 @@ public sealed class HudSystem(Canvas canvas, GameSaver saver, Elevator elevator)
                 OreIcon => OreColors[Math.Min(ore++, OreColors.Length - 1)],
                 LadderIcon or LadderIconEnd => ConsoleColor.Yellow,
                 DynamiteIcon => ConsoleColor.Red,
-                FindIcon => ConsoleColor.Yellow,
+                FindIcon or FlaskIcon => ConsoleColor.Yellow,
                 OilFull or OilEmpty => oilColor,
                 _ => inValue ? valueColor : ConsoleColor.White
             };

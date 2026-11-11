@@ -5,7 +5,7 @@ and gold back to the house on the surface, sell it, and buy ladders so you can c
 
 ```text
  ETERNAL DIGGER   GOLD 0g  ╟╢8  OIL ▮▮▮▮▮▮▮▮  DEPTH 0m  BAG ◆0 ◆0 ◆0 ◆0 = 0g
- ←→ walk/dig   ↓ dig   ↑ climb   SPACE ladder   E use/buy   hold E dynamite   hold R rescue   ESC save & quit
+ ←→↓ walk/dig  ↑ climb  ↑+←→ jump  SPACE ladder  E use  hold E+arrow dynamite  TAB inventory  hold R rescue  ESC quit
         ▄▄▀▄▀▄▀▄▀▄▀▄▀▄▀▄▀▄▀▄▀▄▀▄
          ─── EternalDigger ─────
             ▀             ▀     ▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄                                    MINE
@@ -59,12 +59,15 @@ On Windows the game sets a 120 × 48 console with an 8 × 16 font. In a macOS or
 | `←` `→` or `A` `D` (hold) | Walk. Into rock, dig it instead |
 | `↓` or `S` (hold) | Dig down, or step down a ladder |
 | `↑` or `W` (hold) | Climb up. Only works while standing on a ladder |
-| `SPACE` | Place a ladder in the tile you stand in |
-| `E` | At the house door: sell your ore. At the shop counter: buy the selected item (ladders, lamp oil, upgrades, the blasting kit, then dynamite). At the `LIFT` sign: build 10 m of lift. On the lift's top or bottom landing: call the car, or get in |
-| `E` (hold 0.5 s) underground | Plant a lit stick of dynamite in the rock you face. The fuse burns 2 s: walk away. The blast clears 3 × 3 tiles of any rock, obsidian too, and bags the ore |
+| `↑` + `←` / `→` | Jump two tiles to the side: over a one-tile hole to the ground beyond it, or into the next hole. Both tiles must be open |
+| `SPACE` | Place a ladder in the tile you stand in. Standing in a ladder, pick it back up for reuse (careful: you fall if nothing holds you) |
+| `E` | At the house door: sell your ore. At the shop counter: buy the selected item (ladders, lamp oil, oil flasks that pour themselves into a low lamp, upgrades for the shovel, pickaxe, lamp, bag and detector, the blasting kit, then dynamite). At the `LIFT` sign: build 10 m of lift. On the lift's top or bottom landing: call the car, or get in. At the deep camp's counter (100 m, once bought): sell the bag at 70% or buy supplies at a markup (`↑` `↓` choose) |
+| `E` (hold 0.5 s) underground | Plant a lit stick of dynamite in the rock you face. Hold an arrow with it to aim: `↓` below you, `↑` above, `←` `→` to a side. The fuse burns 2 s: walk away. The blast clears 3 × 3 tiles of any rock, obsidian too, and bags the ore. On the lift's bottom landing it works too: there a quick tap of `E` is the lift, holding it plants |
+| `E` at the tool shop | Column 13, next to the toolsmith, once you have been below the wall: bundles of sticks and ladders (`↑` `↓` choose) |
 | `↑` / `↓` at the shop counter | Choose what to buy. The panel above the miner shows the item, what you have and the price |
 | `↑` / `↓` in the lift car | Ride to the top / the bottom. `←` `→` (or `↓` at the bottom) gets out |
 | `R` (hold 1.5 s) | Rescue: back to the surface. You keep gold and ladders, but **lose the ore in your bag** |
+| `TAB` | Inventory: everything you carry, the bag's worth and weight, your upgrades and finds. The game pauses while it is open; `TAB` again closes it |
 | `ESC` | Save and quit |
 
 ## The docs
@@ -90,5 +93,5 @@ The original design contract the game was built from is in
   `Position`/`Velocity`/`Glyph` components, `Camera`, `RenderConsole`, `Input`.
 - **Not entities:** the terrain. The mine is a plain grid (`Mining/Mine.cs`) that is drawn from the rows the camera
   can see, so an endless mine costs nothing per frame. Entities are the miner, particles and floating numbers.
-- **Status:** builds with 0 warnings, 216 tests pass. It has been run in a macOS terminal, but has not been played with
+- **Status:** builds with 0 warnings, 287 tests pass. It has been run in a macOS terminal, but has not been played with
   a real keyboard or checked in the Windows console. See [Known limitations](docs/gameplay.md#known-limitations).

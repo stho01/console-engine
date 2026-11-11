@@ -10,11 +10,13 @@ namespace EternalDigger.Systems;
 
 /// <summary>
 /// <c>E</c> on the surface and at the lift: deliver the bag at the door, buy the selected item at the shop counter
-/// (Up/Down choose it there), build a lift segment at the lift sign; at a lift landing, call the car or get in. Only
-/// while the miner stands still. Every sale and purchase asks for a save.
+/// (Up/Down choose it there), build a lift segment at the lift sign; at a lift landing, call the car or get in; at the
+/// deep camp's counter sell the bag or buy supplies (Up/Down choose there too). Only while the miner stands still.
+/// Every sale and purchase asks for a save.
 /// </summary>
 public sealed class InteractionSystem(
-    Mine mine, Elevator elevator, ShopCounter counter, EffectSpawner effects, GameSaver saver) : EntitySystem
+    Mine mine, Elevator elevator, ShopCounter counter, EffectSpawner effects, GameSaver saver,
+    ShopCounter campCounter = null, ShopCounter toolCounter = null) : EntitySystem
 {
     //**********************************************************
     //** fields
@@ -33,6 +35,11 @@ public sealed class InteractionSystem(
     public static readonly Vector2 LiftEffectOrigin = Layout.TileCenter(
         (Layout.LiftSignFirstColumn + Layout.LiftSignLastColumn) / 2, Layout.GroundRow) + new Vector2(2f, -6f);
 
+    private readonly ShopCounter _campCounter = campCounter ?? new ShopCounter(ShopCounter.CampItems);
+    private readonly ShopCounter _toolCounter = toolCounter ?? new ShopCounter(ShopCounter.ToolShopItems);
+
+    public static readonly Vector2 ToolShopEffectOrigin =
+        Layout.TileCenter(Layout.ToolShopColumn, Layout.GroundRow) + new Vector2(2f, -6f);
     private Query _miners;
 
     //**********************************************************
@@ -44,7 +51,7 @@ public sealed class InteractionSystem(
     protected override void OnUpdate(float deltaSeconds)
     {
         var input = MinerInput.FromKeyboard();
-        if (!input.UsePressed && !input.UpPressed && !input.DownPressed)
+        if (!input.UsePressed && !input.UseReleased && !input.UpPressed && !input.DownPressed)
             return;
 
         foreach (var chunk in _miners.GetChunks())
@@ -68,27 +75,50 @@ public sealed class InteractionSystem(
         if (miner.IsMoving || miner.IsRiding)
             return;
 
-        if (Layout.IsAtShop(miner.Column, miner.Row))
+        var atCamp = DeepCamp.IsAtCounter(miner);
+        var atTools = Layout.IsAtToolShop(miner.Column, miner.Row) && Progress.IsToolShopOpen(miner);
+        if (Layout.IsAtShop(miner.Column, miner.Row) || atCamp || atTools)
         {
+            var selection = atCamp ? _campCounter : atTools ? _toolCounter : counter;
             if (input.UpPressed)
-                counter.Previous();
+                selection.Previous();
             else if (input.DownPressed)
-                counter.Next();
+                selection.Next();
+        }
+
+        var feet = Layout.TileToWorld(miner.Column, miner.Row + 1) + new Vector2(Layout.TileWidth / 2f, -.1f);
+        if (IsTapToUseLift(miner))
+        {
+            // Holding E here plants dynamite, so the lift answers to a short tap: on release, before the fuse lights.
+            if (input.UseReleased && miner.PlantHold >= 0f && miner.PlantHold < MinerControlSystem.PlantDuration)
+                UseLift(ref miner, feet, commands);
+            return;
         }
 
         if (!input.UsePressed)
             return;
 
-        var feet = Layout.TileToWorld(miner.Column, miner.Row + 1) + new Vector2(Layout.TileWidth / 2f, -.1f);
         if (Layout.IsAtDeliverSpot(miner.Column, miner.Row))
             Deliver(ref miner, feet, commands);
         else if (Layout.IsAtShop(miner.Column, miner.Row))
             Buy(ref miner, feet, commands);
+        else if (atTools)
+            BuyTools(ref miner, feet, commands);
         else if (Layout.IsAtLiftSign(miner.Column, miner.Row))
             BuildLift(ref miner, feet, commands);
+        else if (atCamp)
+            TradeAtCamp(ref miner, feet, commands);
         else if (miner.Column == Elevator.Column && elevator.IsLanding(miner.Row))
             UseLift(ref miner, feet, commands);
     }
+
+    /// <summary>
+    /// On a lift landing underground (the bottom one) while carrying dynamite: <c>E</c> held plants a stick, so a tap
+    /// uses the lift.
+    /// </summary>
+    public bool IsTapToUseLift(in Miner miner) =>
+        miner.Column == Elevator.Column && elevator.IsLanding(miner.Row) && Mine.Depth(miner.Row) > 0 &&
+        MinerControlSystem.CanPlant(miner);
 
     //**********************************************************
     //** internals
@@ -96,6 +126,7 @@ public sealed class InteractionSystem(
 
     private void Deliver(ref Miner miner, Vector2 feet, CommandBuffer commands)
     {
+        var houseLevel = Progress.HouseLevel(miner.GoldEarned);
         var earned = Shop.Deliver(ref miner);
         if (earned == 0)
         {
@@ -106,6 +137,24 @@ public sealed class InteractionSystem(
         effects.Coins(commands, DoorEffectOrigin, Math.Clamp(earned / GoldPerCoin, 3, MaxCoins));
         effects.Pop(commands, DoorEffectOrigin);
         effects.Number(commands, DoorEffectOrigin + new Vector2(0f, -2f), earned);
+        if (Progress.HouseLevel(miner.GoldEarned) > houseLevel)
+            effects.Text(commands, DoorEffectOrigin + new Vector2(0f, -4f), FloatingTextKind.HouseUpgrade, 0);
+
+        saver.Request();
+    }
+
+    /// <summary>Buys the tool shop's selected bundle.</summary>
+    private void BuyTools(ref Miner miner, Vector2 feet, CommandBuffer commands)
+    {
+        var price = Shop.Price(_toolCounter.Selected, miner);
+        if (!Shop.TryBuy(_toolCounter.Selected, ref miner))
+        {
+            effects.FootDust(commands, feet, miner.FacingX);
+            return;
+        }
+
+        effects.Pop(commands, ToolShopEffectOrigin);
+        effects.Number(commands, ToolShopEffectOrigin + new Vector2(0f, -2f), -price);
         saver.Request();
     }
 
@@ -119,8 +168,42 @@ public sealed class InteractionSystem(
             return;
         }
 
+        if (counter.Selected == ShopItem.DeepCamp)
+            DeepCamp.Build(mine, ref miner);
+
         effects.Pop(commands, ShopEffectOrigin);
         effects.Number(commands, ShopEffectOrigin + new Vector2(0f, -2f), -price);
+        saver.Request();
+    }
+
+    /// <summary>The deep camp's counter: sells the bag (coins, 70%) or buys the selected supply at the markup.</summary>
+    private void TradeAtCamp(ref Miner miner, Vector2 feet, CommandBuffer commands)
+    {
+        if (_campCounter.Selected == ShopItem.SellBag)
+        {
+            var earned = DeepCamp.SellBag(ref miner);
+            if (earned == 0)
+            {
+                effects.FootDust(commands, feet, miner.FacingX);
+                return;
+            }
+
+            effects.Coins(commands, DeepCamp.EffectOrigin, Math.Clamp(earned / GoldPerCoin, 3, MaxCoins));
+            effects.Pop(commands, DeepCamp.EffectOrigin);
+            effects.Number(commands, DeepCamp.EffectOrigin + new Vector2(0f, -2f), earned);
+            saver.Request();
+            return;
+        }
+
+        var price = Shop.CampPrice(_campCounter.Selected, miner);
+        if (!Shop.TryBuyAtCamp(_campCounter.Selected, ref miner))
+        {
+            effects.FootDust(commands, feet, miner.FacingX);
+            return;
+        }
+
+        effects.Pop(commands, DeepCamp.EffectOrigin);
+        effects.Number(commands, DeepCamp.EffectOrigin + new Vector2(0f, -2f), -price);
         saver.Request();
     }
 

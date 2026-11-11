@@ -128,6 +128,7 @@ plays** (except `R`, the rescue).
 | Climb or step down one tile | 0.17 s | `ClimbDuration` |
 | Climb up, held | 0.17 s for the first 4 tiles, then faster over the next 10 down to 0.06 s per tile; a 100 m climb takes about 7.5 s. Letting go of Up, stepping off the ladder or anything else starts slow again | `ClimbRampStart`, `ClimbRampTiles`, `TopClimbDuration`, `ClimbUpDuration`, `Miner.ClimbStreak` |
 | Fall one tile | 0.06 s, speeding up | `FallDuration` |
+| Jump | `↑` with `←`/`→`, standing: two tiles sideways in 0.28 s, in an arc 2 cells high (1 under rock), if the tile beside and the one beyond it are both open. Lands with a puff of dust; with no floor there the fall rule takes over, so a jump crosses a one-tile hole to the ground beyond, or into the next hole. Rock in either tile: no jump, the side key walks or digs as usual | `JumpTiles`, `JumpDuration`, `JumpHeight`, `MinerControlSystem.CanJump`, `MinerMotion.Jumping` |
 | One shovel hit | every 0.16 s while the key is held | `DigInterval` |
 
 ### Standing and falling
@@ -172,7 +173,9 @@ only works when:
 - you are underground (row 11 or deeper; the surface and sky refuse ladders),
 - the tile is air and has no ladder yet.
 
-Ladders can't be picked up again. To climb up you need a ladder in **every** tile you climb out of: the up key only
+`SPACE` in a tile that already has a ladder **picks it back up** into the inventory (`Mine.TryTakeLadder`), anywhere
+below the grass row; the shaft's grass-row ladder stays. Without a ladder or solid ground under him the miner then
+falls, so take ladders from the bottom up when you leave a shaft. To climb up you need a ladder in **every** tile you climb out of: the up key only
 works on a ladder tile, and the tile you arrive in must be a ladder tile too if you want to keep climbing.
 
 > **Rule of thumb:** a straight shaft down to depth *d* needs *d* − 1 ladders (the shaft's top two tiles come with
@@ -199,7 +202,10 @@ The counter sells (`ShopCounter.Items`, prices in `Shop`):
 |---|---|---|
 | Ladder | 10g | One per press |
 | Fill lamp | 2g per missing unit | Fills the tank; `FULL` when it is ([Lamp oil](#lamp-oil)) |
+| Oil flask | 60g | One flask for the pack, up to 5; poured in by itself when the lamp runs low |
 | Shovel | 300 / 900 / 2500g | Each tier digs 15% faster ([Upgrades](#upgrades)) |
+| Pickaxe | 350 / 1000 / 2800g | Each tier takes one hit off every tile, never below 1 ([Upgrades](#upgrades)) |
+| Deep camp | 1500g, once | A trading post at 100 m by the lift ([The deep camp](#deep-camp)) |
 | Lamp | 250 / 750 / 2000g | Each tier: +2 tiles of reach and −20% oil burn |
 | Bag | 200 / 600 / 1500g | Each tier: +10 weight carried before the climb slows ([Bag weight](#bag-weight)) |
 | Detector | 400 / 1200 / 3000g | Each tier: +3 tiles of glint radius, glints 20% more often |
@@ -223,6 +229,7 @@ The headlamp burns oil (`LampOil.cs`, `Miner.Oil`, `LampSystem`). It never hurts
 | Low (below 30 units) | The cone shortens with the oil, from the full reach down to 3 tiles; the lamp flickers (some 0.04–0.12 s stretches are one light level darker, more of them the emptier it gets); the lamp glyph turns dark yellow and grey `°` smoke rises from it every 0.45 s | `LowShare`, `LowReach`, `LampOil.Reach`, `Headlamp` |
 | Empty | No cone: only the close radius, one level darker. The lamp glyph is dark grey, no glow dots. Remembered outlines and glints still show, so the way home can be found, or hold `R` | `LampOil.IsEmpty` |
 | Refill | `FILL LAMP` at the counter: 2g per missing unit (`OIL <n>%` on the panel) | `LampOil.FillPrice`, `TryFill` |
+| Oil flasks | `OIL FLASK` at the counter: 60g each, up to 5 in the pack (`FULL` then). Underground, when the tank drops below 30 units a flask pours itself in: +40 units (never past full), a puff of smoke and a floating `OIL +40`. The HUD shows `δ<n>` after the gauge while you carry any | `LampOil.FlaskPrice`, `FlaskUnits`, `MaxFlasks`, `TryBuyFlask`, `TryPour`, `LampSystem` |
 | HUD | `OIL ▮▮▮▮▮▯▯▯` on row 0: white, yellow below half, blinking red when low | `HudSystem.OilCells` |
 
 <a id="bag-weight"></a>
@@ -243,12 +250,13 @@ The rescue still empties the bag, so greed costs more the heavier it gets.
 <a id="upgrades"></a>
 ## Upgrades
 
-Four lines, three tiers each, bought at the counter (`Upgrades.cs`, tiers on the `Miner`). The panel shows tier pips
+Five lines, three tiers each, bought at the counter (`Upgrades.cs`, tiers on the `Miner`). The panel shows tier pips
 (`●●○`) and `MAX` at the top tier.
 
 | Line | Per tier | At tier 3 | Identifier |
 |---|---|---|---|
 | Shovel | 15% less time between hits | 0.088 s instead of 0.16 s | `Upgrades.DigInterval`, `ShovelSpeedPerTier` |
+| Pickaxe | 1 hit less for every breakable tile (at least 1 hit stays); cracks follow the shorter count | 3 hits less: dirt at 0 m breaks in 1, gold at 100 m in 9 instead of 12 | `Upgrades.FewerHits`, `PickaxeHitsPerTier`, `Tiles.HitsToBreak`, `Mine.Hit` |
 | Lamp | +2 tiles of cone reach (the bright and lit bands scale with it: half and three quarters of the reach), oil burn ×0.8 | 14 tiles, ×0.51 burn | `Upgrades.LampReach`, `LampReachPerTier` |
 | Bag | +10 weight before the climb slows | +30 (capacity 50) | `BagCapacityPerTier` |
 | Detector | +3 tiles of glint radius; samples 20% more often | 18 tiles, every 0.041 s | `Upgrades.GlintRadius`, `GlintInterval` |
@@ -273,6 +281,40 @@ the mine entrance.
 The shaft below the surface is open once the lift is built: stepping into it without a ladder or the car means a
 fall to the bottom landing (no fall damage).
 
+<a id="deep-camp"></a>
+## The deep camp
+
+A trading post at 100 m (`DeepCamp.cs`), so a deep trip doesn't have to end at the house. It sits right of the lift
+shaft, beside the lift's bottom landing once the lift reaches 100 m (its last segment above the wall).
+
+| Rule | Value | Identifier |
+|---|---|---|
+| Buying | `DEEP CAMP` at the surface counter (between the detector and the blasting slot): 1500g, once. The panel shows `AT 100m BY THE LIFT`, then `BUILT` | `DeepCamp.Price`, `Shop.TryBuyDeepCamp`, `Miner.HasDeepCamp` |
+| Building | Buying digs out columns 22–24 on row 110 (100 m) and the row above; ore there goes into the bag. Every open tile under them becomes stone, so the camp has a floor | `DeepCamp.Build` |
+| Counter | Standing on row 110 at columns 22–24 once it is built. `↑`/`↓` choose (they don't climb or dig there), `E` buys or sells. Holding `E` there doesn't plant dynamite | `DeepCamp.IsAtCounter`, `ShopCounter.CampItems` |
+| Selling | `SELL BAG` (first): the bag for 70% of what the house pays, rounded down. Coins, stars and `+<n>g` above the tent | `DeepCamp.SaleShare`, `DeepCamp.SellBag` |
+| Buying there | Ladders 15g, `FILL LAMP` 3g per missing unit, `OIL FLASK` 90g, dynamite 150g a stick: the surface price × 1.5, rounded up. Sticks only with the kit (`KIT: SURFACE ONLY`); no upgrades | `DeepCamp.Markup`, `Shop.CampPrice`, `Shop.TryBuyAtCamp` |
+| Look | A tent `/▀\` at column 24, a flickering lantern `¤` on a pole at column 22, a `CAMP` plank and a crate. The lantern lights the tiles within 2.6 tiles (`Lit`), dim to 3.9 | `CampRenderSystem`, `LightMap.AddLantern`, `DeepCamp.LanternRadius` |
+| Saving | Every sale and purchase there saves. The camp is saved from format version 10; its dug tiles are ordinary changed tiles | `SaveData.HasDeepCamp` |
+
+<a id="surface-progression"></a>
+## Surface progression
+
+The surface shows how far you've come (`Progress.cs`). All of it is kept on the miner and saved (format version 12).
+
+| Rule | Value | Identifier |
+|---|---|---|
+| Depth record | The deepest depth reached, on a ` RECORD <n>m ` plank over the `MINE` frame (from the first metre underground). The inventory shows it too | `Miner.DepthRecord`, `Progress.Track` (every frame in `MinerMotionSystem`) |
+| Gold earned | Every sale, at the door or the deep camp, adds to a lifetime total that spending never lowers | `Miner.GoldEarned`, `Progress.Earn` |
+| House level 1 | 2000g earned: a yellow flag flutters on a pole on the roof's peak | `Progress.FlagGold`, `HouseRenderSystem.DrawFlag` |
+| House level 2 | 8000g earned: the windows glow yellow | `Progress.LitWindowsGold` |
+| House level 3 | 20000g earned: a second floor (4 cells, two more windows) lifts the roof, chimney and flag | `Progress.SecondFloorGold`, `HouseRenderSystem.UpperFloorHeight` |
+| Upgrade text | The sale that reaches a level floats `HOUSE UPGRADE!` above the door | `InteractionSystem.Deliver` |
+| Trophy case | Left of the door: two shelves of 5, one glyph per rare find ever dug up, relics `¥` (yellow) first, then fossils `§` (white). More than 10: the last slot shows `+` | `HouseRenderSystem.DrawTrophyCase`, `Miner.FossilsFound`, `RelicsFound` |
+| Tool shop | A stall with a green-striped awning and a `TOOLS` board at columns 13–14. Boarded up (`CLOSED`) until the miner has stood below the wall; the first time, `TOOL SHOP OPEN` floats up. Then a toolsmith (4 × 2, `☺` over a green body, arms swapping every 0.6 s) stands at column 14 | `Miner.PassedTheWall`, `Progress.IsToolShopOpen`, `HouseRenderSystem.DrawToolShop` |
+| Tool shop counter | Stand at column 13: `↑`/`↓` choose, `E` buys. `DYNAMITE x5` for 400g (kit needed: `NEEDS THE KIT`), `LADDERS x10` for 80g, both cheaper than one by one. Closed: ` TOOL SHOP: OPENS PAST THE WALL ` | `ShopCounter.ToolShopItems`, `Shop.TryBuyBundle`, `InteractionSystem.BuyTools` |
+| Older saves | Start the record at the saved depth and count the gold in hand as earned | `SaveFile.ReadFields` |
+
 <a id="dynamite"></a>
 ## Dynamite
 
@@ -281,7 +323,7 @@ The way through the obsidian wall, and a fast but costly way to dig anywhere.
 | What | Rule | Identifier |
 |---|---|---|
 | Buying | At the shop counter, the blasting slot: the kit once (2500g), then one stick per press (100g). Every purchase saves | `Shop.TryBuyBlasting`, `BlastingKitPrice`, `DynamitePrice` |
-| Planting | Hold `E` for 0.5 s underground, standing still and not on a lift landing: a lit stick goes into the tile the lamp faces (the last move or dig direction). Needs the kit, a stick, and rock there (any breakable rock or obsidian). Otherwise a dust puff. While `E` is held the miner does nothing else; let go to plant the next one. The HUD shows a ` LIGHTING FUSE ` bar | `MinerControlSystem.UpdatePlanting`, `PlantDuration` |
+| Planting | Hold `E` for 0.5 s underground, standing still: a lit stick goes into the tile the lamp faces (the last move or dig direction). An arrow held with `E` aims it first: `↓` below, `↑` above, `←`/`→` to that side (the lamp turns there). On the lift's bottom landing it works only with the kit and a stick; there a short tap of `E` (released before 0.5 s) calls the car or gets in, and the prompt adds ` HOLD [E] + ARROW: DYNAMITE `. Facing obsidian, an idle miner sees ` HOLD [E] + ARROW: DYNAMITE ` (or a red ` TOO HARD: DYNAMITE AT THE SHOP ` without sticks). Needs the kit, a stick, and rock there (any breakable rock or obsidian). Otherwise a dust puff. While `E` is held the miner does nothing else; let go to plant the next one. The HUD shows a ` LIGHTING FUSE ` bar | `MinerControlSystem.UpdatePlanting`, `PlantDuration` |
 | The fuse | 2 s, with yellow/red `*` sparks and grey `·` smoke | `FuseDuration`, `DynamiteSystem` |
 | The blast | Clears the 3 × 3 tiles around the stick: any rock, obsidian included. Bedrock, the grass and the sky stay. Ore in it goes into the bag; ladders in it are destroyed; other sticks in it go off 0.12 s later | `DynamiteSystem.Blast`, `BlastRadius`, `ChainDelay` |
 | The miner | Never hurt. Inside the blast area (and standing, not riding) he slides one tile away from the stick if that tile is open | `DynamiteSystem.Push`, `PushDuration` |
@@ -289,6 +331,31 @@ The way through the obsidian wall, and a fast but costly way to dig anywhere.
 
 A 4-tile wall needs about 4–6 sticks. A stick in a lit fuse that is saved (sale, purchase, autosave, `ESC`) goes back
 into the stock.
+
+<a id="hazards"></a>
+## Hazards
+
+Moody but forgiving: nothing here hurts the miner. The worst outcome is lost light, and a rescue if you give up.
+
+### Gas pockets
+
+| Rule | Value | Identifier |
+|---|---|---|
+| Where | Caves from 50 m down (act 1's deep caves and act 2): 30% of the 2 × 2 cave areas hold gas in their air tiles. Dug or blasted tiles never do | `Tiles.GasDepth`, `GasChance`, `Mine.IsGasPocket`, `TileCell.HasGas` |
+| Shimmer | Faint dark-green `~` `∙` drifting over gas tiles within 9 tiles of the miner, also in the dark (gas warns, it never ambushes). At most 30, 10 new per second | `GasSystem`, `ParticleStyle.GasShimmer`, `Gas` tag |
+| Flare | A lit lamp (not dry, not blown out) within 2 tiles of gas sets the pocket off: up to 24 connected gas tiles burn with yellow-red `*` fire, a shake and a floating `GAS!`. The gas is gone for good | `GasSystem.Check`, `GasPockets.Ignite`, `EffectSpawner.GasFlare` |
+| The lamp | A flare blows the lamp out for 3 s (dark like an empty lamp, no oil burns) and burns 5 oil. Then it relights by itself | `GasSystem.LampOutSeconds`, `OilDrain`, `Miner.LampOut`, `LampSystem` |
+| Blasts | A blast sets off every pocket within 3 tiles of the stick (up to 6 pockets) as a bigger flare. Harmless: the lamp stays lit | `DynamiteSystem.GasReach`, `DynamiteSystem.IgniteGas` |
+| Saving | Burnt gas is a changed tile (flag bit 2 from format version 11) | `SaveFile` |
+
+### Darkness
+
+| Rule | Value | Identifier |
+|---|---|---|
+| Act 2 rock | Below the wall (deeper than the column's last obsidian row) the cone reaches 2 tiles less (never under 1 while lit) | `LampOil.ActTwoAbsorb`, `LampOil.DarkReach`, `Mine.IsBelowTheWall` |
+| Black damp | Bad air in rare 4 × 4 areas below the wall (12% of them): their open tiles, caves and your own tunnels alike. Standing in it halves the cone (after the act 2 cut) and burns twice the oil. A grey `BLACK DAMP` floats up as you step in | `Tiles.BlackDampChance`, `Mine.IsBlackDamp`, `LampOil.BlackDampReachShare`, `BlackDampBurn`, `LampSystem.InBlackDamp` |
+| Its look | No mist in black damp. Lit rock around it is drawn as dark-grey `░` (ore specks still show) | `MistSystem`, `Mine.IsBlackDampEdge`, `TileLooks.BlackDampEdge`, `TerrainRenderSystem` |
+| Never lost | Glints and remembered outlines show as everywhere, so the way back is always visible | `GlintSystem`, `TerrainRenderSystem` |
 
 ## The rescue
 
@@ -331,8 +398,9 @@ twinkles and dig towards them.
 
 | Part | Shows | Identifier |
 |---|---|---|
-| HUD, row 0 | ` ETERNAL DIGGER ` title, gold, ladders (`╟╢<n>`), `LIFT <n>m` once a lift is built, dynamite (`¡<n>`) once the kit is bought, the oil gauge, depth, the bag (copper/silver/gold/gem counts with coloured `◆` icons, and `✦` rare finds) and what the bag is worth | `HudSystem` |
+| HUD, row 0 | ` ETERNAL DIGGER ` title, gold, ladders (`╟╢<n>`), `LIFT <n>m` once a lift is built, dynamite (`¡<n>`) once the kit is bought, the oil gauge (then `δ<n>` oil flasks while carrying any), depth, the bag (copper/silver/gold/gem counts with coloured `◆` icons, and `✦` rare finds) and what the bag is worth | `HudSystem` |
 | HUD, row 1 | The key help; the rescue bar while `R` is held; the ` LIGHTING FUSE ` bar while `E` is held to plant; the no-ladders warning. After a save, ` SAVED ` at the right end for 1.5 s (grey, then dark grey), or ` SAVE FAILED` in red | `HudSystem` |
+| Inventory (`TAB`) | A framed panel in the middle of the screen: gold, ladders, oil %, flasks, dynamite, the lift; the bag line by line (`count × price = worth`), its weight against the capacity (`HEAVY` over it) and total worth; upgrade pips for all five lines; rare finds ever dug up. The game is paused while it is open (`PAUSED` on the frame); `TAB` closes it | `InventorySystem` |
 | Title screen | `ETERNAL DIGGER` logo, `CONTINUE` / `NEW MINE` (selected item black on yellow with `►`), the confirmation, a red message for an unreadable save, `↑↓ choose   E select   ESC quit` | `TitleScene`, `TitleMenu` |
 | Camera | Keeps the miner at 40% of the screen height, eased. Never scrolls above the sky. Shakes on breaks and long falls | `CameraSystem` |
 | Prompts | ` DELIVER [E] ` / the shop counter's three-line panel / ` BUILD LIFT +10m [E] <price>g ` / ` CALL LIFT [E] ` / ` GET IN [E] ` / ` ↑↓ RIDE   ←→ GET OUT ` / ` LIFT BLOCKED BY OBSIDIAN ` in a small bobbing frame above the miner | `PromptRenderSystem` |
@@ -370,7 +438,7 @@ The game saves itself; there is no save key.
 - **When:** after every sale at the door (when it earned gold) and every ladder bought, every 60 s spent underground
   (`GameSaver.AutosaveInterval`), and on `ESC`, which saves and quits. A NEW MINE is saved as soon as it starts.
 - **What:** the seed, the miner's tile and facing, gold, ladders and the bag, the lift (segments and the car's
-  landing), the blasting kit and the dynamite stock (lit sticks counted back in), the upgrade tiers, the lamp oil, rare finds (in the bag and ever found), and every tile that differs from what
+  landing), the blasting kit and the dynamite stock (lit sticks counted back in), the upgrade tiers, the lamp oil and oil flasks, rare finds (in the bag and ever found), and every tile that differs from what
   the seed generates (dug, half-dug, ladder placed, seen). The mine itself is regenerated from the seed.
 - **Not saved:** anything mid-action. A continued game starts with the miner standing still on the saved tile (if
   that tile has no support, they fall), no particles, and the rescue timer at zero.

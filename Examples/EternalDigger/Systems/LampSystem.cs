@@ -11,10 +11,13 @@ namespace EternalDigger.Systems;
 
 /// <summary>
 /// Burns the lamp's oil while the miner is underground and works out this frame's <see cref="Headlamp"/>: the reach
-/// from the oil, flicker frames when low (on a timer, so the rate doesn't depend on the FPS), and smoke rising from a
-/// low lamp. Runs before <see cref="LightingSystem"/>.
+/// from the oil (a carried flask is poured in when it runs low; no light and no burning while a gas flare has blown the
+/// lamp out; shorter below the wall and in black damp, where it also burns twice the oil), flicker frames when low (on
+/// a timer, so the rate doesn't depend on the FPS), and smoke rising from a low lamp. Runs before
+/// <see cref="LightingSystem"/>.
 /// </summary>
-public sealed class LampSystem(Headlamp headlamp, EffectSpawner effects, Random random) : EntitySystem
+public sealed class LampSystem(Headlamp headlamp, EffectSpawner effects, Random random, Mine mine = null)
+    : EntitySystem
 {
     //**********************************************************
     //** fields
@@ -28,6 +31,10 @@ public sealed class LampSystem(Headlamp headlamp, EffectSpawner effects, Random 
     private Query _miners;
     private float _flickerTimer;
     private float _smokeTimer;
+    private bool _wasInBlackDamp;
+
+    /// <summary>The miner stood in black damp this frame.</summary>
+    public bool InBlackDamp { get; private set; }
 
     //**********************************************************
     //** lifecycle
@@ -40,7 +47,21 @@ public sealed class LampSystem(Headlamp headlamp, EffectSpawner effects, Random 
         foreach (var chunk in _miners.GetChunks())
         {
             ref var miner = ref chunk.GetSpan<Miner>()[0];
-            Burn(ref miner, deltaSeconds, LoadFactor(miner));
+            var position = chunk.GetSpan<Position>()[0].Value;
+            InBlackDamp = mine != null && mine.IsBlackDamp(miner.Column, miner.Row);
+            if (InBlackDamp && !_wasInBlackDamp)
+                effects.Text(Commands, position + new Vector2(Layout.TileWidth / 2f, -2f), FloatingTextKind.BlackDamp, 0);
+
+            _wasInBlackDamp = InBlackDamp;
+            if (miner.LampOut > 0f)
+                miner.LampOut = Math.Max(0f, miner.LampOut - deltaSeconds);
+            else
+                Burn(ref miner, deltaSeconds, LoadFactor(miner) * (InBlackDamp ? LampOil.BlackDampBurn : 1f));
+
+            var poured = LampOil.TryPour(ref miner);
+            if (poured > 0f)
+                Pour(miner, chunk.GetSpan<Position>()[0].Value, poured);
+
             Update(miner, chunk.GetSpan<Position>()[0].Value, deltaSeconds);
             return;
         }
@@ -69,10 +90,22 @@ public sealed class LampSystem(Headlamp headlamp, EffectSpawner effects, Random 
     //** internals
     //**********************************************************
 
+    /// <summary>A flask went into the lamp: a puff of smoke and a floating <c>OIL +40</c>.</summary>
+    private void Pour(in Miner miner, Vector2 position, float poured)
+    {
+        effects.LampSmoke(Commands, LampCell(miner, position));
+        effects.Text(Commands, position + new Vector2(Layout.TileWidth / 2f, -2f), FloatingTextKind.Oil,
+            (int)MathF.Round(poured));
+    }
+
     private void Update(in Miner miner, Vector2 position, float deltaSeconds)
     {
-        headlamp.Reach = LampOil.Reach(miner.LampTier, miner.Oil);
-        headlamp.IsEmpty = LampOil.IsEmpty(miner.Oil);
+        // Blown out by a gas flare: dark like an empty lamp until it relights.
+        var blownOut = miner.LampOut > 0f;
+        var belowTheWall = mine != null && mine.IsBelowTheWall(miner.Column, miner.Row);
+        headlamp.Reach = blownOut ? 0f
+            : LampOil.DarkReach(LampOil.Reach(miner.LampTier, miner.Oil), belowTheWall, InBlackDamp);
+        headlamp.IsEmpty = blownOut || LampOil.IsEmpty(miner.Oil);
         headlamp.IsLow = LampOil.IsLow(miner.Oil) && Mine.Depth(miner.Row) > 0;
         if (!headlamp.IsLow || headlamp.IsEmpty)
         {

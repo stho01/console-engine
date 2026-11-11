@@ -1,6 +1,7 @@
 using System;
 using ConsoleEngine.Ecs;
 using ConsoleEngine.Ecs.Rendering;
+using EternalDigger.Components;
 using EternalDigger.Mining;
 using EternalDigger.Rendering;
 
@@ -9,8 +10,8 @@ namespace EternalDigger.Systems;
 /// <summary>
 /// Draws every tile from the grass row down that is on screen, by the <see cref="LightMap"/>: bright tiles in full
 /// colour, lit ones without their fill, dim ones in dark colours, and dark tiles that were seen before as faint
-/// silhouettes. Unseen dark tiles stay black. Adds ladders and cracks for damaged tiles. Textures are picked by the
-/// mine's noise, so they never flicker.
+/// silhouettes. Unseen dark tiles stay black. Lit rock around black damp shows as dark-grey <c>░</c>. Adds ladders and
+/// cracks for damaged tiles. Textures are picked by the mine's noise, so they never flicker.
 /// </summary>
 public sealed class TerrainRenderSystem(Canvas canvas, Camera camera, Mine mine, LightMap light) : EntitySystem
 {
@@ -22,12 +23,26 @@ public sealed class TerrainRenderSystem(Canvas canvas, Camera camera, Mine mine,
     private const int SpeckSalt = 103;
     private const int CrackSalt = 107;
 
+    private Query _miners;
+
+    /// <summary>Hits the miner's pickaxe takes off every tile, so the cracks show how close a tile is to breaking.</summary>
+    private int _fewerHits;
+
     //**********************************************************
     //** lifecycle
     //**********************************************************
 
+    protected override void OnCreate() => _miners = World.Query(Query.With<Miner>());
+
     protected override void OnUpdate(float deltaSeconds)
     {
+        _fewerHits = 0;
+        foreach (var chunk in _miners.GetChunks())
+        {
+            _fewerHits = Upgrades.FewerHits(chunk.GetSpan<Miner>()[0].PickaxeTier);
+            break;
+        }
+
         var originX = (int)MathF.Floor(camera.Position.X);
         var originY = (int)MathF.Floor(camera.Position.Y);
         var firstRow = Math.Max(Mine.SurfaceRow, FloorDiv(originY, Layout.TileHeight));
@@ -58,7 +73,9 @@ public sealed class TerrainRenderSystem(Canvas canvas, Camera camera, Mine mine,
         }
 
         var look = TileLooks.For(cell.Type);
-        var hitsToBreak = Tiles.HitsToBreak(cell.Type, Mine.Depth(row));
+        var isDampEdge = level > LightMap.Dark && row > Mine.SurfaceRow + Tiles.WallDepth &&
+                         mine.IsBlackDampEdge(column, row);
+        var hitsToBreak = Tiles.HitsToBreak(cell.Type, Mine.Depth(row), _fewerHits);
         var cracks = hitsToBreak > 0 ? (cell.Damage * 8 + hitsToBreak - 1) / hitsToBreak : 0;
         for (var dy = 0; dy < Layout.TileHeight; dy++)
         for (var dx = 0; dx < Layout.TileWidth; dx++)
@@ -96,6 +113,14 @@ public sealed class TerrainRenderSystem(Canvas canvas, Camera camera, Mine mine,
                     background = ConsoleColor.Black;
                     isCrack = false;
                     break;
+            }
+
+            if (isDampEdge && !isSpeck)
+            {
+                // The walls of black damp: dark grey, as if the bad air soaks up the light.
+                character = TileLooks.BlackDampEdge;
+                foreground = ConsoleColor.DarkGray;
+                background = ConsoleColor.Black;
             }
 
             if (isCrack)

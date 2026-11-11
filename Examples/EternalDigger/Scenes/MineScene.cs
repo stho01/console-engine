@@ -51,12 +51,15 @@ public sealed class MineScene(SaveData start, string savePath) : EcsScene<Eterna
         var mine = new Mine(start.Seed);
         var elevator = new Elevator();
         var counter = new ShopCounter();
+        var campCounter = new ShopCounter(ShopCounter.CampItems);
+        var toolCounter = new ShopCounter(ShopCounter.ToolShopItems);
         start.ApplyTo(mine, elevator);
         var random = new Random(start.Seed);
         var effects = new EffectSpawner(random, new ScreenShake());
         var light = new LightMap(Mine.Columns, Layout.ScreenHeight / Layout.TileHeight + 2);
         var canvas = new Canvas(Console);
         var headlamp = new Headlamp();
+        var gas = new GasPockets(mine);
         _saver = new GameSaver(savePath, start.Seed, mine, elevator);
         _miners = World.Query(Query.With<Miner>());
 
@@ -64,12 +67,14 @@ public sealed class MineScene(SaveData start, string savePath) : EcsScene<Eterna
         World.Create(new Position(Layout.TileToWorld(miner.Column, miner.Row)), miner);
 
         Simulation.Add(new MinerControlSystem(mine, elevator, effects));
-        Simulation.Add(new InteractionSystem(mine, elevator, counter, effects, _saver));
+        Simulation.Add(new InteractionSystem(mine, elevator, counter, effects, _saver, campCounter,
+            toolCounter));
         Simulation.Add(new MinerMotionSystem(mine, effects));
         Simulation.Add(new ElevatorSystem(elevator));
-        Simulation.Add(new DynamiteSystem(mine, effects));
+        Simulation.Add(new DynamiteSystem(mine, effects, gas));
+        Simulation.Add(new GasSystem(mine, gas, effects, random));
         Simulation.Add(new CameraSystem(Camera, Console, effects.Shake, random));
-        Simulation.Add(new LampSystem(headlamp, effects, random));
+        Simulation.Add(new LampSystem(headlamp, effects, random, mine));
         Simulation.Add(new LightingSystem(mine, light, Camera, headlamp));
         Simulation.Add(new GlintSystem(mine, light, Camera, effects, random));
         Simulation.Add(new MistSystem(mine, light, Camera, effects, random));
@@ -82,12 +87,16 @@ public sealed class MineScene(SaveData start, string savePath) : EcsScene<Eterna
         Presentation.Add(new TerrainRenderSystem(canvas, Camera, mine, light));
         Presentation.Add(new HouseRenderSystem(canvas, Camera));
         Presentation.Add(new ElevatorRenderSystem(canvas, Camera, elevator));
+        Presentation.Add(new CampRenderSystem(canvas, Camera));
         Presentation.Add(new DynamiteRenderSystem(canvas, Camera));
         Presentation.Add(new ParticleRenderSystem(canvas, Camera, light));
         // After the particles, so debris, dust and sparks never cover the miner.
         Presentation.Add(new MinerRenderSystem(canvas, Camera, headlamp));
         Presentation.Add(new FloatingTextRenderSystem(canvas, Camera));
-        Presentation.Add(new PromptRenderSystem(canvas, Camera, mine, elevator, counter));
+        Presentation.Add(new PromptRenderSystem(canvas, Camera, mine, elevator, counter, campCounter,
+            toolCounter));
         Presentation.Add(new HudSystem(canvas, _saver, elevator));
+        // Last, over everything: TAB pauses the simulation and shows the inventory.
+        Presentation.Add(new InventorySystem(canvas, elevator, Simulation));
     }
 }

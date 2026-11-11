@@ -34,9 +34,11 @@ and its `docs/` folder.
 | `LEFT`/`A`, `RIGHT`/`D` (held) | Walk to the side tile if it is air; otherwise dig it (one hit per `DigInterval`). Turns the miner |
 | `DOWN`/`S` (held) | Below solid → dig it. Below air → step down (climbing if a ladder is there, otherwise the fall rule takes over) |
 | `UP`/`W` (held) | Only on a ladder tile: above air → climb up; above solid → dig it |
-| `SPACE` (pressed) | Place a ladder in the miner's tile (uses one from the inventory) |
+| `UP` + `LEFT`/`RIGHT` (held) | Jump 2 tiles sideways if both are air (Tier 2b, player feedback). Lands and then falls if there is no floor |
+| `SPACE` (pressed) | Place a ladder in the miner's tile (uses one from the inventory); on a ladder, take it back (Tier 2b) |
 | `E` (pressed) | At the door: deliver all ore. At the shop counter: buy the selected item (Up/Down choose; Tier 2) |
 | `R` (held 1.5 s) | Rescue: back to the spawn tile, the bag is lost (ore only, not gold or ladders). The way out of a pit without ladders |
+| `TAB` (pressed) | Inventory screen on/off; the game pauses while it is open (Tier 2b, player feedback: the one new key) |
 | `ESC` | Save and quit (on the title screen: quit) |
 
 Keys are read once per frame into a `MinerInput` (`MinerInput.FromKeyboard`); tests pass their own. No input
@@ -44,7 +46,7 @@ except `R` is read while the miner is moving (a move is a slide of one tile). Fa
 miner is idle. Digging also turns the headlamp (`LampDirection`) towards the dug tile; walking turns it to the side,
 climbing up/down points it up/down.
 
-Timings (`MinerControlSystem` constants, seconds): walk 0.13 per tile, climb 0.17 (held Up ramps to 0.06 after 4 tiles, over 10 tiles), fall 0.06 per tile, dig interval
+Timings (`MinerControlSystem` constants, seconds): walk 0.13 per tile, climb 0.17 (held Up ramps to 0.06 after 4 tiles, over 10 tiles), fall 0.06 per tile, jump 0.28 for 2 tiles, dig interval
 0.16, swing animation 0.12, rescue hold 1.5.
 
 ## Components (`Components/`)
@@ -110,7 +112,9 @@ Simulation:
    particles that enter a solid tile are put back on top of it and stop (velocity zero; coins bounce once).
 9. `ParticleLifetimeSystem`: ages particles, writes `Glyph` from `Style`, `Variant` and `Progress`, destroys expired.
 10. `FloatingTextSystem`: moves floating texts up, ages and destroys them.
-11. `SaveSystem(GameSaver)`: writes the save when requested this frame, or every `GameSaver.AutosaveInterval` (60) s
+11. `GasSystem(Mine, GasPockets, EffectSpawner, Random)` (Tier 3, runs right after `DynamiteSystem`): gas shimmer and
+    flares near a lit lamp.
+12. `SaveSystem(GameSaver)`: writes the save when requested this frame, or every `GameSaver.AutosaveInterval` (60) s
     underground.
 
 Presentation (draw order). Renderers draw through `Canvas` (`Rendering/Canvas.cs`), which wraps the `RenderConsole`
@@ -132,6 +136,8 @@ box behind them (the engine has no public way to read a cell back):
    panel at the shop, and the lift prompts, while the miner stands there.
 8. `HudSystem(Canvas, GameSaver)`: top 2 rows (plus a fading ` SAVED ` after each save): `ETERNAL DIGGER`, gold, ladders, depth, bag; key help or the rescue
    progress bar. Strings rebuilt only when a value changes.
+9. `InventorySystem(Canvas, Elevator, SystemGroup)` (Tier 2b): `TAB` opens and closes the inventory panel; while
+   open every Simulation system is disabled, so the game pauses. Lines rebuilt only when a shown value changes.
 
 ## Performance rules
 
@@ -168,7 +174,7 @@ version 3.
 ## Dynamite (Tier 1)
 
 Not in the original document. The shop counter's blasting slot sells the kit once (2500g), then sticks (100g)
-(`Shop.TryBuyBlasting`). Holding `E` 0.5 s underground, off the lift landings, plants a lit stick in the faced rock
+(`Shop.TryBuyBlasting`). Holding `E` 0.5 s underground plants a lit stick in the faced rock (an arrow held with `E` aims it; on the lift's bottom landing only while carrying sticks, and there a short tap of `E` is the lift: Tier 2b)
 (`MinerControlSystem.UpdatePlanting`; a `Dynamite` entity with a 2 s fuse). `DynamiteSystem` runs after
 `ElevatorSystem`: the blast clears 3 x 3 of any rock including obsidian (not bedrock, grass or sky), bags ore,
 destroys ladders, chains to nearby sticks and pushes the miner one tile away; he is never hurt.
@@ -184,9 +190,9 @@ the miner (`PromptRenderSystem.DrawCounterPanel`) shows the item, what the miner
 
 ## Upgrades (Tier 2)
 
-`Upgrades.cs`: shovel (−15% dig interval per tier), lamp (+2 tiles reach), bag (+10 carried weight), detector (+3
+`Upgrades.cs`: shovel (−15% dig interval per tier), pickaxe (−1 hit per tile per tier, min 1; added in Tier 2b from player feedback), lamp (+2 tiles reach), bag (+10 carried weight), detector (+3
 glint radius, ×0.8 glint interval), three tiers each at the handover's prices, bought at the counter. Tiers are on
-the `Miner` and saved from format version 5. The shovel and lamp glyph colours follow the tiers.
+the `Miner` and saved from format version 5 (the pickaxe from 9). The shovel and lamp glyph colours follow the tiers.
 
 ## Lamp oil (Tier 2)
 
@@ -194,6 +200,8 @@ the `Miner` and saved from format version 5. The shovel and lamp glyph colours f
 (before `LightingSystem`) sets the `Headlamp`: full reach above 30%, then shrinking to 3 tiles, timed flicker frames
 one light level darker, `°` smoke and a dark-yellow lamp glyph; empty, only the close radius one level darker.
 Refilled at the counter (`FILL LAMP`, 2g a unit). The HUD shows an 8-cell gauge. Saved from format version 6.
+Tier 2b: `OIL FLASK`s (60g, up to 5) ride in the pack and pour themselves in below 30% (+40), so a trip can be
+stretched without walking home (`LampOil.TryPour`; saved from format version 8).
 
 ## Gems and rare finds (Tier 2)
 
@@ -201,6 +209,39 @@ The Tier 1 gem already matched the handover (250g, magenta glint, a bag slot). R
 (`§`, act 1 from 15 m, 0.15%, 300g) and `Relic` (`¥`, act 2, 0.1%, 750g): single tiles with a slow pulsing glint, a
 double star burst and a floating name when dug out, sold at the door, counted in the HUD as `✦n` and for good in
 `Miner.FossilsFound`/`RelicsFound` for the Tier 3 trophy shelf. Saved from format version 7.
+
+## Deep camp (Tier 3)
+
+`DeepCamp.cs`. Bought once at the surface counter (`DEEP CAMP`, 1500g; `Miner.HasDeepCamp`, saved from format
+version 10). Building digs out columns 22–24 on rows 109–110 (100 m, right of the shaft, so beside the lift's last
+bottom landing above the wall) and floors them. Its counter (`ShopCounter.CampItems`, the same Up/Down/E controls)
+sells the bag at 70% and ladders, oil, flasks and sticks at ×1.5. `CampRenderSystem` (after `ElevatorRenderSystem`)
+draws a tent with a lantern; `LightMap.AddLantern` lights the camp.
+
+## Hazards: gas (Tier 3)
+
+Gas pockets: `TileCell.HasGas` on generated cave air from 50 m (`Tiles.GasDepth`), in 2 × 2 noise areas. `GasSystem`
+(Simulation, after `DynamiteSystem`, before `LampSystem`) keeps a dark-green shimmer over gas near the miner and,
+when the lit lamp comes within 2 tiles, burns the pocket (`GasPockets.Ignite`, preallocated flood fill): fire, a shake,
+`GAS!`, the lamp blown out 3 s (`Miner.LampOut`) and 5 oil. A blast within 3 tiles flares gas bigger, harmlessly.
+Nothing kills; glints and remembered outlines still show. Burnt gas is saved as a changed tile (flag bit 2, format
+version 11).
+
+## Hazards: darkness (Tier 3)
+
+Below the wall the headlamp reaches 2 tiles less (`LampOil.ActTwoAbsorb`). Black damp is a property of the place, not
+a saved tile: open tiles below the wall in 4 × 4 noise areas (`Mine.IsBlackDamp`, 12%). Inside, `LampSystem` halves
+the cone and doubles the burn and floats `BLACK DAMP` on entry; `MistSystem` spawns no mist there; `TerrainRenderSystem`
+draws lit rock around it as dark-grey `░` (`Mine.IsBlackDampEdge`). Glints and outlines are untouched.
+
+## Surface progression (Tier 3)
+
+`Progress.cs`: `Miner.DepthRecord` (kept by `Progress.Track` every frame), `Miner.GoldEarned` (every sale) and
+`Miner.PassedTheWall`, saved from format version 12. `HouseRenderSystem` reads them: a ` RECORD <n>m ` plank over the
+mine entrance; a trophy case left of the door (a glyph per find ever dug up); house levels at 2000 / 8000 / 20000g
+earned (flag, lit windows, second floor); and the tool shop stall at columns 13–14, boarded up until the miner has
+been below the wall, then with a 4 × 2 toolsmith NPC idling between two frames. Its counter
+(`ShopCounter.ToolShopItems`) sells bundles: 5 sticks for 400g, 10 ladders for 80g.
 
 ## Bag weight (Tier 2)
 

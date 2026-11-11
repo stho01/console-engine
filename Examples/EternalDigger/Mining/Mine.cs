@@ -87,8 +87,11 @@ public sealed class Mine
     public bool IsSupported(int column, int row) =>
         HasLadder(column, row) || IsSolid(column, row + 1) || HasLadder(column, row + 1);
 
-    /// <summary>One shovel hit. The tile breaks (becomes air) on its last hit.</summary>
-    public DigResult Hit(int column, int row)
+    /// <summary>
+    /// One shovel hit. The tile breaks (becomes air) on its last hit; a better pickaxe needs
+    /// <paramref name="fewerHits"/> fewer (<see cref="Tiles.HitsToBreak"/>).
+    /// </summary>
+    public DigResult Hit(int column, int row, int fewerHits = 0)
     {
         if (!IsInside(column, row))
             return DigResult.Nothing;
@@ -98,7 +101,7 @@ public sealed class Mine
             return DigResult.Nothing;
 
         var type = cell.Type;
-        var hitsToBreak = Tiles.HitsToBreak(type, Depth(row));
+        var hitsToBreak = Tiles.HitsToBreak(type, Depth(row), fewerHits);
         cell.Damage++;
         if (cell.Damage < hitsToBreak)
             return new DigResult(DigOutcome.Damaged, type, cell.Damage, hitsToBreak);
@@ -118,6 +121,23 @@ public sealed class Mine
             return false;
 
         cell.HasLadder = true;
+        return true;
+    }
+
+    /// <summary>
+    /// Takes a placed ladder back out of a tile below the surface (the grass row's shaft ladder stays). False if there
+    /// is none.
+    /// </summary>
+    public bool TryTakeLadder(int column, int row)
+    {
+        if (!IsInside(column, row) || row <= SurfaceRow)
+            return false;
+
+        ref var cell = ref At(column, row);
+        if (!cell.HasLadder)
+            return false;
+
+        cell.HasLadder = false;
         return true;
     }
 
@@ -154,6 +174,23 @@ public sealed class Mine
         var thickness = Tiles.WallMinThickness + Math.Min(range - 1, (int)(Noise(column, 0, 41) * range));
         return Tiles.WallDepth + thickness - 1;
     }
+
+    /// <summary>Below the wall in this column: act 2, whose rock swallows some of the lamp's light.</summary>
+    public bool IsBelowTheWall(int column, int row) => Depth(row) > WallBottomDepth(column);
+
+    /// <summary>
+    /// An open tile in a black damp area: 4 x 4 areas below the wall picked by the noise
+    /// (<see cref="Tiles.BlackDampChance"/>). Its caves, and tunnels dug through it, hold bad air.
+    /// </summary>
+    public bool IsBlackDamp(int column, int row) =>
+        Depth(row) > Tiles.WallDepth && !IsSolid(column, row) && IsInside(column, row) &&
+        Noise(column >> 2, row >> 2, 83) < Tiles.BlackDampChance && IsBelowTheWall(column, row);
+
+    /// <summary>A solid tile touching black damp: drawn as a dark-grey <c>░</c> edge when lit.</summary>
+    public bool IsBlackDampEdge(int column, int row) =>
+        Depth(row) > Tiles.WallDepth && IsSolid(column, row) &&
+        (IsBlackDamp(column - 1, row) || IsBlackDamp(column + 1, row) || IsBlackDamp(column, row - 1) ||
+         IsBlackDamp(column, row + 1));
 
     /// <summary>
     /// A value in [0, 1) that only depends on the seed and the arguments. For textures and effects that must not
@@ -193,12 +230,18 @@ public sealed class Mine
         if (column == 0 || column == Columns - 1)
             return new TileCell { Type = TileType.Bedrock };
 
+        TileType type;
         if (depth < Tiles.WallDepth)
-            return new TileCell { Type = Underground(column, row, depth) };
+        {
+            type = Underground(column, row, depth);
+        }
+        else
+        {
+            var wallBottom = WallBottomDepth(column);
+            type = depth <= wallBottom ? TileType.Obsidian : BelowTheWall(column, row, depth - wallBottom);
+        }
 
-        var wallBottom = WallBottomDepth(column);
-        var type = depth <= wallBottom ? TileType.Obsidian : BelowTheWall(column, row, depth - wallBottom);
-        return new TileCell { Type = type };
+        return new TileCell { Type = type, HasGas = type == TileType.Air && IsGasPocket(column, row, depth) };
     }
 
     private TileType Underground(int column, int row, int depth)
@@ -229,7 +272,12 @@ public sealed class Mine
     }
 
     private static bool IsSame(in TileCell a, in TileCell b) =>
-        a.Type == b.Type && a.Damage == b.Damage && a.HasLadder == b.HasLadder && a.Seen == b.Seen;
+        a.Type == b.Type && a.Damage == b.Damage && a.HasLadder == b.HasLadder && a.Seen == b.Seen &&
+        a.HasGas == b.HasGas;
+
+    /// <summary>Caves from <see cref="Tiles.GasDepth"/> hold gas in 2 x 2 areas picked by the noise.</summary>
+    private bool IsGasPocket(int column, int row, int depth) =>
+        depth >= Tiles.GasDepth && Noise(column >> 1, row >> 1, 71) < Tiles.GasChance;
 
     /// <summary>Act 2: slate with quartzite blobs, gem veins, rare relics and caves. No act 1 rock or ore.</summary>
     private TileType BelowTheWall(int column, int row, int depthBelowWall)

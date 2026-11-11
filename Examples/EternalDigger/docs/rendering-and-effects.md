@@ -13,12 +13,14 @@ The Presentation group draws in `Add` order, each layer over the last:
 | 2 | `TerrainRenderSystem` | Every tile from the grass row down, by light level | Every screen cell from the grass down (the mine's 30 columns) |
 | 3 | `HouseRenderSystem` | House, sign, chimney smoke, ladder shop, `MINE` frame, `LIFT` sign | Fixed spots on the surface |
 | 4 | `ElevatorRenderSystem` | Shaft walls and braces, cable, car, speed lines | The shaft column (and the cells beside it), over terrain |
-| 5 | `DynamiteRenderSystem` | Planted sticks: red `¡` with a `*` fuse flickering yellow/red above it | The stick's tile, in the dark too |
-| 6 | `ParticleRenderSystem` | Every particle glyph, except on the miner's cells | Over the world, keeping its background |
-| 7 | `MinerRenderSystem` | The 4 × 2 miner and the lamp glow | Over the world and the particles |
-| 8 | `FloatingTextRenderSystem` | `+150g` / `-10g` / `ELEVATOR +10m` | Over everything so far |
-| 9 | `PromptRenderSystem` | The door prompt, the counter panel, the lift sign and landing prompts | Above the miner |
-| 10 | `HudSystem` | The two top rows | Screen rows 0–1 |
+| 5 | `CampRenderSystem` | The deep camp once bought: tent `/▀\` (dark yellow, dark-grey door), flickering lantern `¤` on a pole, `CAMP` plank, crate | Columns 22–24, rows 109–110 |
+| 6 | `DynamiteRenderSystem` | Planted sticks: red `¡` with a `*` fuse flickering yellow/red above it | The stick's tile, in the dark too |
+| 7 | `ParticleRenderSystem` | Every particle glyph, except on the miner's cells | Over the world, keeping its background |
+| 8 | `MinerRenderSystem` | The 4 × 2 miner and the lamp glow (a jump draws him up to 2 cells higher, in an arc) | Over the world and the particles |
+| 9 | `FloatingTextRenderSystem` | `+150g` / `-10g` / `ELEVATOR +10m` / `OIL +40` / `GAS!` / `BLACK DAMP` | Over everything so far |
+| 10 | `PromptRenderSystem` | The door prompt, the counter panels (surface and deep camp), the lift sign and landing prompts, the dynamite hints | Above the miner |
+| 11 | `HudSystem` | The two top rows | Screen rows 0–1 |
+| 12 | `InventorySystem` | The `TAB` inventory panel, 60 × 20, double frame, yellow on dark blue | The middle of the screen, over everything, while open |
 
 Layers 1 and 2 together paint every cell of the screen each frame. That matters for the `Canvas`.
 
@@ -65,6 +67,11 @@ tiles as the oil runs low, 0 when it is empty (`LampOil.Reach`).
 
 The "solid tile on the line" test samples the ray 4 times per tile (`RaySamplesPerTile`) and skips the lamp's own
 tile and the target. It runs only for tiles inside the cone and range, so a frame costs a few thousand tile lookups.
+
+The deep camp's lantern adds light after `Compute`: `LightMap.AddLantern` raises tiles within 2.6 tiles to `Lit` and
+within 3.9 to `Dim` (walls don't block it) and marks them seen. Below the wall the reach is 2 tiles shorter, and in
+black damp it is then halved (`LampOil.DarkReach`); lit rock touching black damp is drawn as dark-grey `░`
+(`TileLooks.BlackDampEdge`).
 
 Other systems use the light map too: `ParticleRenderSystem` hides dust and mist in the dark, `MistSystem` only spawns
 mist in lit tiles, and `GlintSystem` makes ore in the dark glint more.
@@ -242,6 +249,8 @@ flowchart LR
 | `Mist` | `MistSystem`: while fewer than 40 exist, up to 12 per second, in a random lit air tile below the surface | One slow drifting dot, 4–8 s |
 | `Coins` | A delivery (`InteractionSystem`): one coin per 10g, 3 to 30 | Coins shoot up and rain onto the grass (gravity 45, bounce once), spinning, 1.6–2.4 s |
 | `Pop` | A delivery, a purchase, a rescue | A ring of 8–12 stars, 0.35–0.5 s |
+| `GasShimmer` | `GasSystem`: while fewer than 30 exist, up to 10 per second, over a random gas tile within 9 tiles of the miner | One dark-green `~`/`∙` drifting slowly, 1.5–3 s, drawn in the dark too (`Gas` tag) |
+| `GasFlare` | A gas tile burns (`GasSystem`, or a blast within 3 tiles) | 5–7 (big: 10–14) `✶**+·` fire particles bursting out and rising, yellow → red → dark red, 0.35–0.7 s; shake 0.1 (big 0.25) per tile, plus 0.6 for a lamp flare |
 | `Number` | A delivery (`+<gold>g`), a purchase (`-10g`) | Text drifting up and slowing, 1.4 s, fading after 70% |
 
 ### Screen shake

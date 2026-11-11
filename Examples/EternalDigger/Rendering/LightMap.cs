@@ -100,6 +100,30 @@ public sealed class LightMap
         }
     }
 
+    /// <summary>
+    /// Raises the light around a lantern at <paramref name="center"/> (tile coordinates) to at least <see cref="Lit"/>
+    /// within <paramref name="radius"/> tiles, <see cref="Dim"/> within 1.5 times that, and marks those tiles seen.
+    /// Call after <see cref="Compute"/>; walls don't block it.
+    /// </summary>
+    public void AddLantern(Mine mine, Vector2 center, float radius)
+    {
+        var reach = radius * 1.5f;
+        var firstRow = Math.Max(FirstRow, (int)MathF.Floor(center.Y - reach));
+        var lastRow = Math.Min(FirstRow + Rows - 1, (int)MathF.Ceiling(center.Y + reach));
+        for (var row = firstRow; row <= lastRow; row++)
+        for (var column = 0; column < _columns; column++)
+        {
+            var distance = Vector2.Distance(new Vector2(column + .5f, row + .5f), center);
+            var level = distance <= radius ? Lit : distance <= reach ? Dim : Dark;
+            ref var current = ref _levels[(row - FirstRow) * _columns + column];
+            if (level <= current)
+                continue;
+
+            current = level;
+            mine.At(column, row).Seen = true;
+        }
+    }
+
     public byte Get(int column, int row)
     {
         var r = row - FirstRow;

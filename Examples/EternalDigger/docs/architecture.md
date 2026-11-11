@@ -15,7 +15,7 @@ Program.cs                       parses the seed, creates the game, Initialize()
         │                         Canvas, GameSaver
         ├── World                 the miner, particles, floating texts
         ├── World                 (also) planted dynamite
-        ├── Simulation group      14 systems: rules, motion, lift, dynamite, camera, lamp oil, light, effects, saving
+        ├── Simulation group      15 systems: rules, motion, lift, dynamite, gas, camera, lamp oil, light, effects, saving
         └── Presentation group    10 systems: sky, terrain, house, lift, dynamite, particles, miner, texts, prompts, HUD
 ```
 
@@ -126,6 +126,7 @@ Scenes.Update → MineScene.OnUpdate → Simulation.Update(dt)
   MinerMotionSystem       slide Position one tile, finish moves, foot and landing dust
   ElevatorSystem          move the car; carry the rider; a called car picks up the caller
   DynamiteSystem          burn fuses (sparks, smoke); blast: clear 3 × 3, bag ore, push the miner, chain
+  GasSystem               gas shimmer near the miner; a lit lamp within 2 tiles makes a pocket flare (lamp out)
   CameraSystem            follow the miner, add shake, round to whole cells → Camera.Position
   LampSystem              burn oil underground; Headlamp reach, flicker, low; lamp smoke
   LightingSystem          LightMap.Compute for the rows on screen with the Headlamp (marks tiles Seen)
@@ -138,9 +139,9 @@ Scenes.Update → MineScene.OnUpdate → Simulation.Update(dt)
   ── Commands.Playback: the particles recorded above are created, expired ones destroyed
 OnUpdate (game)           ESC → MineScene.Save(), Stop()
 Scenes.Render → MineScene.OnRender → Presentation.Update(dt)
-  SkyRenderSystem → TerrainRenderSystem → HouseRenderSystem → ElevatorRenderSystem → DynamiteRenderSystem
+  SkyRenderSystem → TerrainRenderSystem → HouseRenderSystem → ElevatorRenderSystem → CampRenderSystem → DynamiteRenderSystem
   → ParticleRenderSystem
-  → MinerRenderSystem → FloatingTextRenderSystem → PromptRenderSystem → HudSystem
+  → MinerRenderSystem → FloatingTextRenderSystem → PromptRenderSystem → HudSystem → InventorySystem
 Display                   the frame goes to the console in one write
 ```
 
@@ -213,7 +214,7 @@ Saving lives in `Saving/` and never runs per frame:
 
 | Piece | Does |
 |---|---|
-| `SaveData` | What a save holds: seed, miner tile and facing, gold, ladders, bag (with gems and rare finds), rare finds ever found, blasting kit and dynamite, upgrade tiers, oil, lift segments and car row, `List<TileChange>`. `NewMine(seed)`, `Capture(seed, miner, mine, changes)`, `ToMiner()`, `ApplyTo(mine)` |
+| `SaveData` | What a save holds: seed, miner tile and facing, gold, ladders, bag (with gems and rare finds), rare finds ever found, blasting kit and dynamite, upgrade tiers (pickaxe too), oil and oil flasks, lift segments and car row, `List<TileChange>`. `NewMine(seed)`, `Capture(seed, miner, mine, changes)`, `ToMiner()`, `ApplyTo(mine)` |
 | `SaveFile` | The binary, versioned file (`Version` = 7, reads back to `OldestVersion` = 1, magic `EDSV`). `Save` (temp file, then move), `Load` (never throws; returns `SaveStatus` `Missing`/`Loaded`/`Corrupt`/`Unsupported`, moves an unreadable file to `save.dat.bad`), `Write`/`Read` on a stream, `DefaultPath` |
 | `GameSaver` | The running mine's slot: `Request()` from gameplay, `Save(miner)` builds the data and writes it, catching I/O errors (`LastSaveFailed`); `Saves` counts attempts for the HUD |
 | `SaveSystem` | Last in Simulation: saves when requested (`InteractionSystem` after a sale or purchase) or after `AutosaveInterval` s underground |

@@ -208,6 +208,21 @@ public class MineTests
     }
 
     [Test]
+    public void TryTakeLadder_PlacedLadder_TakesItOnce()
+    {
+        var mine = MineWith(TileType.Air, Column, DeepRow);
+        mine.TryPlaceLadder(Column, DeepRow);
+
+        Assert.That(mine.TryTakeLadder(Column, DeepRow), Is.True);
+        Assert.That(mine.HasLadder(Column, DeepRow), Is.False);
+        Assert.That(mine.TryTakeLadder(Column, DeepRow), Is.False);
+    }
+
+    [Test]
+    public void TryTakeLadder_GrassRowShaft_KeepsTheEntranceLadder() =>
+        Assert.That(new Mine(Seed).TryTakeLadder(Mine.ShaftColumn, Mine.SurfaceRow), Is.False);
+
+    [Test]
     public void TryPlaceLadder_SolidTile_ReturnsFalse() =>
         Assert.That(MineWith(TileType.Stone, Column, DeepRow).TryPlaceLadder(Column, DeepRow), Is.False);
 

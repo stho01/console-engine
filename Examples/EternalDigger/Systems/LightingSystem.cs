@@ -11,7 +11,7 @@ namespace EternalDigger.Systems;
 
 /// <summary>
 /// Computes the <see cref="LightMap"/> for the rows on screen from the miner's headlamp (its reach and flicker from
-/// the <see cref="Headlamp"/>). Uses the sliding
+/// the <see cref="Headlamp"/>), plus the deep camp's lantern once it is built. Uses the sliding
 /// <c>Position</c>, so the light moves smoothly with the miner.
 /// </summary>
 public sealed class LightingSystem(Mine mine, LightMap light, Camera camera, Headlamp headlamp) : EntitySystem
@@ -39,6 +39,8 @@ public sealed class LightingSystem(Mine mine, LightMap light, Camera camera, Hea
             var lamp = new Vector2(position.X / Layout.TileWidth + .5f, position.Y / Layout.TileHeight + .5f);
             var miner = chunk.GetSpan<Miner>()[0];
             light.Compute(mine, firstRow, VisibleRows, lamp, miner.LampDirection, headlamp.Reach, headlamp.IsDimmed);
+            if (miner.HasDeepCamp)
+                light.AddLantern(mine, DeepCamp.LanternCenter, DeepCamp.LanternRadius);
             return;
         }
     }

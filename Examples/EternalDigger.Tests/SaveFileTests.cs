@@ -203,6 +203,60 @@ public class SaveFileTests
     }
 
     [Test]
+    public void Read_Version7Save_LoadsRareFindsWithoutFlasks()
+    {
+        var status = SaveFile.Read(OldSave(7), out var loaded);
+
+        Assert.That(status, Is.EqualTo(SaveStatus.Loaded));
+        Assert.That(loaded.Fossils, Is.EqualTo(1));
+        Assert.That(loaded.FossilsFound, Is.EqualTo(2));
+        Assert.That(loaded.OilFlasks, Is.Zero);
+    }
+
+    [Test]
+    public void Read_Version8Save_LoadsOilFlasks()
+    {
+        var status = SaveFile.Read(OldSave(8), out var loaded);
+
+        Assert.That(status, Is.EqualTo(SaveStatus.Loaded));
+        Assert.That(loaded.OilFlasks, Is.EqualTo(2));
+        Assert.That(loaded.PickaxeTier, Is.Zero);
+    }
+
+    [Test]
+    public void Read_Version9Save_LoadsThePickaxe()
+    {
+        var status = SaveFile.Read(OldSave(9), out var loaded);
+
+        Assert.That(status, Is.EqualTo(SaveStatus.Loaded));
+        Assert.That(loaded.PickaxeTier, Is.EqualTo(2));
+        Assert.That(loaded.HasDeepCamp, Is.False);
+    }
+
+    [Test]
+    public void Read_Version10Save_LoadsTheDeepCamp()
+    {
+        var status = SaveFile.Read(OldSave(10), out var loaded);
+
+        Assert.That(status, Is.EqualTo(SaveStatus.Loaded));
+        Assert.That(loaded.HasDeepCamp, Is.True);
+        Assert.That(loaded.GoldEarned, Is.EqualTo(55), "older saves count the gold in hand as earned");
+        Assert.That(loaded.DepthRecord, Is.Zero, "saved on the surface");
+        Assert.That(loaded.PassedTheWall, Is.False);
+    }
+
+    [Test]
+    public void Read_Version12Save_LoadsTheSurfaceProgress()
+    {
+        var status = SaveFile.Read(OldSave(12), out var loaded);
+
+        Assert.That(status, Is.EqualTo(SaveStatus.Loaded));
+        Assert.That(loaded.DepthRecord, Is.EqualTo(120));
+        Assert.That(loaded.GoldEarned, Is.EqualTo(9000));
+        Assert.That(loaded.PassedTheWall, Is.True);
+    }
+
+    [Test]
     public void Read_OilOverTheTank_ReturnsCorrupt()
     {
         var data = new SaveData { Seed = Seed, Column = 1, Row = 9, Oil = LampOil.TankSize + 1f };
@@ -236,6 +290,27 @@ public class SaveFileTests
 
         Assert.That(SaveFile.Load(_path, out _), Is.EqualTo(SaveStatus.Unsupported));
         Assert.That(File.Exists(SaveFile.BadPath(_path)), Is.True);
+    }
+
+    [Test]
+    public void Read_GasFlagInAVersion10Save_ReturnsCorrupt()
+    {
+        var bytes = OldSave(10).ToArray();
+        bytes[^1] |= 4;
+
+        Assert.That(SaveFile.Read(new MemoryStream(bytes), out _), Is.EqualTo(SaveStatus.Corrupt));
+    }
+
+    [Test]
+    public void Read_Version11Save_LoadsGasOnAChangedTile()
+    {
+        var bytes = OldSave(11).ToArray();
+        bytes[^1] |= 4;
+
+        var status = SaveFile.Read(new MemoryStream(bytes), out var loaded);
+
+        Assert.That(status, Is.EqualTo(SaveStatus.Loaded));
+        Assert.That(loaded.Changes[0].Cell.HasGas, Is.True);
     }
 
     [Test]
@@ -308,6 +383,7 @@ public class SaveFileTests
         mine.TryPlaceLadder(5, row);
         mine.At(6, row) = new TileCell { Type = TileType.Gold, Damage = 3, Seen = true };
         mine.At(7, row + 70).Seen = true;
+        mine.At(8, row + 2) = new TileCell { Type = TileType.Air, HasGas = true };
         var miner = new Miner
         {
             Column = 5,
@@ -330,7 +406,13 @@ public class SaveFileTests
             Fossils = 2,
             Relics = 1,
             FossilsFound = 5,
-            RelicsFound = 3
+            RelicsFound = 3,
+            OilFlasks = 2,
+            PickaxeTier = 3,
+            HasDeepCamp = true,
+            DepthRecord = 140,
+            GoldEarned = 23_456,
+            PassedTheWall = true
         };
         var elevator = new Elevator();
         var rich = new Miner { Gold = 10_000 };
@@ -343,7 +425,8 @@ public class SaveFileTests
 
     /// <summary>
     /// A hand-written old save: gold 55, one tile; v2 a 30 m lift, v3 9 gems, v4 the kit and 5 sticks, v5 tiers 1-2-0-3,
-    /// v6 25 oil.
+    /// v6 25 oil, v7 a fossil in the bag and 2 found, v8 2 oil flasks, v9 pickaxe tier 2, v10 the deep camp, v12 a
+    /// 120 m record, 9000g earned and the wall passed.
     /// </summary>
     private static MemoryStream OldSave(int version)
     {
@@ -377,6 +460,28 @@ public class SaveFileTests
 
             if (version >= 6)
                 writer.Write(25f);
+
+            if (version >= 7)
+            {
+                foreach (var value in new[] { 1, 0, 2, 0 })
+                    writer.Write(value);
+            }
+
+            if (version >= 8)
+                writer.Write(2);
+
+            if (version >= 9)
+                writer.Write((byte)2);
+
+            if (version >= 10)
+                writer.Write(true);
+
+            if (version >= 12)
+            {
+                writer.Write(120);
+                writer.Write(9000);
+                writer.Write(true);
+            }
 
             writer.Write(1);
             writer.Write(13);
@@ -421,6 +526,12 @@ public class SaveFileTests
         Assert.That(actual.Relics, Is.EqualTo(expected.Relics));
         Assert.That(actual.FossilsFound, Is.EqualTo(expected.FossilsFound));
         Assert.That(actual.RelicsFound, Is.EqualTo(expected.RelicsFound));
+        Assert.That(actual.OilFlasks, Is.EqualTo(expected.OilFlasks));
+        Assert.That(actual.PickaxeTier, Is.EqualTo(expected.PickaxeTier));
+        Assert.That(actual.HasDeepCamp, Is.EqualTo(expected.HasDeepCamp));
+        Assert.That(actual.DepthRecord, Is.EqualTo(expected.DepthRecord));
+        Assert.That(actual.GoldEarned, Is.EqualTo(expected.GoldEarned));
+        Assert.That(actual.PassedTheWall, Is.EqualTo(expected.PassedTheWall));
         Assert.That(actual.ElevatorSegments, Is.EqualTo(expected.ElevatorSegments));
         Assert.That(actual.ElevatorCarRow, Is.EqualTo(expected.ElevatorCarRow));
         Assert.That(actual.Changes, Is.EqualTo(expected.Changes));

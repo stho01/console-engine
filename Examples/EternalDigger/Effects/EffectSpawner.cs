@@ -237,6 +237,38 @@ public sealed class EffectSpawner(Random random, ScreenShake shake)
             new Components.Mist());
     }
 
+    /// <summary>One slow green shimmer over a gas pocket (has the <see cref="Components.Gas"/> tag).</summary>
+    public void GasShimmer(CommandBuffer commands, Vector2 position)
+    {
+        var variant = RandomVariant();
+        commands.Create(
+            new Position(position),
+            new Velocity(new Vector2(Range(-1f, 1f), Range(-.6f, .2f))),
+            ParticleLooks.GlyphAt(ParticleStyle.GasShimmer, variant, 0f),
+            new Particle(ParticleStyle.GasShimmer, Range(1.5f, 3f)) { Variant = variant },
+            new Physics(0f, 0f),
+            new Components.Gas());
+    }
+
+    /// <summary>
+    /// A gas tile burning off: fire bursting out of it and rising. A <paramref name="big"/> flare (set off by a blast)
+    /// throws more and further, and shakes harder.
+    /// </summary>
+    public void GasFlare(CommandBuffer commands, int column, int row, bool big)
+    {
+        var center = Layout.TileCenter(column, row);
+        var count = big ? random.Next(10, 15) : random.Next(5, 8);
+        var speed = big ? 30f : 18f;
+        for (var i = 0; i < count; i++)
+        {
+            var velocity = RandomDirection(speed * .4f, speed) - new Vector2(0f, Range(2f, 6f));
+            Spawn(commands, center + RandomOffset(1.5f, .8f), velocity, ParticleStyle.GasFlare, Range(.35f, .7f), -4f,
+                2f);
+        }
+
+        Shake.Add(big ? .25f : .1f);
+    }
+
     /// <summary>Coins burst up and cascade down onto the grass.</summary>
     public void Coins(CommandBuffer commands, Vector2 origin, int count)
     {

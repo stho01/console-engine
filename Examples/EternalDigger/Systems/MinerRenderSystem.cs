@@ -95,7 +95,7 @@ public sealed class MinerRenderSystem(Canvas canvas, Camera camera, Headlamp hea
     {
         MinerMotion.Walking => WalkLegs[miner.MoveElapsed < miner.MoveDuration / 2f ? 0 : 1],
         MinerMotion.Climbing => ClimbLegs[miner.MoveElapsed < miner.MoveDuration / 2f ? 0 : 1],
-        MinerMotion.Falling => '╨',
+        MinerMotion.Falling or MinerMotion.Jumping => '╨',
         _ => '█'
     };
 

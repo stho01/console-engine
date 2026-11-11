@@ -111,6 +111,39 @@ public class MinerControlSystemTests
     }
 
     [Test]
+    public void Control_LadderKeyOnALadder_TakesItBackAndPlacesItAgain()
+    {
+        FillShaft(TileType.Air, ShaftBottom, ShaftBottom);
+        FillShaft(TileType.Stone, ShaftBottom + 1, ShaftBottom + 1);
+        _mine.TryPlaceLadder(Mine.ShaftColumn, ShaftBottom);
+        PlaceMiner(Mine.ShaftColumn, ShaftBottom);
+
+        Play(new MinerInput { PlaceLadder = true }, seconds: FrameSeconds);
+
+        Assert.That(_mine.HasLadder(Mine.ShaftColumn, ShaftBottom), Is.False);
+        Assert.That(_miner.Ladders, Is.EqualTo(Shop.StartLadders + 1));
+
+        Play(new MinerInput { PlaceLadder = true }, seconds: FrameSeconds);
+
+        Assert.That(_mine.HasLadder(Mine.ShaftColumn, ShaftBottom), Is.True);
+        Assert.That(_miner.Ladders, Is.EqualTo(Shop.StartLadders));
+    }
+
+    [Test]
+    public void Control_TakeTheLadderHoldingTheMiner_Falls()
+    {
+        FillShaft(TileType.Air, ShaftBottom, ShaftBottom + 2);
+        FillShaft(TileType.Stone, ShaftBottom + 3, ShaftBottom + 3);
+        _mine.TryPlaceLadder(Mine.ShaftColumn, ShaftBottom);
+        PlaceMiner(Mine.ShaftColumn, ShaftBottom);
+
+        Play(new MinerInput { PlaceLadder = true }, seconds: FrameSeconds);
+        Play(default, .5f);
+
+        Assert.That(_miner.Row, Is.EqualTo(ShaftBottom + 2));
+    }
+
+    [Test]
     public void Control_PlaceLadderWithoutLadders_PlacesNothing()
     {
         FillShaft(TileType.Air, ShaftBottom, ShaftBottom);
@@ -268,6 +301,82 @@ public class MinerControlSystemTests
             Is.LessThan(MinerControlSystem.ClimbDuration));
         Assert.That(MinerControlSystem.ClimbUpDuration(MinerControlSystem.ClimbRampStart + 100),
             Is.EqualTo(MinerControlSystem.TopClimbDuration).Within(.0001f));
+    }
+
+    [Test]
+    public void Control_UpAndRightAtAGap_JumpsToTheGroundBeyond()
+    {
+        var row = BuildGap(landingHasFloor: true);
+
+        Play(new MinerInput { Up = true, Horizontal = 1 }, FrameSeconds);
+        Play(default, MinerControlSystem.JumpDuration);
+
+        Assert.That(_miner.Column, Is.EqualTo(GapColumn + 1));
+        Assert.That(_miner.Row, Is.EqualTo(row), "landed on the far side, not in the hole");
+        Assert.That(_miner.IsMoving, Is.False);
+    }
+
+    [Test]
+    public void Control_JumpMidAir_RisesAboveTheRow()
+    {
+        var row = BuildGap(landingHasFloor: true);
+        var groundY = Layout.TileToWorld(GapColumn - 1, row).Y;
+
+        Play(new MinerInput { Up = true, Horizontal = 1 }, MinerControlSystem.JumpDuration / 2f);
+
+        Assert.That(_miner.Motion, Is.EqualTo(MinerMotion.Jumping));
+        Assert.That(_position.Value.Y, Is.LessThan(groundY - 1f));
+    }
+
+    [Test]
+    public void Control_JumpTowardsAnotherHole_FallsIntoIt()
+    {
+        var row = BuildGap(landingHasFloor: false);
+
+        Play(new MinerInput { Up = true, Horizontal = 1 }, FrameSeconds);
+        Play(default, MinerControlSystem.JumpDuration);
+        Play(default, .5f);
+
+        Assert.That(_miner.Column, Is.EqualTo(GapColumn + 1));
+        Assert.That(_miner.Row, Is.GreaterThan(row));
+    }
+
+    [Test]
+    public void Control_UpAndRightWithRockBeyondTheGap_WalksIntoTheGap()
+    {
+        var row = BuildGap(landingHasFloor: true);
+        _mine.At(GapColumn + 1, row) = new TileCell { Type = TileType.Stone };
+
+        Play(new MinerInput { Up = true, Horizontal = 1 }, MinerControlSystem.WalkDuration + .3f);
+
+        Assert.That(_miner.Column, Is.EqualTo(GapColumn));
+        Assert.That(_miner.Row, Is.GreaterThan(row), "no room to land: walked off and fell");
+    }
+
+    private const int GapColumn = 6;
+
+    /// <summary>
+    /// A tunnel 60 m down with the miner standing left of a one-tile-wide hole at <see cref="GapColumn"/> (3 deep),
+    /// and air beyond it with or without a floor. Returns the tunnel's row.
+    /// </summary>
+    private int BuildGap(bool landingHasFloor)
+    {
+        var row = Mine.SurfaceRow + 60;
+        for (var column = GapColumn - 2; column <= GapColumn + 2; column++)
+        {
+            _mine.At(column, row - 1) = new TileCell { Type = TileType.Air };
+            _mine.At(column, row) = new TileCell { Type = TileType.Air };
+            _mine.At(column, row + 1) = new TileCell { Type = TileType.Stone };
+        }
+
+        for (var depth = 1; depth <= 3; depth++)
+            _mine.At(GapColumn, row + depth) = new TileCell { Type = TileType.Air };
+        _mine.At(GapColumn, row + 4) = new TileCell { Type = TileType.Stone };
+        if (!landingHasFloor)
+            _mine.At(GapColumn + 1, row + 1) = new TileCell { Type = TileType.Air };
+
+        PlaceMiner(GapColumn - 1, row);
+        return row;
     }
 
     private void PlaceMiner(int column, int row)

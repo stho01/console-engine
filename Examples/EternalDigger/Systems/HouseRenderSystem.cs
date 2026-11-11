@@ -1,6 +1,7 @@
 using System;
 using ConsoleEngine.Ecs;
 using ConsoleEngine.Ecs.Rendering;
+using EternalDigger.Components;
 using EternalDigger.Mining;
 using EternalDigger.Rendering;
 
@@ -9,7 +10,9 @@ namespace EternalDigger.Systems;
 /// <summary>
 /// The surface buildings, drawn from rectangles in world cells: the house with its "EternalDigger" sign, door and
 /// chimney smoke, the ladder shop with a striped awning, and the wooden frame over the mine shaft. Decoration only;
-/// the miner walks in front of them.
+/// the miner walks in front of them. They show the miner's <see cref="Progress"/>: a flag, lit windows and a second
+/// floor at gold milestones, a trophy case beside the door with a glyph per rare find, a <c>RECORD</c> plank over the
+/// mine entrance, and the tool shop stall with its toolsmith (boarded up until the miner has been below the wall).
 /// </summary>
 public sealed class HouseRenderSystem(Canvas canvas, Camera camera) : EntitySystem
 {
@@ -41,6 +44,31 @@ public sealed class HouseRenderSystem(Canvas canvas, Camera camera) : EntitySyst
     private const int ShedRight = (Layout.BlastingLastColumn + 1) * Layout.TileWidth - 1;
     private const int LiftSignLeft = Layout.LiftSignFirstColumn * Layout.TileWidth + 1;
 
+    /// <summary>Cells the second floor adds under the roof (house level 3).</summary>
+    public const int UpperFloorHeight = 4;
+
+    /// <summary>The trophy case beside the door: two shelves of this many finds each.</summary>
+    public const int ShelfWidth = 5;
+    public const int TrophySlots = ShelfWidth * 2;
+
+    public const string ToolsText = "TOOLS";
+    public const string ClosedText = "CLOSED";
+    public const char FossilTrophy = '§';
+    public const char RelicTrophy = '¥';
+
+    /// <summary>
+    /// The toolsmith's bottom row, 4 x 2 like the miner with a face above: the arms swap every
+    /// <see cref="IdleFrameSeconds"/>.
+    /// </summary>
+    public static readonly string[] ToolsmithFrames = ["/█\\", "\\█/"];
+
+    public const float IdleFrameSeconds = .6f;
+
+    private const int ShelfLeft = DoorLeft - ShelfWidth;
+    private const int StallLeft = Layout.ToolShopColumn * Layout.TileWidth;
+    private const int StallRight = (Layout.ToolsmithColumn + 1) * Layout.TileWidth - 1;
+    private const int ToolsmithLeft = Layout.ToolsmithColumn * Layout.TileWidth;
+
     private const float SmokeRise = 1.5f;
     private const int SmokePuffs = 4;
     private const int SmokeHeight = 6;
@@ -49,21 +77,35 @@ public sealed class HouseRenderSystem(Canvas canvas, Camera camera) : EntitySyst
     private int _originX;
     private int _originY;
 
+    private Query _miners;
+    private int _houseLevel;
+    private int _fossils;
+    private int _relics;
+    private bool _toolShopOpen;
+    private int _shownRecord;
+    private string _recordText = string.Empty;
+
     //**********************************************************
     //** lifecycle
     //**********************************************************
+
+    protected override void OnCreate() => _miners = World.Query(Query.With<Miner>());
 
     protected override void OnUpdate(float deltaSeconds)
     {
         _time += deltaSeconds;
         _originX = (int)MathF.Floor(camera.Position.X);
         _originY = (int)MathF.Floor(camera.Position.Y);
-        if (WallTop - RoofHeight - 5 - _originY >= canvas.Height || Ground - _originY < 0)
+        if (WallTop - UpperFloorHeight - RoofHeight - 8 - _originY >= canvas.Height || Ground - _originY < 0)
             return;
 
+        ReadProgress();
         DrawHouse();
+        DrawTrophyCase();
         DrawShop();
+        DrawToolShop();
         DrawMineEntrance();
+        DrawRecordSign();
         DrawLiftSign();
         DrawBlastingShed();
     }
@@ -72,22 +114,45 @@ public sealed class HouseRenderSystem(Canvas canvas, Camera camera) : EntitySyst
     //** internals
     //**********************************************************
 
+    /// <summary>The miner's progress this frame, read once.</summary>
+    private void ReadProgress()
+    {
+        foreach (var chunk in _miners.GetChunks())
+        {
+            var miner = chunk.GetSpan<Miner>()[0];
+            _houseLevel = Progress.HouseLevel(miner.GoldEarned);
+            _fossils = miner.FossilsFound;
+            _relics = miner.RelicsFound;
+            _toolShopOpen = Progress.IsToolShopOpen(miner);
+            if (miner.DepthRecord != _shownRecord)
+            {
+                _shownRecord = miner.DepthRecord;
+                _recordText = $" RECORD {_shownRecord}m ";
+            }
+
+            return;
+        }
+    }
+
     private void DrawHouse()
     {
+        // A second floor lifts the roof (and chimney) by its height.
+        var roofBase = _houseLevel >= 3 ? WallTop - UpperFloorHeight : WallTop;
+
         // Chimney first, so the roof covers its foot. Smoke rises from it.
-        Fill(ChimneyX, WallTop - RoofHeight - 1, ChimneyX + 1, WallTop - 2, '▓', ConsoleColor.Gray, ConsoleColor.DarkGray);
+        Fill(ChimneyX, roofBase - RoofHeight - 1, ChimneyX + 1, roofBase - 2, '▓', ConsoleColor.Gray, ConsoleColor.DarkGray);
         for (var i = 0; i < SmokePuffs; i++)
         {
             var rise = (_time * SmokeRise + i * SmokeHeight / (float)SmokePuffs) % SmokeHeight;
             var x = ChimneyX + (int)MathF.Round(MathF.Sin(_time + i * 1.7f) * rise * .4f + rise * .3f);
-            var y = WallTop - RoofHeight - 2 - (int)rise;
+            var y = roofBase - RoofHeight - 2 - (int)rise;
             DrawOver(x, y, rise < SmokeHeight / 2f ? '○' : '°', ConsoleColor.Gray);
         }
 
         // Roof: a wedge of shingles, one cell narrower per row on both sides.
         for (var row = 0; row < RoofHeight; row++)
         {
-            var y = WallTop - 1 - row;
+            var y = roofBase - 1 - row;
             var inset = row * 2;
             for (var x = HouseLeft + inset; x <= HouseRight - inset; x++)
             {
@@ -97,8 +162,11 @@ public sealed class HouseRenderSystem(Canvas canvas, Camera camera) : EntitySyst
             }
         }
 
-        // Plank walls.
-        for (var y = WallTop; y <= Ground; y++)
+        if (_houseLevel >= 1)
+            DrawFlag(roofBase - RoofHeight);
+
+        // Plank walls (from the upper floor's top with a second floor).
+        for (var y = roofBase; y <= Ground; y++)
             Fill(HouseLeft + 1, y, HouseRight, y, (y & 1) == 0 ? '─' : ' ', ConsoleColor.DarkRed, ConsoleColor.DarkYellow);
 
         // The sign on the wall, under the eaves.
@@ -107,7 +175,13 @@ public sealed class HouseRenderSystem(Canvas canvas, Camera camera) : EntitySyst
         Draw(signLeft, WallTop + 1, '▀', ConsoleColor.DarkRed, ConsoleColor.DarkYellow);
         Draw(signLeft + SignBoard.Length - 1, WallTop + 1, '▀', ConsoleColor.DarkRed, ConsoleColor.DarkYellow);
 
-        // Windows and the door (over the deliver spot).
+        // Windows and the door (over the deliver spot). The upper floor gets two more.
+        if (_houseLevel >= 3)
+        {
+            DrawWindow(HouseLeft + 4, roofBase + 1);
+            DrawWindow(HouseRight - 7, roofBase + 1);
+        }
+
         DrawWindow(HouseLeft + 2, WallTop + 3);
         DrawWindow(HouseRight - 5, WallTop + 3);
         Fill(DoorLeft, Ground - 4, DoorLeft + 3, Ground, '║', ConsoleColor.DarkYellow, ConsoleColor.DarkRed);
@@ -115,10 +189,85 @@ public sealed class HouseRenderSystem(Canvas canvas, Camera camera) : EntitySyst
         Draw(DoorLeft + 3, Ground - 2, '•', ConsoleColor.Yellow, ConsoleColor.DarkRed);
     }
 
+    /// <summary>Windows glow yellow from house level 2, as if a lamp burns inside.</summary>
     private void DrawWindow(int x, int y)
     {
-        Draw(x, y, "┌┬┐", ConsoleColor.DarkRed, ConsoleColor.Cyan);
-        Draw(x, y + 1, "└┴┘", ConsoleColor.DarkRed, ConsoleColor.Cyan);
+        var glass = _houseLevel >= 2 ? ConsoleColor.Yellow : ConsoleColor.Cyan;
+        Draw(x, y, "┌┬┐", ConsoleColor.DarkRed, glass);
+        Draw(x, y + 1, "└┴┘", ConsoleColor.DarkRed, glass);
+    }
+
+    /// <summary>A pole on the roof's peak with a flag that flutters (house level 1).</summary>
+    private void DrawFlag(int peakY)
+    {
+        var poleX = (HouseLeft + HouseRight) / 2;
+        Fill(poleX, peakY - 3, poleX, peakY - 1, '│', ConsoleColor.Gray, Backdrop(poleX, peakY - 1));
+        var flutter = ((int)(_time * 3f) & 1) == 0;
+        DrawOver(poleX + 1, peakY - 3, flutter ? '▀' : '▄', ConsoleColor.Yellow);
+        DrawOver(poleX + 2, peakY - 3, flutter ? '▄' : '▀', ConsoleColor.Yellow);
+    }
+
+    /// <summary>
+    /// The trophy case left of the door: two shelves, relics (<c>¥</c>) first, then fossils (<c>§</c>), one glyph per find
+    /// ever dug up. With more than <see cref="TrophySlots"/> finds the last slot shows <c>+</c>.
+    /// </summary>
+    private void DrawTrophyCase()
+    {
+        var total = _relics + _fossils;
+        for (var slot = 0; slot < TrophySlots; slot++)
+        {
+            var x = ShelfLeft + slot % ShelfWidth;
+            var y = Ground - 4 + slot / ShelfWidth * 2;
+            var character = slot >= total ? ' '
+                : slot == TrophySlots - 1 && total > TrophySlots ? '+'
+                : slot < _relics ? RelicTrophy : FossilTrophy;
+            Draw(x, y, character, slot < _relics ? ConsoleColor.Yellow : ConsoleColor.White, ConsoleColor.Black);
+            Draw(x, y + 1, '▀', ConsoleColor.DarkYellow, ConsoleColor.DarkRed);
+        }
+    }
+
+    /// <summary>A plank with the depth record over the mine entrance, once the miner has been underground.</summary>
+    private void DrawRecordSign()
+    {
+        if (_shownRecord <= 0)
+            return;
+
+        var center = Mine.ShaftColumn * Layout.TileWidth + Layout.TileWidth / 2;
+        Draw(center - _recordText.Length / 2, Ground - 6, _recordText, ConsoleColor.White, ConsoleColor.DarkYellow);
+    }
+
+    /// <summary>
+    /// The tool shop: a stall with a green-striped awning and a <c>TOOLS</c> board. Open, the toolsmith stands behind a
+    /// crate counter, idling between two frames; closed, the front is boarded up.
+    /// </summary>
+    private void DrawToolShop()
+    {
+        for (var x = StallLeft; x <= StallRight; x++)
+        {
+            var stripe = ((x - StallLeft) / 2 & 1) == 0 ? ConsoleColor.DarkGreen : ConsoleColor.White;
+            Draw(x, Ground - 5, '▄', stripe, Backdrop(x, Ground - 5));
+            Draw(x, Ground - 4, '▀', stripe, Backdrop(x, Ground - 4));
+        }
+
+        Draw((StallLeft + StallRight + 1 - ToolsText.Length) / 2, Ground - 6, ToolsText, ConsoleColor.White,
+            ConsoleColor.DarkGreen);
+        Fill(StallLeft, Ground - 3, StallLeft, Ground, '│', ConsoleColor.DarkYellow, Backdrop(StallLeft, Ground));
+        Fill(StallRight, Ground - 3, StallRight, Ground, '│', ConsoleColor.DarkYellow, Backdrop(StallRight, Ground));
+        if (!_toolShopOpen)
+        {
+            Fill(StallLeft + 1, Ground - 3, StallRight - 1, Ground, '▒', ConsoleColor.DarkYellow, ConsoleColor.Black);
+            Draw((StallLeft + StallRight + 1 - ClosedText.Length) / 2, Ground - 2, ClosedText, ConsoleColor.White,
+                ConsoleColor.DarkGray);
+            return;
+        }
+
+        var frame = ToolsmithFrames[(int)(_time / IdleFrameSeconds) & 1];
+        Draw(ToolsmithLeft + 1, Ground - 1, '☺', ConsoleColor.White, Backdrop(ToolsmithLeft + 1, Ground - 1));
+        for (var i = 0; i < frame.Length; i++)
+            Draw(ToolsmithLeft + i, Ground, frame[i], frame[i] == '█' ? ConsoleColor.DarkGreen : ConsoleColor.Green,
+                Backdrop(ToolsmithLeft + i, Ground));
+        Fill(StallLeft + 1, Ground, ToolsmithLeft - 1, Ground, '▄', ConsoleColor.DarkYellow,
+            Backdrop(StallLeft + 1, Ground));
     }
 
     private void DrawShop()

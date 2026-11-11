@@ -14,6 +14,56 @@ public class LampOilTests
     private const int Seed = 9;
 
     [Test]
+    public void TryPour_LowLampWithAFlask_PoursOneFlask()
+    {
+        var miner = new Miner { Oil = 10f, OilFlasks = 2 };
+
+        var poured = LampOil.TryPour(ref miner);
+
+        Assert.That(poured, Is.EqualTo(LampOil.FlaskUnits));
+        Assert.That(miner.Oil, Is.EqualTo(10f + LampOil.FlaskUnits));
+        Assert.That(miner.OilFlasks, Is.EqualTo(1));
+    }
+
+    [Test]
+    public void TryPour_LampNotLow_KeepsTheFlask()
+    {
+        var miner = new Miner { Oil = LampOil.TankSize * LampOil.LowShare + 1f, OilFlasks = 1 };
+
+        Assert.That(LampOil.TryPour(ref miner), Is.Zero);
+        Assert.That(miner.OilFlasks, Is.EqualTo(1));
+    }
+
+    [Test]
+    public void TryPour_NoFlask_PoursNothing()
+    {
+        var miner = new Miner { Oil = 0f };
+
+        Assert.That(LampOil.TryPour(ref miner), Is.Zero);
+        Assert.That(miner.Oil, Is.Zero);
+    }
+
+    [Test]
+    public void TryBuyFlask_PackFull_IsSoldOut()
+    {
+        var miner = new Miner { Gold = 1000, OilFlasks = LampOil.MaxFlasks };
+
+        Assert.That(Shop.Price(ShopItem.OilFlask, miner), Is.EqualTo(Shop.SoldOut));
+        Assert.That(Shop.TryBuy(ShopItem.OilFlask, ref miner), Is.False);
+        Assert.That(miner.Gold, Is.EqualTo(1000));
+    }
+
+    [Test]
+    public void TryBuyFlask_EnoughGold_AddsAFlask()
+    {
+        var miner = new Miner { Gold = LampOil.FlaskPrice };
+
+        Assert.That(Shop.TryBuy(ShopItem.OilFlask, ref miner), Is.True);
+        Assert.That(miner.OilFlasks, Is.EqualTo(1));
+        Assert.That(miner.Gold, Is.Zero);
+    }
+
+    [Test]
     public void Burn_ThirtySecondsUnderground_BurnsTenUnits()
     {
         var miner = new Miner { Row = Mine.SurfaceRow + 20, Oil = LampOil.TankSize };

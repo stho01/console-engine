@@ -34,6 +34,9 @@ public static class TileLooks
     public const string LadderRow = "╟──╢";
     public const string CrackCharacters = "/\\╳x";
 
+    /// <summary>Lit rock around black damp (<c>Mine.IsBlackDampEdge</c>), drawn dark grey.</summary>
+    public const char BlackDampEdge = '░';
+
     private static readonly TileLook Dirt =
         new("░▒░·▒░ ▒", ConsoleColor.DarkRed, ConsoleColor.DarkYellow, ConsoleColor.DarkYellow);
 

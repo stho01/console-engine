@@ -32,6 +32,18 @@ public static class Tiles
     public const int GraniteDepth = 40;
     public const int CaveDepth = 6;
 
+    /// <summary>Gas pockets fill caves from this depth down (act 1's deep caves and act 2).</summary>
+    public const int GasDepth = 50;
+
+    /// <summary>Share of 2 x 2 cave areas from <see cref="GasDepth"/> whose air tiles hold gas.</summary>
+    public const float GasChance = .3f;
+
+    /// <summary>
+    /// Share of the 4 x 4 areas below the wall that are black damp: bad air that halves the lamp's cone and doubles its
+    /// oil burn in their open tiles (<see cref="Mine.IsBlackDamp"/>).
+    /// </summary>
+    public const float BlackDampChance = .12f;
+
     /// <summary>Depth of the top of the obsidian wall, the end of act 1.</summary>
     public const int WallDepth = 110;
 
@@ -73,8 +85,11 @@ public static class Tiles
         _ => 0
     };
 
-    /// <summary>Shovel hits to break a tile at a depth in metres (<see cref="Mine.Depth"/>). 0 if unbreakable.</summary>
-    public static int HitsToBreak(TileType type, int depth)
+    /// <summary>
+    /// Shovel hits to break a tile at a depth in metres (<see cref="Mine.Depth"/>), <paramref name="fewerHits"/> fewer
+    /// with a better pickaxe (<see cref="Upgrades.FewerHits"/>) but never under 1. 0 if unbreakable.
+    /// </summary>
+    public static int HitsToBreak(TileType type, int depth, int fewerHits = 0)
     {
         var baseHits = type switch
         {
@@ -92,6 +107,6 @@ public static class Tiles
             _ => 0
         };
 
-        return baseHits == 0 ? 0 : baseHits + Math.Max(0, depth) / DepthPerExtraHit;
+        return baseHits == 0 ? 0 : Math.Max(1, baseHits + Math.Max(0, depth) / DepthPerExtraHit - fewerHits);
     }
 }

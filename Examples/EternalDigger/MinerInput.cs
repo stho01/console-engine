@@ -32,6 +32,12 @@ public readonly struct MinerInput
     /// <summary>The use key went down this frame: deliver, buy, call the lift.</summary>
     public bool UsePressed { get; init; }
 
+    /// <summary>
+    /// The use key came up this frame. On the lift's bottom landing with dynamite in hand, a short tap (released
+    /// before <c>MinerControlSystem.PlantDuration</c>) uses the lift, so holding the key can plant a stick there.
+    /// </summary>
+    public bool UseReleased { get; init; }
+
     /// <summary>Arrows and WASD, <c>SPACE</c> for a ladder, <c>R</c> for the rescue, <c>E</c> to use.</summary>
     public static MinerInput FromKeyboard()
     {
@@ -50,7 +56,8 @@ public readonly struct MinerInput
             PlaceLadder = input.GetKey(Key.SPACE).Pressed,
             Rescue = input.GetKey(Key.R).Held,
             Use = input.GetKey(Key.E).Held,
-            UsePressed = input.GetKey(Key.E).Pressed
+            UsePressed = input.GetKey(Key.E).Pressed,
+            UseReleased = input.GetKey(Key.E).Released
         };
     }
 }

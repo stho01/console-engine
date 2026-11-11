@@ -216,9 +216,66 @@ public class ElevatorTests
         Assert.That(_miner.Gold, Is.Zero);
     }
 
+    [Test]
+    public void Use_TapOnTheBottomLandingWithDynamite_CallsTheCar()
+    {
+        Build(2);
+        PlaceMiner(Elevator.Column, _elevator.BottomRow);
+        _miner.HasBlastingKit = true;
+        _miner.Dynamite = 3;
+
+        Frame(new MinerInput { Use = true, UsePressed = true });
+        Assert.That(_elevator.CarTargetRow, Is.EqualTo(Elevator.TopRow), "nothing on the press");
+        Frame(new MinerInput { UseReleased = true });
+
+        Assert.That(_elevator.CarTargetRow, Is.EqualTo(_elevator.BottomRow));
+        Assert.That(_miner.Dynamite, Is.EqualTo(3));
+    }
+
+    [Test]
+    public void Use_HoldOnTheBottomLandingWithDynamite_PlantsBelowAndLeavesTheLift()
+    {
+        Build(2);
+        PlaceMiner(Elevator.Column, _elevator.BottomRow);
+        _mine.At(Elevator.Column, _elevator.BottomRow + 1) = new TileCell { Type = TileType.Obsidian };
+        _miner.HasBlastingKit = true;
+        _miner.Dynamite = 3;
+
+        Frame(new MinerInput { Use = true, UsePressed = true, Down = true });
+        for (var t = 0f; t < MinerControlSystem.PlantDuration + .05f; t += FrameSeconds)
+            Frame(new MinerInput { Use = true, Down = true });
+        Frame(new MinerInput { UseReleased = true });
+
+        Assert.That(_miner.Dynamite, Is.EqualTo(2));
+        Assert.That(_miner.LitDynamite, Is.EqualTo(1));
+        Assert.That(_elevator.CarTargetRow, Is.EqualTo(Elevator.TopRow), "the hold didn't call the car");
+    }
+
+    [Test]
+    public void Use_PressOnTheBottomLandingWithoutDynamite_CallsTheCarAtOnce()
+    {
+        Build(2);
+        PlaceMiner(Elevator.Column, _elevator.BottomRow);
+
+        Frame(new MinerInput { Use = true, UsePressed = true });
+
+        Assert.That(_elevator.CarTargetRow, Is.EqualTo(_elevator.BottomRow));
+        Assert.That(_miner.PlantHold, Is.Zero);
+    }
+
     //**********************************************************
     //** helpers
     //**********************************************************
+
+    /// <summary>One frame in the scene's order: control, <c>E</c>, motion, the car.</summary>
+    private void Frame(MinerInput input)
+    {
+        _control.Control(ref _miner, ref _position, input, FrameSeconds, _commands);
+        _interaction.Interact(ref _miner, input, _commands);
+        _motion.Move(ref _miner, ref _position, FrameSeconds, _commands);
+        _carry.Carry(ref _miner, ref _position, _elevator.Update(FrameSeconds));
+        _commands.Clear();
+    }
 
     private void Build(int segments)
     {
