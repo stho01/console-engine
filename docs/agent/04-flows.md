@@ -44,7 +44,7 @@ the final `Width`/`Height`, because those come from the ctor arguments.
 
 | # | Step | Class.method | Note |
 |---|---|---|---|
-| 1 | Game calls `Stop()`. Only `ConsoleGame` does, on `ESC` | `GameBase.Stop` | Other games have no quit path: the user closes the window |
+| 1 | Game calls `Stop()` on `ESC`: `ConsoleGame`, `ConsoleGame.Ecs`, `Swarm`, `EternalDigger` (after `MineScene.Save`) | `GameBase.Stop` | Other games have no quit path: the user closes the window. EternalDigger: closing the window without `ESC` loses progress since the last save |
 | 2 | `_running = false`, then `_console.Close()` | `RenderConsole.Close` | **Calls `Environment.Exit(0)`: the process ends here** |
 | 3 | `if (EnableLogger) Log.Stop()` | `GameBase.Stop` | **Never reached** (step 2 exited). The logger socket isn't closed by `Log.Stop` |
 
@@ -165,11 +165,46 @@ Runs inside [F2](#f2) steps "Scenes.Update" and "Scenes.Render". Both are skippe
 | 2 | Compute each game's exe path | `LauncherApp` ctor, `GameLocator.GetExecutablePath` | — | — |
 | 3 | Loop: check which exes exist, draw, `Console.ReadKey` | `LauncherApp.Run`, `RefreshBuilt`, `LauncherScreen.Draw` | Esc/Q → loop ends, screen cleared | Menu; unbuilt games show `(not built)` |
 | 4 | Enter/Space/digit → `Launch(index)` | `LauncherMenu.HandleKey`, `LauncherApp.Launch` | Exe missing → status `LauncherTexts.NotBuilt`, nothing started | Yellow status line |
-| 5 | Start the exe through `conhost.exe` + `cmd.exe` in a new classic console window, working directory = exe folder, and wait | `GameRunner.Run` | `Process.Start` fails → `Win32Exception` caught | Status `LauncherTexts.StartFailed` |
+| 5 | Windows: start the exe through `conhost.exe` + `cmd.exe` in a new classic console window. macOS/Linux: start it directly in the launcher's terminal (`RunInCurrentTerminal`). Working directory = exe folder, and wait | `GameRunner.Run` | `Process.Start` fails → `Win32Exception` caught | Status `LauncherTexts.StartFailed` |
 | 6 | Window closes → status `Closed`, discard buffered keys, back to step 3. A crashing game first stops at `pause` | `DiscardBufferedKeys` | — | `LauncherTexts.Closed` |
-
 <a id="f11"></a>
-## F11 — Physics step (`PhysicsSystem.OnUpdate`, inside [F9](#f9) step 0)
+## F11 — EternalDigger miner frame (`MinerControlSystem` → `InteractionSystem` → `MinerMotionSystem`)
+
+Runs in [F9](#f9) step 1, in this order. The keyboard is read once into a `MinerInput` (`MinerInput.FromKeyboard`).
+
+| # | Step | Class.method | Stops / skips if | Observable |
+|---|---|---|---|---|
+| 1 | Rescue: `R` held adds to `RescueHold`; at 1.5 s the miner jumps to the spawn and the bag empties | `MinerControlSystem.UpdateRescue` | `R` not held → `RescueHold = 0`, continue. Rescue done → rest of the frame's control skipped | HUD rescue bar, pop at the spawn |
+| 2 | — | `MinerControlSystem.Control` | `Miner.IsMoving` → no keys read this frame. Riding: car moving → nothing; Up (not at top) / Down (at top) → send the car, rest skipped; Left/Right or Down at the bottom → get out and go on; anything else → rest skipped | — |
+| 3 | Fall one tile if unsupported | same | `Mine.IsSupported` false → fall starts, keys ignored | Miner drops |
+| 3b | Hold `E` to plant dynamite (an arrow held with it aims) | `UpdatePlanting` | `E` not held → go on (the hold survives the release frame for step 6, then resets). On the surface, at the deep camp's counter, or on a lift landing without kit and stick → hold reset, go on. Holding (< 0.5 s) → rest of the frame skipped. At 0.5 s: no kit, no sticks, or no rock in the faced tile → dust puff; else a `Dynamite` entity is recorded. After that, `E` must be released | Fuse bar in the HUD, then the stick `¡` |
+| 4 | `SPACE`: take the ladder in the miner's tile back, else place one | `PlaceLadder` → `Mine.TryTakeLadder`, `TryPlaceLadder` | Taken (row > 10) → ladders +1, the fall rule applies next frame. Else `Ladders == 0`, row ≤ 10, tile not air → nothing placed (one dust puff) | Ladder drawn or gone, HUD count ∓1 |
+| 4b | `↑` + side key: jump 2 tiles | `MinerControlSystem.CanJump` | Either tile beside is solid → no jump, step 5 handles the side key | Miner arcs over the gap, landing dust |
+| 5 | Side key, else down, else up (only on a ladder): walk/climb into air, or dig | `MoveOrDig` | Target unbreakable (grass, bedrock, outside the mine) → nothing. `DigCooldown > 0` → no hit this frame. At the deep camp's counter Down/Up do nothing (they select) | Debris, cracks, burst on break, ore +1 in the HUD bag |
+| 6 | At a counter (surface, deep camp, open tool shop) `↑`/`↓` move its selection; `E` (pressed): deliver, buy the selected item, trade at the camp, buy a tool shop bundle, build a lift segment, or get in / call the lift | `InteractionSystem.Interact` | Miner moving or riding → nothing. On the bottom landing with kit and stick: only a release of `E` with the plant hold under 0.5 s uses the lift (`IsTapToUseLift`). Otherwise `E` not pressed this frame, or not on a spot (row 9 at columns 3–6 / 8–11 / 13 (open) / 23–24, row 110 at 22–24 with the camp) or a landing in column 21 → nothing. Empty bag / not enough gold / sold out → dust puff only | Coins, `+<n>g` / `-10g` / `ELEVATOR +10m` |
+| 7 | Slide `Position`, finish the move, landing dust | `MinerMotionSystem.Move` | — | — |
+| 8 | Move the car; carry the rider; a called car picks up the miner waiting on its landing | `ElevatorSystem` → `Elevator.Update`, `Carry` | Not riding and (car didn't arrive this frame, not called, or the miner isn't idle on that landing) → nothing | Car and miner move together |
+| 9 | Burn fuses; at 0 blast the 3 × 3, push the miner, chain, flare gas within 3 tiles | `DynamiteSystem` | Fuse > 0 → only sparks. No miner entity → nothing burns | Flash, rubble, shake, fire |
+| 9b | Gas: flare the nearest pocket within 2 tiles of a lit lamp; shimmer near the miner | `GasSystem.Check` | Lamp blown out or dry, on the surface, or no gas in reach → nothing | Fire, shake, `GAS!`, the lamp dark for 3 s |
+| 10 | Burn oil underground (none while blown out, ×2 in black damp); pour a flask into a low lamp; set the headlamp's reach, flicker and low/empty state; smoke when low | `LampSystem` | On the surface → no burn | HUD oil gauge, shorter / flickering cone |
+
+<a id="f12"></a>
+## F12 — EternalDigger start, save and load (`TitleScene` → `MineScene` → `SaveSystem`)
+
+| # | Step | Class.method | Stops / skips if | Observable |
+|---|---|---|---|---|
+| 1 | `OnInitialize` sets the title scene | `EternalDiggerGame.OnInitialize` | — | Title screen |
+| 2 | Load the save once | `TitleScene.OnLoad` → `SaveFile.Load` | No file → `Missing`, only NEW MINE. Bad magic, early end, trailing bytes, out-of-range value → `Corrupt`; version ≠ 1 → `Unsupported`; I/O error → `Corrupt`. Not `Loaded` → file moved to `save.dat.bad` (if that fails, silently left in place) | Red message, only NEW MINE |
+| 3 | `E` on CONTINUE | `TitleMenu.Select` → `Scenes.Set(new MineScene(save, path))` | — | Saved mine |
+| 4 | `E` on NEW MINE | `TitleMenu.Select` | With a save: switch to the confirmation, nothing starts until `YES, START OVER` | Confirmation |
+| 5 | New mine: write its first save, then start | `TitleScene.StartNewMine` → `SaveFile.Save` | I/O error is **ignored** (the mine still starts; the next save retries) | — |
+| 6 | Sale (earned > 0) or purchase → `GameSaver.Request` | `InteractionSystem.Interact` | Empty bag, not enough gold → no request | — |
+| 7 | Save when requested or after 60 s underground | `SaveSystem.OnUpdate` → `GameSaver.Save` → `SaveData.Capture` + `SaveFile.Save` | No request and timer not reached → nothing. `IOException`/`UnauthorizedAccessException` → caught, `LastSaveFailed = true` | ` SAVED ` / ` SAVE FAILED` |
+| 8 | `ESC` | `EternalDiggerGame.OnUpdate` → `MineScene.Save` → `Stop()` | On the title: no save | Process exits |
+
+
+<a id="f13"></a>
+## F13 — Physics step (`PhysicsSystem.OnUpdate`, inside [F9](#f9) step 0)
 
 Runs once per fixed step, where the scene added it to `FixedSimulation`. Rules: [03 § Physics](03-rules.md#physics).
 
@@ -185,8 +220,8 @@ Runs once per fixed step, where the scene added it to `FixedSimulation`. Rules: 
 | 8 | Write `Position`, `Velocity`, `Rotation`, `AngularVelocity`, `RigidBody.IsSleeping`/`SleepTime` back (and `Interpolation`'s previous transform was saved in step 2), same chunk order as step 2 | `PhysicsSystem.Scatter` | Static bodies → not written | New positions and velocities |
 | 9 | Later systems in `FixedSimulation` read the events and record destroys in `Commands`; playback after the group | game systems (Asteroids.Ecs `CollisionSystem`), `CommandBuffer.Playback` | Destroy of an already-dead entity → skipped silently | Hit entities gone before the frame is drawn |
 
-<a id="f12"></a>
-## F12 — Spatial query and character move (`IPhysicsQueries`, `CharacterMover.MoveAndSlide`)
+<a id="f14"></a>
+## F14 — Spatial query and character move (`IPhysicsQueries`, `CharacterMover.MoveAndSlide`)
 
 Called by game systems, normally in `FixedSimulation` after `PhysicsSystem` (Platformer.Ecs `PlayerPhysicsSystem`).
 Rules: [03 § Physics](03-rules.md#physics).

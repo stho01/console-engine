@@ -5,7 +5,7 @@ for code and commits.
 
 ## What this is
 
-**console-engine** is a small **game engine** that renders into the Windows console, written in C# / .NET 10. It ships as
+**console-engine** is a small **game engine** that renders into the Windows console, written in C# / .NET 11. It ships as
 the `ConsoleEngine` library (NuGet package, `PackageVersion` 0.2.0) with example games under `Examples/`.
 
 The two priorities for every change:
@@ -33,7 +33,7 @@ Platform: **Windows only.** Rendering and input go through Win32 P/Invoke (`kern
 | ECS (entities, components, archetypes, chunks) | `ConsoleEngine/Ecs/`, design and phases in [`docs/design/ecs-plan.md`](docs/design/ecs-plan.md) |
 | 2D physics (bodies, circles/boxes/polygons, rotation, broadphase, Soft Step contact solver, contact/sensor events, tile grid, sleeping, interpolation, raycasts and box casts, `CharacterMover.MoveAndSlide`) | `ConsoleEngine.Physics/` (own assembly and NuGet package, optional), rules in [`docs/agent/03-rules.md` § Physics](docs/agent/03-rules.md#physics), design and phases in [`docs/design/physics-plan.md`](docs/design/physics-plan.md). Examples: `Examples/PhysicsShowcase` (every feature), `Examples/PhysicsSandbox` (solver), `Examples/Asteroids.Ecs` (sensors, layers), `Examples/Platformer.Ecs` (tile grid, character controller) |
 | Performance measurements | `ConsoleEngine.Benchmarks/` (BenchmarkDotNet) |
-| How to use the engine | `Examples/Snake` (smallest), `Examples/TerraForM` (scenes, assets, tests), `Examples/<Game>.Ecs` (ECS port of each game: components, systems, queries, `EcsScene`; compare with `Examples/<Game>`. `Snake.Ecs` is the smallest, `TerraForM.Ecs` the fullest), `Examples/Swarm` (ECS at scale, system ordering attributes), `Examples/PhysicsSandbox` (physics: bodies, colliders, fixed step, kinematic platform) |
+| How to use the engine | `Examples/Snake` (smallest), `Examples/TerraForM` (scenes, assets, tests), `Examples/<Game>.Ecs` (ECS port of each game: components, systems, queries, `EcsScene`; compare with `Examples/<Game>`. `Snake.Ecs` is the smallest, `TerraForM.Ecs` the fullest), `Examples/Swarm` (ECS at scale, system ordering attributes), `Examples/PhysicsSandbox` (physics: bodies, colliders, fixed step, kinematic platform), `Examples/PhysicsShowcase` (every physics feature), `Examples/EternalDigger` (a full original ECS game: endless grid world, particle effects, lighting; start at [`Examples/EternalDigger/README.md`](Examples/EternalDigger/README.md), design contract in [`docs/design/eternal-digger.md`](docs/design/eternal-digger.md)) |
 | Build/test pipeline | `.github/workflows/build-and-test.yml` |
 | Formatting rules | `.editorconfig` + [§ Code style](#code-style) |
 | Open feature requests | GitHub issues: mouse input (8), macOS (7), more colours (6) |
@@ -50,15 +50,16 @@ Every name in `docs/agent/` is grep-able. Search for the identifier you are inte
 | `ConsoleEngine.Windows` | `Libs/ConsoleEngine.Windows/` | Library, namespace `ConsoleEngine.Native` | Abstractions |
 | `ConsoleEngine.Logger` | `Libs/ConsoleEngine.Logger/` | Exe: TCP log viewer (port 11000) | — |
 | `Microsoft.Xna.Framework` | `Libs/Microsoft.Xna.Framework/` | Library: math types | — |
-| `TerraForM`, `Snake`, `Asteroids`, `Platformer`, `ConsoleGame`, their ports `<Game>.Ecs`, `Swarm` (ECS stress test), `PhysicsSandbox` and `PhysicsShowcase` (physics demos) | `Examples/*` | Exe | ConsoleEngine |
+| `TerraForM`, `Snake`, `Asteroids`, `Platformer`, `ConsoleGame`, their ports `<Game>.Ecs`, `Swarm` (ECS stress test), `PhysicsSandbox` and `PhysicsShowcase` (physics demos) and `EternalDigger` (ECS game) | `Examples/*` | Exe | ConsoleEngine |
 | `Launcher` | `Examples/Launcher/` | Exe: text menu that starts the ECS games (plain `System.Console`, no engine) | ECS games (build order only) |
 | `TerraForM.Tests` | `Examples/TerraForM.Tests/` | NUnit 5 + NSubstitute | TerraForM |
 | `Launcher.Tests` | `Examples/Launcher.Tests/` | NUnit 5 | Launcher |
+| `EternalDigger.Tests` | `Examples/EternalDigger.Tests/` | NUnit 5, hand-written `Fakes/FakeConsoleHandler` | EternalDigger |
 | `ConsoleEngine.Tests` | `ConsoleEngine.Tests/` | NUnit 5, hand-written fakes in `Fakes/` | ConsoleEngine |
 | `ConsoleEngine.Physics.Tests` | `ConsoleEngine.Physics.Tests/` | NUnit 5 | ConsoleEngine.Physics |
 | `ConsoleEngine.Benchmarks` | `ConsoleEngine.Benchmarks/` | Exe: BenchmarkDotNet 0.15.8 | ConsoleEngine |
 
-All projects: `net10.0`, `LangVersion` 14, `TreatWarningsAsErrors` = `True`. Solution: `ConsoleEngine.sln`.
+All projects: `net11.0`, `LangVersion` 15, `TreatWarningsAsErrors` = `True`. Solution: `ConsoleEngine.sln`.
 
 ```bash
 dotnet build
@@ -95,11 +96,12 @@ ReportGenerator is a local tool pinned in `dotnet-tools.json`. There is no cover
 
 Games need a real Windows console, so an agent cannot run them headless. TerraForM loads `Assets/Maps/*.txt` and the
 logger exe by **relative path**, so run a game's exe from its output folder (e.g.
-`Examples/TerraForM/bin/Debug/net10.0/`). CI runs restore → build → test with coverage on `windows-latest` for PRs to
+`Examples/TerraForM/bin/Debug/net11.0/`). CI runs restore → build → test with coverage on `windows-latest` for PRs to
 `main`. The coverage summary is in the job summary, and the HTML report is the `coverage-report` artifact.
 
-To play the ECS games, start the launcher. It builds them first and starts each one in its own classic console window
-(`conhost.exe`, even when Windows Terminal is the default) from its output folder. A new game in `Examples/` is added
+To play the ECS games, start the launcher. It builds them first and starts each one from its output folder: on Windows in its
+own classic console window (`conhost.exe`, even when Windows Terminal is the default), on macOS and Linux in the
+launcher's own terminal. A new game in `Examples/` is added
 to `GameCatalog.Games` **and** as a build-order `ProjectReference` in `Launcher.csproj`; `GameLocatorTests` checks both:
 
 ```bash
@@ -115,7 +117,7 @@ coverage.runsettings              coverlet settings for `dotnet test` coverage
 dotnet-tools.json                 local tools (ReportGenerator)
 AGENTS.md / CLAUDE.md             agent instructions (CLAUDE.md imports AGENTS.md)
 docs/agent/                       support/triage docs for agents (01–09 + README)
-docs/design/                      design plans (ecs-plan.md, physics-plan.md)
+docs/design/                      design plans (ecs-plan.md, physics-plan.md, eternal-digger.md)
 ConsoleEngine/                    the engine
   GameBase.cs                       abstract game: Initialize/Start/Stop, frame loop
   Collections/Deque.cs              double-ended queue (used by Snake)
@@ -171,6 +173,16 @@ Examples/
   Launcher/                       game launcher: GameCatalog (menu entries), GameLocator (exe paths), LauncherMenu
                                   (keys), LauncherScreen (drawing), GameRunner (Process.Start + wait), LauncherTexts
   Launcher.Tests/                 LauncherMenuTests, GameLocatorTests
+  EternalDigger/                  original ECS digging game (no OOP original): Mining/ (Mine grid, Tiles rules, Elevator),
+                                  Components/, Systems/, Effects/ (EffectSpawner, ParticleLooks), Rendering/
+                                  (Canvas, LightMap, TileLooks), Saving/ (SaveData, SaveFile, GameSaver),
+                                  Scenes/ (TitleScene + TitleMenu, MineScene), Layout, Shop, ShopCounter, DeepCamp, Progress, Upgrades,
+                                  LampOil, MinerInput.
+                                  README.md + docs/ (gameplay, architecture, rendering-and-effects,
+                                  working-with-the-code, testing, reference)
+  EternalDigger.Tests/            Mine, Tiles, Shop, LightMap, ParticleLooks, frame-by-frame MinerControlSystem,
+                                  MinerVisibility (render), Elevator, Dynamite, ShopCounter, Upgrades, LampOil,
+                                  BagWeight, SaveFile, SaveSystem, TitleMenu, InventorySystem, DeepCamp, Gas, Darkness and Progress tests, Fakes/ (console handler)
   TerraForM/Scenes/               GameScene, MenuScene, InputNameScene
   TerraForM/Commands/             Command, Move, Plant, Wait
   TerraForM/Assets/               Maps/*.txt, Sprites.cs, Texts/HudTexts.cs, Story/ (unused)

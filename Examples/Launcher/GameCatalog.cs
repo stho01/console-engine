@@ -16,6 +16,7 @@ internal static class GameCatalog
         new("Swarm", "Swarm", "Space / Backspace +/- 10 000 particles, Esc quit"),
         new("Physics Sandbox", "PhysicsSandbox", "Space ball, B box, Enter 50 balls, R clear, Esc quit"),
         new("Physics Showcase", "PhysicsShowcase",
-            "1-5 shapes, Enter shower, A D W move, E blast, G gravity, I smooth, R clear")
+            "1-5 shapes, Enter shower, A D W move, E blast, G gravity, I smooth, R clear"),
+        new("EternalDigger", "EternalDigger", "Arrows walk/dig, Space ladder, E deliver/buy, hold R rescue")
     ];
 }

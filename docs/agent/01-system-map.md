@@ -21,8 +21,10 @@ Nothing is hosted and nothing is exposed to the internet. Every unit is a local 
 | `Swarm` (`Examples/Swarm`) | Exe | ECS-only stress test: 100 000 particles (first argument) chasing a moving attractor |
 | `PhysicsSandbox` (`Examples/PhysicsSandbox`) | Exe | ECS-only physics demo: balls and boxes dropped into a walled box with two ledges and a moving platform (`ConsoleEngine.Physics`) |
 | `PhysicsShowcase` (`Examples/PhysicsShowcase`) | Exe | ECS-only demo of every physics feature: tile level, turning boxes and polygons, a kinematic platform and windmill, a sensor zone, collision layers, a player with `MoveAndSlide`, a raycast laser, an overlap blast, sleeping and interpolation |
-| `Launcher` (`Examples/Launcher`) | **Exe** `Launcher.exe`, no engine dependency (plain `System.Console`) | Text menu that starts the ECS games (`GameCatalog.Games`: Snake.Ecs, Asteroids.Ecs, Platformer.Ecs, TerraForM.Ecs, ConsoleGame.Ecs, Swarm, PhysicsSandbox, PhysicsShowcase). Build-order `ProjectReference`s (`ReferenceOutputAssembly=false, Private=false as default metadata`) make building it build those games, without copying anything into its output |
+| `Launcher` (`Examples/Launcher`) | **Exe** `Launcher.exe`, no engine dependency (plain `System.Console`) | Text menu that starts the ECS games (`GameCatalog.Games`: Snake.Ecs, Asteroids.Ecs, Platformer.Ecs, TerraForM.Ecs, ConsoleGame.Ecs, Swarm, PhysicsSandbox, PhysicsShowcase, EternalDigger). Build-order `ProjectReference`s (`ReferenceOutputAssembly=false, Private=false as default metadata`) make building it build those games, without copying anything into its output |
 | `Launcher.Tests` (`Examples/Launcher.Tests`) | NUnit test project | `LauncherMenu` keys, `GameLocator` paths, and that every `GameCatalog` game has a `ProjectReference` in `Launcher.csproj` |
+| `EternalDigger` (`Examples/EternalDigger`) | Exe | ECS-only digging game: dig ore in an endless mine, sell it at the house, buy ladders. Design: `docs/design/eternal-digger.md` |
+| `EternalDigger.Tests` | NUnit test project | `MineTests`, `TilesTests`, `ShopTests`, `LightMapTests`, `ParticleLooksTests`, `MinerControlSystemTests` (plays frames with scripted `MinerInput`, no keyboard), `MinerVisibilityTests` (renders into a `RenderConsole` over `Fakes/FakeConsoleHandler`), `ElevatorTests`, `DynamiteTests`, `ShopCounterTests`, `UpgradesTests`, `LampOilTests`, `BagWeightTests`, `SaveFileTests`, `SaveSystemTests` (temp folders), `TitleMenuTests`, `InventorySystemTests`, `DeepCampTests`, `GasTests`, `DarknessTests`, `ProgressTests` |
 
 Hard dependency: **Windows only.** `ConsoleHandler` and `InputHandler` call `kernel32.dll`/`user32.dll` directly
 (`GetStdHandle`, `WriteConsoleOutputW`, `SetCurrentConsoleFontEx`, `GetAsyncKeyState`…). No other platform
@@ -41,7 +43,7 @@ implementation exists; macOS support is GitHub issue 7, open.
 
 | Link | Direction | Detail | Where |
 |---|---|---|---|
-| Launcher → game process | spawn | `Process.Start` of `%SystemRoot%System32nhost.exe cmd.exe /c ".<ProjectName>.exe || pause"` with `UseShellExecute = true` and `WorkingDirectory` = the exe's folder, so the game gets a **classic console window** even when Windows Terminal is the default terminal. The launcher waits for conhost to exit (`WaitForExit`), so one game runs at a time. Exe path: `Examples/<ProjectName>/<launcher's output path, e.g. bin/Debug/net10.0>/<ProjectName>.exe` | `GameRunner.Run`, `GameRunner.BuildArguments`, `GameLocator` |
+| Launcher → game process | spawn | `Process.Start` of `%SystemRoot%System32nhost.exe cmd.exe /c ".<ProjectName>.exe || pause"` with `UseShellExecute = true` and `WorkingDirectory` = the exe's folder, so the game gets a **classic console window** even when Windows Terminal is the default terminal. The launcher waits for conhost to exit (`WaitForExit`), so one game runs at a time. Exe path: `Examples/<ProjectName>/<launcher's output path, e.g. bin/Debug/net11.0>/<ProjectName>.exe`. **On macOS and Linux** there is no conhost: the apphost has no extension (`<ProjectName>`) and is started directly (`UseShellExecute = false`, same working directory), inheriting the launcher's terminal | `GameRunner.Run`, `GameRunner.BuildArguments`, `GameLocator.GetExecutablePath` |
 | Game → console window | out | Whole frame written each frame with `WriteConsoleOutput` | `ConsoleHandler.Render` |
 | Keyboard → game | in | `GetAsyncKeyState(i)` polled for all 256 virtual keys every frame | `InputHandler.Update` |
 | Game → logger | out, TCP | Game **listens** on `Dns.GetHostEntry("localhost").AddressList[0]`, port **11000** (hard-coded). No auth. Messages are UTF-8 and end with `'\0'` | `Log` static ctor, `Log.Start` |
@@ -68,6 +70,7 @@ callbacks that run on the game loop thread ([03 § Intervals](03-rules.md#interv
 | `SwarmGame` | 160 × 100 | 6×6 Consolas | `Name = "Swarm (ECS)"`, `EnableLogger = true`, `ShowFps = true`. First command-line argument = starting particle count (default 100 000) |
 | `PhysicsSandboxGame` | 100 × 60 | 10×10 Consolas (square cells, so circles look round) | `Name = "Physics Sandbox"`, `ShowFps = true` |
 | `PhysicsShowcaseGame` | 120 × 60 | 10×10 Consolas (square cells) | `Name = "Physics Showcase"`, `ShowFps = true` |
+| `EternalDiggerGame` | 120 × 48 (`Layout.ScreenWidth` × `Layout.ScreenHeight`) | 8×16 Consolas | `Name = "EternalDigger"`. First command-line argument = seed for a NEW MINE (default `Environment.TickCount`); CONTINUE uses the saved seed. Reads and writes `<LocalApplicationData>/EternalDigger/save.dat` (+ `.tmp`, `.bad`). No logger, no FPS |
 
 `GameBase(width, height, fontWidth, fontHeight)` always uses face `"Consolas"`.
 
@@ -86,7 +89,7 @@ There is no dev/staging/prod split. What changes behaviour:
 
 ## CI
 
-`.github/workflows/build-and-test.yml`: on push/PR to `main`, `windows-latest`, .NET 10.0.x,
+`.github/workflows/build-and-test.yml`: on push/PR to `main`, `windows-latest`, .NET 11.0.x,
 `dotnet restore` → `dotnet build --no-restore` → `dotnet test --no-build` with `--settings coverage.runsettings
 --collect:"XPlat Code Coverage"` → `dotnet reportgenerator` (local tool from `dotnet-tools.json`). The Markdown summary
 goes to the job summary, and the HTML report is uploaded as the `coverage-report` artifact. There is no coverage

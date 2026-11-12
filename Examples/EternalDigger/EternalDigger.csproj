@@ -1,0 +1,17 @@
+<Project Sdk="Microsoft.NET.Sdk">
+
+    <PropertyGroup>
+        <OutputType>Exe</OutputType>
+        <TargetFramework>net11.0</TargetFramework>
+        <LangVersion>15</LangVersion>
+        <RootNamespace>EternalDigger</RootNamespace>
+        <AssemblyName>EternalDigger</AssemblyName>
+        <TreatWarningsAsErrors>True</TreatWarningsAsErrors>
+    </PropertyGroup>
+
+    <ItemGroup>
+      <ProjectReference Include="..\..\ConsoleEngine\ConsoleEngine.csproj" />
+      <ProjectReference Include="..\..\Libs\Microsoft.Xna.Framework\Microsoft.Xna.Framework.csproj" />
+    </ItemGroup>
+
+</Project>
