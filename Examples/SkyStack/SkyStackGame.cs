@@ -9,9 +9,9 @@ namespace SkyStack;
 /// Climb an endless tower by jumping from floor to floor while the screen scrolls up faster and faster. Running fast
 /// makes jumps higher, the walls bounce you back, and jumps over two or more floors chain into combos. Starts on the
 /// <see cref="TitleScene"/>; a run is one ECS scene, <see cref="TowerScene"/>. <c>ESC</c> goes from a run back to the
-/// title, and quits on the title. 8 x 16 font, so a cell is twice as tall as it is wide.
+/// title, and quits on the title. 6 x 12 font: each cell shows two square pixels (<c>Rendering.PixelCanvas</c>).
 /// </summary>
-public class SkyStackGame() : GameBase(Layout.ScreenWidth, Layout.ScreenHeight, fontWidth: 8, fontHeight: 16)
+public class SkyStackGame() : GameBase(Layout.ScreenWidth, Layout.ScreenHeight, Layout.FontWidth, Layout.FontHeight)
 {
     //**********************************************************
     //** props

@@ -26,7 +26,7 @@ Nothing is hosted and nothing is exposed to the internet. Every unit is a local 
 | `EternalDigger` (`Examples/EternalDigger`) | Exe | ECS-only digging game: dig ore in an endless mine, sell it at the house, buy ladders. Design: `docs/design/eternal-digger.md` |
 | `EternalDigger.Tests` | NUnit test project | `MineTests`, `TilesTests`, `ShopTests`, `LightMapTests`, `ParticleLooksTests`, `MinerControlSystemTests` (plays frames with scripted `MinerInput`, no keyboard), `MinerVisibilityTests` (renders into a `RenderConsole` over `Fakes/FakeConsoleHandler`), `ElevatorTests`, `DynamiteTests`, `ShopCounterTests`, `UpgradesTests`, `LampOilTests`, `BagWeightTests`, `SaveFileTests`, `SaveSystemTests` (temp folders), `TitleMenuTests`, `InventorySystemTests`, `DeepCampTests`, `GasTests`, `DarknessTests`, `ProgressTests` |
 | `SkyStack` (`Examples/SkyStack`) | Exe | ECS-only tower climbing game: jump from floor to floor of an endless tower while the view rises; run speed makes jumps higher, jumps over 2+ floors chain into combos. Rules: [03 § SkyStack](03-rules.md#skystack) |
-| `SkyStack.Tests` | NUnit test project | `TowerTests`, `ClimbPhysicsTests` (plays fixed steps of `ClimbPhysics.Step`), `RunStatsTests`, `ScrollerTests` |
+| `SkyStack.Tests` | NUnit test project | `TowerTests`, `ClimbPhysicsTests` (plays fixed steps of `ClimbPhysics.Step`), `RunStatsTests`, `ScrollerTests`, `PixelCanvasTests` (canvas, sprites, pixel font; `Fakes/FakeConsoleHandler`) |
 
 Hard dependency: **Windows only.** `ConsoleHandler` and `InputHandler` call `kernel32.dll`/`user32.dll` directly
 (`GetStdHandle`, `WriteConsoleOutputW`, `SetCurrentConsoleFontEx`, `GetAsyncKeyState`…). No other platform
@@ -73,7 +73,7 @@ callbacks that run on the game loop thread ([03 § Intervals](03-rules.md#interv
 | `PhysicsSandboxGame` | 100 × 60 | 10×10 Consolas (square cells, so circles look round) | `Name = "Physics Sandbox"`, `ShowFps = true` |
 | `PhysicsShowcaseGame` | 120 × 60 | 10×10 Consolas (square cells) | `Name = "Physics Showcase"`, `ShowFps = true` |
 | `EternalDiggerGame` | 120 × 48 (`Layout.ScreenWidth` × `Layout.ScreenHeight`) | 8×16 Consolas | `Name = "EternalDigger"`. First command-line argument = seed for a NEW MINE (default `Environment.TickCount`); CONTINUE uses the saved seed. Reads and writes `<LocalApplicationData>/EternalDigger/save.dat` (+ `.tmp`, `.bad`). No logger, no FPS |
-| `SkyStackGame` | 64 × 40 (`Layout.ScreenWidth` × `Layout.ScreenHeight`) | 8×16 Consolas | `Name = "SkyStack"`. Each run uses a new seed (`Environment.TickCount`). Best score and floor live only in memory (`SkyStackGame.BestScore`, `BestFloor`). No logger, no FPS |
+| `SkyStackGame` | 112 × 60 (`Layout.ScreenWidth` × `Layout.ScreenHeight`); the tower is an 84 × 120 pixel canvas, two pixels per cell | 6×12 Consolas (`Layout.FontWidth`/`FontHeight`, square half-cell pixels) | `Name = "SkyStack"`. Each run uses a new seed (`Environment.TickCount`). Best score and floor live only in memory (`SkyStackGame.BestScore`, `BestFloor`). No logger, no FPS |
 
 `GameBase(width, height, fontWidth, fontHeight)` always uses face `"Consolas"`.
 

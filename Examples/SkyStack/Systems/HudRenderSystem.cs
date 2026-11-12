@@ -28,6 +28,7 @@ public sealed class HudRenderSystem(RunStats run, Scroller scroller, SkyStackGam
     private const ConsoleColor KeysColor = ConsoleColor.Gray;
     private const char BarChar = '█';
     private const char EmptyBarChar = '·';
+    private const char SeparatorChar = '│';
 
     //**********************************************************
     //** lifecycle
@@ -35,16 +36,18 @@ public sealed class HudRenderSystem(RunStats run, Scroller scroller, SkyStackGam
 
     protected override void OnUpdate(float deltaSeconds)
     {
-        console.Draw(Left, 1, SkyStackTexts.Logo, LogoColor);
+        DrawSeparator();
+        console.Draw(Left, 2, SkyStackTexts.Logo, LogoColor);
 
-        DrawValue(4, SkyStackTexts.Floor, run.HighestFloor);
-        DrawValue(7, SkyStackTexts.Score, run.Score);
-        DrawValue(10, SkyStackTexts.Best, Math.Max(game.BestScore, run.Score));
-        DrawCombo(13);
-        DrawSpeed(18);
+        DrawValue(6, SkyStackTexts.Floor, run.HighestFloor);
+        DrawValue(10, SkyStackTexts.Score, run.Score);
+        DrawValue(14, SkyStackTexts.Best, Math.Max(game.BestScore, run.Score));
+        DrawCombo(18);
+        DrawSpeed(24);
 
-        console.Draw(Left, 22, SkyStackTexts.Zone, LabelColor);
-        console.Draw(Left, 23, TowerLooks.ZoneOf(run.LandedFloor).Name, TowerLooks.ZoneOf(run.LandedFloor).Platform);
+        console.Draw(Left, 28, SkyStackTexts.Zone, LabelColor);
+        ref readonly var zone = ref TowerLooks.ZoneOf(run.LandedFloor);
+        console.Draw(Left, 29, zone.Name, zone.Platform);
 
         console.Draw(Left, Layout.ScreenHeight - 5, SkyStackTexts.KeysRun, KeysColor);
         console.Draw(Left, Layout.ScreenHeight - 4, SkyStackTexts.KeysJump, KeysColor);
@@ -54,6 +57,13 @@ public sealed class HudRenderSystem(RunStats run, Scroller scroller, SkyStackGam
     //**********************************************************
     //** internals
     //**********************************************************
+
+    /// <summary>A thin line between the tower and the panel.</summary>
+    private void DrawSeparator()
+    {
+        for (var row = 0; row < Layout.ScreenHeight; row++)
+            console.Draw(Layout.TowerWidth + 1, row, SeparatorChar, LabelColor);
+    }
 
     private void DrawValue(int row, string label, int value)
     {

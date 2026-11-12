@@ -55,7 +55,7 @@ Every name in `docs/agent/` is grep-able. Search for the identifier you are inte
 | `TerraForM.Tests` | `Examples/TerraForM.Tests/` | NUnit 5 + NSubstitute | TerraForM |
 | `Launcher.Tests` | `Examples/Launcher.Tests/` | NUnit 5 | Launcher |
 | `EternalDigger.Tests` | `Examples/EternalDigger.Tests/` | NUnit 5, hand-written `Fakes/FakeConsoleHandler` | EternalDigger |
-| `SkyStack.Tests` | `Examples/SkyStack.Tests/` | NUnit 5 | SkyStack |
+| `SkyStack.Tests` | `Examples/SkyStack.Tests/` | NUnit 5, hand-written `Fakes/FakeConsoleHandler` | SkyStack |
 | `ConsoleEngine.Tests` | `ConsoleEngine.Tests/` | NUnit 5, hand-written fakes in `Fakes/` | ConsoleEngine |
 | `ConsoleEngine.Physics.Tests` | `ConsoleEngine.Physics.Tests/` | NUnit 5 | ConsoleEngine.Physics |
 | `ConsoleEngine.Benchmarks` | `ConsoleEngine.Benchmarks/` | Exe: BenchmarkDotNet 0.15.8 | ConsoleEngine |
@@ -185,9 +185,10 @@ Examples/
                                   MinerVisibility (render), Elevator, Dynamite, ShopCounter, Upgrades, LampOil,
                                   BagWeight, SaveFile, SaveSystem, TitleMenu, InventorySystem, DeepCamp, Gas, Darkness and Progress tests, Fakes/ (console handler)
   SkyStack/                       original ECS tower climber (no OOP original): Climbing/ (Tower, Floor, ClimbPhysics,
-                                  RunStats, Scroller), Components/Climber, Systems/, Rendering/ (ConsoleText,
-                                  TowerLooks), Scenes/ (TitleScene, TowerScene), Layout, SkyStackTexts
-  SkyStack.Tests/                 Tower, ClimbPhysics (fixed steps), RunStats, Scroller tests
+                                  RunStats, Scroller), Components/Climber, Systems/, Rendering/ (PixelCanvas,
+                                  PixelSprite, PixelFont, ClimberLooks, TowerLooks, ConsoleText), Scenes/ (TitleScene,
+                                  TowerScene), Layout, SkyStackTexts
+  SkyStack.Tests/                 Tower, ClimbPhysics (fixed steps), RunStats, Scroller, PixelCanvas tests, Fakes/
   TerraForM/Scenes/               GameScene, MenuScene, InputNameScene
   TerraForM/Commands/             Command, Move, Plant, Wait
   TerraForM/Assets/               Maps/*.txt, Sprites.cs, Texts/HudTexts.cs, Story/ (unused)

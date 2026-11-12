@@ -4,6 +4,7 @@ using ConsoleEngine.Ecs.Components;
 using Microsoft.Xna.Framework;
 using SkyStack.Climbing;
 using SkyStack.Components;
+using SkyStack.Rendering;
 using SkyStack.Systems;
 
 namespace SkyStack.Scenes;
@@ -11,7 +12,8 @@ namespace SkyStack.Scenes;
 /// <summary>
 /// One run: the climber entity on the ground floor of a <see cref="Tower"/> built from <paramref name="seed"/>, and the
 /// systems in the order they run. Physics, combo timer and scrolling run in the fixed step; input and restart every
-/// frame; drawing goes tower, climber, messages, HUD. A restart replaces the scene with a new one and a new seed.
+/// frame. Drawing paints tower and climber into a <see cref="PixelCanvas"/>, presents it, then draws the text over
+/// it (messages, HUD). A restart replaces the scene with a new one and a new seed.
 /// </summary>
 public sealed class TowerScene(int seed) : EcsScene<SkyStackGame>
 {
@@ -23,14 +25,15 @@ public sealed class TowerScene(int seed) : EcsScene<SkyStackGame>
     {
         var tower = new Tower(seed);
         var run = new RunStats();
-        var scroller = new Scroller(-Layout.GroundScreenRow);
+        var scroller = new Scroller(-Layout.GroundViewRow);
+        var canvas = new PixelCanvas(Layout.TowerWidth, Layout.ViewHeight);
         Camera.Position = new Vector2(0f, scroller.Top);
 
         var startX = (Layout.InnerLeft + Layout.InnerRight - ClimbPhysics.BodyWidth) / 2f;
         World.Create(
             new Position(new Vector2(startX, Tower.RowOf(0))),
             new Velocity(Vector2.Zero),
-            new Climber { IsGrounded = true });
+            new Climber { IsGrounded = true, Facing = 1 });
 
         FixedSimulation.Add(new ClimberMotionSystem(tower, run));
         FixedSimulation.Add(new ScrollSystem(scroller, run, Camera, Game));
@@ -38,8 +41,9 @@ public sealed class TowerScene(int seed) : EcsScene<SkyStackGame>
         Simulation.Add(new ClimberInputSystem(run));
         Simulation.Add(new RestartSystem(run, Restart));
 
-        Presentation.Add(new TowerRenderSystem(tower, Camera, Console));
-        Presentation.Add(new ClimberRenderSystem(run, Camera, Console));
+        Presentation.Add(new TowerRenderSystem(tower, Camera, canvas));
+        Presentation.Add(new ClimberRenderSystem(run, Camera, canvas));
+        Presentation.Add(new CanvasPresentSystem(canvas, Console));
         Presentation.Add(new MessageRenderSystem(run, scroller, Game, Console));
         Presentation.Add(new HudRenderSystem(run, scroller, Game, Console));
     }

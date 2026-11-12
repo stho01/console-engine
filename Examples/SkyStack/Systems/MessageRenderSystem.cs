@@ -17,12 +17,12 @@ public sealed class MessageRenderSystem(RunStats run, Scroller scroller, SkyStac
     //** fields
     //**********************************************************
 
-    private const int NoticeRow = 3;
-    private const int ComboRow = 6;
-    private const int BoxLeft = 8;
-    private const int BoxRight = Layout.TowerWidth - 8;
-    private const int BoxTop = 13;
-    private const int BoxBottom = 26;
+    private const int NoticeRow = 8;
+    private const int ComboRow = 14;
+    private const int BoxLeft = 16;
+    private const int BoxRight = Layout.TowerWidth - 17;
+    private const int BoxTop = 20;
+    private const int BoxBottom = 34;
     private const float BlinksPerSecond = 4f;
 
     private const ConsoleColor NoticeColor = ConsoleColor.Red;

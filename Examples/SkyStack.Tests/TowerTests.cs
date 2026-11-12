@@ -55,9 +55,9 @@ public class TowerTests
 
     [TestCase(0, 0)]
     [TestCase(-1, 0)]
-    [TestCase(-4, 1)]
-    [TestCase(-5, 1)]
-    [TestCase(-8, 2)]
+    [TestCase(-Layout.FloorSpacing, 1)]
+    [TestCase(-Layout.FloorSpacing - 1, 1)]
+    [TestCase(-2 * Layout.FloorSpacing, 2)]
     public void FloorAtOrBelow_Row_ReturnsTheFloorWhosePlatformIsAtOrUnderIt(int row, int expected) =>
         Assert.That(Tower.FloorAtOrBelow(row), Is.EqualTo(expected));
 

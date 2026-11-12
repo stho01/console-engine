@@ -1,27 +1,25 @@
+using System;
 using ConsoleEngine.Ecs;
 using ConsoleEngine.Ecs.Rendering;
-using ConsoleEngine.Infrastructure.Rendering;
 using SkyStack.Climbing;
 using SkyStack.Rendering;
 
 namespace SkyStack.Systems;
 
 /// <summary>
-/// Draws the part of the tower the camera sees, row by row: walls, a dotted brick backdrop, platforms, the ground and
-/// a floor number under every <see cref="Tower.LabelEvery"/>th platform. Every cell of the tower is drawn every frame.
-/// The colours of a row come from the zone of the floor at or below it.
+/// Paints the part of the tower the camera sees into the <see cref="PixelCanvas"/>, row by row: stone walls, a brick
+/// backdrop, platforms (lit top, shaded underside, rounded ends), the ground, and the number of every
+/// <see cref="Tower.LabelEvery"/>th floor under its platform. Every pixel is painted every frame. The colours of a
+/// row come from the zone of the platform above it.
 /// </summary>
-public sealed class TowerRenderSystem(Tower tower, Camera camera, RenderConsole console) : EntitySystem
+public sealed class TowerRenderSystem(Tower tower, Camera camera, PixelCanvas canvas) : EntitySystem
 {
     //**********************************************************
     //** fields
     //**********************************************************
 
-    /// <summary>Rows per brick course of the backdrop; a dot row is drawn once per course.</summary>
-    private const int BrickRows = 2;
-
-    /// <summary>Columns per brick of the backdrop; every other course is shifted by half a brick.</summary>
-    private const int BrickColumns = 8;
+    /// <summary>Pixels between a platform's top and its floor number.</summary>
+    private const int LabelOffset = Layout.PlatformThickness + 3;
 
     //**********************************************************
     //** lifecycle
@@ -30,70 +28,79 @@ public sealed class TowerRenderSystem(Tower tower, Camera camera, RenderConsole 
     protected override void OnUpdate(float deltaSeconds)
     {
         var top = (int)camera.Position.Y;
-        for (var screenRow = 0; screenRow < console.Height; screenRow++)
-            DrawRow(screenRow, top + screenRow);
+        for (var y = 0; y < canvas.Height; y++)
+            PaintRow(y, top + y);
+
+        PaintLabels(top);
     }
 
     //**********************************************************
     //** internals
     //**********************************************************
 
-    private void DrawRow(int screenRow, int worldRow)
+    private void PaintRow(int y, int worldY)
     {
-        var floor = Tower.FloorAtOrBelow(worldRow);
+        // The platform whose band (its top down to the next platform) holds this row.
+        var rowInBand = TowerLooks.Mod(worldY, Layout.FloorSpacing);
+        var floor = -(worldY - rowInBand) / Layout.FloorSpacing;
         ref readonly var zone = ref TowerLooks.ZoneOf(floor);
 
-        var wallChar = TowerLooks.Mod(worldRow, BrickRows) == 0 ? TowerLooks.WallSeamChar : TowerLooks.WallChar;
-        for (var column = 0; column < Layout.InnerLeft; column++)
-            console.Draw(column, screenRow, wallChar, zone.Wall);
-        for (var column = Layout.InnerRight; column < Layout.TowerWidth; column++)
-            console.Draw(column, screenRow, wallChar, zone.Wall);
+        for (var x = 0; x < Layout.InnerLeft; x++)
+            canvas.Set(x, y, TowerLooks.WallAt(x, worldY, zone));
+        for (var x = Layout.InnerRight; x < Layout.TowerWidth; x++)
+            canvas.Set(x, y, TowerLooks.WallAt(Layout.TowerWidth - 1 - x, worldY, zone));
 
-        if (worldRow > 0)
+        if (floor < 0 || (floor == 0 && rowInBand >= Layout.PlatformThickness))
         {
-            for (var column = Layout.InnerLeft; column < Layout.InnerRight; column++)
-                console.Draw(column, screenRow, TowerLooks.GroundChar, TowerLooks.GroundColor);
+            PaintGround(y, worldY);
             return;
         }
 
-        DrawBackdrop(screenRow, worldRow, zone);
+        for (var x = Layout.InnerLeft; x < Layout.InnerRight; x++)
+            canvas.Set(x, y, TowerLooks.BackdropAt(x, worldY, zone));
 
-        if (worldRow == Tower.RowOf(floor))
-            DrawPlatform(screenRow, floor, zone);
-        else if (worldRow == Tower.RowOf(floor + 1) + 1)
-            DrawLabel(screenRow, floor + 1);
+        if (rowInBand < Layout.PlatformThickness)
+            PaintPlatform(y, floor, rowInBand, zone);
     }
 
-    private void DrawBackdrop(int screenRow, int worldRow, in TowerLooks.Zone zone)
+    private void PaintPlatform(int y, int floor, int rowInPlatform, in TowerLooks.Zone zone)
     {
-        if (TowerLooks.Mod(worldRow, BrickRows) != 1)
-            return;
+        var platform = tower.GetFloor(floor);
+        var milestone = floor > 0 && Tower.IsMilestone(floor);
+        var bottom = rowInPlatform == Layout.PlatformThickness - 1;
+        var color = bottom
+            ? milestone ? TowerLooks.MilestoneShade : zone.PlatformShade
+            : milestone ? TowerLooks.MilestoneTop : zone.Platform;
 
-        var course = (worldRow - TowerLooks.Mod(worldRow, BrickRows)) / BrickRows;
-        var shift = TowerLooks.Mod(course, 2) * BrickColumns / 2;
-        for (var column = Layout.InnerLeft; column < Layout.InnerRight; column++)
+        // The underside is one pixel shorter at each end, so the ends look rounded.
+        var left = bottom ? platform.Left + 1 : platform.Left;
+        var right = bottom ? platform.Right - 1 : platform.Right;
+        for (var x = left; x < right; x++)
+            canvas.Set(x, y, color);
+    }
+
+    private void PaintGround(int y, int worldY)
+    {
+        for (var x = Layout.InnerLeft; x < Layout.InnerRight; x++)
         {
-            if (TowerLooks.Mod(column + shift, BrickColumns) == 0)
-                console.Draw(column, screenRow, TowerLooks.BackdropChar, zone.Backdrop);
+            var speck = TowerLooks.Mod(x * 7 + worldY * 13, 11) == 0;
+            canvas.Set(x, y, speck ? TowerLooks.GroundSpeck : TowerLooks.Ground);
         }
     }
 
-    private void DrawPlatform(int screenRow, int floor, in TowerLooks.Zone zone)
+    private void PaintLabels(int top)
     {
-        var platform = tower.GetFloor(floor);
-        var color = Tower.IsMilestone(floor) && floor > 0 ? TowerLooks.MilestoneColor : zone.Platform;
-        for (var column = platform.Left; column < platform.Right; column++)
-            console.Draw(column, screenRow, TowerLooks.PlatformChar, color);
-    }
+        var highest = Tower.FloorAtOrBelow(top) + 1;
+        var lowest = Math.Max(1, Tower.FloorAtOrBelow(top + canvas.Height));
+        for (var floor = lowest; floor <= highest; floor++)
+        {
+            if (floor % Tower.LabelEvery != 0)
+                continue;
 
-    /// <summary>The number of <paramref name="floor"/>, on the row just under its platform, for labelled floors.</summary>
-    private void DrawLabel(int screenRow, int floor)
-    {
-        if (floor <= 0 || floor % Tower.LabelEvery != 0)
-            return;
-
-        var platform = tower.GetFloor(floor);
-        var x = ConsoleText.Centered(platform.Left, platform.Right, ConsoleText.DigitCount(floor));
-        ConsoleText.DrawNumber(console, x, screenRow, floor, TowerLooks.ZoneOf(floor).Platform);
+            var platform = tower.GetFloor(floor);
+            var x = platform.Left + (platform.Width - PixelFont.MeasureNumber(floor)) / 2;
+            var y = Tower.RowOf(floor) + LabelOffset - top;
+            PixelFont.DrawNumber(canvas, x, y, floor, TowerLooks.ZoneOf(floor).Platform);
+        }
     }
 }

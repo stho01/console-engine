@@ -5,7 +5,7 @@ namespace SkyStack.Tests;
 
 public class ScrollerTests
 {
-    private const float Top = -Layout.GroundScreenRow;
+    private const float Top = -Layout.GroundViewRow;
 
     [Test]
     public void Update_BelowTheStartFloor_DoesNotRise()
@@ -52,7 +52,7 @@ public class ScrollerTests
 
         scroller.Update(.01f, climberRow, highestFloor: 0);
 
-        Assert.That(scroller.Top, Is.EqualTo(climberRow - Scroller.CatchUpRows));
+        Assert.That(scroller.Top, Is.EqualTo(climberRow - Scroller.CatchUpPixels));
     }
 
     [Test]
@@ -67,7 +67,7 @@ public class ScrollerTests
     public void HasLost_HeadBelowTheBottomEdge_IsTrue()
     {
         var scroller = new Scroller(Top);
-        var belowScreen = Top + Layout.ScreenHeight + ClimbPhysics.BodyHeight;
+        var belowScreen = Top + Layout.ViewHeight + ClimbPhysics.BodyHeight;
 
         Assert.That(scroller.HasLost(belowScreen), Is.True);
     }

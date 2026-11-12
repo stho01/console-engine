@@ -17,15 +17,15 @@ public sealed class Tower(int seed)
     public const int MilestoneEvery = 50;
 
     /// <summary>Platform width near the ground, before the random spread.</summary>
-    public const int StartWidth = 16;
+    public const int StartWidth = 30;
 
-    /// <summary>Platforms lose one column every this many floors.</summary>
-    public const int NarrowEvery = 20;
+    /// <summary>Platforms lose one pixel every this many floors.</summary>
+    public const int NarrowEvery = 10;
 
-    /// <summary>Random spread of a platform's width: up to this many columns more or fewer.</summary>
-    public const int WidthSpread = 2;
+    /// <summary>Random spread of a platform's width: up to this many pixels more or fewer.</summary>
+    public const int WidthSpread = 4;
 
-    public const int MinWidth = 5;
+    public const int MinWidth = 12;
 
     /// <summary>Every this many floors the floor number is written on the platform.</summary>
     public const int LabelEvery = 10;
@@ -34,7 +34,7 @@ public sealed class Tower(int seed)
     //** public methods
     //**********************************************************
 
-    /// <summary>World row of a floor's platform.</summary>
+    /// <summary>World pixel row of a floor's platform.</summary>
     public static int RowOf(int floor) => -floor * Layout.FloorSpacing;
 
     /// <summary>The highest floor whose platform row is at or below <paramref name="row"/>.</summary>

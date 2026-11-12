@@ -5,8 +5,8 @@ using SkyStack.Components;
 namespace SkyStack.Climbing;
 
 /// <summary>
-/// Running, jumping, wall bounces and landing for a <see cref="Climber"/>. Horizontal numbers are in columns, vertical
-/// ones in rows (a row is twice as tall as a column is wide). The faster the climber runs, the higher it jumps
+/// Running, jumping, wall bounces and landing for a <see cref="Climber"/>. Numbers are in pixels and seconds
+/// (pixels are square). The faster the climber runs, the higher it jumps
 /// (<see cref="JumpSpeed"/>). Platforms are one-way: they only catch a falling climber.
 /// </summary>
 public static class ClimbPhysics
@@ -15,35 +15,35 @@ public static class ClimbPhysics
     //** fields
     //**********************************************************
 
-    public const int BodyWidth = 2;
-    public const int BodyHeight = 2;
+    public const int BodyWidth = 6;
+    public const int BodyHeight = 10;
 
     /// <summary>Returned by <see cref="Step"/> when the climber didn't land.</summary>
     public const int NoLanding = -1;
 
-    /// <summary>Rows/s².</summary>
-    public const float Gravity = 120f;
+    /// <summary>Pixels/s².</summary>
+    public const float Gravity = 480f;
 
-    /// <summary>Upward speed of a jump from standing still, rows/s. Enough to reach the next floor.</summary>
-    public const float BaseJumpSpeed = 34f;
+    /// <summary>Upward speed of a jump from standing still, pixels/s. Enough to reach the next floor.</summary>
+    public const float BaseJumpSpeed = 136f;
 
-    /// <summary>Extra jump speed (rows/s) per column/s of running speed.</summary>
-    public const float RunJumpBonus = .75f;
+    /// <summary>Extra jump speed per pixel/s of running speed.</summary>
+    public const float RunJumpBonus = 1.6f;
 
-    /// <summary>Columns/s.</summary>
-    public const float MaxRunSpeed = 60f;
+    /// <summary>Pixels/s.</summary>
+    public const float MaxRunSpeed = 114f;
 
-    /// <summary>Rows/s.</summary>
-    public const float MaxFallSpeed = 80f;
+    /// <summary>Pixels/s.</summary>
+    public const float MaxFallSpeed = 320f;
 
-    /// <summary>Columns/s² while a run key is held on a floor.</summary>
-    public const float GroundAcceleration = 90f;
+    /// <summary>Pixels/s² while a run key is held on a floor.</summary>
+    public const float GroundAcceleration = 170f;
 
-    /// <summary>Columns/s² while a run key is held in the air.</summary>
-    public const float AirAcceleration = 60f;
+    /// <summary>Pixels/s² while a run key is held in the air.</summary>
+    public const float AirAcceleration = 115f;
 
-    /// <summary>Columns/s² of slowing down on a floor without a run key.</summary>
-    public const float GroundFriction = 120f;
+    /// <summary>Pixels/s² of slowing down on a floor without a run key.</summary>
+    public const float GroundFriction = 230f;
 
     /// <summary>Share of the running speed kept when bouncing off a wall.</summary>
     public const float WallBounce = .9f;
@@ -103,6 +103,7 @@ public static class ClimbPhysics
     {
         if (climber.RunDirection != 0f)
         {
+            climber.Facing = climber.RunDirection < 0f ? -1 : 1;
             var acceleration = climber.IsGrounded ? GroundAcceleration : AirAcceleration;
             velocity.X += climber.RunDirection * acceleration * deltaSeconds;
         }

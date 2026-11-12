@@ -50,7 +50,9 @@ public sealed class RunStats
     /// <summary>Floors of the biggest combo that paid out this run.</summary>
     public int BestComboFloors { get; private set; }
 
-    /// <summary>Floors and points of the last combo that paid out, shown while <see cref="ComboResultSecondsLeft"/>.</summary>
+    /// <summary>
+    /// Floors and points of the last combo that paid out, shown while <see cref="ComboResultSecondsLeft"/>.
+    /// </summary>
     public int LastComboFloors { get; private set; }
 
     public int LastComboPoints { get; private set; }
