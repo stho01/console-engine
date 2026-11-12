@@ -6,7 +6,7 @@ namespace Launcher;
 /// <summary>
 /// Finds each game's exe in its own build output. Games are built next to the launcher with the same configuration
 /// and target framework, so a game's exe is <c>Examples/&lt;Project&gt;/&lt;output path&gt;/&lt;Project&gt;[.exe]</c> (no extension off Windows),
-/// where the output path (e.g. <c>bin/Debug/net10.0</c>) is the launcher's own.
+/// where the output path (e.g. <c>bin/Debug/net11.0</c>) is the launcher's own.
 /// </summary>
 internal sealed class GameLocator
 {

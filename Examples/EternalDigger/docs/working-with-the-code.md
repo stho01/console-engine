@@ -15,7 +15,7 @@ dotnet test Examples/EternalDigger.Tests
 ```
 
 ```bash
-cd Examples/EternalDigger/bin/Debug/net10.0 && ./EternalDigger 42
+cd Examples/EternalDigger/bin/Debug/net11.0 && ./EternalDigger 42
 ```
 
 - Run from the repository root. The repo builds with `TreatWarningsAsErrors`, so a warning fails the build.

@@ -5,7 +5,7 @@ for code and commits.
 
 ## What this is
 
-**console-engine** is a small **game engine** that renders into the Windows console, written in C# / .NET 10. It ships as
+**console-engine** is a small **game engine** that renders into the Windows console, written in C# / .NET 11. It ships as
 the `ConsoleEngine` library (NuGet package, `PackageVersion` 0.2.0) with example games under `Examples/`.
 
 The two priorities for every change:
@@ -56,7 +56,7 @@ Every name in `docs/agent/` is grep-able. Search for the identifier you are inte
 | `ConsoleEngine.Tests` | `ConsoleEngine.Tests/` | NUnit 5, hand-written fakes in `Fakes/` | ConsoleEngine |
 | `ConsoleEngine.Benchmarks` | `ConsoleEngine.Benchmarks/` | Exe: BenchmarkDotNet 0.15.8 | ConsoleEngine |
 
-All projects: `net10.0`, `LangVersion` 14, `TreatWarningsAsErrors` = `True`. Solution: `ConsoleEngine.sln`.
+All projects: `net11.0`, `LangVersion` 15, `TreatWarningsAsErrors` = `True`. Solution: `ConsoleEngine.sln`.
 
 ```bash
 dotnet build
@@ -92,7 +92,7 @@ ReportGenerator is a local tool pinned in `dotnet-tools.json`. There is no cover
 
 Games need a real Windows console, so an agent cannot run them headless. TerraForM loads `Assets/Maps/*.txt` and the
 logger exe by **relative path**, so run a game's exe from its output folder (e.g.
-`Examples/TerraForM/bin/Debug/net10.0/`). CI runs restore → build → test with coverage on `windows-latest` for PRs to
+`Examples/TerraForM/bin/Debug/net11.0/`). CI runs restore → build → test with coverage on `windows-latest` for PRs to
 `main`. The coverage summary is in the job summary, and the HTML report is the `coverage-report` artifact.
 
 To play the ECS games, start the launcher. It builds them first and starts each one from its output folder: on Windows in its
