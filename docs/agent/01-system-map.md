@@ -14,6 +14,7 @@ Nothing is hosted and nothing is exposed to the internet. Every unit is a local 
 | `Microsoft.Xna.Framework` (`Libs/Microsoft.Xna.Framework`) | Library | Math types (`Vector2`, `Point`, `Rectangle`, `Matrix`…) copied from MonoGame |
 | `TerraForM` (`Examples/TerraForM`) | Exe | Mars-rover puzzle game: scenes, maps in `Assets/Maps/*.txt`, scoring |
 | `TerraForM.Tests` | NUnit test project | One test: `Rover_PowerIsDepletedWhenRemainingPowerIsZeroOrLess` |
+| `TerraForM.Ecs.Tests` (`Examples/TerraForM.Ecs.Tests`) | NUnit test project | `MapLoaderTests`: map parsing through `AssetManager` + `MemoryAssetSource`, and every shipped map loaded from `Assets/` next to the test assembly |
 | `ConsoleEngine.Tests` (`ConsoleEngine.Tests/`) | NUnit test project | Engine tests: `RenderConsole`, `Sprite`, `SceneManager`, `GameTime.Interval`, `Deque<T>`, `ArrayExtensions`, ECS (`Ecs/`: `World`, `Query`, `CommandBuffer`, `SystemGroup`, `EcsScene`, `FixedTimestep`, `Archetype`, `ComponentMask`, `Systems/`). Uses `Fakes/`, no Win32 |
 | `ConsoleEngine.Physics.Tests` (`ConsoleEngine.Physics.Tests/`) | NUnit test project | Physics tests: `Collision`, `SpatialHashGrid`, `PhysicsSystem` (rules, events), `PhysicsSolverTests` (contact response over whole steps), `TileGridTests`, `PhysicsQueryTests`, `CharacterMoverTests`, `RotationTests`, `TileContactTests`, `SleepTests`, `InterpolationTests`. `InternalsVisibleTo` from `ConsoleEngine.Physics` |
 | `ConsoleEngine.Benchmarks` (`ConsoleEngine.Benchmarks/`) | **Exe**, BenchmarkDotNet 0.15.8 | `Baseline/OopUpdateBenchmarks` (list of classes vs. struct arrays), `Ecs/WorldBenchmarks`, `Ecs/QueryBenchmarks`, `Physics/BruteForceCollisionBenchmarks` (all-pairs circle test, the baseline) and `Physics/PhysicsStepBenchmarks` (one whole `PhysicsSystem` step on the same bodies), `Physics/PhysicsQueryBenchmarks` (1 000 raycasts / box casts). Built by CI, never run by CI |
@@ -48,7 +49,7 @@ implementation exists; macOS support is GitHub issue 7, open.
 | Keyboard → game | in | `GetAsyncKeyState(i)` polled for all 256 virtual keys every frame | `InputHandler.Update` |
 | Game → logger | out, TCP | Game **listens** on `Dns.GetHostEntry("localhost").AddressList[0]`, port **11000** (hard-coded). No auth. Messages are UTF-8 and end with `'\0'` | `Log` static ctor, `Log.Start` |
 | Game → logger process | spawn | `Process.Start` of `"ConsoleEngine.Logger.exe"` with `UseShellExecute = true` (relative file name) | `Log.Start` |
-| TerraForM → filesystem | in | `File.ReadAllLines("Assets/Maps/{name}.txt")`, a path **relative to the working directory** | `GameScene.MapAssetPath`, `WorldLoader.LoadWorld` |
+| TerraForM, TerraForM.Ecs → filesystem | in | `<exe folder>/Assets/Maps/{name}.txt` through `GameBase.Assets` (`DirectoryAssetSource`, rooted at `AppContext.BaseDirectory`), independent of the working directory | `GameScene.MapFolder`, `Assets.Load<string[]>` + `WorldLoader.LoadWorld` (TerraForM), `Assets.Load<Map>` + `MapLoader` (TerraForM.Ecs) |
 
 No async machinery exists beyond this: no queues and no scheduled jobs. "Timers" are `GameTime.SetInterval`
 callbacks that run on the game loop thread ([03 § Intervals](03-rules.md#intervals)).
@@ -83,7 +84,7 @@ There is no dev/staging/prod split. What changes behaviour:
 |---|---|---|
 | OS | Windows / other | Other OS: fails at first P/Invoke (`ConsoleHandler` ctor calls `GetStdHandle`). See [P1](05-triage.md#p1) |
 | Console host **[external]** | classic `conhost` / Windows Terminal | The resize and font calls (`SetConsoleWindowInfo`, `SetConsoleScreenBufferSize`, `SetCurrentConsoleFontEx`) target the classic console. Under Windows Terminal (the default host on Windows 11) they are generally ignored, so the size and font are wrong. Return values are not checked, so nothing reports this. See [P2](05-triage.md#p2) |
-| Working directory | game's output folder / elsewhere | TerraForM maps and the logger exe are found by relative path. See [P1](05-triage.md#p1) |
+| Working directory | game's output folder / elsewhere | The logger exe is found by relative path. Assets (TerraForM maps) are not: they are read next to the exe. See [P1](05-triage.md#p1) |
 | Machine speed (FPS) | any | The loop is uncapped (no sleep in `GameBase.Start`), and TerraForM physics/power depend on FPS. See [03 § Frame-rate dependence](03-rules.md#fps) |
 | Build config | `Debug` / `Release` | No behavioural difference in code. No `#if DEBUG` exists |
 

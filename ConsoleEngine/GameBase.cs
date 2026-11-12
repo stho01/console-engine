@@ -1,5 +1,6 @@
 ﻿using System;
 using System.Threading;
+using ConsoleEngine.Assets;
 using ConsoleEngine.Abstractions.Rendering;
 using ConsoleEngine.Infrastructure;
 using ConsoleEngine.Infrastructure.Inputs;
@@ -35,7 +36,8 @@ public abstract class GameBase
     {
         _console = new RenderConsole(Platform.CreateConsoleHandler(width, height, fontInfo));
         Name = "Game";
-        Scenes = new SceneManager(this);
+        Assets = new AssetManager(DirectoryAssetSource.CreateDefault());
+        Scenes = new SceneManager(this, Assets);
     }
               
     //**********************************************************
@@ -49,6 +51,12 @@ public abstract class GameBase
     public bool ClearScreenOnEachFrame { get; set; } = true;
     public SceneManager Scenes { get; }
     public Scene Scene => Scenes.Current;
+
+    /// <summary>
+    /// Loads assets from <c>Assets/</c> next to the exe, whatever folder the game was started from. Register a game's
+    /// own formats with <see cref="AssetManager.RegisterLoader{T}"/> in <see cref="OnInitialize"/>.
+    /// </summary>
+    public AssetManager Assets { get; }
 
     //**********************************************************
     //** abstract methods:

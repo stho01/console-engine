@@ -3,6 +3,7 @@ using System.Collections.Generic;
 using System.Linq;
 using ConsoleEngine.Abstractions.Inputs;
 using ConsoleEngine.Infrastructure.Inputs;
+using ConsoleEngine.Infrastructure.Rendering;
 using TerraForM.Assets;
 using TerraForM.Assets.Texts;
 using TerraForM.Commands;
@@ -31,6 +32,7 @@ public class Hud(GameScene scene)
     //**********************************************************
         
     private readonly int _height = scene.Game.Console.Height - Top;
+    private readonly Sprite _gameOver = scene.Assets.Load<Sprite>(SpritePaths.GameOver);
     private List<Command> _commandSequence { get; set; } = new();
     private bool _sequenceReadyToShip { get; set; }
     public TerraformGame Game => scene.Game;
@@ -116,9 +118,9 @@ public class Hud(GameScene scene)
        
     private void DrawGameOver()
         => scene.Console.Draw(
-            x: (int)scene.Console.ScreenCenter.X - (Sprites.GameOver.Width / 2),
-            y: (int)scene.Console.ScreenCenter.Y - Sprites.GameOver.Height / 2,
-            sprite: Sprites.GameOver
+            x: (int)scene.Console.ScreenCenter.X - (_gameOver.Width / 2),
+            y: (int)scene.Console.ScreenCenter.Y - _gameOver.Height / 2,
+            sprite: _gameOver
         );
 
     private void DrawMoveSequence()

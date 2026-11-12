@@ -16,9 +16,11 @@
 
     <!-- Shared with Examples/TerraForM instead of copied: the same screens, texts and maps. -->
     <ItemGroup>
-      <Compile Include="..\TerraForM\Assets\Sprites.cs" Link="Assets\Sprites.cs" />
+      <Compile Include="..\TerraForM\Assets\SpritePaths.cs" Link="Assets\SpritePaths.cs" />
       <Compile Include="..\TerraForM\Assets\Texts\HudTexts.cs" Link="Assets\Texts\HudTexts.cs" />
       <None Include="..\TerraForM\Assets\Maps\*.txt" Link="Assets\Maps\%(Filename)%(Extension)"
+            CopyToOutputDirectory="PreserveNewest" />
+      <None Include="..\TerraForM\Assets\Sprites\*.sprite" Link="Assets\Sprites\%(Filename)%(Extension)"
             CopyToOutputDirectory="PreserveNewest" />
     </ItemGroup>
 

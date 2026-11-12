@@ -20,7 +20,8 @@ public sealed class GameScene(string mapName) : EcsScene<TerraformEcsGame>
     //** fields
     //**********************************************************
 
-    private const string MapAssetPath = "Assets/Maps";
+    /// <summary>Folder of the map files, under <c>Assets/</c> next to the exe.</summary>
+    private const string MapFolder = "Maps";
     private readonly string _mapName = mapName ?? throw new ArgumentNullException(nameof(mapName));
 
     //**********************************************************
@@ -29,7 +30,7 @@ public sealed class GameScene(string mapName) : EcsScene<TerraformEcsGame>
 
     protected override void OnCreate()
     {
-        var map = MapLoader.Load($"{MapAssetPath}/{_mapName}.txt");
+        var map = Assets.Load<Map>($"{MapFolder}/{_mapName}.txt");
         var level = new Level(_mapName, map.Name);
 
         CreateTiles(map.Tiles);

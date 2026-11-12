@@ -2,6 +2,7 @@ using System;
 using System.Text;
 using ConsoleEngine.Abstractions.Inputs;
 using ConsoleEngine.Infrastructure.Inputs;
+using ConsoleEngine.Infrastructure.Rendering;
 using ConsoleEngine.Infrastructure.Scenery;
 using TerraForM.Assets;
 
@@ -20,12 +21,17 @@ public class InputNameScene : Scene<TerraformEcsGame>
     private const int NameRow = 32;
 
     private readonly StringBuilder _name = new();
+    private Sprite _screen;
 
     //**********************************************************
     //** lifecycle
     //**********************************************************
 
-    public override void OnLoad() => _name.Clear();
+    public override void OnLoad()
+    {
+        _name.Clear();
+        _screen = Assets.Load<Sprite>(SpritePaths.InputName);
+    }
 
     public override void OnUnload() => _name.Clear();
 
@@ -47,7 +53,7 @@ public class InputNameScene : Scene<TerraformEcsGame>
 
     public override void OnRender()
     {
-        var sprite = Sprites.InputName;
+        var sprite = _screen;
         Game.Console.Draw(3, 5, sprite);
 
         var x = sprite.Width / 2 - _name.Length / 2;

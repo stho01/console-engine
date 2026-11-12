@@ -16,7 +16,13 @@ Support/user words are **[inferred]**. The team may also use Norwegian terms. Ad
 | holding a key | Key is down | `KeyState.Held` |
 | screen / page / menu | A scene on the scene stack | `Scene`, `SceneManager` (`Push`, `Pop`, `Set`) |
 | timer | Repeating callback | `GameTime.SetInterval`, `GameTime.Interval` |
-| level / map / world | A TerraForM map | `World`, `WorldLoader`, `Assets/Maps/mapN.txt`, `GameScene`. Not the same as the ECS `ConsoleEngine.Ecs.World` |
+| level / map / world | A TerraForM map | `World`, `WorldLoader`, `Assets/Maps/mapN.txt`, `GameScene`; in TerraForM.Ecs `Map`, `MapLoader`. Not the same as the ECS `ConsoleEngine.Ecs.World` |
+| asset / content / data file | A file a game reads at load time (map, text), loaded by path and type and cached | `GameBase.Assets`, `AssetManager.Load<T>`, `AssetPath` |
+| asset loader / importer | Turns one file format into an object; games add their own | `IAssetLoader<T>`, `AssetManager.RegisterLoader`, `TextLoader`, `LinesLoader`, `SpriteLoader`, `JsonLoader<T>` |
+| sprite file / ASCII art file | A picture as text with an optional colour header | `*.sprite`, `SpriteLoader`, `Sprite`; TerraForM `SpritePaths` |
+| asset source / asset folder | Where asset bytes come from | `IAssetSource`, `DirectoryAssetSource` (`<exe folder>/Assets`), `MemoryAssetSource` |
+| asset scope / unloading assets | An owner of loaded assets; disposing it releases what nobody else owns | `AssetScope`, `Scene.Assets`, `AssetManager.CreateScope`, `Dispose` |
+| asset handle / asset id | A small `unmanaged` id for a loaded asset, for ECS components | `AssetHandle<T>` (`Index`, `Generation`), `AssetManager.Get`, `AssetStore<T>`, `GetStore<T>` |
 | ECS / entity | A game object as an id with components attached | `ConsoleEngine.Ecs.Entity` (`Id`, `Version`), `World` |
 | component | A plain `unmanaged` data struct on an entity | `World.Add<T>`, `Get<T>`, `ComponentType<T>` |
 | tag | A component with no fields: only marks an entity | `ComponentType<T>.IsTag` |
@@ -64,7 +70,7 @@ Support/user words are **[inferred]**. The team may also use Norwegian terms. Ad
 | start | Spawn tile | `StartingPoint` (map char `S`) |
 | damage | Collision counter | `Rover.DamageTaken` |
 | score / points | Running score | `TerraformGame.Score` |
-| game over | HUD state, not a stop | `GameScene.GameOver`, `Sprites.GameOver` |
+| game over | HUD state, not a stop | `GameScene.GameOver`, `game-over.sprite` (`SpritePaths.GameOver`) |
 | restart | Reload same map | `R` → `Scenes.Set(new GameScene(_worldName))` |
 | player name | Typed on first screen (PII) | `TerraformGame.Playername`, `InputNameScene` |
 | debug mode | Developer overlay | `PlatformerGame.IsDebugMode` (F1), `TerraformGame.IsDebugMode` (unreachable) |

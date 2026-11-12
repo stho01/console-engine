@@ -14,7 +14,8 @@ The only other persistent inputs are the TerraForM map files ([§ Map file forma
 | Window flags | `RenderConsole.Resizeable` (default `false`), `HideCursor` (set `true` in ctor) | Both init-only | `Resizeable = false` removes Maximize/Size from the system menu |
 | Keyboard | `InputHandler._keyStates[256]` (`KeyState`) | `Pressed`, `Released`, `Held`, `Index` per virtual key code | Accessed via singleton `Input.Instance` ([03 § Keys](03-rules.md#keys)) |
 | Clock | `GameTime` (static) | `Delta` (time since last frame), `Fps` (= `1 / Delta`, one frame, not averaged), `_intervals` | Static, so shared by everything in the process |
-| Scenes | `SceneManager._scenes` (`Stack<Scene>`), `_unloadScenes` (`Queue<Scene>`) | `Count`, `Current` (top of stack), `PreviousScene` | `Scene.IsPaused` per scene ([03 § Scenes](03-rules.md#scenes)) |
+| Scenes | `SceneManager._scenes` (`Stack<Scene>`), `_unloadScenes` (`Queue<Scene>`) | `Count`, `Current` (top of stack), `PreviousScene` | `Scene.IsPaused` per scene ([03 § Scenes](03-rules.md#scenes)). `Scene._assets` (`AssetScope`, created on first `Scene.Assets`, disposed and nulled in `Unload`) |
+| Assets | `GameBase.Assets` (`AssetManager`) | `_loaders` (by type + extension), `_cache` (`AssetEntry` by path + type: asset, `RefCount`, `Dependencies`, store slot + generation), `_stores` (one `AssetStore<T>` per asset type, indexed by process-wide `AssetTypeId<T>`), `_root` (the manager's own scope), `_loading` (load chain, for cycle detection) | Each `AssetScope` has `_owned` (entries it counts once). An entry leaves the cache when `RefCount` reaches 0 or on `Clear()`. Store slots are reused with the next generation ([03 § Assets](03-rules.md#assets)) |
 | ECS world | `ConsoleEngine.Ecs.World` (one per `new World()`, owned by the game code) | `_records` (`EntityRecord`: `Version`, `ArchetypeIndex`, `ChunkIndex`, `Row` per entity id), `_freeIds`, `_archetypes`, `_archetypesByMask`, `_chunkPool`, `_iterationDepth` (open query loops), `Count` | Component data is in **native memory** (16 KiB `Chunk`s per `Archetype`, from `NativeMemory.AlignedAlloc`), not on the GC heap. Freed only by `World.Dispose()`: there is no finalizer, so an undisposed world leaks. A record whose `Version` reached `int.MaxValue` is retired (`RetiredVersion` = −1) and its id never reused. Component type ids are process-wide (`ComponentRegistry`, max 256), assigned the first time any API names the type |
 | ECS scene | `EcsScene<TGame>` | `World`, `FixedSimulation`, `Simulation`, `Presentation` (`SystemGroup`s, each with its own `Commands`), `FixedTimestep` (`_accumulator`: time carried over to the next fixed step), `Camera` (`ConsoleEngine.Ecs.Rendering.Camera.Position`) | World created in `OnLoad`, disposed in `OnUnload` |
 | Physics | `PhysicsSystem` (one per scene that adds it) | `_proxies` (`BodyProxy`: bounds, filter), `_shapes` (`BodyShape`: position, rotation, shape), `_states` (`BodyState`: velocity, angular velocity, `DeltaPosition`, `DeltaRotation`, 32 bytes), `_sims` (`BodySim`: inverse mass and inertia, damping, gravity scale, sleep, friction, restitution), `_entities`, `_contacts` (`ContactConstraint`, up to 2 `ContactPoint`s), all one entry per collider or contact and rebuilt every step (one extra body for the tile grid); `_restingPairs`, `_islandParents`, `_islandSleepTimes` (sleep bookkeeping); `Polygons` (`PolygonLibrary`, set up by the game); `SpatialHashGrid` (`_entries`, `_bucketStarts`, rebuilt every step); `PairCache` (`_current`/`_previous` hash tables of contact pairs and touching sensor pairs with their `Touching` flag and solver impulses, swapped every step); the four event lists; `TileGrid` (optional, `bool` per tile, set by the game); query state (`_queryStateIsCurrent`, `_queryStamps`): the first query after a step moves the proxies to the end-of-step positions and rebuilds the grid | Managed arrays that only grow (doubling). Event lists are replaced every step. In the `World`: `RigidBody` (with `IsSleeping`, `SleepTime`), `Collider`, `AngularVelocity`, `Interpolation` (previous position and angle), and the engine's `Rotation` and `RenderOffset` |
@@ -36,7 +37,7 @@ The only other persistent inputs are the TerraForM map files ([§ Map file forma
 | `PlantSpot` | `HasBeenPlanted` | Each spot can be planted once | New level / restart |
 | `BonusPoint` | `HasBeenConsumed` | Each bonus can be collected once | New level / restart |
 | `Hud` | `_commandSequence`, `_sequenceReadyToShip` | Commands typed but not yet sent with SPACE | Cleared by `GetCommands()` on SPACE |
-| `Sprites.Story` (static) | sprite pixels | Player name is stamped into it in place by `MenuScene.OnLoad` | Never. It mutates a shared static sprite |
+| `MenuScene._story` | a `Clone()` of `Assets/Sprites/story.sprite` | Player name is stamped into the copy by `MenuScene.OnLoad`; the cached sprite stays clean | Each `MenuScene` load takes a new copy |
 
 ## EternalDigger state
 
@@ -94,7 +95,10 @@ the lamp direction (rebuilt from facing), riding (a rider is saved standing at t
 <a id="map-format"></a>
 ## Map file format (`Examples/TerraForM/Assets/Maps/mapN.txt`)
 
-Parsed by `WorldLoader.Parse`. Copied to output by `TerraForM.csproj` (`CopyToOutputDirectory=Always`, map0–map4).
+Read as lines by `GameBase.Assets` (`LinesLoader`, cached) and parsed by `WorldLoader.Parse` into a new `World` per
+level; TerraForM.Ecs parses the same files with `MapLoader` (`IAssetLoader<Map>`, the `Map` is cached). Copied to
+`Assets/Maps/` in the output by `TerraForM.csproj` (`<None Update="Assets\**" CopyToOutputDirectory="PreserveNewest">`,
+every data file under `Assets/`) and by `TerraForM.Ecs.csproj` (linked `*.txt`).
 
 **Header lines** start with `!`. Each line is split on `:`, the key is lower-cased and trimmed, and the value (only
 the part before any second `:`) is trimmed. Unknown keys are ignored.
@@ -131,8 +135,8 @@ Shipped maps (rows are 94 chars, header width 95, 17 rows):
 | `map3.txt` | `Persepolis Rising` (same name as map2) | 10000 | 30 | Yes |
 | `map4.txt` | `Leviathan Falls` | 4000 | 130 | **Never** ([03 § Map rotation](03-rules.md#map-rotation)) |
 
-`Assets/Story/story-EN.txt` and `story-NO.txt` exist but are **not referenced by code and not copied to output**. The
-story shown in game is hard-coded English in `Sprites.Story`.
+`Assets/Story/story-EN.txt` and `story-NO.txt` are copied to output (TerraForM's `Assets\**` glob) but **not referenced by code**. The
+story shown in game is the English text in `Assets/Sprites/story.sprite` (`SpritePaths.Story`).
 
 ## Retention
 

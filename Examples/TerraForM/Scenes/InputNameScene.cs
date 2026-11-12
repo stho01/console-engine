@@ -3,6 +3,7 @@ using System.Linq;
 using System.Text;
 using ConsoleEngine.Abstractions.Inputs;
 using ConsoleEngine.Infrastructure.Inputs;
+using ConsoleEngine.Infrastructure.Rendering;
 using ConsoleEngine.Infrastructure.Scenery;
 using TerraForM.Assets;
 
@@ -11,10 +12,12 @@ namespace TerraForM.Scenes;
 public class InputNameScene : Scene<TerraformGame>
 {
     private StringBuilder _nameBuilder;
-        
+    private Sprite _screen;
+
     public override void OnLoad()
     {
         _nameBuilder = new();
+        _screen = Assets.Load<Sprite>(SpritePaths.InputName);
     }
 
     public override void OnUnload()
@@ -41,7 +44,7 @@ public class InputNameScene : Scene<TerraformGame>
 
     public override void OnRender()
     {
-        var sprite = Sprites.InputName;
+        var sprite = _screen;
         Game.Console.Draw(3, 5, sprite);
             
         if (_nameBuilder.Length > 0)

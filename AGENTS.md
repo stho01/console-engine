@@ -32,7 +32,7 @@ Platform: **Windows only.** Rendering and input go through Win32 P/Invoke (`kern
 | Vector/matrix math | `Libs/Microsoft.Xna.Framework/` (copied from MonoGame, change only with good reason) |
 | ECS (entities, components, archetypes, chunks) | `ConsoleEngine/Ecs/`, design and phases in [`docs/design/ecs-plan.md`](docs/design/ecs-plan.md) |
 | 2D physics (bodies, circles/boxes/polygons, rotation, broadphase, Soft Step contact solver, contact/sensor events, tile grid, sleeping, interpolation, raycasts and box casts, `CharacterMover.MoveAndSlide`) | `ConsoleEngine.Physics/` (own assembly and NuGet package, optional), rules in [`docs/agent/03-rules.md` § Physics](docs/agent/03-rules.md#physics), design and phases in [`docs/design/physics-plan.md`](docs/design/physics-plan.md). Examples: `Examples/PhysicsShowcase` (every feature), `Examples/PhysicsSandbox` (solver), `Examples/Asteroids.Ecs` (sensors, layers), `Examples/Platformer.Ecs` (tile grid, character controller) |
-| Asset loading (planned, not built yet: `AssetManager`, `IAssetLoader<T>`, custom loaders for maps etc.) | Plan, phases and decision log in [`docs/design/asset-loader-plan.md`](docs/design/asset-loader-plan.md). Today each game reads its own files (`Examples/TerraForM.Ecs/MapLoader.cs`) |
+| Asset loading (`GameBase.Assets`, `AssetManager`, `IAssetLoader<T>` for a game's own formats, `IAssetSource`) | `ConsoleEngine/Assets/`, rules in [`docs/agent/03-rules.md` § Assets](docs/agent/03-rules.md#assets), plan, phases and decision log in [`docs/design/asset-loader-plan.md`](docs/design/asset-loader-plan.md). Phases 0–3 are built (built-in loaders for text, lines, `.sprite`, JSON; `Scene.Assets` scopes released on unload; `AssetHandle<T>` for ECS components). A game's own loader: `Examples/TerraForM.Ecs/MapLoader.cs` (`IAssetLoader<Map>`, registered in `TerraformEcsGame.OnInitialize`, tested in `Examples/TerraForM.Ecs.Tests`) |
 | Performance measurements | `ConsoleEngine.Benchmarks/` (BenchmarkDotNet) |
 | How to use the engine | `Examples/Snake` (smallest), `Examples/TerraForM` (scenes, assets, tests), `Examples/<Game>.Ecs` (ECS port of each game: components, systems, queries, `EcsScene`; compare with `Examples/<Game>`. `Snake.Ecs` is the smallest, `TerraForM.Ecs` the fullest), `Examples/Swarm` (ECS at scale, system ordering attributes), `Examples/PhysicsSandbox` (physics: bodies, colliders, fixed step, kinematic platform), `Examples/PhysicsShowcase` (every physics feature), `Examples/EternalDigger` (a full original ECS game: endless grid world, particle effects, lighting; start at [`Examples/EternalDigger/README.md`](Examples/EternalDigger/README.md), design contract in [`docs/design/eternal-digger.md`](docs/design/eternal-digger.md)) |
 | Build/test pipeline | `.github/workflows/build-and-test.yml` |
@@ -54,6 +54,7 @@ Every name in `docs/agent/` is grep-able. Search for the identifier you are inte
 | `TerraForM`, `Snake`, `Asteroids`, `Platformer`, `ConsoleGame`, their ports `<Game>.Ecs`, `Swarm` (ECS stress test), `PhysicsSandbox` and `PhysicsShowcase` (physics demos) and `EternalDigger` (ECS game) | `Examples/*` | Exe | ConsoleEngine |
 | `Launcher` | `Examples/Launcher/` | Exe: text menu that starts the ECS games (plain `System.Console`, no engine) | ECS games (build order only) |
 | `TerraForM.Tests` | `Examples/TerraForM.Tests/` | NUnit 5 + NSubstitute | TerraForM |
+| `TerraForM.Ecs.Tests` | `Examples/TerraForM.Ecs.Tests/` | NUnit 5 | TerraForM.Ecs |
 | `Launcher.Tests` | `Examples/Launcher.Tests/` | NUnit 5 | Launcher |
 | `EternalDigger.Tests` | `Examples/EternalDigger.Tests/` | NUnit 5, hand-written `Fakes/FakeConsoleHandler` | EternalDigger |
 | `ConsoleEngine.Tests` | `ConsoleEngine.Tests/` | NUnit 5, hand-written fakes in `Fakes/` | ConsoleEngine |
@@ -86,18 +87,21 @@ dotnet reportgenerator -reports:"TestResults/**/coverage.cobertura.xml" -targetd
 
 Benchmarks (always `Release`; `--job short` for a quick run; `--affinity 1` pins the process to one core, so runs on a
 hybrid CPU are comparable (without it results can vary up to 1.8×); add `--counters CacheMisses+BranchMispredictions`
-for hardware counters, which needs an elevated prompt on Windows):
+for hardware counters, which needs an elevated prompt on Windows). BenchmarkDotNet 0.15.8 doesn't recognise the .NET 11
+runtime and stops with `NotImplementedException: GetRuntimeVersion not implemented for NotRecognized`; add
+`--inProcess` until it does:
 
 ```bash
-dotnet run -c Release --project ConsoleEngine.Benchmarks -- --filter "*"
+dotnet run -c Release --project ConsoleEngine.Benchmarks -- --filter "*" --inProcess
 ```
 
 `coverage.runsettings` excludes `Microsoft.Xna.Framework`, `ConsoleEngine.Windows`, `ConsoleEngine.Logger` and `Program.cs`.
 ReportGenerator is a local tool pinned in `dotnet-tools.json`. There is no coverage threshold yet.
 
-Games need a real Windows console, so an agent cannot run them headless. TerraForM loads `Assets/Maps/*.txt` and the
-logger exe by **relative path**, so run a game's exe from its output folder (e.g.
-`Examples/TerraForM/bin/Debug/net11.0/`). CI runs restore → build → test with coverage on `windows-latest` for PRs to
+Games need a real Windows console, so an agent cannot run them headless. Assets (TerraForM's `Assets/Maps/*.txt`) are
+read through `GameBase.Assets` from `Assets/` next to the exe, whatever the working directory. The logger exe is still
+started by **relative path**, so run a game with `EnableLogger` from its output folder (e.g.
+`Examples/Asteroids/bin/Debug/net11.0/`). CI runs restore → build → test with coverage on `windows-latest` for PRs to
 `main`. The coverage summary is in the job summary, and the HTML report is the `coverage-report` artifact.
 
 To play the ECS games, start the launcher. It builds them first and starts each one from its output folder: on Windows in its
@@ -121,7 +125,12 @@ docs/agent/                       support/triage docs for agents (01–09 + READ
 docs/design/                      design plans (ecs-plan.md, physics-plan.md, eternal-digger.md,
                                   asset-loader-plan.md)
 ConsoleEngine/                    the engine
-  GameBase.cs                       abstract game: Initialize/Start/Stop, frame loop
+  GameBase.cs                       abstract game: Initialize/Start/Stop, frame loop, Assets
+  Assets/                           AssetManager (loader registry + refcounted cache), AssetScope (owner, one per
+                                    Scene), AssetHandle<T> + AssetStore<T> (frame-loop lookup), AssetEntry, AssetPath,
+                                    IAssetSource, DirectoryAssetSource, MemoryAssetSource, IAssetLoader<T>, AssetLoadContext,
+                                    AssetLoadException (+ NotFound, LoaderNotFound); Loaders/: TextLoader, LinesLoader,
+                                    SpriteLoader (.sprite), JsonLoader<T>
   Collections/Deque.cs              double-ended queue (used by Snake)
   Ecs/                              World (+ World.Create.cs overloads), Entity, Archetype, Chunk, ChunkPool,
                                     ComponentMask, ComponentType<T>/ComponentRegistry, EcsThrowHelper,
@@ -152,7 +161,8 @@ ConsoleEngine.Physics.Tests/      physics tests (Collision, SpatialHashGrid, Phy
                                   InterpolationTests)
 ConsoleEngine.Tests/              engine unit tests (mirrors ConsoleEngine/ folders), Fakes/ (console handler, scene)
 ConsoleEngine.Benchmarks/         BenchmarkDotNet: Baseline/ (OOP vs. struct arrays), Ecs/ (World, Query),
-                                  Physics/ (brute-force baseline, whole PhysicsSystem step, queries)
+                                  Physics/ (brute-force baseline, whole PhysicsSystem step, queries), Assets/ (handle
+                                  and store lookup vs. SpriteLibrary, cached Load)
 ConsoleEngine.Abstractions/
   Inputs/  IInputHandler, Key, KeyState
   Rendering/  IConsoleHandler, Pixel, FontInfo
@@ -187,8 +197,11 @@ Examples/
                                   BagWeight, SaveFile, SaveSystem, TitleMenu, InventorySystem, DeepCamp, Gas, Darkness and Progress tests, Fakes/ (console handler)
   TerraForM/Scenes/               GameScene, MenuScene, InputNameScene
   TerraForM/Commands/             Command, Move, Plant, Wait
-  TerraForM/Assets/               Maps/*.txt, Sprites.cs, Texts/HudTexts.cs, Story/ (unused)
+  TerraForM/Assets/               Maps/*.txt, Sprites/*.sprite + SpritePaths.cs (paths), Texts/HudTexts.cs,
+                                  Story/ (unused). Platformer.Ecs/Assets/: Maps/level.txt, Sprites/*.sprite
   TerraForM.Tests/                RoverTests.cs
+  TerraForM.Ecs.Tests/            MapLoaderTests, SpritePathsTests (MemoryAssetSource, and the shipped maps and
+                                  sprites from the exe folder)
 .github/workflows/                build-and-test.yml
 ```
 
@@ -220,7 +233,7 @@ inlinable, and run `ConsoleEngine.Benchmarks` before and after a change.
 | Do | Don't |
 |---|---|
 | Preallocate and reuse buffers (`RenderConsole._pixels`, `ConsoleHandler._chars`) | Allocate per frame: `new` of classes, `List<T>`, arrays |
-| Build sprites once as `static readonly` (see `Rover`, `Rock`) | Build sprites or strings inside `OnRender` |
+| Build sprites once: `static readonly` (see `Rover`, `Rock`) or `Assets.Load<Sprite>` in `OnLoad`/`OnCreate`/a ctor, kept in a field | Build or load sprites or strings inside `OnRender`/`OnUpdate` |
 | Use structs for small data (`Pixel`, `KeyState`, `Coord`) and `Span<T>`/`Span2D<T>` | Box structs or copy large arrays |
 | Plain `for` loops in hot code | LINQ, `foreach` over interfaces, lambdas/closures capturing state |
 | Keep exactly one console write per frame (`WriteConsoleOutput`) | Add per-cell or per-line Win32 calls |
@@ -243,9 +256,9 @@ Tag performance work as `perf:` commits.
 - **Indentation:** 4 spaces (C#), 2 spaces (YAML). `.csproj`/XML 4 spaces.
 - **Line endings:** LF in the repository (`end_of_line = lf`). Git may check out CRLF on Windows (`core.autocrlf`).
   That's fine. Don't commit mass line-ending changes.
-- **Max line length:** 125. **Final newline** required. **Trailing whitespace** trimmed. **Charset** UTF-8. Sprites use
-  box-drawing characters, so keep files UTF-8. Most existing `.cs` files start with a BOM, but `charset = utf-8` means
-  no BOM. Editors may strip it on save, so leave BOM-only diffs out of feature commits.
+- **Max line length:** 125. **Final newline** required. **Trailing whitespace** trimmed, except in `*.sprite` (it is
+  part of the art). **Charset** UTF-8. Sprites use box-drawing characters, so keep files UTF-8. Most existing `.cs`
+  files start with a BOM, but `charset = utf-8` means no BOM. Editors may strip it on save, so leave BOM-only diffs out of feature commits.
 - **Namespaces:** file-scoped (`namespace ConsoleEngine.Infrastructure.Rendering;`). All files already follow this.
 - **`var`:** everywhere (`csharp_style_var_*` = `true`).
 - **Primary constructors:** `.editorconfig` says `csharp_style_prefer_primary_constructors = false` (don't convert
@@ -282,7 +295,7 @@ Tag performance work as `perf:` commits.
 | Engine lifecycle hooks | `On<Phase>` | `OnInitialize`, `OnUpdate`, `OnRender`, `OnLoad`, `OnUnload` |
 | Win32 interop | `internal`, in `LowLevel/`. Keep Win32 names for functions, structs PascalCase | `SetConsoleWindowInfo`, `CharInfo`, `SmallRect`, `Coord` |
 | Win32 constants / virtual keys | Win32 spelling (UPPER_CASE) | `SC_MAXIMIZE`, `MF_BYCOMMAND`, `Key.ESCAPE`, `Key.LEFT` |
-| Assets | `Assets/<Kind>/`, maps `map<N>.txt`, sprites as `static readonly` on `Sprites` | `Assets/Maps/map1.txt`, `Sprites.GameOver` |
+| Assets | Data files in `Assets/<Kind>/` (copied next to the exe, loaded with `Assets.Load<T>`), lower-case file names, kebab-case for sprites. Paths as `const string` on a `*Paths` class (shared files) or on the class that loads them | `Assets/Maps/map1.txt`, `Assets/Sprites/game-over.sprite`, `SpritePaths.GameOver` |
 | UI text constants | `const string` on a `*Texts` class | `HudTexts.NoPower` |
 | Test classes | `<ClassUnderTest>Tests` | `RoverTests` |
 | Test names | `Method_State_Expected` | `PowerDepleted_WhenRemainingPowerIsZero_ReturnsTrue` |
@@ -351,7 +364,7 @@ change that alters what they describe is **not finished** until the docs are upd
 | Runtime state fields, TerraForM state, the map file format or a shipped map | `docs/agent/02-state-model.md` |
 | A rule: timing, key semantics, scenes, drawing, power, damage, sequences, game over, score, planting, map rotation, name entry | `docs/agent/03-rules.md` (+ the affected playbook in `05-triage.md`) |
 | A guard clause, early return, thrown exception or ignored Win32 result in a flow | `docs/agent/04-flows.md`, `06-diagnostics.md` |
-| Any user-visible string (`HudTexts`, `Sprites`, logger output, exception messages) | `docs/agent/06-diagnostics.md` (verbatim) |
+| Any user-visible string (`HudTexts`, `*.sprite` files, logger output, exception messages) | `docs/agent/06-diagnostics.md` (verbatim) |
 | A new failure mode or common complaint | `docs/agent/05-triage.md` + the routing table in `docs/agent/README.md` |
 | A file/port/runtime prerequisite | `docs/agent/07-checks.md` |
 | A control key or anything a user can do without code | `docs/agent/08-operator-actions.md` |

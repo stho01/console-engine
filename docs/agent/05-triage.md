@@ -7,7 +7,7 @@
 |---|---|---|
 | **Which game** (TerraForM, Snake, Asteroids, Platformer, ConsoleGame, their `.Ecs` ports, Swarm, PhysicsSandbox, PhysicsShowcase, EternalDigger, or their own game on `ConsoleEngine`) | Rules differ per game ([03](03-rules.md)) | Ask, or the exe name |
 | **OS and console host** | Windows only. Windows Terminal ignores the sizing/font calls **[external]** | [07 § Q1, Q2](07-checks.md#q1) |
-| **How it was launched and from which folder** (double-click the exe, `dotnet run`, IDE, a shortcut, a terminal in another folder) | Map files and the logger exe are found by **relative path** | [07 § Q3](07-checks.md#q3) |
+| **How it was launched and from which folder** (double-click the exe, `dotnet run`, IDE, a shortcut, a terminal in another folder) | The logger exe is found by **relative path**. Map files are read next to the exe, so the folder doesn't matter for them | [07 § Q3](07-checks.md#q3) |
 | **The exact error text**, if any | There are no log files. The exception printed to the console is the only record | Ask them to start it from an already-open terminal so the text stays ([06 § Capturing a crash](06-diagnostics.md#capture)) |
 | **When in the flow** (before the window appears / at the name screen / after pressing `H` / mid-level / on finish) | Maps to a flow step in [04](04-flows.md) | Ask |
 | **Machine speed** (FPS if they have the logger, or "fast gaming PC vs old laptop") | TerraForM power and movement depend on FPS ([03 § FPS](03-rules.md#fps)) | Ask, or [07 § Q8](07-checks.md#q8) |
@@ -35,7 +35,8 @@
    - `DllNotFoundException` mentioning `kernel32.dll`/`user32.dll` → **Cause:** not Windows. **Fix:** run on Windows. Stop.
    - `SocketException` → step 3.
    - `Win32Exception` (file not found) → step 4.
-   - `FileNotFoundException`/`DirectoryNotFoundException` naming `Assets/Maps/...` → step 5.
+   - `AssetNotFoundException` (`Asset 'Maps/mapN.txt' not found at '…'`) → step 5.
+   - `AssetLoadException` (`Failed to load asset 'Maps/…' as Map with MapLoader`, TerraForM.Ecs) → step 6.
    - `IndexOutOfRangeException`, `FormatException` or `NullReferenceException` with `WorldLoader`/`GameScene.OnLoad` in the stack → step 6.
    - `IndexOutOfRangeException` in `RenderConsole.Draw` / `Sprite.Draw` → **Cause:** game code drew a `Span<string>` or wrote a sprite out of bounds (no bounds check, [03 § Drawing](03-rules.md)). **Fix:** escalate with the stack trace. Stop.
 2. Does it crash only when started from a terminal in another folder, or from an IDE/shortcut? → step 4/5 by game. Otherwise ask them to capture the text (step 1).
@@ -44,10 +45,9 @@
    - Port free → escalate with the full stack trace (DNS resolution of `localhost` is the remaining suspect, [04 § F4](04-flows.md#f4) step 1).
 4. `Win32Exception` at startup, logger enabled:
    - [07 § Q4](07-checks.md#q4): is `ConsoleEngine.Logger.exe` in the **working directory**? If not → **Cause:** `Log.Start` launches the logger by relative name. **Fix:** start the game from its output folder (double-click the exe there). Stop.
-5. TerraForM `...NotFoundException` for `Assets/Maps/mapN.txt` (appears **after pressing `H`**, not at launch):
-   - [07 § Q3](07-checks.md#q3): working directory has no `Assets/Maps` → **Cause:** `WorldLoader.LoadWorld` reads `Assets/Maps/{name}.txt` relative to the working directory. **Fix:** launch from the TerraForM output folder. Stop.
-   - Folder exists, file missing → **Cause:** incomplete copy/build output. **Fix:** rebuild (maps are `CopyToOutputDirectory=Always`) or recopy the folder. Stop.
-6. TerraForM map parse failure (custom or edited map): run [07 § Q6](07-checks.md#q6) on the named map and match against [04 § F6](04-flows.md#f6) steps 4–11. **Cause:** that step. **Fix:** correct the map file (developer/map author). Stop.
+5. TerraForM / TerraForM.Ecs `AssetNotFoundException` for `Maps/mapN.txt` (appears **after pressing `H`**, not at launch). The message gives the full path it looked at, `<exe folder>\Assets\Maps\mapN.txt`; the working directory doesn't matter:
+   - [07 § Q12](07-checks.md#q12) on that path is `False` → **Cause:** incomplete copy/build output. **Fix:** rebuild (the `.csproj` copies `Assets/**` with `PreserveNewest`) or recopy the `Assets` folder next to the exe. Stop.
+6. TerraForM map parse failure (custom or edited map): run [07 § Q6](07-checks.md#q6) on the named map and match against [04 § F6](04-flows.md#f6) steps 4–11. In TerraForM.Ecs the same errors arrive as the `InnerException` of `AssetLoadException`. **Cause:** that step. **Fix:** correct the map file (developer/map author). Stop.
 
 <a id="p2"></a>
 ## P2 — Wrong window size, scrollbars, wrong font, garbled or wrapped picture
@@ -135,7 +135,7 @@
 <a id="p10"></a>
 ## P10 — TerraForM: "GAME OVER but I kept playing / still finished"
 
-1. **Cause:** game over only swaps the HUD for `Sprites.GameOver`. `GameScene.OnUpdate` keeps processing input, commands and collisions, so a rover with power can still finish and score ([03 § Game over](03-rules.md#game-over)). The flag is recomputed every frame and is not latched. **Fix:** works as coded, escalate as a bug. Stop.
+1. **Cause:** game over only swaps the HUD for `game-over.sprite` (`SpritePaths.GameOver`). `GameScene.OnUpdate` keeps processing input, commands and collisions, so a rover with power can still finish and score ([03 § Game over](03-rules.md#game-over)). The flag is recomputed every frame and is not latched. **Fix:** works as coded, escalate as a bug. Stop.
 
 <a id="p11"></a>
 ## P11 — TerraForM: planting doesn't work
@@ -166,7 +166,7 @@
 <a id="p15"></a>
 ## P15 — TerraForM: Norwegian story missing
 
-1. **Cause:** `Assets/Story/story-NO.txt` (and `story-EN.txt`) are not used by code or copied to output. The story is hard-coded English in `Sprites.Story`. **Fix:** feature request. Stop.
+1. **Cause:** `Assets/Story/story-NO.txt` (and `story-EN.txt`) are copied to output but not used by code. The story is the English text in `Assets/Sprites/story.sprite`. **Fix:** feature request. Stop.
 
 <a id="p16"></a>
 ## P16 — Launcher: game shows "(not built)" / won't start / window stops at "Press any key"
@@ -279,3 +279,18 @@ flow: [04 § F13](04-flows.md#f13).
    while standing means landing works and `AIR` should be `False`. A jump pressed in the air waits for the landing (by
    design, as the original). Otherwise escalate with `POS`, `VEL` and `HIT`. Stop.
 
+<a id="p19"></a>
+## P19 — Asset not found / no loader / asset fails to load
+
+Applies to code that loads through `GameBase.Assets` (TerraForM, TerraForM.Ecs, a game's own loaders). Rules:
+[03 § Assets](03-rules.md#assets), flow: [04 § F15](04-flows.md#f15), messages: [06](06-diagnostics.md#engine--logger).
+
+1. `Asset '…' not found at '…'.` → the message has the full path. Check that the file is in the build output
+   ([07 § Q12](07-checks.md#q12)): the game's `.csproj` must copy it (`CopyToOutputDirectory`). The working directory
+   doesn't matter for `GameBase.Assets`. On macOS/Linux the case of every folder and file name must match. Stop.
+2. `No loader for …` → the message lists the extensions that type has. Either the path has the wrong extension or type,
+   or the game didn't call `Assets.RegisterLoader` before loading (do it in `OnInitialize`). Stop.
+3. `Failed to load asset '…'` → read the `InnerException`: the loader's own error (bad data, line numbers if the loader
+   gives them) or the dependency that failed. Fix the file or the loader. Stop.
+4. `A loader for … is already registered` → a game registered a second loader for the same type and extension; the
+   built-in `TextLoader`/`LinesLoader` already own `txt` for `string`/`string[]`. Use another type or extension. Stop.

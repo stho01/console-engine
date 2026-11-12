@@ -63,6 +63,19 @@ Grep these to locate the code path. None of them has a log level.
 | `Component type <Type> is listed more than once.` | `World.Create` (`ArgumentException`) | Same type twice in one `Create` |
 | `Cannot register <Type>: the ECS supports at most 256 component types.` | `ComponentRegistry.Register` (`InvalidOperationException`, wrapped in `TypeInitializationException`) | 257th component type used in the process |
 | `An archetype row needs <n> bytes and does not fit in one 16384-byte chunk.` | `Archetype` ctor (`InvalidOperationException`) | A component set too large for a chunk |
+| `AssetHandle<<Type>>(<index>v<generation>) is not loaded: the scope that loaded it was disposed, or the AssetManager was cleared.` | `AssetManager.Get`, `AssetScope.Get`, `AssetStore<T>.Get` (`InvalidOperationException`) | A handle kept after its scene unloaded (or `AssetHandle<T>.Null`, `(0v0)`). Load it in a longer-lived scope (`Game.Assets`) or reload it ([03 § Assets](03-rules.md#assets)) |
+| `Scene.Assets is available once the scene is pushed onto the SceneManager (in OnLoad and later).` | `Scene.Assets` (`InvalidOperationException`) | A scene used its assets in its constructor, or a scene that was never pushed |
+| .NET's own `ObjectDisposedException` message naming `ConsoleEngine.Assets.AssetScope` | `AssetScope.Load` / `TryLoad` / `LoadHandle` | Code loaded through a scope after disposing it |
+| `Asset '<path>' not found at '<location>'.` | `DirectoryAssetSource.Open` / `MemoryAssetSource.Open` (`AssetNotFoundException`) | No file for the asset. `<location>` is the full file path (`<exe folder>\Assets\…`) or `memory:<path>` ([04 § F15](04-flows.md#f15) step 5) |
+| `No loader for <Type> assets with extension '.<ext>' (asset '<path>'). Registered extensions for <Type>: <.a, .b or none>. Register one with AssetManager.RegisterLoader.` | `AssetManager.FindLoader` (`AssetLoaderNotFoundException`) | Wrong type or extension asked for, or the game never registered its loader |
+| `Failed to load asset '<path>' as <Type> with <Loader>: <inner message>` | `AssetManager.LoadUncached` (`AssetLoadException`) | The loader threw. The real cause is `InnerException` (bad data, or a dependency that failed) |
+| `<Loader> returned null for asset '<path>'.` | `AssetManager.LoadUncached` (`AssetLoadException`) | Bug in the loader |
+| `Circular asset dependency: <path> (<Type>) -> … -> <path> (<Type>).` | `AssetManager.LoadUncached` (`AssetLoadException`, usually as an `InnerException`) | Assets that load each other |
+| `A loader for <Type> assets with extension '.<ext>' is already registered (<Loader>).` | `AssetManager.RegisterLoader` (`InvalidOperationException`) | Two loaders for the same type and extension, including the built-in `txt` ones |
+| `<Loader> lists no extensions.` / `<Loader> lists an empty extension.` (`ArgumentException`, param `loader`) | `AssetManager.RegisterLoader` | A loader with an empty `Extensions` list or entry |
+| `The header has no '---' line to end it.` / `The sprite has no rows.` / `Line <n>: expected '!key: value' in the header, got '<line>'.` / `Line <n>: unknown header key '<key>'. Known keys: fg, bg.` / `Line <n>: '<value>' is not a ConsoleColor.` (`FormatException`, the `InnerException` of "Failed to load asset … as Sprite with SpriteLoader") | `SpriteLoader.Load` | A broken `.sprite` file ([03 § Assets](03-rules.md#assets)) |
+| .NET's own `JsonException` message (line and byte position), as the `InnerException` of "Failed to load asset … with JsonLoader`1" | `JsonLoader<T>.Load` | Invalid JSON, or JSON that doesn't fit the type. A file holding `null` → "JsonLoader`1 returned null for asset '<path>'." |
+| `An asset path can't be empty.` / `Asset path '<path>' must be relative to the asset root.` / `Asset path '<path>' leaves the asset root.` / `Asset path '<path>' names no file.` (`ArgumentException`) | `AssetPath.Parse` / `Resolve`, `MemoryAssetSource.Add` | Bad asset path ([03 § Assets](03-rules.md#assets)) |
 | Window title = `GameBase.Name` | `GameBase.Initialize` → `SetTitle` | Default `"Game"`. Platformer `"Platformer game"`, Asteroids.Ecs `"Asteroids (ECS)"`, Snake.Ecs `"Snake (ECS)"`, TerraForM.Ecs `"TerraForM (ECS)"`, Platformer.Ecs `"Platformer (ECS)"`, Swarm `"Swarm (ECS)"`, PhysicsSandbox `"Physics Sandbox"`, PhysicsShowcase `"Physics Showcase"`, EternalDigger `"EternalDigger"` |
 
 Runtime exceptions without repo-authored text (message comes from .NET and varies): `DllNotFoundException`,
@@ -133,12 +146,12 @@ using [04](04-flows.md).
 | `HOUSE UPGRADE!` / `TOOL SHOP OPEN` (yellow, floating) | `FloatingTextRenderSystem.HouseUpgradeText`, `ToolShopOpenText` | A sale reached a gold milestone / first time below the wall |
 | ` EternalDigger `, `SHOP`, `MINE` | `HouseRenderSystem` (house sign, shop, shaft frame) | Scenery |
 
-### TerraForM screen text (`HudTexts`, `Sprites`)
+### TerraForM screen text (`HudTexts`, `Assets/Sprites/*.sprite`)
 
 | Text | Where | Meaning |
 |---|---|---|
-| `HUMAN, WHAT IS YOUR NAME?` | `Sprites.InputName` | Name scene (`InputNameScene`) |
-| `press H to continue` | `Sprites.Story` | Menu scene (`MenuScene`) |
+| `HUMAN, WHAT IS YOUR NAME?` | `input-name.sprite` (`SpritePaths.InputName`) | Name scene (`InputNameScene`) |
+| `press H to continue` | `story.sprite` (`SpritePaths.Story`) | Menu scene (`MenuScene`) |
 | `NOW ENTERING:  ` + map name | `HudTexts.MapPrefix` | In a level. The name is the map's `!name` ([P8](05-triage.md#p8)) |
 | `POWER: … kWh` | `HudTexts.Power`, `PowerUnit`. Number formatted `ToString("N")` in the **user's culture** | Remaining power |
 | `!OUT OF POWER!` | `HudTexts.NoPower` | `RemainingPower <= 0` |
@@ -147,7 +160,7 @@ using [04](04-flows.md).
 | `REMAINING COMMAND SEQUENCES: n` | `HudTexts.RemainingCommandSequences` | Can show −1 ([03 § Game over](03-rules.md#game-over)) |
 | `QUEUED COMMANDS ` + `→←↑↓P` | `HudTexts.QueuedCommands`, `Move`/`Plant.GetVisualRepresentation` | Typed, not yet sent with SPACE |
 | `SCORE:` | `HudTexts.Score` | Top-right. **Hidden during game over** |
-| `PRESS R TO RESTART` (inside the GAME OVER art) | `Sprites.GameOver` | `GameScene.GameOver` is true |
+| `PRESS R TO RESTART` (inside the GAME OVER art) | `game-over.sprite` (`SpritePaths.GameOver`) | `GameScene.GameOver` is true |
 
 ## Reading the screen as state (TerraForM)
 

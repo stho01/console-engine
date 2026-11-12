@@ -12,22 +12,10 @@
     <ProjectReference Include="..\..\ConsoleEngine\ConsoleEngine.csproj" />
   </ItemGroup>
 
+  <!-- Every data file under Assets/ goes next to the exe, where GameBase.Assets reads it. The .cs files there are
+       Compile items, not None, so they are not copied. -->
   <ItemGroup>
-    <None Update="Assets\Maps\map0.txt">
-      <CopyToOutputDirectory>Always</CopyToOutputDirectory>
-    </None>
-    <None Update="Assets\Maps\map1.txt">
-      <CopyToOutputDirectory>Always</CopyToOutputDirectory>
-    </None>
-    <None Update="Assets\Maps\map2.txt">
-      <CopyToOutputDirectory>Always</CopyToOutputDirectory>
-    </None>
-    <None Update="Assets\Maps\map3.txt">
-      <CopyToOutputDirectory>Always</CopyToOutputDirectory>
-    </None>
-    <None Update="Assets\Maps\map4.txt">
-      <CopyToOutputDirectory>Always</CopyToOutputDirectory>
-    </None>
+    <None Update="Assets\**" CopyToOutputDirectory="PreserveNewest" />
   </ItemGroup>
 
 </Project>

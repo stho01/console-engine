@@ -26,9 +26,10 @@ setting says. Ask the user what that setting is. Windows Terminal → [P2](05-tr
 
 From the folder the game is launched in:
 ```powershell
-Get-Location; Get-ChildItem -Name *.exe; Test-Path .\Assets\Maps\map1.txt
+Get-Location; Get-ChildItem -Name *.exe, ConsoleEngine.Logger.exe
 ```
-TerraForM needs `True` on the last line (`GameScene.MapAssetPath` = `Assets/Maps`, relative). → [P1](05-triage.md#p1) step 5.
+Only matters for games with `EnableLogger`: the logger exe is started by relative name ([P1](05-triage.md#p1) step 4).
+Map files no longer depend on it: they are read next to the exe ([Q12](#q12), [P1](05-triage.md#p1) step 5).
 
 <a id="q4"></a>
 ## Q4 — Is the logger exe where `Log.Start` will look?
@@ -120,3 +121,14 @@ On macOS: `ls -l ~/Library/Application\ Support/EternalDigger`; on Linux: `ls -l
 `save.dat.tmp` left behind = a save was interrupted (the old `save.dat` is intact). No folder = never saved. →
 [P17](05-triage.md#p17) step 8.
 
+
+<a id="q12"></a>
+## Q12 — Is the asset where `GameBase.Assets` looks?
+
+`GameBase.Assets` reads `<exe folder>\Assets\<path>`, whatever the working directory is. From the game's output folder
+(the one with the exe), with the path from the `Asset '…' not found at '…'` message:
+```powershell
+Test-Path .\Assets\Maps\map1.txt; Get-ChildItem -Recurse -Name .\Assets
+```
+`False` → the `.csproj` doesn't copy the file to the output (`CopyToOutputDirectory`), or the name differs. On macOS
+and Linux compare the case of each folder and file name too. → [P19](05-triage.md#p19) step 1.

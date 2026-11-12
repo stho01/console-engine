@@ -60,14 +60,15 @@ Gotchas:
 
 | Call | Effect |
 |---|---|
-| `Push(scene)` / `Push<T>()` | Pauses the current top scene, sets `scene.Game`, calls `scene.OnLoad()` **immediately**, pushes it |
+| `Push(scene)` / `Push<T>()` | Pauses the current top scene, sets `scene.Game` and the scene's asset manager, calls `scene.OnLoad()` **immediately**, pushes it |
 | `Pop()` | Removes the top scene, queues it for unload, unpauses the new top. Returns `null` if the stack is empty |
 | `Set(scene)` / `Set<T>()` | Queues **every** scene for unload, then `Push(scene)` |
-| `Cleanup()` (end of frame) | Calls `OnUnload()` on queued scenes, then `GC.Collect()` |
+| `Cleanup()` (end of frame) | Calls `OnUnload()` on queued scenes, then disposes each one's `Scene.Assets` scope (if it used one), then `GC.Collect()` |
 
 - Only the **top** scene is updated and rendered. A paused scene neither updates **nor renders**, so whatever is under
   a menu disappears (the screen was cleared).
-- On `Set`, the new scene's `OnLoad` runs **before** the old scene's `OnUnload`, which happens at end of frame.
+- On `Set`, the new scene's `OnLoad` runs **before** the old scene's `OnUnload`, which happens at end of frame. So an
+  asset both scenes load (a restarted level's map) is never released in between and isn't read from disk again.
 - `PreviousScene` throws if the stack is empty, because it calls `Stack.Pop()` unguarded.
 
 ### Drawing (`RenderConsole`)
@@ -86,6 +87,53 @@ Gotchas:
   (`EnqueueMessage` guard).
 - FPS is shown **only in the logger window's title** (`Game FPS: n`), never in the game window.
 - Port 11000 and the exe name `ConsoleEngine.Logger.exe` are hard-coded.
+
+<a id="assets"></a>
+### Assets (`GameBase.Assets`, `ConsoleEngine.Assets.AssetManager`)
+
+Used by TerraForM (`Load<string[]>` of `Maps/mapN.txt`, [04 § F6](04-flows.md#f6), and its screens
+`Sprites/*.sprite`), TerraForM.Ecs (its own `MapLoader`, the same sprites) and Platformer.Ecs (`Maps/level.txt`,
+`Sprites/player.sprite`, `Sprites/tile.sprite`). Plan and phases: `docs/design/asset-loader-plan.md`. Flow:
+[04 § F15](04-flows.md#f15).
+
+- `GameBase.Assets` reads from `Assets/` next to the exe (`AppContext.BaseDirectory`), **not** the working directory
+  (`DirectoryAssetSource.CreateDefault`, `DefaultFolder = "Assets"`).
+- Paths (`AssetPath`) are relative to that folder. `\` becomes `/`, `.` and empty segments are dropped, `..` removes the
+  segment before it. Empty, rooted (`/x`, `C:\x`), containing `:`, or leaving the root (`../x`) → `ArgumentException`.
+- The cache key is path **and** type, compared ordinally (case matters): `Load<string>("a.txt")` and
+  `Load<string[]>("a.txt")` are two entries. The source itself follows the file system, so on Windows `maps/map1.txt`
+  opens `Maps/map1.txt` but is cached separately.
+- The loader is picked by the asset type and the path's extension, lower-cased. Built in, registered by the
+  `AssetManager` ctor: `TextLoader` (`string`, `txt`), `LinesLoader` (`string[]`, `txt`) and `SpriteLoader`
+  (`Sprite`, `sprite`). `JsonLoader<T>` (`json`) is not registered by default: it needs the game's source-generated
+  `JsonTypeInfo<T>`. A second loader for the same type and extension → `InvalidOperationException`, and none of its
+  extensions are registered.
+- **Lifetime.** Every cached asset has owners: each `AssetScope` that loaded it (counted once per scope), and each
+  cached asset that loaded it as a dependency (`AssetLoadContext.Load`). When the last owner lets go it is removed from
+  the cache, disposed if it is `IDisposable`, its dependencies are released, and its handles go stale.
+  - `Game.Assets.Load` (and `TryLoad`, `LoadHandle`) loads into the manager's root scope: kept until
+    `AssetManager.Clear()`. Use it for what the whole game shares (TerraForM.Ecs `HudSystem`'s game-over screen).
+  - `Scene.Assets` is the scene's own scope, created on first use and disposed when the scene is unloaded (after
+    `OnUnload`, at `Cleanup`). A paused scene under a pushed menu keeps its assets. Using `Scene.Assets` before the
+    scene is pushed → `InvalidOperationException`. A scope used after `Dispose` → `ObjectDisposedException`.
+  - `AssetManager.Clear()` drops everything whoever owns it; existing scopes stay usable and load afresh.
+- Cached assets are shared. Drawing into a loaded `Sprite` changes it for every user: take `Sprite.Clone()` first
+  (TerraForM's `MenuScene`).
+- **Handles.** `LoadHandle<T>` returns an `AssetHandle<T>` (index + generation, `unmanaged`, fits in an ECS
+  component). `Get(handle)` on the manager or a scope, or `store.Get(handle)` on an `AssetStore<T>` kept from
+  `GetStore<T>()` (fastest), allocates nothing and is the frame-loop lookup. A handle doesn't keep its asset loaded:
+  after release, `Get` throws even if the slot was reused (generation check, always on). `AssetHandle<T>.Null`
+  (`default`) is never loaded.
+- `Load` on a cached asset still costs a dictionary lookup (~175 ns, `AssetBenchmarks`): load once in
+  `OnLoad`/`OnCreate`, keep the asset or handle in a field.
+- `.sprite` format (`SpriteLoader`): if the first line starts with `!` or is `---`, lines up to the first line that is
+  exactly `---` are the header: blank lines or `!fg: <ConsoleColor>` / `!bg: <ConsoleColor>` (keys and colour names
+  case-insensitive; defaults `White` on `Black`; any other key → error). Otherwise the whole file is rows. Every row is
+  kept as written (spaces included) and padded with spaces to the widest. No rows → error. One colour pair per sprite.
+  `.editorconfig` keeps trailing spaces in `*.sprite`.
+- A failed load caches nothing, so the next `Load` tries again.
+- `TryLoad` returns `false` **only** when the source has no such file. A missing loader or a loader error still throws.
+- `Enumerate(directory, extension)` lists only that folder (no subfolders), exact extension, sorted ordinally.
 
 <a id="ecs"></a>
 ### ECS (`ConsoleEngine.Ecs.World`)
@@ -298,7 +346,7 @@ as wide on screen unless the font is square, as in PhysicsSandbox and PhysicsSho
   rises above 0.
 - With `!sequences: N`, commits 1…N are fine. Commit **N+1** makes it −1, so game over, **but that commit still
   executes**.
-- Game over **only changes the HUD**: `Hud.Draw` shows `Sprites.GameOver` ("PRESS R TO RESTART") instead of the HUD.
+- Game over **only changes the HUD**: `Hud.Draw` shows `game-over.sprite` (`SpritePaths.GameOver`) ("PRESS R TO RESTART") instead of the HUD.
   Input, commands, movement, planting, bonus and **finish all keep working**. A rover with power left can still
   reach `F` and score ([P10](05-triage.md#p10)).
 - `R` (`Pressed`) at any time restarts the same map with `Scenes.Set(new GameScene(_worldName))`.
@@ -345,7 +393,7 @@ as wide on screen unless the font is square, as in PhysicsSandbox and PhysicsSho
 - Letters are appended from `GetPressedKeyCodesSpace09AZ()`: **upper-case A–Z, digits 0–9 (top row only), space**.
   No lower case, æøå, punctuation or numpad digits. `BACKSPACE` deletes one, `ENTER` accepts. An empty name is allowed.
 - The global keyboard applies ([§ Keys](#keys)): text typed in other windows is captured.
-- `MenuScene.OnLoad` writes the first **30** characters over the `###` placeholder in `Sprites.Story` (row 22,
+- `MenuScene.OnLoad` writes the first **30** characters over the `###` placeholder in a copy (`Clone()`) of `story.sprite` (row 22,
   column 32). It does not clear first, so a 1–2 character name leaves `#`/`##` visible. An empty name leaves `###`.
 
 ### Menu
@@ -358,7 +406,7 @@ as wide on screen unless the font is square, as in PhysicsSandbox and PhysicsSho
 <a id="terraform-ecs"></a>
 ### TerraForM.Ecs (`Examples/TerraForM.Ecs`)
 
-The same game on the ECS. It shares the map files, `Sprites` and `HudTexts` with `Examples/TerraForM` through linked
+The same game on the ECS. It shares the map and sprite files, `SpritePaths` and `HudTexts` with `Examples/TerraForM` through linked
 files, so every rule above applies, except:
 
 - **Movement and power are scaled by `Delta`.** The port plays like the original at 300 FPS
@@ -375,6 +423,9 @@ files, so every rule above applies, except:
   sprite partly left of or above the screen edge is drawn one cell further left/up than in TerraForM.
 - Window title is `"TerraForM (ECS)"`. A map without `S` throws `InvalidOperationException` instead of
   `NullReferenceException`.
+- Map files are parsed by `MapLoader` through `GameBase.Assets`, so a parse error (`IndexOutOfRangeException`,
+  `FormatException`) arrives wrapped in `AssetLoadException` ("Failed to load asset 'Maps/mapN.txt' as Map with
+  MapLoader: …"). The parsed `Map` is cached: `R` and the next round of the rotation reuse it without reading the file.
 - Systems run in the original order: `LevelInputSystem` → `CommandSystem` → `RoverPhysicsSystem` → `MovementSystem` →
   `RoverCollisionSystem` → `PlantEmitterSystem` → `RestartSystem` → `CameraFollowSystem`. Drawing: tiles → grass →
   rover → `HudSystem`.

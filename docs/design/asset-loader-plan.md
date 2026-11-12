@@ -1,6 +1,14 @@
 # Plan: asset loader i ConsoleEngine
 
-Status (2026-11-12): **utkast**. Ingen kode er skrevet. Beslutninger som er tatt står i § 11, åpne spørsmål i § 12.
+Status (2026-11-12): **fase 0–3 er ferdige.** Fase 0: `ConsoleEngine/Assets/`, `GameBase.Assets`. Fase 1:
+TerraForM og TerraForM.Ecs laster kartene gjennom `Assets`, TerraForM.Ecs med sin egen `MapLoader : IAssetLoader<Map>`,
+testet i det nye `Examples/TerraForM.Ecs.Tests`. Fase 2: `SpriteLoader` (`.sprite`), `JsonLoader<T>`, `Sprite.Clone()`;
+TerraForM-skjermene og hele Platformer.Ecs-innholdet (kart, spiller, flis) ligger som filer. Fase 3: referansetelt
+cache, `AssetScope`, `Scene.Assets` (slippes når scenen lastes ut), `AssetHandle<T>` og `AssetStore<T>`; eksempelscenene
+laster i sitt eget scope. Tester i `ConsoleEngine.Tests/Assets/` og `Infrastructure/Scenery/SceneAssetsTests`, 15 i
+`TerraForM.Ecs.Tests`. Neste steg er fase 8 (analyzer) eller fase 4 (flere kilder). § 2 beskriver utgangspunktet før
+fase 0 og oppdateres ikke.
+Beslutninger som er tatt står i § 11, åpne spørsmål i § 12.
 Oppdater status, § 10 (faser) og § 11 (beslutningslogg) etter hvert som arbeidet går.
 
 Planen er skrevet mot industristandarden for asset-systemer: MonoGame/XNA `ContentManager`, Godot `ResourceLoader` +
@@ -107,7 +115,7 @@ assembly: `SpriteLoader` trenger `Sprite`, og alle spill trenger asset-lasting (
 | `AssetManager` | Loader-register, cache, kilde. `Load<T>`, `TryLoad<T>`, `Get<T>(AssetHandle<T>)`, `CreateScope()`, `RegisterLoader<T>` | MonoGame `ContentManager`, Bevy `AssetServer` |
 | `AssetScope` | `IDisposable`. Eier asset-ene som lastes gjennom den. `Dispose` slipper dem, og en asset uten eiere fjernes fra cachen (og `Dispose`-es om den er `IDisposable`) | MonoGame én `ContentManager` per nivå |
 | `AssetHandle<T>` | `readonly struct` med `int Id`. Kan ligge i en `unmanaged` komponent (via en ikke-generisk `AssetId` om nødvendig, se § 12) | Bevy `Handle<T>` (svak) |
-| `AssetLoadException`, `AssetNotFoundException`, `AssetLoaderNotFoundException` | Feil med sti, type og loader i meldingen, opprinnelig unntak som `InnerException` | — |
+| `AssetLoadException`, `AssetNotFoundException`, `AssetLoaderNotFoundException` | Feil med sti, type og loader i meldingen, opprinnelig unntak som `InnerException`. De to siste arver `AssetLoadException`, så én `catch` fanger alle asset-feil | — |
 
 ### 4b. API-skisse
 
@@ -156,7 +164,10 @@ Valgt modell: **scope eier, handles teller ikke** (MonoGame-modellen, med delt c
 - Cachen er delt: laster to scener samme kart, finnes det én gang. Hvert scope teller én gang per asset. Asset-en fjernes
   når siste scope er borte.
 - `AssetHandle<T>` er en svak ID: den holder ikke asset-en i live. Å bruke en handle etter at eier-scopet er borte kaster
-  i Debug (generasjonsteller i handle-en, samme idé som `Entity`-versjonen i ECS).
+  (generasjonsteller i handle-en, samme idé som `Entity`-versjonen i ECS). Bygget: sjekken er på i alle bygg, ikke
+  bare Debug; den koster én sammenligning (§ 7).
+- Bygget i fase 3, i tillegg: avhengigheter (`AssetLoadContext.Load`) eies av asset-en som lastet dem og slippes med
+  den, og en loader som feiler slipper avhengighetene den rakk å laste. `IDisposable`-assets disposes når de slippes.
 
 Hvorfor ikke refcount per handle (Bevy/Addressables)? Handles må ligge i `unmanaged` komponenter og kopieres fritt. Uten
 destruktører på structs blir refcount per handle manuell `Release`, og det glemmes. Scope per scene passer scene-stakken
@@ -186,7 +197,10 @@ bakgrunnstråd, men legger resultatet inn i cachen på spilltråden ved starten 
 | `JsonLoader<T>` | `json` | `T` via `System.Text.Json` med `JsonTypeInfo<T>` (source generator, trygt for trimming/AOT) | 2 |
 | Tiled (`.tmj`) | `tmj` | Tile-lag som `int[,]` + properties | Valgfri, § 12 |
 
-**Sprite-format (`.sprite`)**, forslag. Samme header-stil som kartene (`!key: value`), så det føles kjent:
+`SpriteLoader` registreres av `AssetManager`-ctoren som de to tekst-loaderne. `JsonLoader<T>` gjør ikke det: den
+trenger spillets `JsonTypeInfo<T>` og registreres én gang per type.
+
+**Sprite-format (`.sprite`)**, bygget i fase 2. Samme header-stil som kartene (`!key: value`), så det føles kjent:
 
 ```
 !fg: Yellow
@@ -199,6 +213,10 @@ bakgrunnstråd, men legger resultatet inn i cachen på spilltråden ved starten 
 
 Én farge per sprite i v1, akkurat som `Sprite.FromStringArray` i dag. Fargelag per celle (en andre blokk med tegn som
 peker på en palett) er et åpent spørsmål, § 12. Filene skal være UTF-8 uten BOM, så boks-tegn fungerer.
+
+Regler som ble bestemt under byggingen: headeren finnes bare hvis første linje starter med `!` eller er `---`; ellers
+er hele fila rader. Bare `fg` og `bg` er gyldige nøkler, og en ukjent nøkkel er en feil (fanger skrivefeil). Radene
+beholdes tegn for tegn, også mellomrom på slutten, og `.editorconfig` slår av trimming for `*.sprite`.
 
 ## 6. Bygg og distribusjon
 
@@ -220,18 +238,50 @@ peker på en palett) er et åpent spørsmål, § 12. Filene skal være UTF-8 ute
   uventede lastinger midt i spillet synes.
 - `Get(AssetHandle<T>)` er en indeks inn i en `T[]` per type (`AssetStore<T>`, samme mønster som `ComponentType<T>`):
   ingen `Dictionary`, ingen boksing, ingen typesjekk på hot path.
+- **Målt** (2026-11-12, `AssetBenchmarks`, `--job short --affinity 1 --inProcess`, 10 000 oppslag, 0 B allokert i
+  alle): `SpriteLibrary.Get` 22,6 µs (grunnlinje), `AssetStore<T>.Get` 29,1 µs (1,29×), `AssetManager.Get` 45,0 µs
+  (2,0×), `Load` med cache-treff 1 764 µs (78×). `AssetManager.Get` er tregere fordi `Sprite` er en referansetype:
+  delt generisk kode slår opp `AssetTypeId<T>` via en generisk ordbok. Derfor `GetStore<T>()` (som Bevys
+  `Assets<T>`): et system henter lageret én gang i `OnCreate`. Resten av forskjellen mot `SpriteLibrary` er
+  generasjonssjekken.
 - Benchmark i `ConsoleEngine.Benchmarks/Assets/`: `Get` per handle mot `SpriteLibrary.Get`, og en cache-treff-`Load` for
   å vise at den ikke skal kalles per frame.
 - `GC.Collect()` i `Scene.Unload` og `SceneManager.Cleanup` (kjent gjeld) er urørt av denne planen.
+
+### 7a. Analyzer: varsel ved lasting fra hot path (forslag, fase 8)
+
+Status: **foreslått** 2026-11-12, ikke besluttet. Kan bygges når som helst etter fase 0.
+
+En Roslyn-analyzer som gir en kompileringsadvarsel når `Load` kalles fra kode som kjører hver frame. Standarden å
+følge er Rider/ReSharper sin «performance-critical context» for Unity, som markerer dyre kall (`GetComponent`, `Find`)
+i `Update`. Vi gjør det samme med en vanlig `DiagnosticAnalyzer`, slik .NET-analyzerne (CA-reglene) er bygget.
+
+- **Generisk, ikke asset-spesifikk.** Motoren merker dyre API-er med et attributt, for eksempel `[NotInFrameLoop]`
+  (navn ikke bestemt). Analyzeren kjenner ikke `AssetManager`; den ser bare etter attributtet. Da kan samme regel senere
+  dekke `Sprite.FromString`/`FromStringArray` og annet AGENTS.md § Performance forbyr i hot path.
+- **Hot path = metoder som overstyrer en kjent liste:** `GameBase.OnUpdate`/`OnRender`, `Scene.OnUpdate`/`OnRender`,
+  `EntitySystem.OnUpdate`, `IForEach<…>.Execute`, pluss lambdaer og lokale funksjoner inne i dem. Et attributt (for
+  eksempel `[FrameLoop]`) lar et spill merke egne metoder.
+- **Diagnostikk:** én regel, `CE0001`, `Warning`. I dette repoet blir den en feil (`TreatWarningsAsErrors`). Bevisst
+  lasting midt i spillet slås av med `#pragma warning disable CE0001` eller `[SuppressMessage]`, som andre analyzere.
+- **Begrensning:** bare direkte kall. Kall via en hjelpemetode (`OnUpdate` → `LoadLevel()` → `Assets.Load`) krever
+  analyse av kallgrafen over hele prosjektet, og det gjør vi ikke (Rider gjør det, CA-reglene gjør det ikke). Derfor
+  beholdes runtime-advarselen over i Debug: analyzeren tar de direkte kallene ved kompilering, runtime-sjekken resten.
+- **Bygg:** eget prosjekt `ConsoleEngine.Analyzers` (`netstandard2.0`, `Microsoft.CodeAnalysis.CSharp`, ingen
+  runtime-avhengighet). Pakkes inn i `ConsoleEngine`-pakken under `analyzers/dotnet/cs`, så NuGet-brukere får den
+  automatisk. Eksemplene i repoet refererer den med `OutputItemType="Analyzer" ReferenceOutputAssembly="false"`, gjerne
+  samlet i en `Directory.Build.props` under `Examples/`.
+- **Tester:** `ConsoleEngine.Analyzers.Tests` med `Microsoft.CodeAnalysis.CSharp.Analyzer.Testing` (NUnit-varianten):
+  kode med kall i `OnUpdate` gir `CE0001`, kall i `OnLoad`/`OnCreate`/`OnInitialize` gir ingenting, `#pragma` virker.
 
 ## 8. Migrering av eksempelspill
 
 | Spill | Endring | Fase |
 |---|---|---|
-| TerraForM.Ecs | `MapLoader` blir `IAssetLoader<Map>`. `GameScene` bruker `Assets.Load<Map>`. Kartlisten fra `Assets.Enumerate` | 1 (pilot) |
-| TerraForM | `WorldLoader` tar en `Stream`/`string[]`. Glob i `.csproj` | 1 |
-| Platformer.Ecs | `Assets/Maps.cs` → `Assets/Maps/level.txt` via `LinesLoader` | 2 |
-| TerraForM, Platformer.Ecs | Store sprites (`GameOver`, `TopMenu`) → `.sprite`-filer | 2 |
+| TerraForM.Ecs ✅ | `MapLoader` er `IAssetLoader<Map>`, registrert i `TerraformEcsGame.OnInitialize`. `GameScene` bruker `Game.Assets.Load<Map>`. Kartlisten er **ikke** flyttet til `Enumerate`, se § 11 | 1 (pilot) |
+| TerraForM ✅ | `WorldLoader.LoadWorld(game, string[] lines)`. `GameScene` henter linjene med `Game.Assets.Load<string[]>`. Glob i `.csproj` | 1 |
+| Platformer.Ecs ✅ | `Assets/Maps.cs` → `Assets/Maps/level.txt` via `LinesLoader`. `Assets/Sprites.cs` → `player.sprite`, `tile.sprite`. Stiene er konstanter i `PlatformerScene` | 2 |
+| TerraForM, TerraForM.Ecs ✅ | `Assets/Sprites.cs` (fire skjermer) → `Assets/Sprites/*.sprite`, stier i `SpritePaths` (lenket inn i TerraForM.Ecs som før). Lastes i `OnLoad`/ctor og holdes i et felt | 2 |
 | EternalDigger | Ingen i v1. Savefiler er ikke assets | — |
 
 Pilot-kriteriet: TerraForM.Ecs startet fra en annen mappe enn output-mappen laster kartene, og `MapLoader`-tester kjører
@@ -245,7 +295,7 @@ mot `MemoryAssetSource` uten disk.
 | Ingen byggetids-pipeline | MonoGame MGCB, Unity import | Små tekstfiler. Parsing ved lasting tar mikrosekunder |
 | Scope eier, handles teller ikke | Bevy sterke handles, Addressables `Release` | Handles må være `unmanaged` og kopieres fritt. Scope per scene passer scene-stakken (§ 4d) |
 | Synkron i v1 | Bevy/Addressables er async-først | Konsollspill laster på millisekunder. Async kommer når et spill trenger lasteskjerm |
-| Ordinal (store/små bokstaver teller) sti-sammenligning, også på Windows | Windows-filsystemet ignorerer store/små | Lik oppførsel når macOS-backend kommer (issue 7). En sti som virker på Windows men ikke på macOS er verre enn en feil med en gang |
+| Ordinal (store/små bokstaver teller) sammenligning av `AssetPath` og cache-nøkkel, også på Windows | Windows-filsystemet ignorerer store/små | Lik oppførsel på alle plattformer for alt `AssetManager` selv styrer. `DirectoryAssetSource` følger filsystemet, så `maps/map1.txt` åpnes på Windows men ikke på macOS/Linux. Å håndheve store/små bokstaver på Windows krever en mappelisting per åpning; vurderes i fase 5 (Debug-advarsel) |
 
 ## 10. Faser
 
@@ -253,14 +303,15 @@ Hver fase er én PR med tester og dokumentasjon. `dotnet build` uten advarsler o
 
 | Fase | Innhold | Ferdig når |
 |---|---|---|
-| **0. Fundament** | `AssetPath`, `IAssetSource`, `DirectoryAssetSource`, `MemoryAssetSource`, `IAssetLoader<T>`, `AssetLoadContext`, `AssetManager` (register, cache, `Load`/`TryLoad`/`Enumerate`), `TextLoader`, `LinesLoader`, unntakene, `GameBase.Assets`. Tester i `ConsoleEngine.Tests/Assets/` | Et spill kan laste en tekstfil med virtuell sti uansett CWD |
-| **1. Pilot: kart** | TerraForM.Ecs og TerraForM over på `Assets.Load`. Glob i `.csproj` | Pilot-kriteriet i § 8 |
-| **2. Sprites og JSON** | `.sprite`-format + `SpriteLoader`, `JsonLoader<T>`. Platformer.Ecs-kart og store sprites flyttes til filer | Ingen innholds-strenger igjen i de flyttede `Assets/*.cs` |
-| **3. Levetid og handles** | `AssetScope`, `Scene.Assets`, `AssetHandle<T>`, `AssetStore<T>`, `Get(handle)`. Vurder om `SpriteLibrary` skal bli en tynn fasade over `AssetStore<Sprite>`. Benchmark | Scene-bytte slipper scenens assets. `Get` 0 B allokert |
+| **0. Fundament** ✅ 2026-11-12 | `AssetPath`, `IAssetSource`, `DirectoryAssetSource`, `MemoryAssetSource`, `IAssetLoader<T>`, `AssetLoadContext`, `AssetManager` (register, cache, `Load`/`TryLoad`/`Enumerate`), `TextLoader`, `LinesLoader`, unntakene, `GameBase.Assets`. Tester i `ConsoleEngine.Tests/Assets/` | Et spill kan laste en tekstfil med virtuell sti uansett CWD |
+| **1. Pilot: kart** ✅ 2026-11-12 | TerraForM.Ecs og TerraForM over på `Assets.Load`. Glob i `.csproj` | Pilot-kriteriet i § 8 |
+| **2. Sprites og JSON** ✅ 2026-11-12 | `.sprite`-format + `SpriteLoader`, `JsonLoader<T>`. Platformer.Ecs-kart og store sprites flyttes til filer | Ingen innholds-strenger igjen i de flyttede `Assets/*.cs` |
+| **3. Levetid og handles** ✅ 2026-11-12 | `AssetScope`, `Scene.Assets`, `AssetHandle<T>`, `AssetStore<T>`, `Get(handle)`. Vurder om `SpriteLibrary` skal bli en tynn fasade over `AssetStore<Sprite>`. Benchmark | Scene-bytte slipper scenens assets. `Get` 0 B allokert |
 | **4. Flere kilder** | `EmbeddedAssetSource`, `CompositeAssetSource` (overstyring) | Et spill kan bygge inn assets i exe-en og la filer på disk overstyre dem |
 | **5. Hot reload (Debug)** | `FileSystemWatcher` på `DirectoryAssetSource` → kø → spilltråden laster på nytt ved frame-start, oppdaterer cachen på plass (samme handle), varsler avhengige. `AssetManager.Reloaded`-event | Endre et kart i output-mappen og se det i spillet uten restart |
 | **6. Async og forhåndslasting** | `LoadAsync<T>`, `Preload(paths)` med fremdrift for lasteskjerm | Bare når et spill trenger det |
 | **7. Pakke-integrasjon** | `buildTransitive`-targets i NuGet-pakken (§ 6) | Et nytt spill fra NuGet får `Assets/**` kopiert uten egen `.csproj`-linje |
+| **8. Analyzer** (foreslått) | `ConsoleEngine.Analyzers` med `CE0001`, attributtene, pakking og tester (§ 7a). Uavhengig av fase 2–7 | `Assets.Load` i et `OnUpdate` gir advarsel ved bygg; i `OnLoad` gir det ingenting |
 
 ## 11. Beslutningslogg
 
@@ -272,17 +323,42 @@ Legg til en linje per beslutning, nyeste nederst.
 | 2026-11-12 | Kilde (`IAssetSource`) og format (`IAssetLoader<T>`) er atskilt | Standard i Bevy/Godot. Loadere testes mot en `MemoryStream` |
 | 2026-11-12 | Stier løses mot `AppContext.BaseDirectory/Assets`, ikke CWD | Fjerner kravet om å starte fra output-mappen |
 | 2026-11-12 | Savefiler er utenfor scope | De skrives av spilleren, de er ikke innhold |
+| 2026-11-12 | `AssetManager`-ctoren registrerer `TextLoader` og `LinesLoader` (`txt`) | Som Godot: innebygde formater virker uten oppsett. Begge tar egne endelser (`new LinesLoader("map")`) |
+| 2026-11-12 | `string` → `AssetPath` er en implisitt konvertering som kaster ved ugyldig sti | `Assets.Load<Map>("Maps/map1.txt")` uten støy, som Bevy (`From<&str>`). Feil sti er en programmeringsfeil |
+| 2026-11-12 | En loader-feil pakkes alltid i `AssetLoadException`, også når årsaken er en avhengighet; ingenting caches | Kjeden av `InnerException` viser hvilken asset som trengte hvilken. Neste `Load` prøver på nytt |
+| 2026-11-12 | `Enumerate` ser bare i én mappe, ikke undermapper, og filtrerer endelsen selv | Windows' `*.txt`-mønster treffer også `.txt2`. Rekursiv listing kan legges til når et spill trenger det |
+| 2026-11-12 | Fase 0 har ingen scopes: cachen lever til `AssetManager.Clear()` | Scopes og handles hører til fase 3 |
+| 2026-11-12 | TerraForM (OOP) cacher linjene (`string[]`), ikke `World` | `World` og flisene endres mens nivået spilles og trenger spillet i ctoren. En asset må være uforanderlig data; tilstand bygges av den hver gang |
+| 2026-11-12 | Kartrotasjonen bruker fortsatt fast antall (`Maps.Length`/`MapCount` = 4), ikke `Enumerate` | Med `Enumerate` ville map4 kommet med i rotasjonen. Det endrer spillet, og fase 1 skal ikke endre oppførsel |
+| 2026-11-12 | Nytt testprosjekt `Examples/TerraForM.Ecs.Tests` i stedet for å utvide `TerraForM.Tests` | Samme mønster som `EternalDigger.Tests`; to spill-exe-er med like navnerom i ett testprosjekt blir rotete |
+| 2026-11-12 | `TerraForM.csproj` kopierer `Assets\**` med `None Update` + `PreserveNewest` | `.cs`-filene under `Assets/` er `Compile`, ikke `None`, så de kopieres ikke. `Story/*.txt` (ubrukt) blir nå også kopiert |
+| 2026-11-12 | Pilot-kriteriet «startet fra en annen mappe» er bevist med test, ikke i konsoll | `ShippedMaps_FromExeFolder_AllLoadWithNameAndStart` leser kartene via `AppContext.BaseDirectory` slik spillet gjør. Spillet selv er ikke kjørt (krever ekte konsoll) |
+| 2026-11-12 | `SpriteLoader` er innebygd; `JsonLoader<T>` er ikke det | Sprite er en motortype. JSON trenger spillets source-genererte `JsonTypeInfo<T>` (ingen refleksjon, trygt for trimming) |
+| 2026-11-12 | Nytt motor-API `Sprite.Clone()` (additivt) | TerraForMs `MenuScene` skriver spillernavnet inn i story-spriten. Med en delt, mellomlagret sprite må den skrive i en kopi |
+| 2026-11-12 | Hele `Sprites.cs` i TerraForM flyttet, også ubrukte `TopMenu` | Kriteriet for fasen er at innholds-strenger ikke ligger igjen i flyttede `Assets/*.cs`. Filene ble sjekket piksel for piksel mot den gamle klassen før den ble slettet |
+| 2026-11-12 | Platformer.Ecs-spritene ble også flyttet, ikke bare kartet | Da er alt innhold i spillet data, og `Assets/` har ingen `.cs` igjen |
+| 2026-11-12 | Ingen JSON-bruk i eksempelspillene ennå | Ingen av dem har et format som passer JSON bedre enn tekst. `JsonLoader<T>` er testet i `ConsoleEngine.Tests` |
+| 2026-11-12 | `AssetManager.Load` = manager-ens rot-scope (slippes aldri før `Clear`); `Scene.Assets` = scenens scope | `Game.Assets` er for det hele spillet deler, `Scene.Assets` for scenens eget. Fase 0–2-kode fortsetter å virke uendret |
+| 2026-11-12 | `Scene.Assets` opprettes ved første bruk, disposes i `Scene.Unload` etter `OnUnload` | En scene som ikke laster noe får ikke noe scope. Siden `Set` laster ny scene før den gamle lastes ut, leses en restartet banes kart ikke på nytt |
+| 2026-11-12 | `SceneManager` får `AssetManager` i en intern ctor | Tester kan ikke lage `GameBase` (Win32); `new SceneManager(null, assets)` gir scener med ekte scopes |
+| 2026-11-12 | `SpriteLibrary` beholdes uendret | Brukes av alle ECS-eksemplene, og å fjerne den er en breaking change. Den er fortsatt raskest for sprites laget i kode. `AssetHandle<Sprite>` er for lastede sprites. En egen render-system for handles venter til et spill trenger det |
+| 2026-11-12 | `AssetStore<T>` er offentlig, med `AssetManager.GetStore<T>()` | Målingen i § 7: oppslag via manageren er 2× `SpriteLibrary` for referansetyper, via et beholdt lager 1,3× |
+| 2026-11-12 | Generasjonssjekken i `Get` er på i alle bygg | Én sammenligning; uten den ville en gammel handle stille gi en annen asset etter at slotten er gjenbrukt |
+| 2026-11-12 | TerraForM.Ecs `HudSystem` laster game-over-skjermen i rot-scopet | Samme skjerm i alle baner. Viser bruken av begge scopene |
 
 ## 12. Åpne spørsmål
 
 - **Sprite-farger:** én farge per sprite (v1-forslaget) eller et fargelag per celle? Alternativt REXPaint `.xp`, som er
   de facto standard for ASCII-kunst, men bruker CP437-tegn og RGB som må mappes til `char` og 16 `ConsoleColor`.
-- **`AssetHandle<T>` i komponenter:** C# regner `AssetHandle<Sprite>` som `unmanaged` fordi den bare har `int`-felt, selv
-  om `Sprite` er en klasse. Bekreft før fase 3 at `ComponentType<T>`/`ComponentRegistry` takler en generisk struct som
-  felt i en komponent. Ellers brukes en ikke-generisk `AssetId` i komponenten.
-- **`SpriteLibrary`:** erstatte, eller beholde som fasade over `AssetStore<Sprite>`? Å fjerne den er en breaking change
-  (`!`-commit).
+- ~~**`AssetHandle<T>` i komponenter**~~: avklart i fase 3. En komponent med et `AssetHandle<Sprite>`-felt virker i
+  `World` (`AssetScopeTests.Handle_InEcsComponent_StoresAndReadsBack`).
+- ~~**`SpriteLibrary`**~~: avklart i fase 3, beholdes uendret (§ 11).
+- **Render-system for handles:** skal motoren få en `SpriteAssetRenderSystem` som tegner `AssetHandle<Sprite>`-
+  komponenter, ved siden av `SpriteRenderSystem`/`SpriteRef`? Først når et spill trenger det.
 - **Reserve-asset** (en synlig «MISSING»-sprite i stedet for unntak) i Release-bygg?
 - **Tiled-støtte** (`.tmj`): verdt det for eksempelspillene, eller bare dokumentere hvordan et spill skriver loaderen selv?
+- **Analyzer (§ 7a):** bygge den? Hvis ja: bare `Load`/`TryLoad`/`Enumerate` først, eller med en gang flere dyre
+  API-er (`Sprite.FromString`, `new List<T>` i `OnRender`)? Og hvilken alvorlighet: `Warning` (feil i dette repoet)
+  eller `Info`?
 - **Navn:** `AssetManager` (MonoGame-aktig) eller `AssetServer` (Bevy)? Planen bruker `AssetManager` fordi det passer
   `SceneManager`.

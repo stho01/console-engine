@@ -1,17 +1,16 @@
-﻿using System.IO;
-using Microsoft.Xna.Framework;
+﻿using Microsoft.Xna.Framework;
 using TerraForM.GameObjects.Tiles;
 
 namespace TerraForM;
 
+/// <summary>
+/// Builds a <see cref="World"/> from the lines of a map file. The lines come from
+/// <see cref="ConsoleEngine.GameBase.Assets"/> and are cached; the <see cref="World"/> is new on every load, because the
+/// level changes it while it is played.
+/// </summary>
 public class WorldLoader
 {
-    public static World LoadWorld(TerraformGame game, string path)
-    {
-        var content = File.ReadAllLines(path);
-            
-        return Parse(game, content);
-    }
+    public static World LoadWorld(TerraformGame game, string[] lines) => Parse(game, lines);
 
     private static World Parse(TerraformGame game, string[] lines)
     {

@@ -96,7 +96,7 @@ See [03 § Scenes](03-rules.md#scenes). TerraForM's scene graph:
 |---|---|---|---|---|
 | 1 | `new GameScene(worldName)` | ctor | `worldName == null` | `ArgumentNullException` (`worldName`) |
 | 2 | `Camera.Position = Vector2.Zero` | `GameScene.OnLoad` | — | — |
-| 3 | `File.ReadAllLines("Assets/Maps/{worldName}.txt")`, **relative to the working directory** | `WorldLoader.LoadWorld` | Working directory isn't the game's output folder, or the file is missing | `DirectoryNotFoundException` / `FileNotFoundException`, crash when the level starts (after pressing `H`) |
+| 3 | `Game.Assets.Load<string[]>("Maps/{worldName}.txt")`: `<exe folder>/Assets/Maps/…`, independent of the working directory; cached after the first load ([F15](#f15)) | `GameScene.OnLoad`, `AssetManager.Load` | The file is missing from the output folder | `AssetNotFoundException` "Asset 'Maps/mapN.txt' not found at '<full path>'.", crash when the level starts (after pressing `H`) |
 | 4 | Header line without `:` | `WorldLoader.Parse` (`keyValue[1]`) | — | `IndexOutOfRangeException` |
 | 5 | `!power`/`!sequences`/`!width`/`!height` value not an integer | `int.Parse` | — | `FormatException` |
 | 6 | Grid rows **before** both `!width` and `!height` | `Parse` (`tiles != null` guard) | — | **Silent:** those rows are dropped |
@@ -121,7 +121,7 @@ See [03 § Scenes](03-rules.md#scenes). TerraForM's scene graph:
 | 7 | `Rover.Update`: drag, accel, move, `HandleCollision` (Rock/Craves/PlantSpot/BonusPoint/FinishPoint) | — | Finish → score + `RotateMap` ([03 § Score](03-rules.md#score)) |
 | 8 | `PlantEmitters.ForEach(Update)` (grass animation, `LifeTime = 3000` ms) | — | — |
 | 9 | `R` Pressed → restart same map | — | — |
-| 10 | Render: `World.Draw`, emitters, `Rover.Draw`, `Hud.Draw` | `Hud.Draw`: if `scene.GameOver` → draw `Sprites.GameOver` and `return` (no HUD, no score) | — |
+| 10 | Render: `World.Draw`, emitters, `Rover.Draw`, `Hud.Draw` | `Hud.Draw`: if `scene.GameOver` → draw `game-over.sprite` (`SpritePaths.GameOver`) and `return` (no HUD, no score) | — |
 | 11 | `RenderDebugInfo` | `!Game.IsDebugMode` → `return` | — |
 
 `Rover.ApplyForce`: after deducting cost, `if (PowerDepleted()) return;` means no acceleration. `Rover.Plant`: needs
@@ -232,3 +232,28 @@ Rules: [03 § Physics](03-rules.md#physics).
 | 2 | Raycast: walk the body grid's cells along the ray (`GridWalker`), test each body once, stop when the next cell is further than the best hit; then walk the tile grid to the first solid tile after leaving any the ray starts in | `RaycastBodies`, `RaycastTiles`, `RayCast.Box`/`Circle` | Sensor, category not in the mask, or the origin inside the shape → body skipped silently | `CastHit` (entity or tile, point, normal, fraction) |
 | 3 | Box cast: test every body and solid tile in the swept box against the shape grown by the cast box | `CastBoxBodies`, `CastBoxTiles`, `RayCast.Box`/`RoundedBox` | Ignored entity, sensor, mask; starting inside and moving out; a tile face touching another solid tile → skipped silently | `CastHit` |
 | 4 | `MoveAndSlide`: cast the box by the remaining move; no hit → move all of it and stop; a hit → move to it plus `SkinWidth`, record `Floor`/`Ceiling`/`Wall`, remove the move and velocity parts into the surface, repeat | `CharacterMover.MoveAndSlide` | After `MaxSlides` (4) hits, or when the remaining move is ~0 → stops, the rest of the move is dropped | New centre and velocity, `SlideCollisions` |
+
+<a id="f15"></a>
+## F15 — Asset load (`AssetManager.Load<T>` / `TryLoad<T>`)
+
+Rules: [03 § Assets](03-rules.md#assets). Messages: [06](06-diagnostics.md#engine--logger).
+
+| # | Step | Class.method | Stops if | Observable |
+|---|---|---|---|---|
+| 0 | `Scene.Assets` only: create the scene's scope on first use | `Scene.Assets` | Scene not pushed yet | `InvalidOperationException` "Scene.Assets is available once …" |
+| 0b | The scope was disposed | `AssetScope.Load` | Yes | `ObjectDisposedException` |
+| 1 | String → `AssetPath` (implicit conversion) | `AssetPath.Parse` / `Resolve` | Empty, rooted, contains `:`, or leaves the root | `ArgumentException` |
+| 2 | Cache lookup on (path, `typeof(T)`) | `AssetManager.GetOrLoad` | Hit → skip to step 9 | — |
+| 3 | Find the loader for (`typeof(T)`, extension) | `AssetManager.FindLoader` | None registered | `AssetLoaderNotFoundException` |
+| 3b | `TryLoad` only: does the source have the file? | `IAssetSource.Exists` | No | Returns `false`, nothing cached |
+| 4 | Same (path, type) already being loaded further up the call chain | `AssetManager.LoadUncached` | Yes | `AssetLoadException` "Circular asset dependency: …" (wrapped by each loader on the way out, see step 6) |
+| 5 | Open the stream (`DirectoryAssetSource`: `File.OpenRead` under `<exe folder>/Assets`) | `IAssetSource.Open` | File or folder missing | `AssetNotFoundException` with the full path |
+| 6 | Run the loader. Dependencies go through `AssetLoadContext.Load<T>`, relative to the asset's folder, back to step 1; each becomes owned by the asset being loaded | `IAssetLoader<T>.Load` | Loader throws (bad data, a failed dependency) | `AssetLoadException` "Failed to load asset …", loader's exception as `InnerException`. Nothing cached; dependencies loaded so far are released |
+| 7 | Loader returned `null` | `AssetManager.LoadUncached` | — | `AssetLoadException` "… returned null for asset …" (dependencies released) |
+| 8 | Put the asset in `AssetStore<T>` (slot + generation) and the cache | `AssetManager.LoadUncached` | — | — |
+| 9 | The scope (root for `Game.Assets.Load`) becomes an owner, once per scope; return the asset or, for `LoadHandle`, its handle | `AssetScope.Own` | — | Asset / `AssetHandle<T>` |
+
+**Release** (`AssetScope.Dispose`, run by `SceneManager.Cleanup` → `Scene.Unload` after `OnUnload`): each owned asset's
+owner count drops by one; at 0 the asset leaves the cache, its store slot gets the next generation (old handles throw),
+`IDisposable` assets are disposed, and its dependencies are released the same way. Assets already dropped by
+`AssetManager.Clear()` are skipped silently.
