@@ -148,14 +148,102 @@ itself.
   not in the group is ignored. Constraints that form a cycle throw `InvalidOperationException` on the first
   `Update` (or `RunOrder` read) after the systems were added.
 
-**`EcsScene<TGame>`**: `OnLoad` creates `World`, `Simulation` and `Presentation`, then calls `OnCreate`. The scene's
-`OnUpdate` runs `Simulation`, `OnRender` runs `Presentation`, both with `(float)GameTime.Delta.TotalSeconds`. `OnUnload`
-calls `OnDestroy`, then disposes the world. A paused scene (another scene pushed on top) runs neither group.
+**`EcsScene<TGame>`**: `OnLoad` creates `World`, `FixedSimulation`, a default `FixedTimestep`, `Simulation` and
+`Presentation`, then calls `OnCreate` (which may replace `FixedTimestep`). The scene's `OnUpdate` first runs
+`FixedSimulation` as many times as `FixedTimestep.Advance(delta)` returns, each time with `FixedTimestep.StepSeconds`,
+then `Simulation` once. `OnRender` runs `Presentation`. `Simulation` and `Presentation` get
+`(float)GameTime.Delta.TotalSeconds`. `OnUnload` calls `OnDestroy`, then disposes the world. A paused scene (another
+scene pushed on top) runs no group, and its paused time is not added to the fixed-step accumulator.
+
+**`FixedTimestep`** (default `DefaultStepSeconds` = 1/60 s, `DefaultMaxStepsPerFrame` = 4): `Advance` adds the delta
+and returns the whole steps that fit; the rest carries over to the next frame (`Alpha` = carried time / step). If more
+than `MaxStepsPerFrame` steps are due, it returns `MaxStepsPerFrame` and **drops** the backlog, so after a long stall
+the game slows down instead of catching up. A delta ≤ 0 or NaN adds nothing. At a high frame rate most frames run 0
+fixed steps, so a system in `FixedSimulation` that reads a key's `Pressed` edge directly misses most presses: latch
+input in `Simulation`, consume it in `FixedSimulation`. Asteroids.Ecs runs its physics there.
+
+<a id="physics"></a>
+**Physics** (assembly and namespace `ConsoleEngine.Physics`, optional: a game references it only if it needs physics;
+plan `docs/design/physics-plan.md`, phases 0–5 done). Units are console cells on both axes (a circle looks twice as tall
+as wide on screen unless the font is square, as in PhysicsSandbox and PhysicsShowcase).
+- `RigidBody` (`RigidBody.Dynamic(mass, gravityScale, linearDamping, angularDamping)`, `.Kinematic()`, `.Static()`;
+  `default` is static). `Collider` (`Collider.Circle(radius, offset)`, `Collider.Box(halfExtents, offset)`,
+  `Collider.Polygon(polygonId)`, then `with { … }`): shape, `Category`/`Mask` bits (factory default: category 1,
+  collides with all), `IsSensor`, `Friction` (factory default `DefaultFriction` 0.6), `Restitution` (default 0). A
+  `Collider` without a `RigidBody` is a static body. `default(Collider)` has `Mask` 0 and collides with nothing.
+- **Polygons**: convex, at most 8 corners, added once with `PhysicsSystem.Polygons.Add(vertices)` (the convex hull is
+  kept; vertices are relative to `Position`). Fewer than 3 points, points on one line, or more than 8 hull corners throw
+  `ArgumentException`.
+- **Rotation**: a body turns only if it has a `Rotation` **and** an `AngularVelocity`; without them its rotation stays
+  fixed (a `Rotation` alone still turns its shape, e.g. a static ramp). Rotation is clockwise on screen, around
+  `Position`; the rotational inertia comes from the shape and mass (uniform density, about `Position`). Kinematic
+  bodies with an `AngularVelocity` turn at that speed.
+- Game systems read the events through `IPhysicsEvents` (`PhysicsSystem` implements it), so another physics engine
+  could stand in behind the same components and events.
+- A dynamic or kinematic body needs a `Velocity`; without one it is handled as **static** (never moves, never pushed).
+- `PhysicsSystem` (add it to `FixedSimulation`; `DefaultCellSize` 8 cells; `Gravity` default 0; `SubstepCount` 4;
+  `ContactHertz` 30, capped at a quarter of the substep rate, doubled for contacts with a static or kinematic body;
+  `ContactDampingRatio` 10; `ContactPushMaxSpeed` 3 cells/s; `RestitutionThreshold` 1 cell/s; `EnableSleep` on;
+  `TimeToSleep` 0.5 s — all Box2D's defaults with 1 cell = 1 Box2D length unit). Each step is split into `SubstepCount`
+  substeps of `h = step / SubstepCount`; per substep, dynamic bodies get
+  `v = v / (1 + h * LinearDamping) + Gravity * GravityScale * h` (and `w = w / (1 + h * AngularDamping)`), contacts
+  push, and non-static bodies move and turn. Rigid bodies without a `Collider` get the same substeps without contacts.
+- A pair is tested only if `(a.Category & b.Mask) != 0` and `(b.Category & a.Mask) != 0`, not both static, not both
+  sensors, and, if neither is a sensor, at least one is dynamic (kinematic–kinematic and kinematic–static never touch).
+- Contact response: dynamic bodies don't pass through each other, through static/kinematic ones or through solid
+  tiles. Static and kinematic bodies are never pushed. A contact has up to 2 points (boxes and polygons resting flat get
+  2), so turned bodies tip over and lie flat. Overlaps are pushed out at most `ContactPushMaxSpeed`, and that push adds
+  no velocity. Bodies settle about `LinearSlop` (0.005 cells) into each other per contact, so a stack sinks a little.
+  Friction per pair = `sqrt(a.Friction * b.Friction)` (a tile contact uses the body's), restitution =
+  `max(a.Restitution, b.Restitution)`; impacts slower than `RestitutionThreshold` don't bounce. Friction makes balls
+  roll. Contacts start before the shapes touch (speculative: when the gap is less than how far both can move this
+  step), so fast bodies don't tunnel through thin walls.
+- **Tile grid**: `PhysicsSystem.TileGrid` (optional `TileGrid`: columns × rows of solid/empty tiles, `TileSize`,
+  `Origin`, `Category`). Dynamic bodies whose `Mask` includes the grid's `Category`, the queries and `CharacterMover`
+  collide with it. Outside the grid is empty. Touching a tile's edge is not overlapping it. A tile face that touches
+  another solid tile is never collided with, so bodies slide over seams: boxes and polygons are only ever pushed out
+  through a tile's open faces (`Collision.PolygonTile`), whatever their angle; a circle's contact is dropped when it would
+  push out through a closed face. Tile contacts have **no events**.
+- **Sleeping** (`EnableSleep`): a dynamic body is still while slower than `LinearSleepTolerance` (0.05 cells/s) and
+  `AngularSleepTolerance` (2°/s). Touching dynamic bodies form an island; an island whose bodies have all been still
+  for `TimeToSleep` sleeps: `RigidBody.IsSleeping` is set, velocities are zeroed, and its bodies aren't simulated.
+  It wakes when a moving body of the island or a moving kinematic body touches it, when one of its contacts ends (a
+  support moved away or was destroyed), when game code gives one of its bodies a velocity, or when `IsSleeping` is
+  cleared. **Changing `Gravity` doesn't wake sleeping bodies** (as Box2D): clear `IsSleeping` yourself.
+  `SleepingBodyCount` counts them. Sleeping bodies still cost their gather and broadphase each step.
+- **Interpolation** (opt-in): a body with `Interpolation` and the engine's `RenderOffset` gets `PreviousPosition` and
+  `PreviousRadians` set each step; `InterpolationSystem(FixedTimestep)` in the presentation group (before the render
+  systems) sets `RenderOffset = (previous - current) × (1 - FixedTimestep.Alpha)`, so the body is drawn between its last
+  two steps (up to one step behind, without jumps). Nothing is offset before the first step (`HasPrevious`). After a
+  teleport, call `Interpolation.Reset()`.
+- **Queries** (`IPhysicsQueries`, implemented by `PhysicsSystem`): `Raycast` (closest collider or tile; shapes that
+  contain the origin are ignored; a ray starting inside solid tiles hits the first solid tile after it leaves them),
+  `CastBox` (an axis-aligned box swept along a translation, against circles, turned boxes and polygons too; a shape it
+  already overlaps is hit at fraction 0 when moving further in and ignored when moving out; tile faces that touch
+  another solid tile are never hit, so boxes don't catch on seams), `OverlapBox`/`OverlapCircle` (colliders only, up to
+  the span's length). A collider is reported if its `Category` has a bit in the query mask; sensors never. Queries see
+  the world **as at the end of the last physics step**.
+- **`CharacterMover.MoveAndSlide`** (Godot `move_and_slide`): sweeps a box by `velocity * delta` with `CastBox`, stops
+  `SkinWidth` (0.01 cells) before what it hits, removes the velocity part into the surface and slides with the rest, at
+  most `MaxSlides` (4) hits per move. Returns `SlideCollisions`: `Floor` (normal within 45° of `up`, default
+  `(0, -1)`), `Ceiling`, `Wall`. A character has no `RigidBody`, so the physics never moves it.
+- "Touching" (for events and `TouchingPairCount`) = separation below `TouchDistance` (0.02 cells), so a resting
+  contact stays touching instead of flickering.
+- Events (`ContactBeginEvents`, `ContactEndEvents`, `SensorBeginEvents`, `SensorEndEvents`) hold the last step's
+  changes only and are replaced every step. A begin fires once when a pair starts touching; an end fires when it stops
+  **or when either entity was destroyed** (the entity in the event is then dead). A sleeping pair stays touching (no
+  end). In contact events `A` has the lower entity id. Read them from a system added after `PhysicsSystem` in
+  `FixedSimulation`; a system in `Simulation` sees the same events again in frames without a fixed step.
 
 **Built-in systems** (namespace `ConsoleEngine.Ecs.Systems`, components in `ConsoleEngine.Ecs.Components`):
-- `MovementSystem`: `Position += Velocity * delta`. No wrapping, no bounds.
+- `MovementSystem`: `Position += Velocity * delta` for every entity with both, or only those that also match the
+  filter passed to its constructor (`new MovementSystem(Query.Without<X>())`). No wrapping, no bounds. The engine knows
+  nothing about physics: a game that uses `PhysicsSystem` must add `new MovementSystem(Query.Without<RigidBody>())`,
+  otherwise rigid bodies are moved twice (once per frame here, once per fixed step there).
 - `GlyphRenderSystem`: draws `Glyph.Character` at `floor(Position - Camera.Position)`. Off-screen cells are clipped
   by `RenderConsole.Draw`.
+- All three render systems add the entity's `RenderOffset` (position, and radians for outlines) when it has one: drawn
+  there, not moved (used by physics interpolation, or for effects).
 - `OutlineRenderSystem`: draws the `OutlineLibrary` polygon for `Outline.Id` around the position, rotated clockwise
   by `Rotation.Radians` if the entity has a `Rotation`. Skipped when its bounding circle (`OutlineLibrary.GetRadius`)
   is entirely off-screen.
@@ -304,18 +392,22 @@ files, so every rule above applies, except:
 | Snake.Ecs | Differs from Snake: when no food exists, new food is placed on a uniformly random **free** on-screen cell (never on the snake, any column/row). It appears after the simulation group's playback. The whole screen is redrawn each frame | `FoodSpawnSystem` |
 | Platformer | `F1` toggles `IsDebugMode`, which **starts true** (`Program.cs`). Draws the player **before** the world, so tiles overwrite the player | `PlatformerGame.OnUpdate`, `OnRender` |
 | Platformer | `ShowFps = true` but no `EnableLogger`, so no FPS anywhere | `PlatformerGame.OnInitialize` |
-| Platformer.Ecs | Same keys, start state (debug on) and draw order (debug text, player, then tiles on top) as Platformer. Velocity is in cells/s and scaled by `Delta`: gravity 200, run 150, air 75 cells/s², drag (3, 0.1)/s, jump speed 50 cells/s (about 6 cells high at any FPS) | `PlayerControlSystem`, `PlayerPhysicsSystem`, `PlatformerScene` |
-| Platformer.Ecs | Differs from Platformer: horizontal speed under 1 cell/s is zeroed only when A/D is not held; moves are split into steps of at most 0.5 cells; vertical and horizontal collisions are checked one after the other; moving left/right checks the corners on that side; screen positions are floored. Kept from the original: walking off a ledge does not make the player airborne, and a jump pressed in the air happens on landing | `PlayerPhysicsSystem.ResolveCollisions` |
+| Platformer.Ecs | Same keys, start state (debug on) and draw order (debug text, player, then tiles on top) as Platformer. Velocity is in cells/s: gravity 200, run 150 (ground) / 75 (air) cells/s², drag (3, 0.1)/s, jump speed 50 cells/s (about 6 cells high at any FPS). The player moves in fixed steps of 1/60 s; A/D and SPACE are read every frame and latched (`PlayerBody.RunDirection`, `JumpRequested`) | `PlayerControlSystem`, `PlayerPhysicsSystem`, `PlatformerScene` |
+| Platformer.Ecs | Collisions go through the engine physics: the level is a `TileGrid` (`TileMap.ToTileGrid`, 4×4-cell tiles, outside the map is empty) and the player a 3×3 box moved by `CharacterMover.MoveAndSlide`, which stops at walls and slides along them. Landing (a `Floor` hit) ends `IsAirborne`. Differs from Platformer: horizontal speed under 1 cell/s is zeroed only when A/D is not held; `Position` is rounded to whole cells after every move (the exact remainder is kept in `PlayerBody.SubCell`), so the player is drawn touching walls and floors although the mover stops `SkinWidth` (0.01) before them. Kept from the original: walking off a ledge does not make the player airborne, and a jump pressed in the air happens on landing | `PlayerPhysicsSystem`, `CharacterMover`, `TileGrid` |
 | Asteroids | Steer `A`/`D`, thrust `W`. No collisions, no objective. Logger enabled but nothing is logged | `AsteroidsGame` |
 | Asteroids.Ecs | Steer `A`/`D` (`Ship.SteeringSpeed` 2π rad/s), thrust `W` (`Ship.Thrust` 60 cells/s²), drag `Ship.Drag` 1.5/s. All movement is scaled by `Delta` | `ShipControlSystem` |
 | Asteroids.Ecs | `SPACE` (Pressed) fires one bullet: 80 cells/s plus the ship's velocity, lives 1.5 s | `ShipControlSystem`, `Spawner.CreateBullet`, `LifetimeSystem` |
-| Asteroids.Ecs | A bullet whose `Collider` touches an asteroid's destroys both. The ship never collides. No score, no objective | `CollisionSystem` |
-| Asteroids.Ecs | Asteroids drift up to 6 cells/s. Everything wraps around a playfield three screens wide and high, so the camera jumps when the ship crosses an edge | `MovementSystem` (engine), `WrapSystem`, `Playfield.Wrap`, `CameraSystem` |
-| Asteroids.Ecs | Ship and asteroids are outlines, bullets are `*` glyphs. Hits and expired bullets disappear at the end of the simulation group (command buffer playback), so they are never drawn in the frame they die | `AsteroidsScene.OnCreate`, `OutlineRenderSystem`, `GlyphRenderSystem` |
+| Asteroids.Ecs | A bullet (kinematic sensor, `CollisionLayers.Bullets`) that touches an asteroid (dynamic, `CollisionLayers.Asteroids`) destroys both, on the `SensorBeginEvents` of the fixed step. One bullet touching two asteroids in the same step destroys both. Asteroids pass through each other. The ship has no collider and never collides. No score, no objective | `PhysicsSystem` (engine), `CollisionSystem`, `Spawner` |
+| Asteroids.Ecs | Asteroids drift up to 6 cells/s. Asteroids and bullets move in fixed steps of 1/60 s (`PhysicsSystem`), the ship every frame (`MovementSystem`). Everything wraps around a playfield three screens wide and high, so the camera jumps when the ship crosses an edge | `PhysicsSystem`, `MovementSystem` (engine), `WrapSystem`, `Playfield.Wrap`, `CameraSystem` |
+| Asteroids.Ecs | Ship and asteroids are outlines, bullets are `*` glyphs. Hits disappear at the end of the fixed step and expired bullets at the end of the simulation group (command buffer playback), so they are never drawn in the frame they die | `AsteroidsScene.OnCreate`, `OutlineRenderSystem`, `GlyphRenderSystem` |
 | ConsoleGame | Recolours all cells every **500 ms**. `ESC` calls `Stop()`, which exits | `Game.OnInitialize`, `OnUpdate` |
 | ConsoleGame.Ecs | One entity per cell (4096). Every **500 ms** (timer reset to 0) each gets a random colour of the same five. Cells are black until the first recolour. `ESC` quits | `RecolorSystem`, `ColorGridScene`, `ConsoleEcsGame.OnUpdate` |
 | Swarm | Particles are pulled towards a point moving on a Lissajous curve, each with its own `Agility.Pull` (30–180 cells/s²), drag 0.3/s, and bounce off the screen edges. Colour by speed: dark blue < 15, blue < 30, cyan < 50 cells/s, else white. The HUD on row 0 shows the count | `AttractorSystem`, `BounceSystem`, `ColorBySpeedSystem`, `HudSystem` |
 | Swarm | `SPACE` adds 10 000 particles, `BACKSPACE` removes up to 10 000 (both through the command buffer, applied at the end of the simulation group). `ESC` quits | `SpawnControlSystem`, `SwarmGame.OnUpdate` |
+| PhysicsSandbox | Gravity 30 cells/s² down. Static floor (3 rows), side walls and two ledges (`█`), a kinematic platform (`▒`, 16×1) that moves at 12 cells/s between 20 % and 80 % of the width. `PhysicsSystem` cell size 2 | `SandboxScene`, `PatrolSystem` (fixed step, `[UpdateBefore(typeof(PhysicsSystem))]`) |
+| PhysicsSandbox | `SPACE` drops a ball (`●`, radius 0.5, restitution 0.6, mass 1), `B` a box (`■`, 1×1, mass 3, no bounce), `ENTER` 50 balls stacked 1.2 cells apart, all at random x on row 3 with a random sideways speed up to 8 cells/s. `R` removes every dropped body. `ESC` quits. Dropping goes through the command buffer: the bodies appear at the end of the simulation group and move from the next fixed step. The HUD on row 0 shows the count | `DropSystem`, `BodySpawner`, `HudSystem`, `PhysicsSandboxGame.OnUpdate` |
+| PhysicsShowcase | One scene with every physics feature. Gravity 40 cells/s² down, 120 × 60 tiles of 1×1 (`Level.CreateTiles`: ceiling rows 0–2 (under the HUD, so it is three tiles thick), floor rows 57–59, side walls, two shelves, two steps). Static turned ramp (`▓`), ice ledge without friction (`═`), kinematic platform patrolling at 10 cells/s (`▒`), kinematic windmill turning at 1.2 rad/s (`#`), static sensor zone (`·`) whose count is on the HUD. Outlines are drawn with every corner moved half a cell towards the body's origin (`OutlineShape.ThroughCellCentres`), so a body resting on a tile isn't drawn one row into it. `PhysicsSystem` cell size 3, sleep and interpolation on | `ShowcaseScene`, `Level`, `PatrolSystem`, `EventCounterSystem` |
+| PhysicsShowcase | Keys: `1` bouncy ball (`●`), `2` turning 2×2 box (`#`), `3` triangle (`▲`), `4` pentagon (`*`), `5` ghost ball (`○`, category `Layers.Ghost`: passes through solid bodies, not through tiles or other ghosts); `ENTER` 30 random shapes; `R` removes every dropped body. Sleeping bodies are drawn dark grey. The player `@` (1×1, `CharacterMover`, `A`/`D` run 18 cells/s, `W` jumps from a floor) is a static obstacle for bodies. Standing on a kinematic body (within 0.5 cells below its feet), it first moves with the point under its feet (velocity plus spin), so the platform and the windmill carry it instead of moving into it. Its laser is a `Raycast` 60 cells in the facing direction (× on the hit). `E` blasts every dynamic body within 10 cells (`OverlapCircle`) outwards and spins it. `G` flips gravity and wakes everything, `I` switches interpolation | `DropSystem`, `BodyFactory`, `PlayerMoveSystem`, `LaserSystem`, `BlastSystem`, `SwitchSystem`, `TintSystem`, `HudSystem` |
 
 <a id="launcher"></a>
 ## Launcher (`Examples/Launcher`)

@@ -33,9 +33,12 @@ public sealed class GlyphRenderSystem(RenderConsole console, Camera camera) : En
         {
             var positions = chunk.GetSpan<Position>();
             var glyphs = chunk.GetSpan<Glyph>();
+            var offsets = chunk.Has<RenderOffset>() ? chunk.GetSpan<RenderOffset>() : Span<RenderOffset>.Empty;
             for (var i = 0; i < chunk.Count; i++)
             {
                 var screen = positions[i].Value - cameraPosition;
+                if (!offsets.IsEmpty)
+                    screen += offsets[i].Position;
                 var x = (int)MathF.Floor(screen.X);
                 var y = (int)MathF.Floor(screen.Y);
                 if ((uint)x >= (uint)width || (uint)y >= (uint)height)

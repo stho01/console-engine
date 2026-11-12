@@ -5,7 +5,7 @@
 
 | Fact | Why | How to get it |
 |---|---|---|
-| **Which game** (TerraForM, Snake, Asteroids, Platformer, ConsoleGame, their `.Ecs` ports, Swarm, EternalDigger, or their own game on `ConsoleEngine`) | Rules differ per game ([03](03-rules.md)) | Ask, or the exe name |
+| **Which game** (TerraForM, Snake, Asteroids, Platformer, ConsoleGame, their `.Ecs` ports, Swarm, PhysicsSandbox, PhysicsShowcase, EternalDigger, or their own game on `ConsoleEngine`) | Rules differ per game ([03](03-rules.md)) | Ask, or the exe name |
 | **OS and console host** | Windows only. Windows Terminal ignores the sizing/font calls **[external]** | [07 § Q1, Q2](07-checks.md#q1) |
 | **How it was launched and from which folder** (double-click the exe, `dotnet run`, IDE, a shortcut, a terminal in another folder) | Map files and the logger exe are found by **relative path** | [07 § Q3](07-checks.md#q3) |
 | **The exact error text**, if any | There are no log files. The exception printed to the console is the only record | Ask them to start it from an already-open terminal so the text stays ([06 § Capturing a crash](06-diagnostics.md#capture)) |
@@ -91,7 +91,7 @@
 
 **Symptom [inferred]:** "how do I exit?", "ESC doesn't quit", "the logger window stays open after the game closes".
 
-1. Which game? Only `ConsoleGame`, `ConsoleGame.Ecs`, `Swarm` and `EternalDigger` quit on `ESC` (`Stop()`). In TerraForM and TerraForM.Ecs `ESC` opens the menu. Others have no quit key. → **Cause:** no quit path ([04 § F3](04-flows.md#f3)). **Fix:** close the console window. Stop.
+1. Which game? Only `ConsoleGame`, `ConsoleGame.Ecs`, `Swarm`, `PhysicsSandbox`, `PhysicsShowcase` and `EternalDigger` quit on `ESC` (`Stop()`). In TerraForM and TerraForM.Ecs `ESC` opens the menu. Others have no quit key. → **Cause:** no quit path ([04 § F3](04-flows.md#f3)). **Fix:** close the console window. Stop.
 2. Logger stays open after the game exits → **Cause:** `Log.Stop` is never reached, because `RenderConsole.Close` calls `Environment.Exit(0)` first, and the logger only exits on a `SocketException` ([04 § F4](04-flows.md#f4)). How the logger sees the closed connection is **[external]** and unverified. **Fix:** close the logger window. Escalate if it spins CPU.
 
 <a id="p6"></a>
@@ -235,4 +235,47 @@ Rules: [03 § EternalDigger](03-rules.md#eternal-digger). Flows: [04 § F11](04-
     Stop.
 16. "Debris or sparks disappear right next to the miner" → **Cause:** by design. No particle is drawn on his 4 × 2
    cells, and at most 6 (dimmed) are drawn in the tile around him, so he stays readable (`ParticleRenderSystem`). Stop.
+
+<a id="p18"></a>
+## P18 — Physics: bodies pass through each other / sink / no hit / hit reported twice or late
+
+Applies to PhysicsSandbox, Asteroids.Ecs and any game on `ConsoleEngine.Physics`. Rules: [03 § Physics](03-rules.md#physics),
+flow: [04 § F13](04-flows.md#f13).
+
+1. Bodies overlap and keep going → check, in order: a filter or pair rule excludes the pair (step 2 below; in Asteroids.Ecs
+   asteroids pass through each other by design); one body is static or kinematic and the other too (no contact between
+   them); the dynamic body has no `Velocity` (handled as static). Otherwise escalate with the body sizes and speeds. Stop.
+2. Bodies sink a little into each other or into the floor, more in a tall stack → by design: each contact settles about
+   `PhysicsSystem.LinearSlop` (0.005 cells) deep, and contacts are soft springs. A deep overlap is pushed out at most
+   `ContactPushMaxSpeed` (3 cells/s), so it takes a moment. Stop.
+3. No event at all for a pair → check, in order: both have a `Collider` and a `Position`; the `Category`/`Mask` bits accept
+   each other both ways (`default(Collider)` has `Mask` 0); not both static (a `Collider` without `RigidBody` is static);
+   not both sensors; a non-sensor pair has a dynamic body. Any of these → skipped silently ([04 § F13](04-flows.md#f13)
+   step 4). Stop.
+4. A body never moves → it has no `Velocity`, is `BodyType.Static`, or `PhysicsSystem` was added to `Simulation` or not
+   at all instead of `FixedSimulation`. Stop.
+5. The same hit handled several times, or hits missed → the reacting system reads the events from `Simulation` instead of
+   after `PhysicsSystem` in `FixedSimulation` ([03 § Physics](03-rules.md#physics)). Stop.
+6. Rigid bodies move too fast, or faster at a higher FPS → the scene adds `new MovementSystem()` without the filter, so they are
+   moved twice. Use `new MovementSystem(Query.Without<RigidBody>())` ([03 § Physics](03-rules.md#physics)). Stop.
+7. Asteroids.Ecs: one bullet removed two asteroids → by design when it touches both in the same step ([03 § Asteroids.Ecs
+   row](03-rules.md)). Stop.
+8. A raycast or box cast misses a body that is clearly there → queries see the world as at the end of the last physics
+   step; a body created or moved by game code since then shows up after the next step. Sensors are never reported, and
+   the query mask must include the collider's `Category`. Stop.
+9. Dynamic bodies fall through a `TileGrid` → the body's `Collider.Mask` must include `TileGrid.Category` (default 1),
+   and it must be dynamic with a `Velocity`. Only through a wall one tile thick: a body pushed more than half a tile
+   into it (a heavy pile, a squeeze) is pushed out through the far face. Make walls at least two tiles thick. Stop.
+10. Bodies hang in the air, don't fall after gravity changed, or don't react → they are asleep (`RigidBody.IsSleeping`,
+   drawn dark grey in PhysicsShowcase). Changing `Gravity` doesn't wake them (as Box2D): clear `IsSleeping`. A body that
+   never sleeps keeps moving faster than 0.05 cells/s (no damping, a moving platform). Stop.
+11. A box doesn't turn when hit off-centre → it needs both `Rotation` and `AngularVelocity`. Stop.
+11b. An outline is drawn one row inside the floor it rests on → the outline system draws a corner in the cell it lies in,
+   and a resting body sits `LinearSlop` into the floor. Draw outlines through cell centres (PhysicsShowcase:
+   `OutlineShape.ThroughCellCentres`). A character falls through a moving or turning platform → the physics never
+   pushes a character: move it with the platform first (PhysicsShowcase: `PlayerMoveSystem.TryGetPlatformVelocity`).
+   Stop.
+12. Platformer.Ecs: player stuck, falls through the floor, or can't jump → check the debug overlay (F1): `HIT: Floor`
+   while standing means landing works and `AIR` should be `False`. A jump pressed in the air waits for the landing (by
+   design, as the original). Otherwise escalate with `POS`, `VEL` and `HIT`. Stop.
 

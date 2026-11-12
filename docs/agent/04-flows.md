@@ -142,12 +142,13 @@ See [03 § Scenes](03-rules.md#scenes). TerraForM's scene graph:
 | 7 | `Add`: write the new value (skipped for tags). `Destroy` instead does step 6 only, then bumps `Version` and frees the id (or retires it at `int.MaxValue`) | `World.Write`, `World.Destroy` | — | — |
 
 <a id="f9"></a>
-## F9 — ECS frame in an `EcsScene` (`SceneManager.Update` → `Simulation`, `SceneManager.Render` → `Presentation`)
+## F9 — ECS frame in an `EcsScene` (`SceneManager.Update` → `FixedSimulation` + `Simulation`, `SceneManager.Render` → `Presentation`)
 
 Runs inside [F2](#f2) steps "Scenes.Update" and "Scenes.Render". Both are skipped while the scene is paused.
 
 | # | Step | Class.method | Stops / skips if | Observable |
 |---|---|---|---|---|
+| 0 | `FixedTimestep.Advance(delta)` → `steps`; `FixedSimulation.Update(FixedTimestep.StepSeconds)` runs `steps` times, each run doing steps 1–3 below for that group (its own `Commands` played back after every run) | `EcsScene.OnUpdate` → `EcsScene.RunSimulation` | Less than one step of time collected → 0 runs. More than `MaxStepsPerFrame` due → only `MaxStepsPerFrame` runs, the rest of the time is dropped | Fixed-step systems run 0, 1 or several times per frame |
 | 1 | `Simulation.Update((float)GameTime.Delta.TotalSeconds)`: each enabled system's `OnUpdate`, in `SystemGroup.RunOrder` (`Add` order adjusted by `UpdateBefore`/`UpdateAfter`) | `EcsScene.OnUpdate` → `SystemGroup.Update` | `EntitySystem.Enabled == false` → that system is skipped | — |
 | 2 | Systems iterate queries and record structural changes in `Commands` | game systems, `MovementSystem` | Direct `World.Create/Destroy/Add/Remove` inside the loop | `InvalidOperationException` ([F8](#f8) step 0) |
 | 3 | Sync point: `Commands.Playback(World)` applies the recorded changes in order (deferred handles from `Create` are swapped for the created entities), then clears the buffer | `CommandBuffer.Playback` | Target entity no longer alive → that `Destroy`/`Add`/`Remove` is **skipped silently**. Foreign or stale deferred handle → `InvalidOperationException` | Entities created/destroyed this frame show up in the render below |
@@ -201,3 +202,33 @@ Runs in [F9](#f9) step 1, in this order. The keyboard is read once into a `Miner
 | 7 | Save when requested or after 60 s underground | `SaveSystem.OnUpdate` → `GameSaver.Save` → `SaveData.Capture` + `SaveFile.Save` | No request and timer not reached → nothing. `IOException`/`UnauthorizedAccessException` → caught, `LastSaveFailed = true` | ` SAVED ` / ` SAVE FAILED` |
 | 8 | `ESC` | `EternalDiggerGame.OnUpdate` → `MineScene.Save` → `Stop()` | On the title: no save | Process exits |
 
+
+<a id="f13"></a>
+## F13 — Physics step (`PhysicsSystem.OnUpdate`, inside [F9](#f9) step 0)
+
+Runs once per fixed step, where the scene added it to `FixedSimulation`. Rules: [03 § Physics](03-rules.md#physics).
+
+| # | Step | Class.method | Stops / skips if | Observable |
+|---|---|---|---|---|
+| 1 | Rigid bodies **without** a `Collider` (`Position` + `Velocity` + `RigidBody`): `SubstepCount` substeps of gravity/damping (dynamic) and `p += v * h` (non-static) | `PhysicsSystem.IntegrateJob` | `BodyType.Static` → not moved | Positions change only on fixed steps |
+| 2 | Copy every `Position` + `Collider` into `BodyProxy` (bounds, filter), `BodyShape` (position, rotation, shape), `BodyState` (velocity, 32 bytes) and `BodySim` (mass, inertia, damping, sleep, friction); a sleeping body given a velocity wakes | `PhysicsSystem.Gather`, `ReadBody` | No `RigidBody` or no `Velocity` → static. No `Rotation` + `AngularVelocity` → doesn't turn | `BodyCount` |
+| 3 | Broadphase: hash each body into every grid cell its bounding box (grown by the margin) touches, then list overlapping boxes, each pair once | `SpatialHashGrid.Build`, `FindPairs` | Boxes apart → no pair | — |
+| 4 | Pair rules, then the contact manifold (up to 2 points). A pair of two resting bodies (asleep or static) keeps the previous step's cache entry instead | `PhysicsSystem.CreateContacts`, `ShouldTest`, `Collision.Collide` | Filters reject each other, both static, both sensors, or a non-sensor pair without a dynamic body → skipped **silently**. Sensor pair not touching, or contact pair further apart than both margins → dropped | — |
+| 5 | Add the pair to the cache; touching now but not before → begin event, touching before but not now → end event. Non-sensor pairs become solver contacts, warm-started with last step's impulses | `PhysicsSystem.CreateContacts`, `AddToCache`, `PairCache.Add` | — | `ContactBeginEvents`, `SensorBeginEvents`, `TouchingPairCount`, `ContactCount` |
+| 6 | Every pair of the previous step that touched and isn't in the cache now (moved apart, filtered out, or an entity destroyed) adds an end event. If anything sleeps: bodies that lost a contact wake, islands (union-find over contacts) with an awake body wake whole, resting pairs with a woken body are measured after all, then awake dynamic bodies get contacts with the solid tiles under them (boxes and polygons only against open tile faces, circles skipped against closed ones), and contacts between sleeping bodies are dropped | `PairCache.CollectEnded`, `WakeBodiesThatLostContacts`, `WakeTouchedIslands`, `ResolveRestingPairs`, `CreateTileContacts`, `DropSleepingContacts` | Sleeping bodies get no tile contacts; tile contacts have no events | `ContactEndEvents`, `SensorEndEvents` (entities may be dead) |
+| 7 | `SubstepCount` times: integrate velocities, warm start, solve with soft push-out, integrate positions and rotations, relax. Then restitution, the impulses go back into the cache, and still islands go to sleep | `PhysicsSystem.Solve`, `ContactSolver`, `UpdateSleep` | Contacts of non-turning bodies take the linear path (same result, less work). Restitution 0, impact slower than `RestitutionThreshold`, or no push during the step → no bounce | Bodies stop at, slide along, roll or bounce off each other; `SleepingBodyCount` |
+| 8 | Write `Position`, `Velocity`, `Rotation`, `AngularVelocity`, `RigidBody.IsSleeping`/`SleepTime` back (and `Interpolation`'s previous transform was saved in step 2), same chunk order as step 2 | `PhysicsSystem.Scatter` | Static bodies → not written | New positions and velocities |
+| 9 | Later systems in `FixedSimulation` read the events and record destroys in `Commands`; playback after the group | game systems (Asteroids.Ecs `CollisionSystem`), `CommandBuffer.Playback` | Destroy of an already-dead entity → skipped silently | Hit entities gone before the frame is drawn |
+
+<a id="f14"></a>
+## F14 — Spatial query and character move (`IPhysicsQueries`, `CharacterMover.MoveAndSlide`)
+
+Called by game systems, normally in `FixedSimulation` after `PhysicsSystem` (Platformer.Ecs `PlayerPhysicsSystem`).
+Rules: [03 § Physics](03-rules.md#physics).
+
+| # | Step | Class.method | Stops / skips if | Observable |
+|---|---|---|---|---|
+| 1 | First query after a step: move every proxy to its end-of-step position and rebuild the body grid without margins | `PhysicsSystem.EnsureQueryState` | Already done since the last step → skipped | Queries see the end of the last step, not later changes by game code |
+| 2 | Raycast: walk the body grid's cells along the ray (`GridWalker`), test each body once, stop when the next cell is further than the best hit; then walk the tile grid to the first solid tile after leaving any the ray starts in | `RaycastBodies`, `RaycastTiles`, `RayCast.Box`/`Circle` | Sensor, category not in the mask, or the origin inside the shape → body skipped silently | `CastHit` (entity or tile, point, normal, fraction) |
+| 3 | Box cast: test every body and solid tile in the swept box against the shape grown by the cast box | `CastBoxBodies`, `CastBoxTiles`, `RayCast.Box`/`RoundedBox` | Ignored entity, sensor, mask; starting inside and moving out; a tile face touching another solid tile → skipped silently | `CastHit` |
+| 4 | `MoveAndSlide`: cast the box by the remaining move; no hit → move all of it and stop; a hit → move to it plus `SkinWidth`, record `Floor`/`Ceiling`/`Wall`, remove the move and velocity parts into the surface, repeat | `CharacterMover.MoveAndSlide` | After `MaxSlides` (4) hits, or when the remaining move is ~0 → stops, the rest of the move is dropped | New centre and velocity, `SlideCollisions` |

@@ -29,6 +29,8 @@
       <ProjectReference Include="..\TerraForM.Ecs\TerraForM.Ecs.csproj" />
       <ProjectReference Include="..\ConsoleGame.Ecs\ConsoleGame.Ecs.csproj" />
       <ProjectReference Include="..\Swarm\Swarm.csproj" />
+      <ProjectReference Include="..\PhysicsSandbox\PhysicsSandbox.csproj" />
+      <ProjectReference Include="..\PhysicsShowcase\PhysicsShowcase.csproj" />
       <ProjectReference Include="..\EternalDigger\EternalDigger.csproj" />
     </ItemGroup>
 

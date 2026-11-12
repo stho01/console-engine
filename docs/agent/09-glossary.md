@@ -4,7 +4,7 @@ Support/user words are **[inferred]**. The team may also use Norwegian terms. Ad
 
 | User / support word | Meaning | Code identifier |
 |---|---|---|
-| the game / the app | One example exe built on the engine | `GameBase` subclass: `TerraformGame`, `SnakeGame`, `AsteroidsGame`, `PlatformerGame`, `ConsoleGame.Game`, and the ECS ports `TerraformEcsGame`, `SnakeEcsGame`, `AsteroidsEcsGame`, `PlatformerEcsGame`, `ConsoleEcsGame`, the ECS stress test `SwarmGame`, and the ECS game `EternalDiggerGame` |
+| the game / the app | One example exe built on the engine | `GameBase` subclass: `TerraformGame`, `SnakeGame`, `AsteroidsGame`, `PlatformerGame`, `ConsoleGame.Game`, and the ECS ports `TerraformEcsGame`, `SnakeEcsGame`, `AsteroidsEcsGame`, `PlatformerEcsGame`, `ConsoleEcsGame`, the ECS stress test `SwarmGame`, the physics demos `PhysicsSandboxGame` and `PhysicsShowcaseGame`, and the ECS game `EternalDiggerGame` |
 | the engine | The shared library | `ConsoleEngine` project, namespace `ConsoleEngine` |
 | window / screen | The console window and its cell buffer | `RenderConsole`, `ConsoleHandler`, `IConsoleHandler` |
 | pixel / cell / character | One console cell | `Pixel` (`Char`, `ForegroundColor`, `BackgroundColor`) |
@@ -25,6 +25,28 @@ Support/user words are **[inferred]**. The team may also use Norwegian terms. Ad
 | query | The entities that have a given set of components | `Query`, `QueryDescription` (`With`, `Without`), `IForEach<…>` |
 | system | Game logic that runs over queries each frame | `EntitySystem` subclasses: engine `MovementSystem`, `GlyphRenderSystem`, `OutlineRenderSystem`, `SpriteRenderSystem`; game ones in `Examples/Asteroids.Ecs/Systems/` |
 | system group / sync point | Ordered list of systems. After the last one, deferred changes are applied | `SystemGroup`, `EcsScene.Simulation` / `Presentation` |
+| rigid body / body type | An entity the physics moves: static (never), kinematic (by its velocity only), dynamic (velocity, gravity, later contacts) | `RigidBody`, `BodyType` |
+| collider / shape | The circle or box physics tests for an entity, plus its collision filter | `Collider`, `ShapeType` |
+| collision layer / category / mask | Bits that say which colliders may touch each other | `Collider.Category`, `Collider.Mask`, Asteroids.Ecs `CollisionLayers` |
+| sensor / trigger | A collider that only reports overlaps, never pushes | `Collider.IsSensor`, `SensorEvent` |
+| contact / hit / collision event | Two colliders started or stopped touching | `ContactEvent`, `PhysicsSystem.ContactBeginEvents` / `ContactEndEvents` / `SensorBeginEvents` / `SensorEndEvents` |
+| broadphase | Fast search for pairs that might touch, before the exact test | `SpatialHashGrid` (narrowphase: `Collision`) |
+| solver / contact response / bounce / friction | What stops bodies going through each other, makes them slide or bounce | `ContactSolver`, `Collider.Friction`, `Collider.Restitution`, `PhysicsSystem.RestitutionThreshold` |
+| substep | One of the slices a physics step is cut into for the solver (default 4) | `PhysicsSystem.SubstepCount` |
+| soft contact / soft step | Contacts act as stiff, damped springs instead of hard corrections (Box2D v3) | `Softness`, `PhysicsSystem.ContactHertz`, `ContactDampingRatio`, `ContactPushMaxSpeed` |
+| warm starting | Starting the solver with the previous step's impulses, so stacks rest instead of jitter | `PairCache.Add` / `StoreImpulses`, `ContactConstraint.NormalImpulse` |
+| physics events interface | What game code depends on instead of the concrete physics system | `IPhysicsEvents` |
+| tile grid / level collision | Solid and empty tiles the physics queries and characters collide with, without one entity per wall | `TileGrid`, `PhysicsSystem.TileGrid`, Platformer.Ecs `TileMap.ToTileGrid` |
+| raycast / box cast / overlap | Asking the physics what is along a line, in the way of a moving box, or inside an area | `IPhysicsQueries.Raycast`, `CastBox`, `OverlapBox`, `OverlapCircle`, `CastHit` |
+| character controller / move and slide | Moving a player box that stops at walls and slides along them, not pushed by physics | `CharacterMover.MoveAndSlide`, `SlideCollisions` |
+| polygon shape | A convex shape of up to 8 corners, shared by id | `PolygonLibrary`, `Collider.Polygon`, `ConvexPolygon` |
+| spin / turning body | A body that rotates from contacts and friction | `Rotation` + `AngularVelocity`, `RigidBody.AngularDamping` |
+| manifold / contact points | Where two shapes touch: a normal and up to 2 points | `Manifold`, `ManifoldPoint`, `Collision` |
+| sleeping / asleep / island | Bodies at rest that the physics stops simulating until something wakes them; an island is a group of touching bodies that sleep and wake together | `RigidBody.IsSleeping`, `PhysicsSystem.EnableSleep`, `TimeToSleep`, `SleepingBodyCount` |
+| interpolation / smoothing | Drawing a body between its last two fixed steps so it glides instead of jumping | `Interpolation`, `InterpolationSystem`, engine `RenderOffset`, `FixedTimestep.Alpha` |
+| speculative contact | A contact created before two bodies touch, because they can close the gap this step; stops tunnelling | `BodyProxy.Margin`, `PhysicsSystem.CreateContacts` |
+| moving platform | A kinematic body moved by its velocity; never pushed, carries what stands on it by friction | `BodyType.Kinematic`, PhysicsSandbox `Patrol` / `PatrolSystem` |
+| fixed step / fixed timestep | A simulation step of constant length (default 1/60 s), run 0 or more times per frame so physics doesn't depend on the frame rate | `FixedTimestep`, `EcsScene.FixedSimulation` |
 | command buffer / deferred change | Create/destroy/add/remove recorded during a loop, applied later | `CommandBuffer`, `EntitySystem.Commands` |
 | deferred handle / deferred entity | Handle returned by a buffered Create, usable only in the same buffer until playback | Negative `Entity.Id`, `CommandBuffer.Create`, `CommandBuffer.Resolve` |
 | system order | Which system in a group runs first | `SystemGroup.RunOrder`, `UpdateBeforeAttribute`, `UpdateAfterAttribute` |

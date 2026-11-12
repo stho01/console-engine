@@ -31,8 +31,9 @@ Platform: **Windows only.** Rendering and input go through Win32 P/Invoke (`kern
 | Win32 signatures and structs | `Libs/ConsoleEngine.Windows/LowLevel/` (`Kernel32.cs`, `User32.cs`) |
 | Vector/matrix math | `Libs/Microsoft.Xna.Framework/` (copied from MonoGame, change only with good reason) |
 | ECS (entities, components, archetypes, chunks) | `ConsoleEngine/Ecs/`, design and phases in [`docs/design/ecs-plan.md`](docs/design/ecs-plan.md) |
+| 2D physics (bodies, circles/boxes/polygons, rotation, broadphase, Soft Step contact solver, contact/sensor events, tile grid, sleeping, interpolation, raycasts and box casts, `CharacterMover.MoveAndSlide`) | `ConsoleEngine.Physics/` (own assembly and NuGet package, optional), rules in [`docs/agent/03-rules.md` § Physics](docs/agent/03-rules.md#physics), design and phases in [`docs/design/physics-plan.md`](docs/design/physics-plan.md). Examples: `Examples/PhysicsShowcase` (every feature), `Examples/PhysicsSandbox` (solver), `Examples/Asteroids.Ecs` (sensors, layers), `Examples/Platformer.Ecs` (tile grid, character controller) |
 | Performance measurements | `ConsoleEngine.Benchmarks/` (BenchmarkDotNet) |
-| How to use the engine | `Examples/Snake` (smallest), `Examples/TerraForM` (scenes, assets, tests), `Examples/<Game>.Ecs` (ECS port of each game: components, systems, queries, `EcsScene`; compare with `Examples/<Game>`. `Snake.Ecs` is the smallest, `TerraForM.Ecs` the fullest), `Examples/Swarm` (ECS at scale, system ordering attributes), `Examples/EternalDigger` (a full original ECS game: endless grid world, particle effects, lighting; start at [`Examples/EternalDigger/README.md`](Examples/EternalDigger/README.md), design contract in [`docs/design/eternal-digger.md`](docs/design/eternal-digger.md)) |
+| How to use the engine | `Examples/Snake` (smallest), `Examples/TerraForM` (scenes, assets, tests), `Examples/<Game>.Ecs` (ECS port of each game: components, systems, queries, `EcsScene`; compare with `Examples/<Game>`. `Snake.Ecs` is the smallest, `TerraForM.Ecs` the fullest), `Examples/Swarm` (ECS at scale, system ordering attributes), `Examples/PhysicsSandbox` (physics: bodies, colliders, fixed step, kinematic platform), `Examples/PhysicsShowcase` (every physics feature), `Examples/EternalDigger` (a full original ECS game: endless grid world, particle effects, lighting; start at [`Examples/EternalDigger/README.md`](Examples/EternalDigger/README.md), design contract in [`docs/design/eternal-digger.md`](docs/design/eternal-digger.md)) |
 | Build/test pipeline | `.github/workflows/build-and-test.yml` |
 | Formatting rules | `.editorconfig` + [§ Code style](#code-style) |
 | Open feature requests | GitHub issues: mouse input (8), macOS (7), more colours (6) |
@@ -45,15 +46,17 @@ Every name in `docs/agent/` is grep-able. Search for the identifier you are inte
 |---|---|---|---|
 | `ConsoleEngine` | `ConsoleEngine/` | Library (NuGet) | Abstractions, Windows, Logger, Xna |
 | `ConsoleEngine.Abstractions` | `ConsoleEngine.Abstractions/` | Library: interfaces + value types | — |
+| `ConsoleEngine.Physics` | `ConsoleEngine.Physics/` | Library (NuGet): 2D physics on the ECS. Optional: games without physics don't reference it | ConsoleEngine, Xna |
 | `ConsoleEngine.Windows` | `Libs/ConsoleEngine.Windows/` | Library, namespace `ConsoleEngine.Native` | Abstractions |
 | `ConsoleEngine.Logger` | `Libs/ConsoleEngine.Logger/` | Exe: TCP log viewer (port 11000) | — |
 | `Microsoft.Xna.Framework` | `Libs/Microsoft.Xna.Framework/` | Library: math types | — |
-| `TerraForM`, `Snake`, `Asteroids`, `Platformer`, `ConsoleGame`, their ports `<Game>.Ecs`, `Swarm` (ECS stress test) and `EternalDigger` (ECS game) | `Examples/*` | Exe | ConsoleEngine |
+| `TerraForM`, `Snake`, `Asteroids`, `Platformer`, `ConsoleGame`, their ports `<Game>.Ecs`, `Swarm` (ECS stress test), `PhysicsSandbox` and `PhysicsShowcase` (physics demos) and `EternalDigger` (ECS game) | `Examples/*` | Exe | ConsoleEngine |
 | `Launcher` | `Examples/Launcher/` | Exe: text menu that starts the ECS games (plain `System.Console`, no engine) | ECS games (build order only) |
 | `TerraForM.Tests` | `Examples/TerraForM.Tests/` | NUnit 5 + NSubstitute | TerraForM |
 | `Launcher.Tests` | `Examples/Launcher.Tests/` | NUnit 5 | Launcher |
 | `EternalDigger.Tests` | `Examples/EternalDigger.Tests/` | NUnit 5, hand-written `Fakes/FakeConsoleHandler` | EternalDigger |
 | `ConsoleEngine.Tests` | `ConsoleEngine.Tests/` | NUnit 5, hand-written fakes in `Fakes/` | ConsoleEngine |
+| `ConsoleEngine.Physics.Tests` | `ConsoleEngine.Physics.Tests/` | NUnit 5 | ConsoleEngine.Physics |
 | `ConsoleEngine.Benchmarks` | `ConsoleEngine.Benchmarks/` | Exe: BenchmarkDotNet 0.15.8 | ConsoleEngine |
 
 All projects: `net11.0`, `LangVersion` 15, `TreatWarningsAsErrors` = `True`. Solution: `ConsoleEngine.sln`.
@@ -80,8 +83,9 @@ dotnet tool restore
 dotnet reportgenerator -reports:"TestResults/**/coverage.cobertura.xml" -targetdir:coverage -reporttypes:Html
 ```
 
-Benchmarks (always `Release`; `--job short` for a quick run; add `--counters CacheMisses+BranchMispredictions` for
-hardware counters, which needs an elevated prompt on Windows):
+Benchmarks (always `Release`; `--job short` for a quick run; `--affinity 1` pins the process to one core, so runs on a
+hybrid CPU are comparable (without it results can vary up to 1.8×); add `--counters CacheMisses+BranchMispredictions`
+for hardware counters, which needs an elevated prompt on Windows):
 
 ```bash
 dotnet run -c Release --project ConsoleEngine.Benchmarks -- --filter "*"
@@ -113,7 +117,7 @@ coverage.runsettings              coverlet settings for `dotnet test` coverage
 dotnet-tools.json                 local tools (ReportGenerator)
 AGENTS.md / CLAUDE.md             agent instructions (CLAUDE.md imports AGENTS.md)
 docs/agent/                       support/triage docs for agents (01–09 + README)
-docs/design/                      design plans (ecs-plan.md, eternal-digger.md)
+docs/design/                      design plans (ecs-plan.md, physics-plan.md, eternal-digger.md)
 ConsoleEngine/                    the engine
   GameBase.cs                       abstract game: Initialize/Start/Stop, frame loop
   Collections/Deque.cs              double-ended queue (used by Snake)
@@ -121,8 +125,9 @@ ConsoleEngine/                    the engine
                                     ComponentMask, ComponentType<T>/ComponentRegistry, EcsThrowHelper,
                                     Query, QueryDescription, EntityChunk, IForEach<…>, CommandBuffer
                                     (+ .Create.cs), EntitySystem, SystemGroup, UpdateBefore/UpdateAfter
-                                    attributes (UpdateOrderAttributes.cs), EcsScene<TGame>
-    Components/                     built-in components: Position, Velocity, Rotation, Glyph, Outline, SpriteRef
+                                    attributes (UpdateOrderAttributes.cs), EcsScene<TGame>, FixedTimestep
+    Components/                     built-in components: Position, Velocity, Rotation, Glyph, Outline, SpriteRef,
+                                    RenderOffset
     Rendering/                      Camera, OutlineLibrary, SpriteLibrary (namespace ConsoleEngine.Ecs.Rendering)
     Systems/                        built-in systems: MovementSystem, GlyphRenderSystem, OutlineRenderSystem,
                                     SpriteRenderSystem
@@ -134,8 +139,18 @@ ConsoleEngine/                    the engine
     Rendering/RenderConsole.cs      frame buffer + Draw* API
     Rendering/Sprite.cs             Pixel[,] sprites, FromString/FromStringArray
     Scenery/Scene.cs, SceneManager.cs  scene stack (Push/Pop/Set)
+ConsoleEngine.Physics/            2D physics (namespace ConsoleEngine.Physics): RigidBody, Collider, AngularVelocity,
+                                  PolygonLibrary, PhysicsSystem (+ .Queries.cs), IPhysicsEvents, IPhysicsQueries/CastHit,
+                                  TileGrid, CharacterMover/SlideCollisions, Interpolation/InterpolationSystem,
+                                  ContactEvent/SensorEvent; internal: BodyProxy, BodyShape/Manifold/Collision
+                                  (narrowphase), ConvexPolygon, SpatialHashGrid (broadphase), PairCache, ContactSolver
+                                  (+ BodyState, BodySim, ContactConstraint, Softness), RayCast, GridWalker, ArrayBuffer
+ConsoleEngine.Physics.Tests/      physics tests (Collision, SpatialHashGrid, PhysicsSystem, PhysicsSolverTests, TileGrid,
+                                  PhysicsQueryTests, CharacterMoverTests, RotationTests, TileContactTests, SleepTests,
+                                  InterpolationTests)
 ConsoleEngine.Tests/              engine unit tests (mirrors ConsoleEngine/ folders), Fakes/ (console handler, scene)
-ConsoleEngine.Benchmarks/         BenchmarkDotNet: Baseline/ (OOP vs. struct arrays), Ecs/ (World, Query)
+ConsoleEngine.Benchmarks/         BenchmarkDotNet: Baseline/ (OOP vs. struct arrays), Ecs/ (World, Query),
+                                  Physics/ (brute-force baseline, whole PhysicsSystem step, queries)
 ConsoleEngine.Abstractions/
   Inputs/  IInputHandler, Key, KeyState
   Rendering/  IConsoleHandler, Pixel, FontInfo
@@ -151,6 +166,10 @@ Examples/
                                   Systems/ (EntitySystem subclasses), Scenes/ (an EcsScene that spawns entities and
                                   adds systems in run order). TerraForM.Ecs links Assets/ from Examples/TerraForM
   Swarm/                          ECS stress test (no OOP original): Components/, Systems/, Scenes/SwarmScene
+  PhysicsSandbox/                 physics demo (no OOP original): BodySpawner, Components/, Systems/,
+                                  Scenes/SandboxScene
+  PhysicsShowcase/                every physics feature in one scene: Level, BodyFactory, OutlineShape, Layers,
+                                  ShowcaseState, Components/, Systems/, Scenes/ShowcaseScene
   Launcher/                       game launcher: GameCatalog (menu entries), GameLocator (exe paths), LauncherMenu
                                   (keys), LauncherScreen (drawing), GameRunner (Process.Start + wait), LauncherTexts
   Launcher.Tests/                 LauncherMenuTests, GameLocatorTests
@@ -192,9 +211,9 @@ Examples/
 ## Performance
 
 **Hot path** = anything reachable from the frame loop: game and scene `OnUpdate`/`OnRender`, `RenderConsole.Draw*`,
-`Sprite` drawing, `InputHandler.Update`, `ConsoleHandler.Render`, and all of `ConsoleEngine/Ecs/` (`World.Get` is
-called per entity). In `Ecs/`, keep throws in `EcsThrowHelper` so checked methods stay inlinable, and run
-`ConsoleEngine.Benchmarks` before and after a change.
+`Sprite` drawing, `InputHandler.Update`, `ConsoleHandler.Render`, all of `ConsoleEngine/Ecs/` (`World.Get` is called per
+entity) and all of `ConsoleEngine.Physics/`. In `Ecs/`, keep throws in `EcsThrowHelper` so checked methods stay
+inlinable, and run `ConsoleEngine.Benchmarks` before and after a change.
 
 | Do | Don't |
 |---|---|
@@ -295,7 +314,7 @@ Use [Conventional Commits 1.0.0](https://www.conventionalcommits.org/en/v1.0.0/#
 | `chore` | Anything else |
 
 - **Scopes** (optional): `engine`, `abstractions`, `windows`, `logger`, `xna`, `terraform`, `snake`, `asteroids`,
-  `platformer`, `consolegame`, `launcher`, `docs`, `ci`.
+  `physics`, `platformer`, `consolegame`, `swarm`, `physicssandbox`, `physicsshowcase`, `launcher`, `docs`, `ci`.
 - **Description:** imperative, lower case, no trailing period. For example `fix(terraform): reset score on restart`.
 - **Breaking changes** to the public `ConsoleEngine` API or target framework: `!` after the type/scope and/or a
   `BREAKING CHANGE:` footer. For example `chore!: net8.0` (#10).
