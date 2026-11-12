@@ -4,7 +4,7 @@
 example games, **without reading the source**. Every identifier, string and file path in these docs exists in this
 repository and can be grepped.
 
-**What this system is:** a Windows-only .NET 10 library that draws games into a console window via Win32 P/Invoke
+**What this system is:** a Windows-only .NET 11 library that draws games into a console window via Win32 P/Invoke
 (`ConsoleEngine`, `ConsoleEngine.Windows`), an optional out-of-process TCP logger (`ConsoleEngine.Logger`), and twelve
 example games (`TerraForM`, `Snake`, `Asteroids`, `Platformer`, `ConsoleGame`, an ECS port `*.Ecs` of each, the ECS stress test `Swarm`, and the ECS game `EternalDigger`), plus `Launcher`, a text menu that starts the ECS games. There is **no server, no database, no
 queue, no tenant, no log file**. Each game is a single local process. See [01-system-map](01-system-map.md).

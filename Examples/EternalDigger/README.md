@@ -34,7 +34,7 @@ dotnet build Examples/EternalDigger
 ```
 
 ```bash
-cd Examples/EternalDigger/bin/Debug/net10.0 && ./EternalDigger
+cd Examples/EternalDigger/bin/Debug/net11.0 && ./EternalDigger
 ```
 
 On Windows run `EternalDigger.exe`. The optional first argument is the **seed** for a new mine: the same number always
