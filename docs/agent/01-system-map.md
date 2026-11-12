@@ -21,10 +21,12 @@ Nothing is hosted and nothing is exposed to the internet. Every unit is a local 
 | `Swarm` (`Examples/Swarm`) | Exe | ECS-only stress test: 100 000 particles (first argument) chasing a moving attractor |
 | `PhysicsSandbox` (`Examples/PhysicsSandbox`) | Exe | ECS-only physics demo: balls and boxes dropped into a walled box with two ledges and a moving platform (`ConsoleEngine.Physics`) |
 | `PhysicsShowcase` (`Examples/PhysicsShowcase`) | Exe | ECS-only demo of every physics feature: tile level, turning boxes and polygons, a kinematic platform and windmill, a sensor zone, collision layers, a player with `MoveAndSlide`, a raycast laser, an overlap blast, sleeping and interpolation |
-| `Launcher` (`Examples/Launcher`) | **Exe** `Launcher.exe`, no engine dependency (plain `System.Console`) | Text menu that starts the ECS games (`GameCatalog.Games`: Snake.Ecs, Asteroids.Ecs, Platformer.Ecs, TerraForM.Ecs, ConsoleGame.Ecs, Swarm, PhysicsSandbox, PhysicsShowcase, EternalDigger). Build-order `ProjectReference`s (`ReferenceOutputAssembly=false, Private=false as default metadata`) make building it build those games, without copying anything into its output |
+| `Launcher` (`Examples/Launcher`) | **Exe** `Launcher.exe`, no engine dependency (plain `System.Console`) | Text menu that starts the ECS games (`GameCatalog.Games`: Snake.Ecs, Asteroids.Ecs, Platformer.Ecs, TerraForM.Ecs, ConsoleGame.Ecs, Swarm, PhysicsSandbox, PhysicsShowcase, EternalDigger, SkyStack). Build-order `ProjectReference`s (`ReferenceOutputAssembly=false, Private=false as default metadata`) make building it build those games, without copying anything into its output |
 | `Launcher.Tests` (`Examples/Launcher.Tests`) | NUnit test project | `LauncherMenu` keys, `GameLocator` paths, and that every `GameCatalog` game has a `ProjectReference` in `Launcher.csproj` |
 | `EternalDigger` (`Examples/EternalDigger`) | Exe | ECS-only digging game: dig ore in an endless mine, sell it at the house, buy ladders. Design: `docs/design/eternal-digger.md` |
 | `EternalDigger.Tests` | NUnit test project | `MineTests`, `TilesTests`, `ShopTests`, `LightMapTests`, `ParticleLooksTests`, `MinerControlSystemTests` (plays frames with scripted `MinerInput`, no keyboard), `MinerVisibilityTests` (renders into a `RenderConsole` over `Fakes/FakeConsoleHandler`), `ElevatorTests`, `DynamiteTests`, `ShopCounterTests`, `UpgradesTests`, `LampOilTests`, `BagWeightTests`, `SaveFileTests`, `SaveSystemTests` (temp folders), `TitleMenuTests`, `InventorySystemTests`, `DeepCampTests`, `GasTests`, `DarknessTests`, `ProgressTests` |
+| `SkyStack` (`Examples/SkyStack`) | Exe | ECS-only tower climbing game: jump from floor to floor of an endless tower while the view rises; run speed makes jumps higher, jumps over 2+ floors chain into combos. Rules: [03 § SkyStack](03-rules.md#skystack) |
+| `SkyStack.Tests` | NUnit test project | `TowerTests`, `ClimbPhysicsTests` (plays fixed steps of `ClimbPhysics.Step`), `RunStatsTests`, `ScrollerTests` |
 
 Hard dependency: **Windows only.** `ConsoleHandler` and `InputHandler` call `kernel32.dll`/`user32.dll` directly
 (`GetStdHandle`, `WriteConsoleOutputW`, `SetCurrentConsoleFontEx`, `GetAsyncKeyState`…). No other platform
@@ -71,6 +73,7 @@ callbacks that run on the game loop thread ([03 § Intervals](03-rules.md#interv
 | `PhysicsSandboxGame` | 100 × 60 | 10×10 Consolas (square cells, so circles look round) | `Name = "Physics Sandbox"`, `ShowFps = true` |
 | `PhysicsShowcaseGame` | 120 × 60 | 10×10 Consolas (square cells) | `Name = "Physics Showcase"`, `ShowFps = true` |
 | `EternalDiggerGame` | 120 × 48 (`Layout.ScreenWidth` × `Layout.ScreenHeight`) | 8×16 Consolas | `Name = "EternalDigger"`. First command-line argument = seed for a NEW MINE (default `Environment.TickCount`); CONTINUE uses the saved seed. Reads and writes `<LocalApplicationData>/EternalDigger/save.dat` (+ `.tmp`, `.bad`). No logger, no FPS |
+| `SkyStackGame` | 64 × 40 (`Layout.ScreenWidth` × `Layout.ScreenHeight`) | 8×16 Consolas | `Name = "SkyStack"`. Each run uses a new seed (`Environment.TickCount`). Best score and floor live only in memory (`SkyStackGame.BestScore`, `BestFloor`). No logger, no FPS |
 
 `GameBase(width, height, fontWidth, fontHeight)` always uses face `"Consolas"`.
 
