@@ -80,6 +80,7 @@ Gotchas:
 - `Sprite.FromString` splits on `Environment.NewLine` (`\r\n` on Windows). A string with bare `\n` becomes one row.
 - Colours: only the 16 `ConsoleColor` values (`GetColorValue` packs fg | bg<<4). More colours is GitHub issue 6.
 
+<a id="logger"></a>
 ### Logger (`Log`)
 
 - `Log.WriteLine` / `Log.ReportFps` silently drop messages unless the game has `EnableLogger = true`
@@ -252,6 +253,83 @@ as wide on screen unless the font is square, as in PhysicsSandbox and PhysicsSho
   `QueryDescription` filter picks a layer (e.g. `With<Tile>()`): add one instance per layer in drawing order, because
   a query visits archetypes in no defined order.
 
+<a id="lua"></a>
+### Lua scripting (`ConsoleEngine.Scripting`)
+
+- **Scripts are ECS behaviour.** `LuaRuntime.Load(path)` returns a `LuaScript`. Its `Component` (a `Script { Id }`
+  component) on an entity makes that entity run the script. Nothing runs without the systems:
+  `LuaScriptSystem(runtime)` in a simulation group runs `on_start`/`on_update`, `LuaRenderSystem(scriptSystem)` in a
+  presentation group runs `on_render`. Use one `LuaScriptSystem` per `World`. In an `EcsScene` it goes in
+  `Simulation` (once per frame, `dt` = frame delta) or, for scripts that steer physics bodies every step,
+  `FixedSimulation` (`dt` = the fixed step). `Examples/Scripted` uses `Simulation`.
+- A script file must **return a table** (its module). The module may define `on_start(self)`, `on_update(self, dt)`
+  and `on_render(self)`. Missing hooks are skipped. Each entity gets its own `self` with metatable
+  `{ __index = module, __newindex = guard }`, so `self:method()` calls module functions.
+- `on_start` runs **once per entity, the first time `LuaScriptSystem` sees it**, in the same frame and just before its
+  first `on_update`. An entity counts as started only when `on_start` succeeds (or the script has none): if
+  `on_start` faults, it runs again after the script is reloaded. `on_render` is skipped until then. Entities created through a command buffer start in the next
+  simulation group run.
+- **`self`'s fields are the entity's components.** A field exists only when the entity has the component:
+
+| Field | Type | Component |
+|---|---|---|
+| `self.x`, `self.y` | number | `Position.Value` (stored as `float`) |
+| `self.vx`, `self.vy` | number, cells per second | `Velocity.Value` (applied by `MovementSystem` if the scene has it) |
+| `self.char` | string (first character used) or code point | `Glyph.Character` |
+| `self.color`, `self.background` | number (`colors.*`, masked to 0–15) | `Glyph.Foreground`, `Glyph.Background` |
+| `self.data` | table owned by the script, starts empty, kept across reloads | — |
+
+- The fields are copied into `self` **before every hook** and back into the components **after `on_start` and
+  `on_update`**. Changes made in `on_render` are not copied back. Other components (`Rotation`, `SpriteRef`, game
+  components) are not visible to Lua.
+- When an entity loses a component, its fields are removed from `self` on the next hook.
+- Writing a field of a component the entity lacks is an error: `self.vx needs a Velocity component on the entity`.
+  Writing any other unknown field (`self.X = 1`, `self.speed = 2`) is an error:
+  `unknown field '<key>' on an entity, put script data in self.data`. Reading an unknown field returns the module's
+  value or `nil` (no error).
+- If a hook stores the wrong type in a field (`self.x = "left"`), no component is written and the entity faults with
+  `self.<field> must be a number` or `self.char must be a string or a code point`.
+- `dt` is the delta the group passes to its systems: the frame delta in `Simulation`, the fixed step in
+  `FixedSimulation`. Scripts must scale movement by it ([§ FPS](#fps)).
+- **Sandbox.** Scripts get only the Lua 5.4 base library and `coroutine`, `string`, `table`, `math` and `utf8`
+  (`LuaRuntime.OpenSandboxedLibraries`). `io`, `os`, `debug`, `package` and `require` do not exist, and
+  `LuaRuntime.RemovedGlobals` removes `dofile`, `loadfile`, `load` and `collectgarbage` from the base library. Using
+  one is a normal Lua error (`attempt to index a nil value (global 'os')`, `attempt to call a nil value (global
+  'load')`) and faults the entity. Scripts cannot reach the file system, start processes, exit the game or load
+  other code; time comes from `dt`.
+- Lua API:
+
+| Lua | Behaviour |
+|---|---|
+| `input.held(key)`, `input.pressed(key)`, `input.released(key)` | `KeyState.Held`/`Pressed`/`Released` of that virtual key ([§ Keys](#keys)). A key outside 0–255 returns `false` |
+| `keys.LEFT`, `keys.A`, … | Every `Key` enum name → its virtual key code |
+| `colors.Red`, … | Every `ConsoleColor` name → its number |
+| `console.draw(x, y, char, fg, bg)` | `RenderConsole.Draw`. `x`/`y` are **floored**. `char` is a string (its first character is used) or a code point. `fg` defaults to White, `bg` to Black. Characters outside the BMP become `?`. Off-screen is clipped |
+| `console.text(x, y, text, fg, bg)` | Draws a string or number left to right, **at most 256 characters** (the rest is dropped) |
+| `console.width`, `console.height` | Set once when the runtime is created |
+| `print(...)` | `Log.WriteLine("Lua: " + args joined by tab)`. Dropped unless `EnableLogger` ([§ Logger](#logger)) |
+
+- **Errors.** A Lua error in a hook, or a .NET exception in a host function, **faults the entity**: the error text
+  (Lua's `name:line: message`, or `ExceptionType: message`) is kept for `LuaScriptSystem.GetError(entity)`,
+  `Log.WriteLine("Lua: " + error)` is called, and the tag `ScriptFaulted` is added through the group's command
+  buffer. The script query excludes `ScriptFaulted`, so none of its hooks run. Its components keep their last good
+  values and C# systems (movement, rendering) still process it. A host-function exception does not stop the Lua code
+  immediately: the hook runs to its end with the failing call returning nothing, then the entity faults.
+- `ScriptFaulted` is removed (and the error cleared) in the first `LuaScriptSystem` update after a successful
+  `Reload` of that entity's script. The entity runs again in the frame after that. Game code may also remove the tag
+  itself (`Remove<ScriptFaulted>`): the entity then runs again and its error is cleared.
+- **Reload.** `LuaScript.Reload` / `LuaRuntime.ReloadAll` re-read the file from `FullPath` (the copy in the output
+  folder, not the project source), run it, and make the existing module table equal to the new one: fields
+  **removed** from the new version are removed from the module (also values a script stored on the module at run
+  time), then every new field is copied in. Running entities keep their `self.data` and use the new functions.
+  `on_start` does **not** run again for started entities. A failing reload throws (`ReloadAll` returns the failures)
+  and the previous version stays active.
+- Lua shortens chunk names longer than 60 bytes in error messages to `...<end of path>`.
+- A UTF-8 byte order mark at the start of a script is skipped.
+- **Entity lifetime.** `self` is kept per `Entity.Id` and `Entity.Version`. A destroyed entity's `self` is freed when
+  its id is reused; a reused id gets a new `self` and runs `on_start` again. Giving an entity a `Script` for another
+  script also starts fresh. Removing `Script` and adding the same one back keeps the old `self` (no new `on_start`).
+
 <a id="terraform"></a>
 ## TerraForM
 
@@ -404,6 +482,8 @@ files, so every rule above applies, except:
 | ConsoleGame.Ecs | One entity per cell (4096). Every **500 ms** (timer reset to 0) each gets a random colour of the same five. Cells are black until the first recolour. `ESC` quits | `RecolorSystem`, `ColorGridScene`, `ConsoleEcsGame.OnUpdate` |
 | Swarm | Particles are pulled towards a point moving on a Lissajous curve, each with its own `Agility.Pull` (30–180 cells/s²), drag 0.3/s, and bounce off the screen edges. Colour by speed: dark blue < 15, blue < 30, cyan < 50 cells/s, else white. The HUD on row 0 shows the count | `AttractorSystem`, `BounceSystem`, `ColorBySpeedSystem`, `HudSystem` |
 | Swarm | `SPACE` adds 10 000 particles, `BACKSPACE` removes up to 10 000 (both through the command buffer, applied at the end of the simulation group). `ESC` quits | `SpawnControlSystem`, `SwarmGame.OnUpdate` |
+| Scripted | ECS scene. Arrows move the player (`@`, yellow, starts at `Console.ScreenCenter`) at 20 cells/s, kept inside rows 1 to height−2. 30 fireflies (`•`, positions from `Random(1)`): `on_start` gives each a random `Velocity` (`math.randomseed(1)`), `MovementSystem` moves them, the script reverses `vx`/`vy` at the edges and switches `self.color` Green/DarkGreen every 0.3 s. Which glyph wins where player and firefly overlap is not defined (archetype order). No collisions, no objective. `ESC` quits | `player.lua`, `firefly.lua`, `ScriptedScene.OnCreate`, `ScriptedGame.OnUpdate` |
+| Scripted | `F5` (`Pressed`) calls `LuaRuntime.ReloadAll()`. Failures go to `Log.WriteLine`, which is dropped because `EnableLogger` is off. The error of the first `ScriptFaulted` entity found is drawn on the bottom row (white on dark red) | `ScriptReloadSystem`, `ScriptErrorSystem` |
 | PhysicsSandbox | Gravity 30 cells/s² down. Static floor (3 rows), side walls and two ledges (`█`), a kinematic platform (`▒`, 16×1) that moves at 12 cells/s between 20 % and 80 % of the width. `PhysicsSystem` cell size 2 | `SandboxScene`, `PatrolSystem` (fixed step, `[UpdateBefore(typeof(PhysicsSystem))]`) |
 | PhysicsSandbox | `SPACE` drops a ball (`●`, radius 0.5, restitution 0.6, mass 1), `B` a box (`■`, 1×1, mass 3, no bounce), `ENTER` 50 balls stacked 1.2 cells apart, all at random x on row 3 with a random sideways speed up to 8 cells/s. `R` removes every dropped body. `ESC` quits. Dropping goes through the command buffer: the bodies appear at the end of the simulation group and move from the next fixed step. The HUD on row 0 shows the count | `DropSystem`, `BodySpawner`, `HudSystem`, `PhysicsSandboxGame.OnUpdate` |
 | PhysicsShowcase | One scene with every physics feature. Gravity 40 cells/s² down, 120 × 60 tiles of 1×1 (`Level.CreateTiles`: ceiling rows 0–2 (under the HUD, so it is three tiles thick), floor rows 57–59, side walls, two shelves, two steps). Static turned ramp (`▓`), ice ledge without friction (`═`), kinematic platform patrolling at 10 cells/s (`▒`), kinematic windmill turning at 1.2 rad/s (`#`), static sensor zone (`·`) whose count is on the HUD. Outlines are drawn with every corner moved half a cell towards the body's origin (`OutlineShape.ThroughCellCentres`), so a body resting on a tile isn't drawn one row into it. `PhysicsSystem` cell size 3, sleep and interpolation on | `ShowcaseScene`, `Level`, `PatrolSystem`, `EventCounterSystem` |

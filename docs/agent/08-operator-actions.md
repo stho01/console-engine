@@ -9,7 +9,8 @@ team's process differs.
 | Action | Effect | Use for |
 |---|---|---|
 | Launch the exe from its own output folder (double-click it there, or `cd` there first) | Relative paths resolve: `Assets/Maps/*.txt`, `ConsoleEngine.Logger.exe` | [P1](05-triage.md#p1) |
-| Run the game in the classic console host instead of Windows Terminal **[external]** | Size/font calls take effect | [P2](05-triage.md#p2) |
+| Double-click `start-conhost.cmd` in the game's output folder (developers: `run-game.ps1 <Game>`) | Starts the game in `conhost.exe` from its own folder, so size/font calls take effect and relative paths resolve | [P1](05-triage.md#p1), [P2](05-triage.md#p2) |
+| Or make the classic console the default: Settings → System → For developers → Terminal → "Windows Console Host" **[external]** | Every console app opens in conhost | [P2](05-triage.md#p2) |
 | Lower display scaling / use a larger screen | Window can reach the requested size | [P2](05-triage.md#p2) |
 | Close the other process holding port 11000 / the other game instance | `Log.Start` can bind | [P1](05-triage.md#p1) |
 | Close the window | Only way to exit every game except ConsoleGame, ConsoleGame.Ecs, Swarm, PhysicsSandbox, PhysicsShowcase and EternalDigger | [P5](05-triage.md#p5) |
@@ -55,6 +56,9 @@ team's process differs.
 | EternalDigger (title) | ↑↓ (or W S) / E / ESC | Choose / pick CONTINUE, NEW MINE or the confirmation / quit without saving | `TitleScene`, `TitleMenu` |
 | EternalDigger (no code) | Delete `<LocalApplicationData>/EternalDigger/save.dat` | Start fresh without the confirmation | `SaveFile.DefaultPath` |
 | EternalDigger | first command-line argument | Mine seed: the same number gives the same mine | `Program.cs` |
+| Scripted | ←→↑↓ | Move the player | `player.lua` |
+| Scripted | `F5` | Reload all Lua scripts from the output folder | `ScriptReloadSystem` → `LuaRuntime.ReloadAll` |
+| Scripted | ESC | Quit (`Stop()`) | `ScriptedGame.OnUpdate` |
 
 There is **no** way to skip a TerraForM level, choose a map, reset the score, or enable TerraForM debug mode without a
 code change.
@@ -70,3 +74,6 @@ code change.
 | Reset score on restart, latch game over, frame-rate-independent power | `GameScene`, `Rover` | `03`, `04`, `05` |
 | Detect and report Win32 failures (size/font) | `ConsoleHandler` (check return values) | `04`, `06` |
 | Logger fixes (port in use, missing exe, truncated lines) | `Log`, `ConsoleEngine.Logger/Program.cs` | `04`, `06` |
+| Change what a scripted entity does | `Assets/Scripts/*.lua` in that game (in a running Scripted demo: edit the output copy, press `F5`) | `03` |
+| Add a Lua API function | `LuaRuntime.RegisterApi` + a host function that never raises a Lua error | `03`, `04`, `06` |
+| Expose another component to scripts | `LuaRuntime.EngineSource` (`COMPONENT`, `run`, `clear`), `RunHook`, `ReadResults`, `LuaScriptSystem.Run` (mask bit + span) | `02`, `03`, `04`, `06` |
