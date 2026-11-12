@@ -99,3 +99,12 @@ Support/user words are **[inferred]**. The team may also use Norwegian terms. Ad
 | glint / sparkle | Twinkle that reveals ore in the dark | `GlintSystem`, `ParticleStyle.Glint` |
 | seed | Number that decides the mine's layout | `Mine(int seed)`, first command-line argument |
 
+| viking / hero (Vikingferd) | One of the three player characters; the keys control one at a time | `ActorKind.Ylva`, `Gorm`, `Sigrid`, `Heroes`, `Expedition.ActiveHero` |
+| switch viking (Vikingferd) | Give the keys to another viking (TAB, 1-3) | `Expedition.SelectNextHero`, `SelectHero` |
+| glide (Vikingferd) | Sigrid falling slowly with jump held; survives any drop | `PuzzleRules.GlideFallSpeed`, `Actor.Gliding` |
+| knocked out / out cold (Vikingferd) | A viking fell 5+ tiles or touched spikes; the level must be restarted | `Outcome.Failed`, `FailCause`, `PuzzleRules.FatalDrop` |
+| crate (Vikingferd) | 1 × 1 box only Gorm can push; holds plates down, fills holes, can be stood on | `ActorKind.Crate`, `PuzzleRules.Push` |
+| plate / lever / door / bridge / channel (Vikingferd) | Switches (plate held down, lever toggled) turn a channel a-e on; doors open and bridges appear while it is on | `TileKind.Plate`, `Lever`, `Door`, `Bridge`, `Stage.UpdateSwitches` |
+| cracked stone (Vikingferd) | Wall tile Gorm smashes with E | `TileKind.Cracked`, `Stage.Smash` |
+| exit (Vikingferd) | `░` tiles; all three vikings must stand on them | `TileKind.Exit` |
+| stacking (Vikingferd) | Standing on another viking's head to reach higher | `PuzzleRules.BlocksVertically` |

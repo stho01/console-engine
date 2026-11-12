@@ -44,7 +44,7 @@ the final `Width`/`Height`, because those come from the ctor arguments.
 
 | # | Step | Class.method | Note |
 |---|---|---|---|
-| 1 | Game calls `Stop()` on `ESC`: `ConsoleGame`, `ConsoleGame.Ecs`, `Swarm`, `EternalDigger` (after `MineScene.Save`) | `GameBase.Stop` | Other games have no quit path: the user closes the window. EternalDigger: closing the window without `ESC` loses progress since the last save |
+| 1 | Game calls `Stop()` on `ESC`: `ConsoleGame`, `ConsoleGame.Ecs`, `Swarm`, `EternalDigger` (after `MineScene.Save`), `Vikingferd` (on the title screen only; in a level `ESC` goes back to the title) | `GameBase.Stop` | Other games have no quit path: the user closes the window. EternalDigger: closing the window without `ESC` loses progress since the last save |
 | 2 | `_running = false`, then `_console.Close()` | `RenderConsole.Close` | **Calls `Environment.Exit(0)`: the process ends here** |
 | 3 | `if (EnableLogger) Log.Stop()` | `GameBase.Stop` | **Never reached** (step 2 exited). The logger socket isn't closed by `Log.Stop` |
 
@@ -232,3 +232,22 @@ Rules: [03 § Physics](03-rules.md#physics).
 | 2 | Raycast: walk the body grid's cells along the ray (`GridWalker`), test each body once, stop when the next cell is further than the best hit; then walk the tile grid to the first solid tile after leaving any the ray starts in | `RaycastBodies`, `RaycastTiles`, `RayCast.Box`/`Circle` | Sensor, category not in the mask, or the origin inside the shape → body skipped silently | `CastHit` (entity or tile, point, normal, fraction) |
 | 3 | Box cast: test every body and solid tile in the swept box against the shape grown by the cast box | `CastBoxBodies`, `CastBoxTiles`, `RayCast.Box`/`RoundedBox` | Ignored entity, sensor, mask; starting inside and moving out; a tile face touching another solid tile → skipped silently | `CastHit` |
 | 4 | `MoveAndSlide`: cast the box by the remaining move; no hit → move all of it and stop; a hit → move to it plus `SkinWidth`, record `Floor`/`Ceiling`/`Wall`, remove the move and velocity parts into the surface, repeat | `CharacterMover.MoveAndSlide` | After `MaxSlides` (4) hits, or when the remaining move is ~0 → stops, the rest of the move is dropped | New centre and velocity, `SlideCollisions` |
+
+<a id="f15"></a>
+## F15 — Vikingferd level frame (`LevelScene`: `PuzzleSystem` → `KeyboardSystem` → `PartyControlSystem`, then drawing)
+
+| # | Step | Class.method | Stops / skips if | Observable |
+|---|---|---|---|---|
+| 1 | Parse the map, create one entity per hero and crate | `LevelScene.OnCreate` → `Stage.Parse`, `Heroes.Create` | Ragged rows / unknown character → `FormatException` (crash on entering the level) | Level drawn |
+| 2 | Fixed steps due this frame (0 to 12, 120 Hz) | `EcsScene.RunSimulation` → `PuzzleSystem` | `Expedition.Outcome` not playing → nothing moves | — |
+| 3 | Copy the actors out, step the rules, copy back | `PuzzleSystem.OnUpdate` → `PuzzleRules.Step` | — | — |
+| 3a | Uses: lever under the hero, else Gorm smashes in front | `PuzzleRules.Use` | No `UseRequested` → skipped. Not Gorm and no lever → nothing | Lever flips / stone gone |
+| 3b | Heroes: run, jump (ground only), gravity, glide, move X (Gorm pushes), move Y, fall check | `PuzzleRules.MoveHero`, `MoveX`, `Push`, `MoveY` | Jump in the air → dropped. Blocked crate → Gorm stops | Hero moves |
+| 3c | Crates fall | `PuzzleRules.MoveCrate` | — | — |
+| 3d | Plates, channels, gates | `Stage.UpdateSwitches` | Gate that would turn solid while occupied → stays as it is this step | Doors/bridges change |
+| 3e | Fatal landing, spikes, exit | `PuzzleRules.MoveHero` result, `CheckHazardsAndExit` | First failure wins; later ones ignored (`Expedition.Apply`) | Message box |
+| 4 | Read the keyboard | `KeyboardSystem` → `PartyInput.FromKeyboard` | — | — |
+| 5 | Switch hero; latch run/jump/use on the active hero | `PartyControlSystem` | Not playing → all heroes get no input | `▼` marker moves |
+| 5b | Turn the rules' events into particles (debris, dust, sparks; gold sparkles once won), then move and expire particles | `EffectSystem` (reads and clears `Expedition.Events`), `ParticleSystem` | `PuzzleEvents` full (64) → further events dropped silently (effects only) | Particles |
+| 6 | Draw into the pixel canvas: backdrop, tiles, crates and heroes, particles, HUD / message; then write the canvas to the console | `BackdropRenderSystem`, `StageRenderSystem`, `ActorRenderSystem`, `ParticleRenderSystem`, `HudSystem`, `CanvasFlushSystem` | — | — |
+| 7 | `ESC` / `R` / confirm after a win | `VikingferdGame.OnUpdate` → `Scenes.Set` | Confirm only when won | Title / restarted level / next level |

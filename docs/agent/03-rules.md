@@ -477,3 +477,30 @@ tile is 4 × 2 cells (`Layout.TileWidth`/`TileHeight`). Row 0 is the top of the 
 | Loading | CONTINUE rebuilds the mine from the saved seed plus the saved changed tiles, and puts the miner standing on the saved tile with the saved facing and inventory. Unreadable save: red message on the title, only NEW MINE, file moved to `save.dat.bad` | `SaveFile.Load`, `SaveData.ApplyTo`, `SaveData.ToMiner` |
 | Save hint | After each save (or failed save), ` SAVED ` (Gray for 0.75 s, then DarkGray for 0.75 s) or ` SAVE FAILED` (red) at the right end of HUD row 1 | `HudSystem.DrawSavedHint`, `HudSystem.SavedHintSeconds` |
 
+
+<a id="vikingferd"></a>
+## Vikingferd (`Examples/Vikingferd`)
+
+Units are tiles (one tile = 4 × 2 cells), y down. All rules run in `PuzzleRules.Step`, called by `PuzzleSystem` in a
+fixed 120 Hz step (`LevelScene.StepSeconds`, at most 12 steps per frame), so they don't depend on the frame rate.
+
+| Rule | Value / behaviour | Code |
+|---|---|---|
+| Goal | Won when all three heroes stand (`OnGround`) with the tile under their box centre at their feet being an exit (`X`). Any hero knocked out fails the attempt; `R` restarts it | `PuzzleRules.CheckHazardsAndExit`, `Expedition.Apply` |
+| Control | Only `Expedition.ActiveHero` gets input; the others stand still (gravity still applies). `TAB` = next in `Heroes.Order` (Ylva, Gorm, Sigrid), `1`/`2`/`3` = that hero. Starts on Ylva. No input once won or failed | `PartyControlSystem`, `Expedition.SelectNextHero` |
+| Hero box | 0.7 × 1.8 tiles (`Heroes.HeroSize`): fits one-tile gaps and two-tile tunnels | `Heroes` |
+| Run speed | Ylva 7, Gorm 4.5, Sigrid 5.5 tiles/s. Ground acceleration 200 tiles/s² (stops almost at once), air 35 | `HeroStats.RunSpeed`, `PuzzleRules.GroundAcceleration` |
+| Jump | Only from the ground, the press is dropped otherwise (no buffering). Height Ylva 3.6, Gorm and Sigrid 1.4 tiles (`JumpHeight`; speed `√(2 · 40 · height)`). Ylva clears a 3-tile wall, the others a 1-tile step | `PuzzleRules.MoveHero`, `HeroStats.JumpSpeed` |
+| Gravity | 40 tiles/s², max fall 22 tiles/s | `PuzzleRules.Gravity`, `MaxFallSpeed` |
+| Glide | Sigrid with jump held while falling falls at most 3 tiles/s (`GlideFallSpeed`), drawn with a spread cloak | `PuzzleRules.MoveHero`, `Actor.Gliding` |
+| Fall damage | Landing more than 4.5 tiles (`FatalDrop`) below where the hero last stood **and** faster than 3.5 tiles/s (`SafeLandingSpeed`) knocks the hero out: 4 tiles is safe, 5 is not. A gliding Sigrid lands at 3 tiles/s, so she survives any drop. Jumping up first doesn't count: the drop is measured from the last ground | `PuzzleRules.MoveHero`, `Actor.LastGroundY` |
+| Spikes (`^`) | Not solid; a hero whose box reaches the lower half of the tile is knocked out. Crates are safe | `PuzzleRules.TouchesSpikes` |
+| Heroes and each other | Pass through each other sideways and upwards; a hero falling onto another lands on their head (stacking: Ylva on Gorm reaches 5 tiles). The hero below doesn't carry the one on top | `PuzzleRules.BlocksVertically` |
+| Crates (`o`, 1 × 1) | Fall, block everyone, can be stood on, press plates, land on heroes. Only Gorm pushes, one crate at a time (a crate against a wall, another crate or a hero doesn't move). A pushed crate whose centre is over a free tile lines up with it and drops in (fills one-tile holes) | `PuzzleRules.Push`, `MoveCrate` |
+| Use (`E`) | A lever overlapping the hero's box toggles. Otherwise Gorm smashes every cracked tile (`%`) in the column within 0.5 tiles in front of him (facing side), on the rows his box covers | `PuzzleRules.Use`, `Stage.Smash` |
+| Channels | Five channels a-e. A channel is on while any of its levers (`1`-`5`) is on or any of its plates (`A`-`E`) is pressed. A plate is pressed while any hero or crate overlaps the bottom quarter of its tile | `Stage.UpdateSwitches` |
+| Doors / bridges | Door (`a`-`e`): solid while its channel is off. Bridge (`p`-`t`): solid while its channel is on. A gate never becomes solid while a hero or crate overlaps it; it waits until free | `Stage.IsSolid`, `Stage.UpdateSwitches` |
+| Outside the map | Rock | `Stage.KindAt` |
+| Levels | `Levels.All`: The Shore, Rockslide, The Gorge, Counterweight, The Long Way Down. All playable from the title; nothing is saved. `LevelsTests` plays each one through | `Levels`, `TitleScene` |
+| Scenes | Title: ↑↓/W S choose (wraps), `ENTER`/`E`/`SPACE` start, `ESC` quits (`Stop()`). In a level: `R` restarts (new `LevelScene`), `ESC` back to the title, after a win `ENTER`/`E`/`SPACE` = next level (title after the last) | `TitleScene.OnUpdate`, `VikingferdGame.OnUpdate` |
+| Graphics | Everything is drawn into a `Canvas` of square pixels (two per console cell, written with `▀`): a tile is 4 × 4 pixels, a hero 4 × 8 (poses: standing, two walking frames every quarter tile, in the air, Sigrid gliding; mirrored when facing left). Backdrop: night sky, moon, mountains, pines, aurora, stars, falling snow. Effects (debris, dust, sparks, win sparkles) come from `PuzzleEvents` and never change the game | `Canvas`, `Looks`, `Backdrop`, `EffectSystem` |

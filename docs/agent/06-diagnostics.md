@@ -63,7 +63,10 @@ Grep these to locate the code path. None of them has a log level.
 | `Component type <Type> is listed more than once.` | `World.Create` (`ArgumentException`) | Same type twice in one `Create` |
 | `Cannot register <Type>: the ECS supports at most 256 component types.` | `ComponentRegistry.Register` (`InvalidOperationException`, wrapped in `TypeInitializationException`) | 257th component type used in the process |
 | `An archetype row needs <n> bytes and does not fit in one 16384-byte chunk.` | `Archetype` ctor (`InvalidOperationException`) | A component set too large for a chunk |
-| Window title = `GameBase.Name` | `GameBase.Initialize` → `SetTitle` | Default `"Game"`. Platformer `"Platformer game"`, Asteroids.Ecs `"Asteroids (ECS)"`, Snake.Ecs `"Snake (ECS)"`, TerraForM.Ecs `"TerraForM (ECS)"`, Platformer.Ecs `"Platformer (ECS)"`, Swarm `"Swarm (ECS)"`, PhysicsSandbox `"Physics Sandbox"`, PhysicsShowcase `"Physics Showcase"`, EternalDigger `"EternalDigger"` |
+| `A level needs at least one row and one column.` / `Row <n> is <w> tiles wide, expected <columns>.` / `Unknown map character '<c>' at column <x>, row <y>.` | `Stage.Parse` (`FormatException`), Vikingferd | A map in `Levels.All` was edited wrongly; crashes when that level starts (`LevelsTests` catches it) |
+| `Crates are not heroes.` (param `kind`, `ArgumentOutOfRangeException`) | `Heroes.Of`, Vikingferd | Code asked for hero stats of a crate |
+| `Sprite row <n> is <w> pixels wide, expected <width>.` / `Unknown sprite pixel '<c>'.` | `PixelSprite.Parse` (`FormatException`, wrapped in `TypeInitializationException` because `Looks` builds its sprites statically), Vikingferd | A sprite string in `Looks` was edited wrongly; crashes on the first frame drawn |
+| Window title = `GameBase.Name` | `GameBase.Initialize` → `SetTitle` | Default `"Game"`. Platformer `"Platformer game"`, Asteroids.Ecs `"Asteroids (ECS)"`, Snake.Ecs `"Snake (ECS)"`, TerraForM.Ecs `"TerraForM (ECS)"`, Platformer.Ecs `"Platformer (ECS)"`, Swarm `"Swarm (ECS)"`, PhysicsSandbox `"Physics Sandbox"`, PhysicsShowcase `"Physics Showcase"`, EternalDigger `"EternalDigger"`, Vikingferd `"Vikingferd"` |
 
 Runtime exceptions without repo-authored text (message comes from .NET and varies): `DllNotFoundException`,
 `SocketException`, `Win32Exception`, `FileNotFoundException`, `DirectoryNotFoundException`, `FormatException`,
@@ -132,6 +135,24 @@ using [04](04-flows.md).
 | ` ↑ DYNAMITE x5 ↓ ` / ` ↑ LADDERS x10 ↓ `, `HAVE <n>` or `NEEDS THE KIT`, `<price>g [E]` | `Shop.DynamiteBundleName`, `LadderBundleName`, `PromptRenderSystem.NeedsKitText` | The open tool shop's counter |
 | `HOUSE UPGRADE!` / `TOOL SHOP OPEN` (yellow, floating) | `FloatingTextRenderSystem.HouseUpgradeText`, `ToolShopOpenText` | A sale reached a gold milestone / first time below the wall |
 | ` EternalDigger `, `SHOP`, `MINE` | `HouseRenderSystem` (house sign, shop, shaft frame) | Scenery |
+
+### Vikingferd screen text (`GameTexts`, `TitleScene`, `Heroes`, `Levels`)
+
+| Text | Where | Meaning |
+|---|---|---|
+| ` VIKINGFERD ` (black on yellow) + `Level <n>/5  <title>` | `GameTexts.Title`, `GameTexts.LevelHeader` | Header row; the level titles are `The Shore`, `Rockslide`, `The Gorge`, `Counterweight`, `The Long Way Down` (`Levels.All`) |
+| The level's hint (grey, row 1) | `Level.Hint` in `Levels.All` | One line per level, e.g. `Ylva jumps high: climb the ledge and pull the lever (E). TAB or 1-3 switches viking.` |
+| `1 YLVA` / `2 GORM` / `3 SIGRID`, ` ◄ you`, `Jumps three tiles high` / `Pushes crates, E smashes cracked stone` / `Hold jump in the air to glide` | `HudSystem.DrawHeroCards`, `HeroStats.Name`, `Ability`, `GameTexts.Active` | Hero cards; the controlled one is highlighted |
+| `←→/A D run   SPACE/W jump   E use   TAB/1-3 switch viking   R restart   ESC levels` | `GameTexts.KeyHelp` | Bottom row in a level |
+| `All three vikings made it!` + `ENTER  next level` | `GameTexts.Won`, `WonNext` | Level won |
+| `The journey is complete. Skål!` + `ENTER  back to the levels` | `GameTexts.Finished`, `FinishedNext` | Last level won |
+| `<NAME> fell too far and is out cold.` / `<NAME> stepped on the spikes.` + `R  try again` | `GameTexts.Failed`, `Retry` | Attempt failed, in a framed blue box (`HudSystem.DrawBox`); the knocked-out hero turns dark grey with two `*` circling over the head (`Looks.DizzyStar`) |
+| `All three vikings made it!` box, gold sparkles rising from the heroes | `HudSystem`, `EffectSystem.SpawnWinSparkles` | Level won |
+| `▼` over a hero, bobbing | `Looks.ActiveMarker`, `ActorRenderSystem.DrawHero` | The hero the keys control |
+| `▲▲▲▲` (white) | `Looks.Spikes` | Spike tile |
+| Stars `∙` / `·` | `Backdrop.DrawStars` | Night sky (decoration only) |
+| Everything else in the stage area | `▀` half blocks: two square pixels per cell (`Canvas.Flush`) | Pixel art: tiles, heroes, crates, particles, backdrop |
+| `Three vikings, one way home. Nobody gets left behind.`, ` Level <n>/5  <title> ` list, `↑↓ choose level   ENTER start   ESC quit` | `TitleScene.Tagline`, `BuildItems`, `KeyHelp` | Title screen |
 
 ### TerraForM screen text (`HudTexts`, `Sprites`)
 

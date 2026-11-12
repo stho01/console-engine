@@ -5,7 +5,7 @@
 
 | Fact | Why | How to get it |
 |---|---|---|
-| **Which game** (TerraForM, Snake, Asteroids, Platformer, ConsoleGame, their `.Ecs` ports, Swarm, PhysicsSandbox, PhysicsShowcase, EternalDigger, or their own game on `ConsoleEngine`) | Rules differ per game ([03](03-rules.md)) | Ask, or the exe name |
+| **Which game** (TerraForM, Snake, Asteroids, Platformer, ConsoleGame, their `.Ecs` ports, Swarm, PhysicsSandbox, PhysicsShowcase, EternalDigger, Vikingferd, or their own game on `ConsoleEngine`) | Rules differ per game ([03](03-rules.md)) | Ask, or the exe name |
 | **OS and console host** | Windows only. Windows Terminal ignores the sizing/font calls **[external]** | [07 § Q1, Q2](07-checks.md#q1) |
 | **How it was launched and from which folder** (double-click the exe, `dotnet run`, IDE, a shortcut, a terminal in another folder) | Map files and the logger exe are found by **relative path** | [07 § Q3](07-checks.md#q3) |
 | **The exact error text**, if any | There are no log files. The exception printed to the console is the only record | Ask them to start it from an already-open terminal so the text stays ([06 § Capturing a crash](06-diagnostics.md#capture)) |
@@ -91,7 +91,7 @@
 
 **Symptom [inferred]:** "how do I exit?", "ESC doesn't quit", "the logger window stays open after the game closes".
 
-1. Which game? Only `ConsoleGame`, `ConsoleGame.Ecs`, `Swarm`, `PhysicsSandbox`, `PhysicsShowcase` and `EternalDigger` quit on `ESC` (`Stop()`). In TerraForM and TerraForM.Ecs `ESC` opens the menu. Others have no quit key. → **Cause:** no quit path ([04 § F3](04-flows.md#f3)). **Fix:** close the console window. Stop.
+1. Which game? Only `ConsoleGame`, `ConsoleGame.Ecs`, `Swarm`, `PhysicsSandbox`, `PhysicsShowcase` and `EternalDigger` quit on `ESC` (`Stop()`). Vikingferd quits on `ESC` from the title screen (in a level `ESC` first goes back to the title). In TerraForM and TerraForM.Ecs `ESC` opens the menu. Others have no quit key. → **Cause:** no quit path ([04 § F3](04-flows.md#f3)). **Fix:** close the console window. Stop.
 2. Logger stays open after the game exits → **Cause:** `Log.Stop` is never reached, because `RenderConsole.Close` calls `Environment.Exit(0)` first, and the logger only exits on a `SocketException` ([04 § F4](04-flows.md#f4)). How the logger sees the closed connection is **[external]** and unverified. **Fix:** close the logger window. Escalate if it spins CPU.
 
 <a id="p6"></a>
@@ -279,3 +279,27 @@ flow: [04 § F13](04-flows.md#f13).
    while standing means landing works and `AIR` should be `False`. A jump pressed in the air waits for the landing (by
    design, as the original). Otherwise escalate with `POS`, `VEL` and `HIT`. Stop.
 
+
+<a id="p19"></a>
+## P19 — Vikingferd: viking can't jump up / can't push / "died for no reason" / level impossible
+
+**Symptom [inferred]:** "Gorm can't get up there", "the crate won't move", "Gorm/Ylva died when I jumped down", "the
+door closed and won't open", "Sigrid died even though she can glide", "I'm stuck, the level can't be solved".
+
+Rules: [03 § Vikingferd](03-rules.md#vikingferd). Flow: [04 § F15](04-flows.md#f15).
+
+1. Which viking was it, and how high is the step? Only Ylva clears 3 tiles; Gorm and Sigrid clear 1. Standing on
+   another viking's head adds 1.8 tiles (Ylva on Gorm: 5). → works as coded (`HeroStats.JumpHeight`). Stop.
+2. Crate won't move → only Gorm pushes (`HeroStats.CanPush`), one crate at a time; a crate against a wall, another
+   crate or a viking stays. Wrong side? He can only push away from himself. → works as coded (`PuzzleRules.Push`).
+   Fix: `R` restarts the level. Stop.
+3. Knocked out after a drop → drops of 5 tiles or more (from the last place the viking stood, `FatalDrop` 4.5) knock
+   out anyone not gliding. Sigrid only survives if jump is **held** as she lands (`SafeLandingSpeed`). Spikes `▲▲▲▲`
+   knock out on touch. → works as coded. Fix: `R`. Stop.
+4. Door stays open or a bridge stays away → a gate never closes on a viking or crate standing in it
+   (`Stage.UpdateSwitches`); step out of it. A door held by a plate closes when the last viking or crate leaves the
+   plate. Stop.
+5. A crate fell into a hole or onto a viking and the level can't be finished → expected; there is no undo. Fix: `R`.
+6. Still believed unsolvable → the intended solutions are played by `LevelsTests` (one test per level, read the moves
+   there). If `dotnet test Examples/Vikingferd.Tests` passes, the level is solvable; escalate with the level name and
+   what the player did otherwise.
