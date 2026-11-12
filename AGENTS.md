@@ -32,6 +32,7 @@ Platform: **Windows only.** Rendering and input go through Win32 P/Invoke (`kern
 | Vector/matrix math | `Libs/Microsoft.Xna.Framework/` (copied from MonoGame, change only with good reason) |
 | ECS (entities, components, archetypes, chunks) | `ConsoleEngine/Ecs/`, design and phases in [`docs/design/ecs-plan.md`](docs/design/ecs-plan.md) |
 | 2D physics (bodies, circles/boxes/polygons, rotation, broadphase, Soft Step contact solver, contact/sensor events, tile grid, sleeping, interpolation, raycasts and box casts, `CharacterMover.MoveAndSlide`) | `ConsoleEngine.Physics/` (own assembly and NuGet package, optional), rules in [`docs/agent/03-rules.md` § Physics](docs/agent/03-rules.md#physics), design and phases in [`docs/design/physics-plan.md`](docs/design/physics-plan.md). Examples: `Examples/PhysicsShowcase` (every feature), `Examples/PhysicsSandbox` (solver), `Examples/Asteroids.Ecs` (sensors, layers), `Examples/Platformer.Ecs` (tile grid, character controller) |
+| Asset loading (planned, not built yet: `AssetManager`, `IAssetLoader<T>`, custom loaders for maps etc.) | Plan, phases and decision log in [`docs/design/asset-loader-plan.md`](docs/design/asset-loader-plan.md). Today each game reads its own files (`Examples/TerraForM.Ecs/MapLoader.cs`) |
 | Performance measurements | `ConsoleEngine.Benchmarks/` (BenchmarkDotNet) |
 | How to use the engine | `Examples/Snake` (smallest), `Examples/TerraForM` (scenes, assets, tests), `Examples/<Game>.Ecs` (ECS port of each game: components, systems, queries, `EcsScene`; compare with `Examples/<Game>`. `Snake.Ecs` is the smallest, `TerraForM.Ecs` the fullest), `Examples/Swarm` (ECS at scale, system ordering attributes), `Examples/PhysicsSandbox` (physics: bodies, colliders, fixed step, kinematic platform), `Examples/PhysicsShowcase` (every physics feature), `Examples/EternalDigger` (a full original ECS game: endless grid world, particle effects, lighting; start at [`Examples/EternalDigger/README.md`](Examples/EternalDigger/README.md), design contract in [`docs/design/eternal-digger.md`](docs/design/eternal-digger.md)) |
 | Build/test pipeline | `.github/workflows/build-and-test.yml` |
@@ -117,7 +118,8 @@ coverage.runsettings              coverlet settings for `dotnet test` coverage
 dotnet-tools.json                 local tools (ReportGenerator)
 AGENTS.md / CLAUDE.md             agent instructions (CLAUDE.md imports AGENTS.md)
 docs/agent/                       support/triage docs for agents (01–09 + README)
-docs/design/                      design plans (ecs-plan.md, physics-plan.md, eternal-digger.md)
+docs/design/                      design plans (ecs-plan.md, physics-plan.md, eternal-digger.md,
+                                  asset-loader-plan.md)
 ConsoleEngine/                    the engine
   GameBase.cs                       abstract game: Initialize/Start/Stop, frame loop
   Collections/Deque.cs              double-ended queue (used by Snake)
