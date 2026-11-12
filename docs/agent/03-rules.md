@@ -266,7 +266,8 @@ as wide on screen unless the font is square, as in PhysicsSandbox and PhysicsSho
   and `on_render(self)`. Missing hooks are skipped. Each entity gets its own `self` with metatable
   `{ __index = module, __newindex = guard }`, so `self:method()` calls module functions.
 - `on_start` runs **once per entity, the first time `LuaScriptSystem` sees it**, in the same frame and just before its
-  first `on_update`. `on_render` is skipped until then. Entities created through a command buffer start in the next
+  first `on_update`. An entity counts as started only when `on_start` succeeds (or the script has none): if
+  `on_start` faults, it runs again after the script is reloaded. `on_render` is skipped until then. Entities created through a command buffer start in the next
   simulation group run.
 - **`self`'s fields are the entity's components.** A field exists only when the entity has the component:
 
@@ -312,10 +313,11 @@ as wide on screen unless the font is square, as in PhysicsSandbox and PhysicsSho
   `Reload` of that entity's script. The entity runs again in the frame after that. Game code may also remove the tag
   itself (`Remove<ScriptFaulted>`): the entity then runs again and its error is cleared.
 - **Reload.** `LuaScript.Reload` / `LuaRuntime.ReloadAll` re-read the file from `FullPath` (the copy in the output
-  folder, not the project source), run it, and copy every field of the new module into the existing module table.
-  Running entities keep their `self.data` and use the new functions. `on_start` does **not** run again. Fields
-  **removed** from the new version stay in the module. A failing reload throws (`ReloadAll` returns the failures) and
-  the previous version stays active.
+  folder, not the project source), run it, and make the existing module table equal to the new one: fields
+  **removed** from the new version are removed from the module (also values a script stored on the module at run
+  time), then every new field is copied in. Running entities keep their `self.data` and use the new functions.
+  `on_start` does **not** run again for started entities. A failing reload throws (`ReloadAll` returns the failures)
+  and the previous version stays active.
 - Lua shortens chunk names longer than 60 bytes in error messages to `...<end of path>`.
 - A UTF-8 byte order mark at the start of a script is skipped.
 - **Entity lifetime.** `self` is kept per `Entity.Id` and `Entity.Version`. A destroyed entity's `self` is freed when

@@ -133,11 +133,32 @@ public sealed class LuaScript
         Metatable = _runtime.Ref();
     }
 
-    /// <summary>Stack: [new module] → []. Copies every field of the new module into the existing one.</summary>
+    /// <summary>
+    /// Stack: [new module] → []. Makes the existing module equal to the new one: removes the fields the new one no
+    /// longer has (Lua allows setting existing fields to nil during <c>next</c>), then copies every new field.
+    /// </summary>
     private void UpdateModule()
     {
         var lua = _runtime.State;
         _runtime.Push(_module);  // [new, module]
+        lua.PushNil();           // [new, module, nil]
+        while (lua.Next(-2))     // [new, module, key, value]
+        {
+            lua.Pop(1);          // [new, module, key]
+            lua.PushCopy(-1);    // [new, module, key, key]
+            if (lua.RawGet(-4) == LuaType.Nil)  // [new, module, key, new[key]]
+            {
+                lua.Pop(1);      // [new, module, key]
+                lua.PushCopy(-1);
+                lua.PushNil();   // [new, module, key, key, nil]
+                lua.RawSet(-4);  // [new, module, key]
+            }
+            else
+            {
+                lua.Pop(1);      // [new, module, key]
+            }
+        }
+
         lua.PushNil();           // [new, module, nil]
         while (lua.Next(-3))     // [new, module, key, value]
         {

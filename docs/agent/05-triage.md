@@ -300,5 +300,5 @@ pressed F5 but nothing changed", "error about lua54.dll".
    - Moves very slowly → movement not multiplied by `dt`, or multiplied twice. `dt` is in seconds ([03 § Lua](03-rules.md#lua)). Stop.
 4. F5 changes nothing (Scripted demo):
    - They edited the file in the **project** folder → **Cause:** `Reload` reads the copy in the output folder (`FullPath`). **Fix:** edit the output copy, or rebuild and restart. Stop.
-   - A removed function still runs → **Cause:** reload copies new fields but never deletes old ones. **Fix:** restart the game. Stop.
+   - A removed function still runs → reload removes fields that the new module no longer has, so the returned table still has it: the copy in the output folder (`FullPath`) still defines it. **Fix:** edit the output copy. Stop.
    - A reload error → `ReloadAll` returned it, but `ScriptReloadSystem` only sends it to `Log.WriteLine`, which is dropped without `EnableLogger`, and the old version stays. **Fix:** check the script for errors (load it in a test), then reload again. Stop.

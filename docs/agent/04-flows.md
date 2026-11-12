@@ -244,7 +244,7 @@ Rules: [03 § Physics](03-rules.md#physics).
 | 3 | Compile with chunk name `"@" + Name` | `KeraLua.Lua.LoadBuffer` | Syntax error | `LuaScriptException`: `Lua script '<name>': <name>:<line>: <message>` |
 | 4 | Run the chunk, expect one result | `LuaRuntime.Call` | Runtime error in top-level code | `LuaScriptException` with Lua's message |
 | 5 | Result must be a table | `LuaScript.Reload` | Not a table | `LuaScriptException`: `the script must return a table` |
-| 6 | First load: keep the table as the module and build `Metatable` = `{ __index = module, __newindex = guard }`. Reload: copy every field into the existing module | `CreateModule` / `UpdateModule` | — | Running entities use the new functions |
+| 6 | First load: keep the table as the module and build `Metatable` = `{ __index = module, __newindex = guard }`. Reload: remove the fields the new module lacks from the existing module, then copy every new field into it | `CreateModule` / `UpdateModule` | — | Running entities use the new functions |
 | 7 | Cache `on_start`, `on_update`, `on_render`. A missing or non-function field becomes "no hook" | `CacheFunction` | — | That hook silently never runs |
 | 8 | `Version++`, `LuaRuntime.ReloadCount++`. `Load` adds the script to the runtime's list (`Id` = its index) | `LuaScript.Reload`, `LuaRuntime.Load` | — | `LuaScriptSystem` retries faulted entities ([F16](#f16) step 1) |
 
@@ -262,7 +262,7 @@ Runs inside [F9](#f9): `LuaScriptSystem` wherever the scene added it to `Simulat
 | 1 | `ReloadCount` changed: for each `Script` + `ScriptFaulted` entity whose script `Version` differs from the one it faulted on, clear the error and record `Remove<ScriptFaulted>` | `LuaScriptSystem.RetryReloadedScripts` | Same version → stays faulted | Entity runs again from the next frame |
 | 2 | Query `With<Script>().Without<ScriptFaulted>()`. Per chunk: which of `Position`, `Velocity`, `Glyph` it has | `LuaScriptSystem.Run` | Faulted entities are in other archetypes, never visited | — |
 | 3 | Per entity: find its side-table entry. New entity, reused id (other `Version`) or other script → unref the old `self`, create `{ data = {} }` with the script's metatable. Lost a component → remove its fields | `GetInstance`, `LuaRuntime.CreateSelf` / `ClearFields` | — | Reused id runs `on_start` again |
-| 4 | Simulation only: not started → `on_start`, then `on_update` | `LuaScriptSystem.Run` → `RunHook` | Hook missing → skipped. `on_start` failed → `on_update` skipped | — |
+| 4 | Simulation only: not started → `on_start` (marked started only on success), then `on_update` | `LuaScriptSystem.Run` → `RunHook` | Hook missing → skipped. `on_start` failed → `on_update` skipped, and `on_start` runs again after a reload | — |
 | 5 | Presentation only: started → `on_render` | `LuaScriptSystem.Render` | Not started, or no `on_render` | Extra drawing |
 | 6 | One native call: the `run` trampoline copies the component fields into `self`, calls the hook, and (steps 4 only) returns the fields | `LuaRuntime.RunHook` | Lua error or stored host exception → step 8 | — |
 | 7 | Check every returned field's type, then write `Position`, `Velocity`, `Glyph` | `LuaRuntime.ReadResults` | Wrong type → nothing written, step 8 | `self.<field> must be …` |

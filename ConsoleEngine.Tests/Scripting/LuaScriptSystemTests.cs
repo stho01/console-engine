@@ -475,6 +475,61 @@ public class LuaScriptSystemTests
     }
 
     [Test]
+    public void Reload_AfterOnStartFault_RunsOnStartAgain()
+    {
+        var script = Load("""
+            return {
+                on_start = function(self) error("boom") end,
+                on_update = function(self) self.x = self.data.speed end
+            }
+            """);
+        var mover = _world.Create(new Position(), script.Component);
+        RunFrames(1);
+
+        Write("""
+            return {
+                on_start = function(self) self.data.speed = 5 end,
+                on_update = function(self) self.x = self.data.speed end
+            }
+            """);
+        script.Reload();
+        RunFrames(2);
+
+        Assert.Multiple(() =>
+        {
+            Assert.That(_world.Has<ScriptFaulted>(mover), Is.False);
+            Assert.That(_world.Get<Position>(mover).Value.X, Is.EqualTo(5));
+        });
+    }
+
+    [Test]
+    public void Reload_WhenFieldRemoved_RemovesItFromModule()
+    {
+        var script = Load("""
+            return {
+                speed = 3,
+                on_update = function(self) self.x = self.x + 1 end
+            }
+            """);
+        var mover = _world.Create(new Position(), script.Component);
+        RunFrames(1);
+
+        Write("return {}");
+        script.Reload();
+        RunFrames(2);
+
+        Assert.That(_world.Get<Position>(mover).Value.X, Is.EqualTo(1), "removed on_update no longer runs");
+
+        Write("""
+            return { on_update = function(self) self.x = self.speed or -1 end }
+            """);
+        script.Reload();
+        RunFrames(1);
+
+        Assert.That(_world.Get<Position>(mover).Value.X, Is.EqualTo(-1), "removed field speed is gone");
+    }
+
+    [Test]
     public void Reload_WhenNewVersionHasSyntaxError_ThrowsAndKeepsPreviousVersion()
     {
         var script = Load("""

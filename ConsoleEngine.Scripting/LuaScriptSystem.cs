@@ -125,11 +125,12 @@ public sealed class LuaScriptSystem(LuaRuntime runtime) : EntitySystem
 
                 if (!instance.Started)
                 {
-                    instance.Started = true;
+                    // Started only on success, so a reload after a failed on_start runs on_start again.
                     if (script.OnStart != LuaRuntime.NoRef &&
                         !RunHook(ref instance, entity, script, script.OnStart, deltaSeconds, mask | readBack,
                             commands, ref position, ref velocity, ref glyph))
                         continue;
+                    instance.Started = true;
                 }
 
                 if (script.OnUpdate != LuaRuntime.NoRef)
