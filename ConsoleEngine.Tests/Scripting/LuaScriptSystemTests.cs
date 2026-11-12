@@ -474,6 +474,46 @@ public class LuaScriptSystemTests
         });
     }
 
+    [TestCase("io")]
+    [TestCase("os")]
+    [TestCase("debug")]
+    [TestCase("package")]
+    [TestCase("require")]
+    [TestCase("load")]
+    [TestCase("loadfile")]
+    [TestCase("dofile")]
+    [TestCase("collectgarbage")]
+    public void Sandbox_UnsafeGlobal_IsNotAvailable(string name)
+    {
+        var script = Load($$"""
+            return { on_update = function(self) self.x = _G["{{name}}"] == nil and 1 or 0 end }
+            """);
+        var mover = _world.Create(new Position(), script.Component);
+
+        RunFrames(1);
+
+        Assert.That(_world.Get<Position>(mover).Value.X, Is.EqualTo(1));
+    }
+
+    [Test]
+    public void Sandbox_SafeLibraries_AreAvailable()
+    {
+        var script = Load("""
+            return {
+                on_update = function(self)
+                    local co = coroutine.wrap(function() coroutine.yield(2) end)
+                    self.x = math.floor(1.5) + co() + #string.rep("a", 3) + #table.pack(1, 2) + utf8.len("ab")
+                        + select("#", pcall(tostring, 1))
+                end
+            }
+            """);
+        var mover = _world.Create(new Position(), script.Component);
+
+        RunFrames(1);
+
+        Assert.That(_world.Get<Position>(mover).Value.X, Is.EqualTo(1 + 2 + 3 + 2 + 2 + 2));
+    }
+
     [Test]
     public void Reload_AfterOnStartFault_RunsOnStartAgain()
     {

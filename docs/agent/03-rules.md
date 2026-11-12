@@ -291,7 +291,13 @@ as wide on screen unless the font is square, as in PhysicsSandbox and PhysicsSho
   `self.<field> must be a number` or `self.char must be a string or a code point`.
 - `dt` is the delta the group passes to its systems: the frame delta in `Simulation`, the fixed step in
   `FixedSimulation`. Scripts must scale movement by it ([§ FPS](#fps)).
-- Lua API (Lua 5.4 standard libraries are all open, including `io` and `os`):
+- **Sandbox.** Scripts get only the Lua 5.4 base library and `coroutine`, `string`, `table`, `math` and `utf8`
+  (`LuaRuntime.OpenSandboxedLibraries`). `io`, `os`, `debug`, `package` and `require` do not exist, and
+  `LuaRuntime.RemovedGlobals` removes `dofile`, `loadfile`, `load` and `collectgarbage` from the base library. Using
+  one is a normal Lua error (`attempt to index a nil value (global 'os')`, `attempt to call a nil value (global
+  'load')`) and faults the entity. Scripts cannot reach the file system, start processes, exit the game or load
+  other code; time comes from `dt`.
+- Lua API:
 
 | Lua | Behaviour |
 |---|---|

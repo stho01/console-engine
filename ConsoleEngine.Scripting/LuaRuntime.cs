@@ -46,6 +46,10 @@ public sealed class LuaRuntime : IDisposable
     private const int HookArguments = 11;
     private const int HookResults = 7;
 
+    // Base functions removed by the sandbox: file access (dofile, loadfile), loading code at run time, including
+    // binary chunks that can crash the VM (load), and stopping or forcing the garbage collector (collectgarbage).
+    private static readonly string[] RemovedGlobals = ["dofile", "loadfile", "load", "collectgarbage"];
+
     // Static so native code always points to a live delegate. Each closure finds its runtime through upvalue 1.
     private static readonly LuaFunction HeldFunction = Held;
     private static readonly LuaFunction PressedFunction = Pressed;
@@ -121,8 +125,8 @@ public sealed class LuaRuntime : IDisposable
     {
         _console = console;
         _getKey = getKey;
-        _lua = new LuaState();
-        _lua.OpenLibs();
+        _lua = new LuaState(openLibs: false);
+        OpenSandboxedLibraries();
         _handle = GCHandle.Alloc(this);
         RegisterApi();
 
@@ -359,6 +363,28 @@ public sealed class LuaRuntime : IDisposable
         var bytes = stackalloc byte[4];
         var length = rune.EncodeToUtf8(new Span<byte>(bytes, 4));
         LuaNative.lua_pushlstring(_lua.Handle, bytes, (UIntPtr)length);
+    }
+
+    /// <summary>
+    /// Opens only the libraries a game script needs: base, <c>coroutine</c>, <c>string</c>, <c>table</c>,
+    /// <c>math</c> and <c>utf8</c>. <c>io</c>, <c>os</c>, <c>debug</c> and <c>package</c> are never opened, and the
+    /// base functions that reach the file system, load code or control the collector are removed.
+    /// </summary>
+    private void OpenSandboxedLibraries()
+    {
+        _lua.OpenBasicLibrary();
+        _lua.OpenCoroutineLibrary();
+        _lua.OpenStringLibrary();
+        _lua.OpenTableLibrary();
+        _lua.OpenMathLibrary();
+        _lua.OpenUTF8Library();
+        _lua.SetTop(0);
+
+        foreach (var name in RemovedGlobals)
+        {
+            _lua.PushNil();
+            _lua.SetGlobal(name);
+        }
     }
 
     private void RegisterApi()
