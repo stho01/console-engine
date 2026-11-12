@@ -17,6 +17,7 @@ internal static class GameCatalog
         new("Physics Sandbox", "PhysicsSandbox", "Space ball, B box, Enter 50 balls, R clear, Esc quit"),
         new("Physics Showcase", "PhysicsShowcase",
             "1-5 shapes, Enter shower, A D W move, E blast, G gravity, I smooth, R clear"),
-        new("EternalDigger", "EternalDigger", "Arrows walk/dig, Space ladder, E deliver/buy, hold R rescue")
+        new("EternalDigger", "EternalDigger", "Arrows walk/dig, Space ladder, E deliver/buy, hold R rescue"),
+        new("Topple", "Topple", "Up/Down aim, hold Space throw, 1 stone, 2 bomb, R restart, Enter next level")
     ];
 }

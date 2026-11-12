@@ -6,7 +6,7 @@ repository and can be grepped.
 
 **What this system is:** a Windows-only .NET 11 library that draws games into a console window via Win32 P/Invoke
 (`ConsoleEngine`, `ConsoleEngine.Windows`), an optional out-of-process TCP logger (`ConsoleEngine.Logger`), and fourteen
-example games (`TerraForM`, `Snake`, `Asteroids`, `Platformer`, `ConsoleGame`, an ECS port `*.Ecs` of each, the ECS stress test `Swarm`, the physics demos `PhysicsSandbox` and `PhysicsShowcase`, and the ECS game `EternalDigger`), plus `Launcher`, a text menu that starts the ECS games. There is **no server, no database, no
+example games (`TerraForM`, `Snake`, `Asteroids`, `Platformer`, `ConsoleGame`, an ECS port `*.Ecs` of each, the ECS stress test `Swarm`, the physics demos `PhysicsSandbox` and `PhysicsShowcase`, the ECS game `EternalDigger` and the physics game `Topple`), plus `Launcher`, a text menu that starts the ECS games. There is **no server, no database, no
 queue, no tenant, no log file**. Each game is a single local process. See [01-system-map](01-system-map.md).
 
 ## How to use these docs
@@ -46,6 +46,7 @@ Tags used throughout:
 | Launcher: "game says (not built)", "launcher won't start a game", "game window stops at Press any key" | [P16](05-triage.md#p16) |
 | EternalDigger: "I'm stuck in a hole", "how do I get my ladders back", "can't jump", "where is my inventory", "can't dig the grass", "SPACE/E does nothing", "lost my ore", "can't see any ore", "my save is gone", "no CONTINUE", "can't build the lift", "fell down the shaft", "can't dig at 110 m", "TOO HARD", "can't plant dynamite", "the lamp keeps getting darker", "climbing got slow" | [P17](05-triage.md#p17) |
 | "Things pass through each other", "things sink into the floor", "bullet didn't hit", "hit counted twice", "physics events don't fire", "raycast misses", "platformer player stuck or falls through", "bodies hang in the air", "box doesn't spin" | [P18](05-triage.md#p18) |
+| Topple: "SPACE does nothing", "can't throw", "a block broke by itself", "game doesn't end when I'm out of shots", "stone went through the crystal" | [P19](05-triage.md#p19) |
 
 ## File index
 

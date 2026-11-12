@@ -5,7 +5,7 @@
 
 | Fact | Why | How to get it |
 |---|---|---|
-| **Which game** (TerraForM, Snake, Asteroids, Platformer, ConsoleGame, their `.Ecs` ports, Swarm, PhysicsSandbox, PhysicsShowcase, EternalDigger, or their own game on `ConsoleEngine`) | Rules differ per game ([03](03-rules.md)) | Ask, or the exe name |
+| **Which game** (TerraForM, Snake, Asteroids, Platformer, ConsoleGame, their `.Ecs` ports, Swarm, PhysicsSandbox, PhysicsShowcase, EternalDigger, Topple, or their own game on `ConsoleEngine`) | Rules differ per game ([03](03-rules.md)) | Ask, or the exe name |
 | **OS and console host** | Windows only. Windows Terminal ignores the sizing/font calls **[external]** | [07 § Q1, Q2](07-checks.md#q1) |
 | **How it was launched and from which folder** (double-click the exe, `dotnet run`, IDE, a shortcut, a terminal in another folder) | Map files and the logger exe are found by **relative path** | [07 § Q3](07-checks.md#q3) |
 | **The exact error text**, if any | There are no log files. The exception printed to the console is the only record | Ask them to start it from an already-open terminal so the text stays ([06 § Capturing a crash](06-diagnostics.md#capture)) |
@@ -91,7 +91,7 @@
 
 **Symptom [inferred]:** "how do I exit?", "ESC doesn't quit", "the logger window stays open after the game closes".
 
-1. Which game? Only `ConsoleGame`, `ConsoleGame.Ecs`, `Swarm`, `PhysicsSandbox`, `PhysicsShowcase` and `EternalDigger` quit on `ESC` (`Stop()`). In TerraForM and TerraForM.Ecs `ESC` opens the menu. Others have no quit key. → **Cause:** no quit path ([04 § F3](04-flows.md#f3)). **Fix:** close the console window. Stop.
+1. Which game? Only `ConsoleGame`, `ConsoleGame.Ecs`, `Swarm`, `PhysicsSandbox`, `PhysicsShowcase`, `EternalDigger` and `Topple` quit on `ESC` (`Stop()`). In TerraForM and TerraForM.Ecs `ESC` opens the menu. Others have no quit key. → **Cause:** no quit path ([04 § F3](04-flows.md#f3)). **Fix:** close the console window. Stop.
 2. Logger stays open after the game exits → **Cause:** `Log.Stop` is never reached, because `RenderConsole.Close` calls `Environment.Exit(0)` first, and the logger only exits on a `SocketException` ([04 § F4](04-flows.md#f4)). How the logger sees the closed connection is **[external]** and unverified. **Fix:** close the logger window. Escalate if it spins CPU.
 
 <a id="p6"></a>
@@ -279,3 +279,27 @@ flow: [04 § F13](04-flows.md#f13).
    while standing means landing works and `AIR` should be `False`. A jump pressed in the air waits for the landing (by
    design, as the original). Otherwise escalate with `POS`, `VEL` and `HIT`. Stop.
 
+
+<a id="p19"></a>
+## P19 — Topple: can't throw / block broke on its own / level won't end / crystal won't break
+
+1. SPACE does nothing → a throw needs the round to be on (`Round.Phase == Playing`, no banner), the arm reloaded (0.6 s
+   after a throw, `CatapultSystem.ReloadSeconds`; no shot is drawn on the arm while it reloads) and a shot of the chosen
+   kind left (`1` stone, `2` bomb; with none of that kind left it switches to the other). The throw happens when SPACE is
+   **released**; holding it only charges the power bar ([03 § Topple](03-rules.md#topple)). Stop.
+2. A block or crystal broke "by itself" → damage comes from any sudden change of velocity (`Impact.Jolt`): landing after
+   a fall, being hit by a falling block, being crushed. A crystal breaks from about a 3-cell fall onto something hard. In
+   the first second of a level nothing takes damage (`ImpactDamageSystem.SettleSeconds`). If an untouched tower breaks
+   after that, it is a level bug: `LevelTests.Run_EveryLevelUntouched_NothingBreaksForEightSeconds` should catch it.
+   Stop.
+3. Out of shots but no "OUT OF SHOTS" → the round is lost only when no shot exists any more and every block is asleep,
+   or 8 s after the last throw (`Round.GiveUpSeconds`). Stones that roll are removed when they fall asleep or after 8 s
+   (`ShotSystem.StoneLifetime`). Stop.
+4. A stone went straight through a crystal or block without breaking it → damage is the jolt above 8 cells/s
+   (`Impact.HarmlessSpeed`); a glancing hit may stay below it. The physics has no continuous collision between dynamic
+   bodies, but at the top speed (56 cells/s) a stone moves less than one cell per step, so it should not tunnel through
+   a 1-cell block. If it does, escalate with the level and the angle/power. Stop.
+5. The graphics show `?` or empty boxes instead of blocks, gems or the catapult → the game draws box-drawing, shade
+   and symbol characters (`░▒▓█▀▄`, `═║`, `◘`, `☼`, `♦`, `•`, `≈`) that need the Consolas font the game sets
+   (`GameBase`, 10×10). Start it from the launcher (classic console) or from its output folder; a terminal that ignores
+   the font request may lack them. Stop.

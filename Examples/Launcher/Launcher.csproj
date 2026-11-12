@@ -32,6 +32,7 @@
       <ProjectReference Include="..\PhysicsSandbox\PhysicsSandbox.csproj" />
       <ProjectReference Include="..\PhysicsShowcase\PhysicsShowcase.csproj" />
       <ProjectReference Include="..\EternalDigger\EternalDigger.csproj" />
+      <ProjectReference Include="..\Topple\Topple.csproj" />
     </ItemGroup>
 
     <ItemGroup>

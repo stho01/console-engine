@@ -63,7 +63,7 @@ Grep these to locate the code path. None of them has a log level.
 | `Component type <Type> is listed more than once.` | `World.Create` (`ArgumentException`) | Same type twice in one `Create` |
 | `Cannot register <Type>: the ECS supports at most 256 component types.` | `ComponentRegistry.Register` (`InvalidOperationException`, wrapped in `TypeInitializationException`) | 257th component type used in the process |
 | `An archetype row needs <n> bytes and does not fit in one 16384-byte chunk.` | `Archetype` ctor (`InvalidOperationException`) | A component set too large for a chunk |
-| Window title = `GameBase.Name` | `GameBase.Initialize` → `SetTitle` | Default `"Game"`. Platformer `"Platformer game"`, Asteroids.Ecs `"Asteroids (ECS)"`, Snake.Ecs `"Snake (ECS)"`, TerraForM.Ecs `"TerraForM (ECS)"`, Platformer.Ecs `"Platformer (ECS)"`, Swarm `"Swarm (ECS)"`, PhysicsSandbox `"Physics Sandbox"`, PhysicsShowcase `"Physics Showcase"`, EternalDigger `"EternalDigger"` |
+| Window title = `GameBase.Name` | `GameBase.Initialize` → `SetTitle` | Default `"Game"`. Platformer `"Platformer game"`, Asteroids.Ecs `"Asteroids (ECS)"`, Snake.Ecs `"Snake (ECS)"`, TerraForM.Ecs `"TerraForM (ECS)"`, Platformer.Ecs `"Platformer (ECS)"`, Swarm `"Swarm (ECS)"`, PhysicsSandbox `"Physics Sandbox"`, PhysicsShowcase `"Physics Showcase"`, EternalDigger `"EternalDigger"`, Topple `"Topple"` |
 
 Runtime exceptions without repo-authored text (message comes from .NET and varies): `DllNotFoundException`,
 `SocketException`, `Win32Exception`, `FileNotFoundException`, `DirectoryNotFoundException`, `FormatException`,
@@ -132,6 +132,17 @@ using [04](04-flows.md).
 | ` ↑ DYNAMITE x5 ↓ ` / ` ↑ LADDERS x10 ↓ `, `HAVE <n>` or `NEEDS THE KIT`, `<price>g [E]` | `Shop.DynamiteBundleName`, `LadderBundleName`, `PromptRenderSystem.NeedsKitText` | The open tool shop's counter |
 | `HOUSE UPGRADE!` / `TOOL SHOP OPEN` (yellow, floating) | `FloatingTextRenderSystem.HouseUpgradeText`, `ToolShopOpenText` | A sale reached a gold milestone / first time below the wall |
 | ` EternalDigger `, `SHOP`, `MINE` | `HouseRenderSystem` (house sign, shop, shaft frame) | Scenery |
+
+### Topple screen text
+
+| Text | Where | Meaning |
+|---|---|---|
+| `LEVEL <n>/<count> <name>`, `SCORE <n>`, one `♦` per crystal left, one `●` per stone and `☼` per bomb left (`-` when none; the loaded kind in `[ ]`), `ANGLE <n>°`, `POWER ` and a bar (row 0, fields separated by `│`) | `HudSystem` | Level, score, targets left, shots left, aim and charge |
+| ` ↑↓ AIM   HOLD SPACE THROW   1 STONE  2 BOMB   R RESTART   ESC QUIT` (row 1), ` BODIES <n>  ASLEEP <n>` | `HudSystem.Keys` | Keys; physics body counts |
+| `LOOKOUT`, `GLASS HOUSES`, `STONE KEEP`, `FERRY` | `LevelBook.Levels` (`LevelPlan.Name`) | Level names |
+| `LEVEL CLEAR!`, `SHOTS LEFT BONUS +<n>`, `ENTER  NEXT LEVEL    R  REPLAY LEVEL` | `BannerSystem` | Level won |
+| `ALL TOWERS TOPPLED!`, `FINAL SCORE <n>`, `ENTER  PLAY AGAIN    R  REPLAY LEVEL` | `BannerSystem` | Last level won |
+| `OUT OF SHOTS`, `CRYSTALS LEFT <n>`, `R  TRY AGAIN` | `BannerSystem` | Level lost |
 
 ### TerraForM screen text (`HudTexts`, `Sprites`)
 
