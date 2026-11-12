@@ -1,0 +1,128 @@
+using System;
+using ConsoleEngine.Ecs;
+using ConsoleEngine.Ecs.Components;
+using EternalDigger.Components;
+using EternalDigger.Effects;
+using EternalDigger.Mining;
+using Microsoft.Xna.Framework;
+
+namespace EternalDigger.Systems;
+
+/// <summary>
+/// Slides the miner's <c>Position</c> one tile per move (two in an arc for a jump) started by
+/// <see cref="MinerControlSystem"/>, kicks up dust from the feet and on landing, and counts down the dig cooldown and
+/// swing animation. Keeps the depth record (<see cref="Progress.Track"/>).
+/// </summary>
+public sealed class MinerMotionSystem(Mine mine, EffectSpawner effects) : EntitySystem
+{
+    //**********************************************************
+    //** fields
+    //**********************************************************
+
+    private Query _miners;
+    private int _steps;
+
+    //**********************************************************
+    //** lifecycle
+    //**********************************************************
+
+    protected override void OnCreate() => _miners = World.Query(Query.With<Miner, Position>());
+
+    protected override void OnUpdate(float deltaSeconds)
+    {
+        foreach (var chunk in _miners.GetChunks())
+        {
+            var miners = chunk.GetSpan<Miner>();
+            var positions = chunk.GetSpan<Position>();
+            for (var i = 0; i < chunk.Count; i++)
+                Move(ref miners[i], ref positions[i], deltaSeconds, Commands);
+        }
+    }
+
+    //**********************************************************
+    //** public methods
+    //**********************************************************
+
+    /// <summary>One frame of motion. Effects are recorded in <paramref name="commands"/>.</summary>
+    public void Move(ref Miner miner, ref Position position, float deltaSeconds, CommandBuffer commands)
+    {
+        if (Progress.Track(ref miner, mine))
+            effects.Text(commands, Layout.TileCenter(miner.Column, miner.Row) - new Vector2(0f, 3f),
+                FloatingTextKind.ToolShopOpen, 0);
+
+        miner.DigCooldown = Math.Max(0f, miner.DigCooldown - deltaSeconds);
+        miner.SwingTime = Math.Max(0f, miner.SwingTime - deltaSeconds);
+
+        if (!miner.IsMoving)
+            return;
+
+        miner.MoveElapsed += deltaSeconds;
+        var t = Math.Min(1f, miner.MoveElapsed / miner.MoveDuration);
+        // Walking and slow climbing ease in and out, a fast climb slides evenly, falling speeds up.
+        var eased = miner.Motion switch
+        {
+            MinerMotion.Falling => t * t,
+            MinerMotion.Climbing when MinerControlSystem.IsFastClimb(miner.ClimbStreak) => t,
+            _ => t * t * (3f - 2f * t)
+        };
+        var from = Layout.TileToWorld((int)miner.MoveFrom.X, (int)miner.MoveFrom.Y);
+        var to = Layout.TileToWorld(miner.Column, miner.Row);
+        position.Value = Vector2.Lerp(from, to, eased);
+        if (miner.Motion == MinerMotion.Jumping)
+            position.Value.Y -= JumpLift(miner, t);
+
+        if (t < 1f)
+            return;
+
+        var motion = miner.Motion;
+        miner.MoveDuration = 0f;
+        miner.MoveElapsed = 0f;
+        miner.Motion = MinerMotion.Idle;
+        FinishMove(ref miner, motion, commands);
+    }
+
+    //**********************************************************
+    //** internals
+    //**********************************************************
+
+    /// <summary>
+    /// How far a jump lifts the miner at <paramref name="t"/> (0 to 1): an arc up to
+    /// <see cref="MinerControlSystem.JumpHeight"/> cells, half that if rock hangs over the gap.
+    /// </summary>
+    private float JumpLift(in Miner miner, float t)
+    {
+        var gapColumn = ((int)miner.MoveFrom.X + miner.Column) / 2;
+        var height = mine.IsSolid(gapColumn, miner.Row - 1) ? MinerControlSystem.JumpHeight / 2f
+            : MinerControlSystem.JumpHeight;
+        return MathF.Sin(t * MathF.PI) * height;
+    }
+
+    private void FinishMove(ref Miner miner, MinerMotion motion, CommandBuffer commands)
+    {
+        var feet = Layout.TileToWorld(miner.Column, miner.Row + 1) + new Vector2(Layout.TileWidth / 2f, -.1f);
+        switch (motion)
+        {
+            case MinerMotion.Walking when ++_steps % 2 == 0:
+                effects.FootDust(commands, feet, -miner.FacingX);
+                break;
+            case MinerMotion.Climbing when MinerControlSystem.IsTopSpeedClimb(miner.ClimbStreak):
+                effects.ClimbTrail(commands, feet);
+                break;
+            case MinerMotion.Climbing:
+                effects.FootDust(commands, feet, miner.FacingX);
+                break;
+            case MinerMotion.Jumping:
+                effects.LandingDust(commands, feet, 1);
+                break;
+            case MinerMotion.Falling:
+                miner.FallRows++;
+                if (mine.IsSupported(miner.Column, miner.Row))
+                {
+                    effects.LandingDust(commands, feet, miner.FallRows);
+                    miner.FallRows = 0;
+                }
+
+                break;
+        }
+    }
+}

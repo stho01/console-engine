@@ -3,6 +3,7 @@ using Asteroids.Ecs.Components;
 using ConsoleEngine.Ecs;
 using ConsoleEngine.Ecs.Components;
 using ConsoleEngine.Ecs.Rendering;
+using ConsoleEngine.Physics;
 using Microsoft.Xna.Framework;
 
 namespace Asteroids.Ecs;
@@ -71,13 +72,18 @@ public sealed class Spawner
             new Position(position),
             new Velocity(drift),
             new Outline(_asteroidOutlines[outline], '#', ConsoleColor.Green),
-            new Collider(_asteroidRadii[outline]),
-            new Asteroid());
+            Collider.Circle(_asteroidRadii[outline]) with
+            {
+                Category = CollisionLayers.Asteroids,
+                Mask = CollisionLayers.Bullets
+            },
+            new Asteroid(),
+            RigidBody.Dynamic());
     }
 
     /// <summary>
     /// Records a bullet fired from the ship's nose. Goes through a command buffer because it's called while the ship
-    /// query is being iterated.
+    /// query is being iterated. A bullet is a kinematic sensor: it flies straight and reports what it touches.
     /// </summary>
     public static void CreateBullet(CommandBuffer commands, Vector2 shipPosition, Vector2 heading,
         Vector2 shipVelocity) =>
@@ -85,9 +91,14 @@ public sealed class Spawner
             new Position(shipPosition + heading * ShipSize),
             new Velocity(shipVelocity + heading * BulletSpeed),
             new Glyph('*', ConsoleColor.Yellow),
-            new Collider(.5f),
+            Collider.Circle(.5f) with
+            {
+                IsSensor = true,
+                Category = CollisionLayers.Bullets,
+                Mask = CollisionLayers.Asteroids
+            },
             new Lifetime(BulletLifetime),
-            new Bullet());
+            RigidBody.Kinematic());
 
     //**********************************************************
     //** internals

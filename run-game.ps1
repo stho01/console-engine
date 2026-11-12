@@ -15,7 +15,9 @@ so relative paths (TerraForM maps, the logger exe) resolve.
 #>
 param(
     [Parameter(Mandatory)]
-    [ValidateSet('TerraForM', 'Snake', 'Asteroids', 'Platformer', 'ConsoleGame', 'Scripted')]
+    [ValidateSet('TerraForM', 'Snake', 'Asteroids', 'Platformer', 'ConsoleGame',
+        'TerraForM.Ecs', 'Snake.Ecs', 'Asteroids.Ecs', 'Platformer.Ecs', 'ConsoleGame.Ecs',
+        'Swarm', 'PhysicsSandbox', 'PhysicsShowcase', 'EternalDigger', 'Scripted')]
     [string] $Game,
 
     [ValidateSet('Debug', 'Release')]
@@ -29,5 +31,5 @@ if ($LASTEXITCODE -ne 0) {
     exit $LASTEXITCODE
 }
 
-$output = Join-Path $PSScriptRoot "Examples/$Game/bin/$Configuration/net10.0"
+$output = Join-Path $PSScriptRoot "Examples/$Game/bin/$Configuration/net11.0"
 Start-Process conhost.exe -ArgumentList "`"$(Join-Path $output "$Game.exe")`"" -WorkingDirectory $output

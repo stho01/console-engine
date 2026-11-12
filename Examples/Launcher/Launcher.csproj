@@ -1,0 +1,42 @@
+<Project Sdk="Microsoft.NET.Sdk">
+
+    <PropertyGroup>
+        <OutputType>Exe</OutputType>
+        <TargetFramework>net11.0</TargetFramework>
+        <LangVersion>15</LangVersion>
+        <RootNamespace>Launcher</RootNamespace>
+        <AssemblyName>Launcher</AssemblyName>
+        <TreatWarningsAsErrors>True</TreatWarningsAsErrors>
+    </PropertyGroup>
+
+    <!--
+        Build order only: building the launcher builds every game it lists, each into its own output folder.
+        ReferenceOutputAssembly=false + Private=false (default for every ProjectReference here, so only add games):
+        nothing is referenced or copied into the launcher's output (without Private=false the SDK still copies each
+        game's apphost and assets). GameLocator finds the exes in the games' own output folders.
+    -->
+    <ItemDefinitionGroup>
+      <ProjectReference>
+        <ReferenceOutputAssembly>false</ReferenceOutputAssembly>
+        <Private>false</Private>
+      </ProjectReference>
+    </ItemDefinitionGroup>
+
+    <ItemGroup>
+      <ProjectReference Include="..\Snake.Ecs\Snake.Ecs.csproj" />
+      <ProjectReference Include="..\Asteroids.Ecs\Asteroids.Ecs.csproj" />
+      <ProjectReference Include="..\Platformer.Ecs\Platformer.Ecs.csproj" />
+      <ProjectReference Include="..\TerraForM.Ecs\TerraForM.Ecs.csproj" />
+      <ProjectReference Include="..\ConsoleGame.Ecs\ConsoleGame.Ecs.csproj" />
+      <ProjectReference Include="..\Swarm\Swarm.csproj" />
+      <ProjectReference Include="..\PhysicsSandbox\PhysicsSandbox.csproj" />
+      <ProjectReference Include="..\PhysicsShowcase\PhysicsShowcase.csproj" />
+      <ProjectReference Include="..\EternalDigger\EternalDigger.csproj" />
+      <ProjectReference Include="..\Scripted\Scripted.csproj" />
+    </ItemGroup>
+
+    <ItemGroup>
+      <InternalsVisibleTo Include="Launcher.Tests" />
+    </ItemGroup>
+
+</Project>

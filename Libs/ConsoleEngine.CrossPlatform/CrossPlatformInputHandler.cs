@@ -1,0 +1,298 @@
+﻿using System;
+using System.Collections.Generic;
+using System.Diagnostics;
+using System.Linq;
+using ConsoleEngine.Abstractions.Inputs;
+
+namespace ConsoleEngine.CrossPlatform;
+
+/// <summary>
+/// Keyboard input for non Windows platforms. Key codes are Windows virtual key codes, same as <see cref="Key"/>.
+///
+/// Terminals that support the kitty keyboard protocol report real press, repeat and release events, which are
+/// used when available. Otherwise, on macOS the real keyboard state is read through CoreGraphics. Everywhere else
+/// (or if macOS refuses to report key state) keys are read from the terminal the classic way, which only reports
+/// presses and auto repeats, never releases. A key is then held for a short tap, and again once its auto repeat
+/// starts until the repeat stops. Pressed and Released fire once per key press.
+/// </summary>
+public class CrossPlatformInputHandler : IInputHandler
+{
+    // A terminal key is held until no new press/repeat arrives within this window. The first window has to
+    // outlast the OS' "delay until repeat" (macOS ~375ms, X11 660ms by default), the following ones only the
+    // repeat interval. Override the first with CONSOLE_ENGINE_REPEAT_DELAY (milliseconds) for longer delays.
+    private const int DefaultInitialHoldMs = 750;
+    private static readonly long InitialHoldTicks = Stopwatch.Frequency * ReadInitialHoldMs() / 1000;
+    private static readonly long RepeatHoldTicks = Stopwatch.Frequency * 150 / 1000;
+
+    // How long a terminal key press counts as held before its auto repeat starts. Until the first repeat
+    // arrives a tap and a hold look the same, so without this every tap would last the whole initial window.
+    private static readonly long TapTicks = Stopwatch.Frequency * 120 / 1000;
+
+    // No OS repeats sooner than this after a key press, so an event before it is the key being pressed again.
+    // Later events are either the first auto repeat or another tap, see ReadLegacyKey.
+    private static readonly long MinRepeatDelayTicks = Stopwatch.Frequency * 200 / 1000;
+
+    // How far apart a terminal key press and the native key down may be to count as the same key press.
+    private static readonly long CalibrationTicks = Stopwatch.Frequency * 300 / 1000;
+    private const int MaxCalibrationMisses = 2;
+
+    private readonly KeyState[] _keyStates = new KeyState[256];
+    private readonly TerminalKeyReader _reader;
+    private readonly bool[] _kittyDown = new bool[256];
+    private readonly bool[] _kittyReleaseNextFrame = new bool[256];
+    private readonly bool[] _nativeDown = new bool[256];
+    private readonly long[] _terminalHeldUntil = new long[256];
+    private readonly long[] _terminalPressedAt = new long[256];
+    private readonly bool[] _terminalRepeating = new bool[256];
+    private readonly bool[] _terminalPressed = new bool[256];
+    private readonly bool[] _terminalActive = new bool[256];
+    private readonly long[] _terminalUndecidedAt = new long[256];
+    private int _undecidedCount;
+    private readonly long[] _nativeLastDown = new long[256];
+    private readonly List<(int Key, long Time)> _pendingCalibration = new();
+    private bool _nativeSupported;
+    private bool _nativeTrusted;
+    private int _calibrationMisses;
+    private bool _started;
+
+    public CrossPlatformInputHandler()
+    {
+        // auto (default), terminal (no native macOS input), legacy (no native input and no kitty protocol)
+        var mode = Environment.GetEnvironmentVariable("CONSOLE_ENGINE_INPUT");
+        var legacy = string.Equals(mode, "legacy", StringComparison.OrdinalIgnoreCase);
+        var terminalOnly = legacy || string.Equals(mode, "terminal", StringComparison.OrdinalIgnoreCase);
+        _nativeSupported = !terminalOnly && MacKeyboard.IsSupported();
+        _reader = new TerminalKeyReader(kittyAllowed: !legacy);
+
+        for (var i = 0; i < _keyStates.Length; i++)
+            _keyStates[i].Index = i;
+    }
+
+    public KeyState GetKey(int id)
+    {
+        return _keyStates[id];
+    }
+
+    public IEnumerable<int> GetPressedKeyCodes() => _keyStates.Where(k => k.Pressed).Select(k => k.Index);
+
+    public void Update()
+    {
+        // Started on the first update, from the game loop, so the kitty protocol is switched on in the game's
+        // alternate screen and the terminal drops it again when the game leaves it.
+        if (!_started)
+        {
+            _started = true;
+            _reader.Start();
+        }
+
+        var now = Stopwatch.GetTimestamp();
+
+        // Always drain the terminal, otherwise key presses pile up in stdin (and get echoed when the game exits).
+        ReadTerminalKeys(now);
+
+        if (_reader.KittyActive)
+        {
+            UpdateFromKitty();
+            return;
+        }
+
+        if (_nativeSupported)
+        {
+            MacKeyboard.Poll(_nativeDown);
+            for (var i = 0; i < _nativeDown.Length; i++)
+                if (_nativeDown[i])
+                    _nativeLastDown[i] = now;
+
+            if (!_nativeTrusted)
+                Calibrate(now);
+        }
+
+        if (_nativeTrusted)
+            UpdateFromNative();
+        else
+            UpdateFromTerminal(now);
+    }
+
+    private void UpdateFromKitty()
+    {
+        // Generic modifier keys, like GetAsyncKeyState reports them
+        _kittyDown[0x10] = _kittyDown[0xA0] || _kittyDown[0xA1];
+        _kittyDown[0x11] = _kittyDown[0xA2] || _kittyDown[0xA3];
+        _kittyDown[0x12] = _kittyDown[0xA4] || _kittyDown[0xA5];
+
+        for (var i = 0; i < _keyStates.Length; i++)
+        {
+            var wasHeld = _keyStates[i].Held;
+            var isDown = _kittyDown[i];
+
+            _keyStates[i].Pressed = _terminalPressed[i] || (isDown && !wasHeld);
+            _keyStates[i].Released = !isDown && wasHeld;
+            _keyStates[i].Held = isDown;
+        }
+    }
+
+    private void UpdateFromNative()
+    {
+        for (var i = 0; i < _keyStates.Length; i++)
+        {
+            var wasHeld = _keyStates[i].Held;
+            var isDown = _nativeDown[i];
+
+            _keyStates[i].Pressed = isDown && !wasHeld;
+            _keyStates[i].Released = !isDown && wasHeld;
+            _keyStates[i].Held = isDown;
+        }
+    }
+
+    private void UpdateFromTerminal(long now)
+    {
+        for (var i = 0; i < _keyStates.Length; i++)
+        {
+            // A key press is active until its hold window runs out, but only held during the tap and while repeating.
+            var active = _terminalHeldUntil[i] > now;
+            var held = active && (_terminalRepeating[i] || now - _terminalPressedAt[i] < TapTicks);
+
+            _keyStates[i].Pressed = _terminalPressed[i];
+            _keyStates[i].Released = _terminalActive[i] && !active;
+            _keyStates[i].Held = held;
+            _terminalActive[i] = active;
+        }
+    }
+
+    /// <summary>
+    /// Without the Input Monitoring permission macOS still reports modifier keys, but every other key as up.
+    /// So the native key state is only trusted once it agrees with a key press read from the terminal, and
+    /// dropped if it keeps missing them. Until then the terminal is used.
+    /// </summary>
+    private void Calibrate(long now)
+    {
+        for (var i = 0; i < _terminalPressed.Length; i++)
+            if (_terminalPressed[i] && MacKeyboard.IsMapped(i))
+                _pendingCalibration.Add((i, now));
+
+        for (var i = _pendingCalibration.Count - 1; i >= 0; i--)
+        {
+            var (key, time) = _pendingCalibration[i];
+            if (Math.Abs(_nativeLastDown[key] - time) < CalibrationTicks)
+            {
+                _nativeTrusted = true;
+                _pendingCalibration.Clear();
+                return;
+            }
+
+            if (now - time > CalibrationTicks)
+            {
+                _pendingCalibration.RemoveAt(i);
+                if (++_calibrationMisses >= MaxCalibrationMisses)
+                {
+                    _nativeSupported = false;
+                    _pendingCalibration.Clear();
+                    return;
+                }
+            }
+        }
+    }
+
+    private void ReadTerminalKeys(long now)
+    {
+        Array.Clear(_terminalPressed);
+
+        // A key pressed and released within one frame is held for that frame and released in the next one.
+        for (var vk = 0; vk < _kittyReleaseNextFrame.Length; vk++)
+        {
+            if (_kittyReleaseNextFrame[vk])
+            {
+                _kittyReleaseNextFrame[vk] = false;
+                _kittyDown[vk] = false;
+            }
+        }
+
+        while (_reader.TryDequeue(out var keyEvent))
+        {
+            var vk = keyEvent.Key;
+            if (vk <= 0 || vk >= _keyStates.Length)
+                continue;
+
+            switch (keyEvent.Type)
+            {
+                case KeyEventType.Press:
+                    _terminalPressed[vk] = true;
+                    _kittyDown[vk] = true;
+                    break;
+                case KeyEventType.Repeat:
+                    _kittyDown[vk] = true;
+                    break;
+                case KeyEventType.Release when _terminalPressed[vk]:
+                    _kittyReleaseNextFrame[vk] = true;
+                    break;
+                case KeyEventType.Release:
+                    _kittyDown[vk] = false;
+                    break;
+                default:
+                    ReadLegacyKey(vk, keyEvent.Time);
+                    break;
+            }
+        }
+
+        // No auto repeat followed an undecided event in time, so it was the key being tapped again.
+        if (_undecidedCount > 0)
+            for (var vk = 0; vk < _terminalUndecidedAt.Length; vk++)
+                if (_terminalUndecidedAt[vk] != 0 && now - _terminalUndecidedAt[vk] >= RepeatHoldTicks)
+                    PressLegacyKey(vk, now);
+    }
+
+    private void ReadLegacyKey(int vk, long time)
+    {
+        // The OS only auto repeats the key pressed last, so another key can't be in the middle of a repeat.
+        if (_undecidedCount > 0)
+            for (var other = 0; other < _terminalUndecidedAt.Length; other++)
+                if (other != vk && _terminalUndecidedAt[other] != 0)
+                    PressLegacyKey(other, time);
+
+        var held = _terminalHeldUntil[vk] > time;
+
+        if (held && (_terminalRepeating[vk] || _terminalUndecidedAt[vk] != 0))
+        {
+            // Part of an auto repeat stream: an undecided event followed by this one within the repeat interval
+            // was the first repeat.
+            SetUndecided(vk, 0);
+            _terminalRepeating[vk] = true;
+            _terminalHeldUntil[vk] = time + RepeatHoldTicks;
+        }
+        else if (held && time - _terminalPressedAt[vk] >= MinRepeatDelayTicks)
+        {
+            // The first auto repeat and a second tap look the same. A repeat is followed by more repeats within
+            // the repeat interval, a tap isn't, so decide once the next event comes or doesn't.
+            SetUndecided(vk, time);
+            _terminalHeldUntil[vk] = time + RepeatHoldTicks;
+        }
+        else
+        {
+            PressLegacyKey(vk, time);
+        }
+    }
+
+    private void PressLegacyKey(int vk, long time)
+    {
+        SetUndecided(vk, 0);
+        _terminalPressedAt[vk] = time;
+        _terminalRepeating[vk] = false;
+        _terminalPressed[vk] = true;
+        _terminalHeldUntil[vk] = time + InitialHoldTicks;
+    }
+
+    private void SetUndecided(int vk, long time)
+    {
+        if ((_terminalUndecidedAt[vk] != 0) != (time != 0))
+            _undecidedCount += time != 0 ? 1 : -1;
+
+        _terminalUndecidedAt[vk] = time;
+    }
+
+    private static long ReadInitialHoldMs()
+    {
+        var setting = Environment.GetEnvironmentVariable("CONSOLE_ENGINE_REPEAT_DELAY");
+        // Leave some headroom above the repeat delay for slow frames.
+        return int.TryParse(setting, out var delay) && delay > 0 ? delay + 100 : DefaultInitialHoldMs;
+    }
+}

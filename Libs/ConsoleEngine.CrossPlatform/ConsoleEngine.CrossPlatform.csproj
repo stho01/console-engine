@@ -1,0 +1,15 @@
+<Project Sdk="Microsoft.NET.Sdk">
+
+    <PropertyGroup>
+        <TargetFramework>net11.0</TargetFramework>
+        <LangVersion>15</LangVersion>
+        <RootNamespace>ConsoleEngine.CrossPlatform</RootNamespace>
+        <Configurations>Release;Debug</Configurations>
+        <Platforms>AnyCPU</Platforms>
+        <TreatWarningsAsErrors>True</TreatWarningsAsErrors>
+    </PropertyGroup>
+    <ItemGroup>
+      <ProjectReference Include="..\..\ConsoleEngine.Abstractions\ConsoleEngine.Abstractions.csproj" />
+    </ItemGroup>
+</Project>
+

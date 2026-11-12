@@ -20,6 +20,8 @@ public class AsteroidsGame() : GameBase(200, 200, 4, 4)
     public Random Random => _random;
         
     protected override void OnInitialize() {
+        Console.PixelMode = true;
+
         _player = new Player(this) {
             Position = new Vector2(10, 10),
             Thrust = 250f

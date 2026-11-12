@@ -25,4 +25,22 @@ public class MovementSystemTests
             Assert.That(world.Get<Position>(still).Value, Is.EqualTo(new Vector2(5, 5)));
         });
     }
+
+    [Test]
+    public void Update_Filter_SkipsExcludedEntities()
+    {
+        using var world = new World();
+        var group = new SystemGroup(world);
+        group.Add(new MovementSystem(Query.Without<Frozen>()));
+        var frozen = world.Create(new Position(Vector2.Zero), new Velocity(Vector2.One), new Frozen());
+        var mover = world.Create(new Position(Vector2.Zero), new Velocity(Vector2.One));
+
+        group.Update(1f);
+
+        Assert.Multiple(() =>
+        {
+            Assert.That(world.Get<Position>(frozen).Value, Is.EqualTo(Vector2.Zero));
+            Assert.That(world.Get<Position>(mover).Value, Is.EqualTo(Vector2.One));
+        });
+    }
 }

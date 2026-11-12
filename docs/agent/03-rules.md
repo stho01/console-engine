@@ -50,7 +50,7 @@ Gotchas:
   call" bit is set **[external]**. The code treats any change without `0x8000` as a release, so `Pressed` never fires.
   More likely at low FPS.
 - `Key` enum (`ConsoleEngine.Abstractions/Inputs/Key.cs`) covers 0–9, A–Z, F1–F12, arrows, ENTER, ESCAPE, SPACE,
-  BACKSPACE, numpad and a few others. **No Shift/Ctrl/Alt/Tab and no OEM keys** (æ, ø, å, punctuation). Raw codes
+  BACKSPACE, TAB (0x09), numpad and a few others. **No Shift/Ctrl/Alt and no OEM keys** (æ, ø, å, punctuation). Raw codes
   0–255 can be read with `GetKey(int)`. 256 or more throws `IndexOutOfRangeException`.
 - `Input.GetPressedKeyCodesSpace09AZ()` returns pressed codes that are `32` or `48..90`, i.e. space, digits and
   upper-case letters only.
@@ -149,14 +149,102 @@ itself.
   not in the group is ignored. Constraints that form a cycle throw `InvalidOperationException` on the first
   `Update` (or `RunOrder` read) after the systems were added.
 
-**`EcsScene<TGame>`**: `OnLoad` creates `World`, `Simulation` and `Presentation`, then calls `OnCreate`. The scene's
-`OnUpdate` runs `Simulation`, `OnRender` runs `Presentation`, both with `(float)GameTime.Delta.TotalSeconds`. `OnUnload`
-calls `OnDestroy`, then disposes the world. A paused scene (another scene pushed on top) runs neither group.
+**`EcsScene<TGame>`**: `OnLoad` creates `World`, `FixedSimulation`, a default `FixedTimestep`, `Simulation` and
+`Presentation`, then calls `OnCreate` (which may replace `FixedTimestep`). The scene's `OnUpdate` first runs
+`FixedSimulation` as many times as `FixedTimestep.Advance(delta)` returns, each time with `FixedTimestep.StepSeconds`,
+then `Simulation` once. `OnRender` runs `Presentation`. `Simulation` and `Presentation` get
+`(float)GameTime.Delta.TotalSeconds`. `OnUnload` calls `OnDestroy`, then disposes the world. A paused scene (another
+scene pushed on top) runs no group, and its paused time is not added to the fixed-step accumulator.
+
+**`FixedTimestep`** (default `DefaultStepSeconds` = 1/60 s, `DefaultMaxStepsPerFrame` = 4): `Advance` adds the delta
+and returns the whole steps that fit; the rest carries over to the next frame (`Alpha` = carried time / step). If more
+than `MaxStepsPerFrame` steps are due, it returns `MaxStepsPerFrame` and **drops** the backlog, so after a long stall
+the game slows down instead of catching up. A delta ≤ 0 or NaN adds nothing. At a high frame rate most frames run 0
+fixed steps, so a system in `FixedSimulation` that reads a key's `Pressed` edge directly misses most presses: latch
+input in `Simulation`, consume it in `FixedSimulation`. Asteroids.Ecs runs its physics there.
+
+<a id="physics"></a>
+**Physics** (assembly and namespace `ConsoleEngine.Physics`, optional: a game references it only if it needs physics;
+plan `docs/design/physics-plan.md`, phases 0–5 done). Units are console cells on both axes (a circle looks twice as tall
+as wide on screen unless the font is square, as in PhysicsSandbox and PhysicsShowcase).
+- `RigidBody` (`RigidBody.Dynamic(mass, gravityScale, linearDamping, angularDamping)`, `.Kinematic()`, `.Static()`;
+  `default` is static). `Collider` (`Collider.Circle(radius, offset)`, `Collider.Box(halfExtents, offset)`,
+  `Collider.Polygon(polygonId)`, then `with { … }`): shape, `Category`/`Mask` bits (factory default: category 1,
+  collides with all), `IsSensor`, `Friction` (factory default `DefaultFriction` 0.6), `Restitution` (default 0). A
+  `Collider` without a `RigidBody` is a static body. `default(Collider)` has `Mask` 0 and collides with nothing.
+- **Polygons**: convex, at most 8 corners, added once with `PhysicsSystem.Polygons.Add(vertices)` (the convex hull is
+  kept; vertices are relative to `Position`). Fewer than 3 points, points on one line, or more than 8 hull corners throw
+  `ArgumentException`.
+- **Rotation**: a body turns only if it has a `Rotation` **and** an `AngularVelocity`; without them its rotation stays
+  fixed (a `Rotation` alone still turns its shape, e.g. a static ramp). Rotation is clockwise on screen, around
+  `Position`; the rotational inertia comes from the shape and mass (uniform density, about `Position`). Kinematic
+  bodies with an `AngularVelocity` turn at that speed.
+- Game systems read the events through `IPhysicsEvents` (`PhysicsSystem` implements it), so another physics engine
+  could stand in behind the same components and events.
+- A dynamic or kinematic body needs a `Velocity`; without one it is handled as **static** (never moves, never pushed).
+- `PhysicsSystem` (add it to `FixedSimulation`; `DefaultCellSize` 8 cells; `Gravity` default 0; `SubstepCount` 4;
+  `ContactHertz` 30, capped at a quarter of the substep rate, doubled for contacts with a static or kinematic body;
+  `ContactDampingRatio` 10; `ContactPushMaxSpeed` 3 cells/s; `RestitutionThreshold` 1 cell/s; `EnableSleep` on;
+  `TimeToSleep` 0.5 s — all Box2D's defaults with 1 cell = 1 Box2D length unit). Each step is split into `SubstepCount`
+  substeps of `h = step / SubstepCount`; per substep, dynamic bodies get
+  `v = v / (1 + h * LinearDamping) + Gravity * GravityScale * h` (and `w = w / (1 + h * AngularDamping)`), contacts
+  push, and non-static bodies move and turn. Rigid bodies without a `Collider` get the same substeps without contacts.
+- A pair is tested only if `(a.Category & b.Mask) != 0` and `(b.Category & a.Mask) != 0`, not both static, not both
+  sensors, and, if neither is a sensor, at least one is dynamic (kinematic–kinematic and kinematic–static never touch).
+- Contact response: dynamic bodies don't pass through each other, through static/kinematic ones or through solid
+  tiles. Static and kinematic bodies are never pushed. A contact has up to 2 points (boxes and polygons resting flat get
+  2), so turned bodies tip over and lie flat. Overlaps are pushed out at most `ContactPushMaxSpeed`, and that push adds
+  no velocity. Bodies settle about `LinearSlop` (0.005 cells) into each other per contact, so a stack sinks a little.
+  Friction per pair = `sqrt(a.Friction * b.Friction)` (a tile contact uses the body's), restitution =
+  `max(a.Restitution, b.Restitution)`; impacts slower than `RestitutionThreshold` don't bounce. Friction makes balls
+  roll. Contacts start before the shapes touch (speculative: when the gap is less than how far both can move this
+  step), so fast bodies don't tunnel through thin walls.
+- **Tile grid**: `PhysicsSystem.TileGrid` (optional `TileGrid`: columns × rows of solid/empty tiles, `TileSize`,
+  `Origin`, `Category`). Dynamic bodies whose `Mask` includes the grid's `Category`, the queries and `CharacterMover`
+  collide with it. Outside the grid is empty. Touching a tile's edge is not overlapping it. A tile face that touches
+  another solid tile is never collided with, so bodies slide over seams: boxes and polygons are only ever pushed out
+  through a tile's open faces (`Collision.PolygonTile`), whatever their angle; a circle's contact is dropped when it would
+  push out through a closed face. Tile contacts have **no events**.
+- **Sleeping** (`EnableSleep`): a dynamic body is still while slower than `LinearSleepTolerance` (0.05 cells/s) and
+  `AngularSleepTolerance` (2°/s). Touching dynamic bodies form an island; an island whose bodies have all been still
+  for `TimeToSleep` sleeps: `RigidBody.IsSleeping` is set, velocities are zeroed, and its bodies aren't simulated.
+  It wakes when a moving body of the island or a moving kinematic body touches it, when one of its contacts ends (a
+  support moved away or was destroyed), when game code gives one of its bodies a velocity, or when `IsSleeping` is
+  cleared. **Changing `Gravity` doesn't wake sleeping bodies** (as Box2D): clear `IsSleeping` yourself.
+  `SleepingBodyCount` counts them. Sleeping bodies still cost their gather and broadphase each step.
+- **Interpolation** (opt-in): a body with `Interpolation` and the engine's `RenderOffset` gets `PreviousPosition` and
+  `PreviousRadians` set each step; `InterpolationSystem(FixedTimestep)` in the presentation group (before the render
+  systems) sets `RenderOffset = (previous - current) × (1 - FixedTimestep.Alpha)`, so the body is drawn between its last
+  two steps (up to one step behind, without jumps). Nothing is offset before the first step (`HasPrevious`). After a
+  teleport, call `Interpolation.Reset()`.
+- **Queries** (`IPhysicsQueries`, implemented by `PhysicsSystem`): `Raycast` (closest collider or tile; shapes that
+  contain the origin are ignored; a ray starting inside solid tiles hits the first solid tile after it leaves them),
+  `CastBox` (an axis-aligned box swept along a translation, against circles, turned boxes and polygons too; a shape it
+  already overlaps is hit at fraction 0 when moving further in and ignored when moving out; tile faces that touch
+  another solid tile are never hit, so boxes don't catch on seams), `OverlapBox`/`OverlapCircle` (colliders only, up to
+  the span's length). A collider is reported if its `Category` has a bit in the query mask; sensors never. Queries see
+  the world **as at the end of the last physics step**.
+- **`CharacterMover.MoveAndSlide`** (Godot `move_and_slide`): sweeps a box by `velocity * delta` with `CastBox`, stops
+  `SkinWidth` (0.01 cells) before what it hits, removes the velocity part into the surface and slides with the rest, at
+  most `MaxSlides` (4) hits per move. Returns `SlideCollisions`: `Floor` (normal within 45° of `up`, default
+  `(0, -1)`), `Ceiling`, `Wall`. A character has no `RigidBody`, so the physics never moves it.
+- "Touching" (for events and `TouchingPairCount`) = separation below `TouchDistance` (0.02 cells), so a resting
+  contact stays touching instead of flickering.
+- Events (`ContactBeginEvents`, `ContactEndEvents`, `SensorBeginEvents`, `SensorEndEvents`) hold the last step's
+  changes only and are replaced every step. A begin fires once when a pair starts touching; an end fires when it stops
+  **or when either entity was destroyed** (the entity in the event is then dead). A sleeping pair stays touching (no
+  end). In contact events `A` has the lower entity id. Read them from a system added after `PhysicsSystem` in
+  `FixedSimulation`; a system in `Simulation` sees the same events again in frames without a fixed step.
 
 **Built-in systems** (namespace `ConsoleEngine.Ecs.Systems`, components in `ConsoleEngine.Ecs.Components`):
-- `MovementSystem`: `Position += Velocity * delta`. No wrapping, no bounds.
+- `MovementSystem`: `Position += Velocity * delta` for every entity with both, or only those that also match the
+  filter passed to its constructor (`new MovementSystem(Query.Without<X>())`). No wrapping, no bounds. The engine knows
+  nothing about physics: a game that uses `PhysicsSystem` must add `new MovementSystem(Query.Without<RigidBody>())`,
+  otherwise rigid bodies are moved twice (once per frame here, once per fixed step there).
 - `GlyphRenderSystem`: draws `Glyph.Character` at `floor(Position - Camera.Position)`. Off-screen cells are clipped
   by `RenderConsole.Draw`.
+- All three render systems add the entity's `RenderOffset` (position, and radians for outlines) when it has one: drawn
+  there, not moved (used by physics interpolation, or for effects).
 - `OutlineRenderSystem`: draws the `OutlineLibrary` polygon for `Outline.Id` around the position, rotated clockwise
   by `Rotation.Radians` if the entity has a `Rotation`. Skipped when its bounding circle (`OutlineLibrary.GetRadius`)
   is entirely off-screen.
@@ -171,7 +259,9 @@ calls `OnDestroy`, then disposes the world. A paused scene (another scene pushed
 - **Scripts are ECS behaviour.** `LuaRuntime.Load(path)` returns a `LuaScript`. Its `Component` (a `Script { Id }`
   component) on an entity makes that entity run the script. Nothing runs without the systems:
   `LuaScriptSystem(runtime)` in a simulation group runs `on_start`/`on_update`, `LuaRenderSystem(scriptSystem)` in a
-  presentation group runs `on_render`. Use one `LuaScriptSystem` per `World`.
+  presentation group runs `on_render`. Use one `LuaScriptSystem` per `World`. In an `EcsScene` it goes in
+  `Simulation` (once per frame, `dt` = frame delta) or, for scripts that steer physics bodies every step,
+  `FixedSimulation` (`dt` = the fixed step). `Examples/Scripted` uses `Simulation`.
 - A script file must **return a table** (its module). The module may define `on_start(self)`, `on_update(self, dt)`
   and `on_render(self)`. Missing hooks are skipped. Each entity gets its own `self` with metatable
   `{ __index = module, __newindex = guard }`, so `self:method()` calls module functions.
@@ -198,8 +288,8 @@ calls `OnDestroy`, then disposes the world. A paused scene (another scene pushed
   value or `nil` (no error).
 - If a hook stores the wrong type in a field (`self.x = "left"`), no component is written and the entity faults with
   `self.<field> must be a number` or `self.char must be a string or a code point`.
-- `dt` is the group's delta, `(float)GameTime.Delta.TotalSeconds` in an `EcsScene`. Scripts must scale movement by it
-  ([§ FPS](#fps)).
+- `dt` is the delta the group passes to its systems: the frame delta in `Simulation`, the fixed step in
+  `FixedSimulation`. Scripts must scale movement by it ([§ FPS](#fps)).
 - Lua API (Lua 5.4 standard libraries are all open, including `io` and `os`):
 
 | Lua | Behaviour |
@@ -372,17 +462,90 @@ files, so every rule above applies, except:
 | Snake.Ecs | Differs from Snake: when no food exists, new food is placed on a uniformly random **free** on-screen cell (never on the snake, any column/row). It appears after the simulation group's playback. The whole screen is redrawn each frame | `FoodSpawnSystem` |
 | Platformer | `F1` toggles `IsDebugMode`, which **starts true** (`Program.cs`). Draws the player **before** the world, so tiles overwrite the player | `PlatformerGame.OnUpdate`, `OnRender` |
 | Platformer | `ShowFps = true` but no `EnableLogger`, so no FPS anywhere | `PlatformerGame.OnInitialize` |
-| Platformer.Ecs | Same keys, start state (debug on) and draw order (debug text, player, then tiles on top) as Platformer. Velocity is in cells/s and scaled by `Delta`: gravity 200, run 150, air 75 cells/s², drag (3, 0.1)/s, jump speed 50 cells/s (about 6 cells high at any FPS) | `PlayerControlSystem`, `PlayerPhysicsSystem`, `PlatformerScene` |
-| Platformer.Ecs | Differs from Platformer: horizontal speed under 1 cell/s is zeroed only when A/D is not held; moves are split into steps of at most 0.5 cells; vertical and horizontal collisions are checked one after the other; moving left/right checks the corners on that side; screen positions are floored. Kept from the original: walking off a ledge does not make the player airborne, and a jump pressed in the air happens on landing | `PlayerPhysicsSystem.ResolveCollisions` |
+| Platformer.Ecs | Same keys, start state (debug on) and draw order (debug text, player, then tiles on top) as Platformer. Velocity is in cells/s: gravity 200, run 150 (ground) / 75 (air) cells/s², drag (3, 0.1)/s, jump speed 50 cells/s (about 6 cells high at any FPS). The player moves in fixed steps of 1/60 s; A/D and SPACE are read every frame and latched (`PlayerBody.RunDirection`, `JumpRequested`) | `PlayerControlSystem`, `PlayerPhysicsSystem`, `PlatformerScene` |
+| Platformer.Ecs | Collisions go through the engine physics: the level is a `TileGrid` (`TileMap.ToTileGrid`, 4×4-cell tiles, outside the map is empty) and the player a 3×3 box moved by `CharacterMover.MoveAndSlide`, which stops at walls and slides along them. Landing (a `Floor` hit) ends `IsAirborne`. Differs from Platformer: horizontal speed under 1 cell/s is zeroed only when A/D is not held; `Position` is rounded to whole cells after every move (the exact remainder is kept in `PlayerBody.SubCell`), so the player is drawn touching walls and floors although the mover stops `SkinWidth` (0.01) before them. Kept from the original: walking off a ledge does not make the player airborne, and a jump pressed in the air happens on landing | `PlayerPhysicsSystem`, `CharacterMover`, `TileGrid` |
 | Asteroids | Steer `A`/`D`, thrust `W`. No collisions, no objective. Logger enabled but nothing is logged | `AsteroidsGame` |
 | Asteroids.Ecs | Steer `A`/`D` (`Ship.SteeringSpeed` 2π rad/s), thrust `W` (`Ship.Thrust` 60 cells/s²), drag `Ship.Drag` 1.5/s. All movement is scaled by `Delta` | `ShipControlSystem` |
 | Asteroids.Ecs | `SPACE` (Pressed) fires one bullet: 80 cells/s plus the ship's velocity, lives 1.5 s | `ShipControlSystem`, `Spawner.CreateBullet`, `LifetimeSystem` |
-| Asteroids.Ecs | A bullet whose `Collider` touches an asteroid's destroys both. The ship never collides. No score, no objective | `CollisionSystem` |
-| Asteroids.Ecs | Asteroids drift up to 6 cells/s. Everything wraps around a playfield three screens wide and high, so the camera jumps when the ship crosses an edge | `MovementSystem` (engine), `WrapSystem`, `Playfield.Wrap`, `CameraSystem` |
-| Asteroids.Ecs | Ship and asteroids are outlines, bullets are `*` glyphs. Hits and expired bullets disappear at the end of the simulation group (command buffer playback), so they are never drawn in the frame they die | `AsteroidsScene.OnCreate`, `OutlineRenderSystem`, `GlyphRenderSystem` |
+| Asteroids.Ecs | A bullet (kinematic sensor, `CollisionLayers.Bullets`) that touches an asteroid (dynamic, `CollisionLayers.Asteroids`) destroys both, on the `SensorBeginEvents` of the fixed step. One bullet touching two asteroids in the same step destroys both. Asteroids pass through each other. The ship has no collider and never collides. No score, no objective | `PhysicsSystem` (engine), `CollisionSystem`, `Spawner` |
+| Asteroids.Ecs | Asteroids drift up to 6 cells/s. Asteroids and bullets move in fixed steps of 1/60 s (`PhysicsSystem`), the ship every frame (`MovementSystem`). Everything wraps around a playfield three screens wide and high, so the camera jumps when the ship crosses an edge | `PhysicsSystem`, `MovementSystem` (engine), `WrapSystem`, `Playfield.Wrap`, `CameraSystem` |
+| Asteroids.Ecs | Ship and asteroids are outlines, bullets are `*` glyphs. Hits disappear at the end of the fixed step and expired bullets at the end of the simulation group (command buffer playback), so they are never drawn in the frame they die | `AsteroidsScene.OnCreate`, `OutlineRenderSystem`, `GlyphRenderSystem` |
 | ConsoleGame | Recolours all cells every **500 ms**. `ESC` calls `Stop()`, which exits | `Game.OnInitialize`, `OnUpdate` |
 | ConsoleGame.Ecs | One entity per cell (4096). Every **500 ms** (timer reset to 0) each gets a random colour of the same five. Cells are black until the first recolour. `ESC` quits | `RecolorSystem`, `ColorGridScene`, `ConsoleEcsGame.OnUpdate` |
 | Swarm | Particles are pulled towards a point moving on a Lissajous curve, each with its own `Agility.Pull` (30–180 cells/s²), drag 0.3/s, and bounce off the screen edges. Colour by speed: dark blue < 15, blue < 30, cyan < 50 cells/s, else white. The HUD on row 0 shows the count | `AttractorSystem`, `BounceSystem`, `ColorBySpeedSystem`, `HudSystem` |
 | Swarm | `SPACE` adds 10 000 particles, `BACKSPACE` removes up to 10 000 (both through the command buffer, applied at the end of the simulation group). `ESC` quits | `SpawnControlSystem`, `SwarmGame.OnUpdate` |
 | Scripted | ECS scene. Arrows move the player (`@`, yellow, starts at `Console.ScreenCenter`) at 20 cells/s, kept inside rows 1 to height−2. 30 fireflies (`•`, positions from `Random(1)`): `on_start` gives each a random `Velocity` (`math.randomseed(1)`), `MovementSystem` moves them, the script reverses `vx`/`vy` at the edges and switches `self.color` Green/DarkGreen every 0.3 s. Which glyph wins where player and firefly overlap is not defined (archetype order). No collisions, no objective. `ESC` quits | `player.lua`, `firefly.lua`, `ScriptedScene.OnCreate`, `ScriptedGame.OnUpdate` |
 | Scripted | `F5` (`Pressed`) calls `LuaRuntime.ReloadAll()`. Failures go to `Log.WriteLine`, which is dropped because `EnableLogger` is off. The error of the first `ScriptFaulted` entity found is drawn on the bottom row (white on dark red) | `ScriptReloadSystem`, `ScriptErrorSystem` |
+| PhysicsSandbox | Gravity 30 cells/s² down. Static floor (3 rows), side walls and two ledges (`█`), a kinematic platform (`▒`, 16×1) that moves at 12 cells/s between 20 % and 80 % of the width. `PhysicsSystem` cell size 2 | `SandboxScene`, `PatrolSystem` (fixed step, `[UpdateBefore(typeof(PhysicsSystem))]`) |
+| PhysicsSandbox | `SPACE` drops a ball (`●`, radius 0.5, restitution 0.6, mass 1), `B` a box (`■`, 1×1, mass 3, no bounce), `ENTER` 50 balls stacked 1.2 cells apart, all at random x on row 3 with a random sideways speed up to 8 cells/s. `R` removes every dropped body. `ESC` quits. Dropping goes through the command buffer: the bodies appear at the end of the simulation group and move from the next fixed step. The HUD on row 0 shows the count | `DropSystem`, `BodySpawner`, `HudSystem`, `PhysicsSandboxGame.OnUpdate` |
+| PhysicsShowcase | One scene with every physics feature. Gravity 40 cells/s² down, 120 × 60 tiles of 1×1 (`Level.CreateTiles`: ceiling rows 0–2 (under the HUD, so it is three tiles thick), floor rows 57–59, side walls, two shelves, two steps). Static turned ramp (`▓`), ice ledge without friction (`═`), kinematic platform patrolling at 10 cells/s (`▒`), kinematic windmill turning at 1.2 rad/s (`#`), static sensor zone (`·`) whose count is on the HUD. Outlines are drawn with every corner moved half a cell towards the body's origin (`OutlineShape.ThroughCellCentres`), so a body resting on a tile isn't drawn one row into it. `PhysicsSystem` cell size 3, sleep and interpolation on | `ShowcaseScene`, `Level`, `PatrolSystem`, `EventCounterSystem` |
+| PhysicsShowcase | Keys: `1` bouncy ball (`●`), `2` turning 2×2 box (`#`), `3` triangle (`▲`), `4` pentagon (`*`), `5` ghost ball (`○`, category `Layers.Ghost`: passes through solid bodies, not through tiles or other ghosts); `ENTER` 30 random shapes; `R` removes every dropped body. Sleeping bodies are drawn dark grey. The player `@` (1×1, `CharacterMover`, `A`/`D` run 18 cells/s, `W` jumps from a floor) is a static obstacle for bodies. Standing on a kinematic body (within 0.5 cells below its feet), it first moves with the point under its feet (velocity plus spin), so the platform and the windmill carry it instead of moving into it. Its laser is a `Raycast` 60 cells in the facing direction (× on the hit). `E` blasts every dynamic body within 10 cells (`OverlapCircle`) outwards and spins it. `G` flips gravity and wakes everything, `I` switches interpolation | `DropSystem`, `BodyFactory`, `PlayerMoveSystem`, `LaserSystem`, `BlastSystem`, `SwitchSystem`, `TintSystem`, `HudSystem` |
+
+<a id="launcher"></a>
+## Launcher (`Examples/Launcher`)
+
+| Rule | Identifier |
+|---|---|
+| Keys (read with `Console.ReadKey`, so only while the launcher window has focus): Up/Down or W/S or K/J move and wrap around, Home/End jump, Enter/Space start the selected game, digit 1–9 selects **and** starts that entry (digits above the entry count are ignored), Esc/Q quit | `LauncherMenu.HandleKey` |
+| A game is "built" when its exe exists at the `GameLocator` path. Checked again before every redraw. Starting an unbuilt game shows `LauncherTexts.NotBuilt` and starts nothing | `LauncherApp.RefreshBuilt`, `LauncherApp.Launch` |
+| On Windows games start in their **own classic console window** (`conhost.exe`). On macOS and Linux the game runs in the **launcher's own terminal** (the exe has no `.exe` extension, started directly, so a crash prints its exception into that terminal and no `pause` is needed). Working directory = the exe's folder, with no arguments (Asteroids.Ecs and Swarm use their default counts). The launcher blocks until the game exits; keys typed into the launcher meanwhile are discarded | `GameRunner.Run`, `LauncherApp.DiscardBufferedKeys` |
+| (Windows) `conhost.exe` always exits with 0, so the launcher cannot tell a crash from a normal quit: it always shows `LauncherTexts.Closed`. A game that exits non-zero (crash) leaves its window open on `pause` with the exception text above it. The logger window that a game opens (`Log.Start`, `UseShellExecute`) still follows the default terminal setting | `GameRunner.BuildArguments` |
+| The launcher finds games only from its own build output: it walks up from `AppContext.BaseDirectory` to the folder holding `Launcher.csproj` and uses the same relative output path (configuration + framework) for each game | `GameLocator.FromLauncherOutput` |
+
+<a id="eternal-digger"></a>
+## EternalDigger (`Examples/EternalDigger`)
+
+Full contract: [`docs/design/eternal-digger.md`](../design/eternal-digger.md). Coordinates are tile columns/rows; a
+tile is 4 × 2 cells (`Layout.TileWidth`/`TileHeight`). Row 0 is the top of the sky.
+
+| Rule | Value | Identifier |
+|---|---|---|
+| World | 30 columns (`Mine.Columns`), endless downwards. Rows 0–9 sky, row 10 grass (`Mine.SurfaceRow`, depth 0). Depth = `row - 10` m, HUD shows at least 0 | `Mine`, `Mine.Depth` |
+| Generation | Same seed → same mine. Rows are generated on first touch in blocks of 64 (`Mine.RowsPerBlock`) | `Mine.Generate`, `Mine.Underground` |
+| Unbreakable | Grass (the whole surface row except the shaft), bedrock (columns 0 and 29 below the surface, and everything outside the 30 columns, also beside the sky). Digging them does nothing | `Tiles.IsBreakable`, `Mine.At` |
+| Shaft | Column 21 (`Mine.ShaftColumn`): rows 10 and 11 start dug out with ladders. The only way down | `Mine.Create` |
+| Hits to break | Dirt 2, Stone 4, Copper 4, Silver 6, Granite 7, Gold 8, Slate 6, Quartzite 8, Gem 9, plus 1 per 25 m of depth (`Tiles.DepthPerExtraHit`), minus 1 per pickaxe tier (min 1). Obsidian: the shovel can't break it | `Tiles.HitsToBreak`, `Tiles.IsBreakable` |
+| Where things appear | Copper from 2 m, silver from 12 m, gold from 30 m, caves (air) from 6 m, granite from 40 m. Veins get richer deeper | `Tiles.CopperDepth`…`CaveDepth`, `Mine.Underground` |
+| The wall | Obsidian from 110 m (`Tiles.WallDepth`), 3–5 tiles thick per column (`Mine.WallBottomDepth`), in every column but the bedrock walls. A shovel hit on it: sparks, a small shake, red floating `TOO HARD` (at most once per `TooHardInterval` = 1 s), no damage | `Mine.Create`, `Tiles.IsBlastOnly`, `MinerControlSystem.Clank` |
+| Act 2 | Below the wall only slate, quartzite (25% → 50% of the rock), gem veins (4% → 7%) and caves. No dirt, stone, granite, copper, silver or gold | `Mine.BelowTheWall` |
+| Rare finds | Single tiles, checked first: fossil (`Noise < 0.15%`) in act 1 from 15 m, relic (`< 0.1%`) in act 2. Hits: fossil 5, relic 7 (+ depth). Breaking one: double star ring, sparks, `FOSSIL!`/`RELIC!`; into the bag (`Fossils`/`Relics`) and counted for good (`FossilsFound`/`RelicsFound`). They pulse slowly when sampled by the glint system | `Tiles.IsRareFind`, `Mine.Underground`, `Mine.BelowTheWall`, `EffectSpawner.RareFind`, `GlintSystem` |
+| Gem hint | From 95 m (`Tiles.HintDepth`), 3 extra samples per glint tick in the 16 rows below the wall's top + 3; a gem there on screen glints at any distance from the miner | `GlintSystem.SampleBelowTheWall` |
+| Ore value | Copper 15g, silver 40g, gold 100g, gem 250g; rare finds fossil 300g, relic 750g | `Tiles.CopperValue/SilverValue/GoldValue/GemValue` |
+| Start | 0 gold, 8 ladders, column 15 on row 9 | `Shop.StartGold`, `Shop.StartLadders`, `Layout.SpawnColumn`, `Layout.GroundRow` |
+| Support / falling | The miner stands still if their tile has a ladder, or the tile below is solid or has a ladder. Otherwise they fall one tile at a time (0.06 s per tile) **before any key is read**. No fall damage | `Mine.IsSupported`, `MinerControlSystem.Control` |
+| Moves | One tile per move: walk 0.13 s, climb 0.17 s. Holding Up on ladders speeds up after 4 tiles, down to 0.06 s per tile after 10 more (`ClimbUpDuration`); any other action or letting go resets it (`Miner.ClimbStreak`). **No keys are read while a move plays** (except the rescue key) | `MinerControlSystem` constants, `Miner.IsMoving` |
+| Side keys | Air → walk. Solid and breakable → one hit every 0.16 s (`DigInterval`) while held. Left and right both held cancel out | `MinerControlSystem.MoveOrDig` |
+| Jump | Up held with Left/Right while idle and supported (also on a ladder): if the side tile and the tile beyond (`JumpTiles` = 2) are both air, the miner moves 2 tiles in 0.28 s (`JumpDuration`), drawn in a sine arc of 2 cells (1 if the tile above the gap is solid). On landing: dust; unsupported → falls. Otherwise the side key acts as usual | `MinerControlSystem.CanJump`, `MinerMotionSystem.JumpLift` |
+| Down key | Below solid → dig it. Below air → step down (then the fall rule applies if there's no ladder) | same |
+| Up key | Only works on a ladder tile: above air → climb, above solid → dig. Without a ladder in the miner's own tile, up does nothing | same |
+| Ore | Breaking an ore tile puts one piece in the bag (`CopperOre`/`SilverOre`/`GoldOre`/`GemOre`). No bag limit | `Shop.Collect` |
+| Ladders | `SPACE` (pressed) places one in the miner's own tile if: ladders > 0, row > 10 (underground), the tile is air and has no ladder. `SPACE` in a tile that has a ladder (row > 10) takes it back instead: ladders +1, dust (`Mine.TryTakeLadder`); the fall rule then applies. A shaft of N dug tiles needs a ladder in every one of them to climb out | `Mine.TryPlaceLadder`, `TryTakeLadder`, `MinerControlSystem.PlaceLadder` |
+| Deliver | `E` (pressed), miner idle at columns 3–6 on row 9 (the door): all ore is sold, the bag empties. Empty bag: only a dust puff | `InteractionSystem`, `Shop.Deliver`, `Layout.IsAtDeliverSpot` |
+| Shop counter | Miner idle at columns 8–11 on row 9 (`Layout.IsAtShop`). `↑`/`↓` (pressed) move the selection through `ShopCounter.Items`, wrapping; it starts on ladders and isn't saved. `E` (pressed) buys one of the selected item at `Shop.Price`. Not enough gold or sold out → dust puff, nothing bought; the panel price is red | `ShopCounter`, `Shop.TryBuy`, `InteractionSystem.Interact` |
+| Rescue | Hold `R` 1.5 s (`RescueDuration`), anywhere, even mid-move: back to column 15, row 9. **The bag (ore) is lost**, gold and ladders are kept. Releasing early resets the timer | `MinerControlSystem.UpdateRescue` |
+| Light | `LightMap` levels `Dark`/`Dim`/`Lit`/`Bright`. Sky and grass rows bright. Daylight: depth 1 lit, depth 2–3 dim, only in dug-out tiles and the tiles touching them. Headlamp: tiles within 1.5 tiles bright (also rock), a cone of ±40° up to 8 tiles (+2 per lamp tier, `Upgrades.LampReach`; shorter when the oil is low, none when empty): within half the reach bright, ¾ lit, else dim. Solid tiles block the lamp. The lamp points along the last move or dig | `LightMap.Compute`, `Miner.LampDirection` |
+| Darkness | Lit tiles are remembered (`TileCell.Seen`) and drawn as faint grey outlines when dark, **without ore colour**. Never-seen dark tiles are black | `TerrainRenderSystem` |
+| Glints | Ore within 9 tiles of the miner (+3 per detector tier) and on screen twinkles, also through rock and in the dark (more in the dark). Gold most often, then silver, then copper. Sampled at a fixed rate (every 0.08 s), so not FPS-dependent | `GlintSystem` |
+| Camera | Follows the miner vertically (miner at 40% of the screen height), eased; never above the sky. Always on whole cells. Breaking tiles and falls of 3+ rows shake it | `CameraSystem`, `ScreenShake` |
+| Miner visibility | The miner is drawn after particles. No particle is drawn on his 4 × 2 cells; in the one-tile ring around him at most 6 particles per frame (`NearMinerCap`) are drawn, in their darker colour | `ParticleRenderSystem`, `MineScene` (Presentation order) |
+| Effects | Debris on hits, bursts and dust on breaks, foot/landing dust, mist in lit caves (max 40), coins + star pop + `+<gold>g` on delivery, pop + `-10g` on buying. All scaled by `Delta` | `EffectSpawner`, `ParticlePhysicsSystem`, `ParticleLifetimeSystem`, `MistSystem` |
+| Lift: buying | `E` idle at columns 23–24 on row 9 (`Layout.IsAtLiftSign`): one 10 m segment for 200g + 100g per segment already built. Digs out the next 10 tiles of column 21; ore there goes into the bag, ladders stay. Obsidian in those tiles blocks it (` LIFT BLOCKED BY OBSIDIAN `, nothing charged), so the lift ends at 100 m until the shaft's obsidian is blasted. Not enough gold → dust puff, nothing built. Every purchase saves | `Elevator.TryBuild`, `InteractionSystem` |
+| Lift: landings and riding | Landings: row 9 and the bottom row. `E` idle on a landing in column 21: car there → get in, else call it (the caller gets in on arrival). On the bottom landing while carrying dynamite this happens on the release of a short tap (< 0.5 s), because holding `E` plants. In the stopped car: Up → top, Down → bottom, 0.04 s per tile, no keys while it moves; Left/Right (or Down at the bottom) get out and act as usual. A rescue gets out too | `Elevator`, `MinerControlSystem.Control`, `ElevatorSystem.Carry` |
+| Lamp oil | Tank 100 (`LampOil.TankSize`), full in a new mine. Burns 1 unit per 3 s only while the miner's row is below the grass (the lift too), ×0.8 per lamp tier, ×(1 + 0.5 per bag weight step) while climbing up. Below 30: the cone reach falls linearly to 3 tiles at empty, flicker stretches of 0.04–0.12 s dim all lamp light one level (20–70% of them, more when emptier), dark-yellow lamp glyph, `°` smoke every 0.45 s. At 0: no cone, the close radius one level darker (`Lit`), grey lamp glyph, no glow. Never harms. `FILL LAMP` at the counter: 2g per missing whole unit; `FULL` when nothing is missing. `OIL FLASK` at the counter: 60g, max 5 carried (`FULL`); below the surface a flask pours itself in when the oil is below 30: +40 (capped at 100), smoke + floating `OIL +40` (`LampOil.TryPour` in `LampSystem`, after the burn) | `LampOil`, `LampSystem`, `Headlamp`, `LightMap.Compute` |
+| Bag weight | Weight: copper 1, silver 1, gold 2, gem 2, rare find 3. Capacity 20 + 10 per bag tier. Each 10 over (rounded up) is a step: climbing up takes +20% per step (max 3×, on top of the climb ramp) and burns +50% oil per step. Walking, climbing down, falls and the lift are unaffected. Heavy: HUD bag value yellow, backpack `▓` | `Shop.BagWeight`, `WeightSteps`, `ClimbLoad`, `OilLoad`, `MinerControlSystem.Control`, `LampSystem.LoadFactor` |
+| Upgrades | At the counter: shovel 300/900/2500g (−15% dig interval per tier), pickaxe 350/1000/2800g (−1 hit per tier on every breakable tile, min 1: `Upgrades.FewerHits` → `Mine.Hit`/`Tiles.HitsToBreak`, cracks drawn with the same count), lamp 250/750/2000g (+2 tiles reach and oil burn ×0.8 per tier; bright/lit bands at ½ and ¾ of the reach), bag 200/600/1500g (+10 carried weight per tier, used by bag weight), detector 400/1200/3000g (+3 glint radius, glint interval ×0.8 per tier). Max tier 3: the panel shows `MAX`, `E` gives a dust puff | `Upgrades`, `Shop.TryBuy` |
+| Deep camp | `DEEP CAMP` at the surface counter, 1500g once (`Miner.HasDeepCamp`): digs out columns 22–24 on rows 109–110 (ore → bag, ladders kept) and turns open tiles on row 111 there into stone. Counter: idle on row 110 at columns 22–24; `↑`/`↓` select (no climbing or digging there), `E` trades, holding `E` doesn't plant. Items (`ShopCounter.CampItems`): `SELL BAG` = 70% of `Shop.BagValue` rounded down (empty bag → dust puff), ladder 15g, fill lamp 3g per missing unit, flask 90g, stick 150g with the kit (else `KIT: SURFACE ONLY`): surface × 1.5 rounded up. Every trade saves. The lantern lights tiles within 2.6 tiles of (23.5, 110) `Lit`, to 3.9 `Dim`, and marks them seen | `DeepCamp`, `Shop.CampPrice`, `Shop.TryBuyAtCamp`, `InteractionSystem.TradeAtCamp`, `LightMap.AddLantern` |
+| Blasting at the counter | The counter's blasting slot: without the kit, buys it for 2500g; with it, one stick for 100g. The `BLASTING` shed (columns 26–28) is scenery | `Shop.TryBuyBlasting` |
+| Planting dynamite | Hold `E` 0.5 s (`PlantDuration`) while idle, supported and underground: a lit stick in the tile `LampDirection` faces. An arrow held with `E` sets `LampDirection` first (`↓` wins, then `↑`, then `←`/`→`; `MinerControlSystem.Aim`). On a lift landing only with the kit and ≥ 1 stick (`MinerControlSystem.CanPlant`); there `E` uses the lift on a tap released before 0.5 s instead of on the press (`InteractionSystem.IsTapToUseLift`, `MinerInput.UseReleased`). Needs the kit, ≥ 1 stick, and breakable rock or obsidian there, else dust puff. While `E` is held nothing else happens; after a plant (or a refusal) `E` must be released first | `MinerControlSystem.UpdatePlanting` |
+| Blast | After the 2 s fuse (`FuseDuration`): the 3 × 3 around the stick becomes air if it's breakable rock or obsidian (not bedrock, grass, rows ≤ 10). Ore in it → bag. Ladders in it are removed. Other sticks in it: fuse set to ≤ 0.12 s (`ChainDelay`). A standing, idle miner inside slides one tile away from the stick (sideways first) if that tile is open; never hurt. Biggest screen shake | `DynamiteSystem.Blast`, `Push` |
+| Inventory | `TAB` (pressed) toggles a centred panel (gold, ladders, oil %, flasks, dynamite, lift, bag lines `count × price = worth`, weight/capacity, upgrade pips, finds ever found). While open, every `MineScene.Simulation` system has `Enabled = false`: nothing moves, no oil burns, no autosave. `ESC` still saves and quits | `InventorySystem.Toggle` |
+| Gas | From 50 m (`Tiles.GasDepth`) the generated air tiles of 2 × 2 noise areas with `Noise < 0.3` (`GasChance`) have `TileCell.HasGas`. `GasSystem` (after `DynamiteSystem`, before `LampSystem`): with the lamp lit (`LampOut` 0 and oil > 0) and the miner below the grass, the nearest gas tile within 2 tiles (Euclidean, tile units) of the miner's tile flares: up to 24 4-connected gas tiles lose their gas (`GasPockets.MaxPocket`; the rest keep it), fire particles, shake 0.6, `GAS!`; `Miner.LampOut` = 3 s (headlamp dark as if empty, no burning) and oil −5. Shimmer particles over gas within 9 tiles, max 30, also in the dark. A blast ignites up to 6 pockets within 3 tiles of the stick (big flare, no lamp effect). Never harms | `GasSystem.Check`, `GasPockets`, `DynamiteSystem.IgniteGas`, `LampSystem` |
+| Darkness | Below the wall (`Mine.IsBelowTheWall`: depth > the column's `WallBottomDepth`) the headlamp reach is 2 tiles less, min 1 (`LampOil.ActTwoAbsorb`). Black damp (`Mine.IsBlackDamp`): an open tile below the wall in a 4 × 4 noise area with `Noise < 0.12` (`Tiles.BlackDampChance`); with the miner's tile in it the reach is then halved (min 1) and oil burns ×2 (`LampOil.DarkReach`, `BlackDampBurn`); entering floats `BLACK DAMP`. No mist spawns there; lit solid tiles touching it draw `░` dark grey | `LampSystem`, `MistSystem`, `TerrainRenderSystem`, `Mine.IsBlackDampEdge` |
+| Surface progression | `Progress.Track` (every frame, start of `MinerMotionSystem.Move`): `DepthRecord` = max(record, depth); first frame with the miner's tile below the wall (`Mine.IsBelowTheWall`) sets `PassedTheWall` and floats `TOOL SHOP OPEN`. `GoldEarned` += every door and camp sale (`Progress.Earn`). House level from `GoldEarned`: ≥ 2000 flag, ≥ 8000 yellow windows, ≥ 20000 second floor (`Progress.HouseLevel`); the sale crossing one floats `HOUSE UPGRADE!`. Trophy case: 10 slots, relics then fossils, `+` in the last slot over 10. Record plank only when the record > 0 | `Progress`, `HouseRenderSystem` |
+| Tool shop | Column 13 on row 9 (`Layout.IsAtToolShop`), open only with `PassedTheWall`: `↑`/`↓` select, `E` buys `DYNAMITE x5` 400g (needs the kit, else sold out) or `LADDERS x10` 80g; saves. Closed: prompt only | `ShopCounter.ToolShopItems`, `Shop.TryBuyBundle`, `InteractionSystem.BuyTools` |
+| Quit | `ESC` in the mine saves (`MineScene.Save`), then `Stop()`. On the title screen it only quits | `EternalDiggerGame.OnUpdate` |
+| Title | Starts on `TitleScene`. With a loaded save: `CONTINUE`, `NEW MINE`; else only `NEW MINE`. `↑`/`W`, `↓`/`S` (pressed) move the selection (wraps), `E` picks. NEW MINE with a save asks `NO` / `YES, START OVER` (NO selected); NO goes back. NEW MINE uses the command-line seed (or `TickCount`) and writes its first save at once | `TitleScene`, `TitleMenu` |
+| Saving | Saves after a sale that earned gold, after a ladder, lift, kit or dynamite purchase, every 60 s underground (`GameSaver.AutosaveInterval`, timer counts only below the surface and resets on every save), and on `ESC`. Never per frame. A failed write shows ` SAVE FAILED` and play goes on | `InteractionSystem`, `SaveSystem`, `GameSaver` |
+| Loading | CONTINUE rebuilds the mine from the saved seed plus the saved changed tiles, and puts the miner standing on the saved tile with the saved facing and inventory. Unreadable save: red message on the title, only NEW MINE, file moved to `save.dat.bad` | `SaveFile.Load`, `SaveData.ApplyTo`, `SaveData.ToMiner` |
+| Save hint | After each save (or failed save), ` SAVED ` (Gray for 0.75 s, then DarkGray for 0.75 s) or ` SAVE FAILED` (red) at the right end of HUD row 1 | `HudSystem.DrawSavedHint`, `HudSystem.SavedHintSeconds` |
+

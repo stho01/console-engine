@@ -4,5 +4,3 @@ namespace Asteroids.Ecs.Components;
 // can select with With<T>() or skip with Without<T>().
 
 public struct Asteroid;
-
-public struct Bullet;

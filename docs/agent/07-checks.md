@@ -78,12 +78,12 @@ Expected for a loadable map ([04 § F6](04-flows.md#f6)):
 Key matching in `WorldLoader` lower-cases the key, so `!Width` works. The regex above assumes lower case.
 
 <a id="q7"></a>
-## Q7 — Is the .NET 10 runtime present?
+## Q7 — Is the .NET 11 runtime present?
 
 ```powershell
-dotnet --list-runtimes | Select-String 'Microsoft.NETCore.App 10.'
+dotnet --list-runtimes | Select-String 'Microsoft.NETCore.App 11.'
 ```
-All projects target `net10.0`. Nothing → install the .NET 10 runtime.
+All projects target `net11.0`. Nothing → install the .NET 11 runtime.
 
 <a id="q8"></a>
 ## Q8 — What FPS is the user getting?
@@ -102,11 +102,32 @@ dotnet test --no-build
 ```
 
 <a id="q10"></a>
-## Q10 — Are the Lua scripts and `lua54.dll` in the output folder?
+## Q10 — Are the games where the launcher looks? (developer checkout)
+
+```powershell
+Get-ChildItem Examples\*\bin\*\net11.0\*.exe -Name
+```
+Each game in `GameCatalog.Games` needs
+`Examples\<ProjectName>\bin\<same configuration as the launcher>\net11.0\<ProjectName>.exe` (no `.exe` on macOS/Linux). → [P16](05-triage.md#p16) step 2.
+
+<a id="q11"></a>
+## Q11 — Is there an EternalDigger save, and was one set aside?
+
+```powershell
+Get-ChildItem "$env:LOCALAPPDATA\EternalDigger" -ErrorAction SilentlyContinue | Select-Object Name, Length, LastWriteTime
+```
+On macOS: `ls -l ~/Library/Application\ Support/EternalDigger`; on Linux: `ls -l ~/.local/share/EternalDigger`.
+`save.dat` is the slot (`SaveFile.DefaultPath`). `save.dat.bad` = a save that couldn't be read and was moved aside;
+`save.dat.tmp` left behind = a save was interrupted (the old `save.dat` is intact). No folder = never saved. →
+[P17](05-triage.md#p17) step 8.
+
+
+<a id="q12"></a>
+## Q12 — Are the Lua scripts and `lua54.dll` in the output folder?
 
 From the game's output folder (the one holding the exe):
 ```powershell
 Get-ChildItem -Recurse -Name -Include *.lua; Get-ChildItem -Recurse -Name -Filter lua54.dll
 ```
-No `.lua` files → the `.csproj` lacks `CopyToOutputDirectory` for them ([P16](05-triage.md#p16) step 1). No
-`runtimes\<rid>\native\lua54.dll` for this machine's architecture → [P16](05-triage.md#p16) step 2.
+No `.lua` files → the `.csproj` lacks `CopyToOutputDirectory` for them ([P19](05-triage.md#p19) step 1). No
+`runtimes\<rid>\native\lua54.dll` for this machine's architecture → [P19](05-triage.md#p19) step 2.

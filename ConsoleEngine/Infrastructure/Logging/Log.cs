@@ -1,5 +1,7 @@
-﻿using System.Collections.Concurrent;
+﻿using System;
+using System.Collections.Concurrent;
 using System.Diagnostics;
+using System.IO;
 using System.Net;
 using System.Net.Sockets;
 using System.Text;
@@ -16,8 +18,11 @@ public static class Log
     private static Socket _loggerConnection;
     private static Process _loggerProcess;
     private static bool _running;
-    private static GameBase _game;
     private const char EndOfMessage = '\0';
+
+    // The logger opens in a new terminal window, which can fail after the process started fine (a terminal that
+    // doesn't take -e, a window the user closes), so give up if it doesn't connect in time.
+    private static readonly TimeSpan ConnectTimeout = TimeSpan.FromSeconds(10);
 
     static Log()
     {
@@ -43,7 +48,8 @@ public static class Log
 
     private static void EnqueueMessage(StringBuilder messageBuilder)
     {
-        if (!(_game?.EnableLogger ?? false))
+        // Nothing reads the queue unless the logger is running.
+        if (!_running)
             return;
             
         messageBuilder.Append(EndOfMessage);
@@ -52,41 +58,108 @@ public static class Log
 
     private static void DispatchMessages()
     {
-        while (_running)
+        try
         {
-            var loggerConnected = _loggerConnection?.Connected ?? false;
-                
-            if (!loggerConnected)
-                _loggerConnection = Socket.Accept(); // wait for new connection
-                
-            while (loggerConnected && Messages.TryDequeue(out var msg))
+            // Wait in short slices: on macOS disposing a listening socket doesn't wake a thread blocked on it.
+            var waited = Stopwatch.StartNew();
+            while (!Socket.Poll(TimeSpan.FromMilliseconds(100), SelectMode.SelectRead))
             {
-                var bytes = Encoding.UTF8.GetBytes(msg);
-                _loggerConnection.Send(bytes);
+                if (!_running || waited.Elapsed > ConnectTimeout)
+                    return;
             }
 
-            Thread.Sleep(100); 
+            _loggerConnection = Socket.Accept();
+
+            while (_running)
+            {
+                while (Messages.TryDequeue(out var msg))
+                {
+                    var bytes = Encoding.UTF8.GetBytes(msg);
+                    _loggerConnection.Send(bytes);
+                }
+
+                Thread.Sleep(100);
+            }
+        }
+        catch (Exception e) when (e is SocketException or ObjectDisposedException)
+        {
+            // Stop() closed the socket, or the logger went away.
+        }
+        finally
+        {
+            // Without a logger nobody reads the queue, stop filling it.
+            _running = false;
+            Messages.Clear();
         }
     }
         
-    internal static void Start(GameBase game)
+    internal static void Start()
     {
-        _game = game;
-        _running = true;
         Socket.Bind(EndPoint);
         Socket.Listen(10);
+
+        if (!StartLoggerProcess())
+        {
+            // Without a logger nobody would ever connect or read the messages.
+            Socket.Dispose();
+            return;
+        }
+
+        _running = true;
         LoggerThread.Start();
-            
+    }
+
+    private static bool StartLoggerProcess()
+    {
+        var logger = Path.Combine(AppContext.BaseDirectory, OperatingSystem.IsWindows() ? "ConsoleEngine.Logger.exe" : "ConsoleEngine.Logger");
+        
         _loggerProcess = new Process();
-        _loggerProcess.StartInfo.FileName = "ConsoleEngine.Logger.exe";
-        _loggerProcess.StartInfo.UseShellExecute = true;
-        _loggerProcess.Start();
+        if (OperatingSystem.IsWindows())
+        {
+            // Opens the logger in its own console window.
+            _loggerProcess.StartInfo.FileName = logger;
+            _loggerProcess.StartInfo.UseShellExecute = true;
+        }
+        else if (OperatingSystem.IsMacOS())
+        {
+            // The game owns the current terminal, open the logger in a new Terminal window.
+            _loggerProcess.StartInfo.FileName = "open";
+            _loggerProcess.StartInfo.ArgumentList.Add("-a");
+            _loggerProcess.StartInfo.ArgumentList.Add("Terminal");
+            _loggerProcess.StartInfo.ArgumentList.Add(logger);
+        }
+        else
+        {
+            // On Linux a shell executed binary runs in the game's own terminal, so it needs a terminal emulator.
+            var terminal = Environment.GetEnvironmentVariable("TERMINAL");
+            if (string.IsNullOrWhiteSpace(terminal))
+                terminal = "x-terminal-emulator";
+
+            _loggerProcess.StartInfo.FileName = terminal;
+            _loggerProcess.StartInfo.ArgumentList.Add("-e");
+            _loggerProcess.StartInfo.ArgumentList.Add(logger);
+            _loggerProcess.StartInfo.UseShellExecute = false;
+        }
+
+        try
+        {
+            return _loggerProcess.Start();
+        }
+        catch (Exception)
+        {
+            // Printed before the game takes over the terminal, so it's visible once the game exits.
+            Console.Error.WriteLine("Could not open the logger in a new window, logging is disabled. Set $TERMINAL to a terminal emulator to enable it.");
+            return false;
+        }
     }
 
     internal static void Stop()
     {
         _running = false;
-        _loggerConnection.Dispose();
+        if (LoggerThread.IsAlive)
+            LoggerThread.Join(TimeSpan.FromSeconds(1));
+
+        _loggerConnection?.Dispose();
         Socket.Dispose();
         Messages.Clear();
     }

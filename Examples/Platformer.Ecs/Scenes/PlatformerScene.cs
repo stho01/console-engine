@@ -2,6 +2,7 @@ using ConsoleEngine.Ecs;
 using ConsoleEngine.Ecs.Components;
 using ConsoleEngine.Ecs.Rendering;
 using ConsoleEngine.Ecs.Systems;
+using ConsoleEngine.Physics;
 using Microsoft.Xna.Framework;
 using Platformer.Ecs.Assets;
 using Platformer.Ecs.Components;
@@ -10,8 +11,10 @@ using Platformer.Ecs.Systems;
 namespace Platformer.Ecs.Scenes;
 
 /// <summary>
-/// The whole game: one player entity, one entity per wall tile of <see cref="Maps.Level"/>, and the systems from
-/// <c>Systems/</c>. The order of <c>Add</c> calls is the order they run. The draw order matches
+/// The whole game: one player entity, one entity per wall tile of <see cref="Maps.Level"/> (to draw it), the level as
+/// the physics' tile grid (to collide with it), and the systems from <c>Systems/</c>. The player moves in the fixed
+/// step; input, camera and drawing run every frame. The order of <c>Add</c> calls is the order they run. The draw order
+/// matches
 /// <c>Examples/Platformer</c>: debug text, then the player, then the tiles (which cover both).
 /// </summary>
 public sealed class PlatformerScene : EcsScene<PlatformerEcsGame>
@@ -41,9 +44,12 @@ public sealed class PlatformerScene : EcsScene<PlatformerEcsGame>
         CreatePlayer(new Vector2(10, Console.Height - 5), playerSprite);
         CreateTiles(map, tileSprite);
 
+        // No bodies here: the physics only answers the player's moves against the level's tile grid.
+        var physics = FixedSimulation.Add(new PhysicsSystem(cellSize: map.TileWidth) { TileGrid = map.ToTileGrid() });
+        FixedSimulation.Add(new PlayerPhysicsSystem(physics));
+
         Simulation.Add(new DebugToggleSystem(Game));
         Simulation.Add(new PlayerControlSystem());
-        Simulation.Add(new PlayerPhysicsSystem(map));
         Simulation.Add(new CameraFollowSystem(Camera, Console));
 
         Presentation.Add(new PlayerDebugOverlaySystem(Game, Console));

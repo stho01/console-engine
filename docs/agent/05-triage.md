@@ -5,7 +5,7 @@
 
 | Fact | Why | How to get it |
 |---|---|---|
-| **Which game** (TerraForM, Snake, Asteroids, Platformer, ConsoleGame, their `.Ecs` ports, Swarm, Scripted, or their own game on `ConsoleEngine`) | Rules differ per game ([03](03-rules.md)) | Ask, or the exe name |
+| **Which game** (TerraForM, Snake, Asteroids, Platformer, ConsoleGame, their `.Ecs` ports, Swarm, PhysicsSandbox, PhysicsShowcase, EternalDigger, Scripted, or their own game on `ConsoleEngine`) | Rules differ per game ([03](03-rules.md)) | Ask, or the exe name |
 | **OS and console host** | Windows only. Windows Terminal ignores the sizing/font calls **[external]** | [07 § Q1, Q2](07-checks.md#q1) |
 | **How it was launched and from which folder** (double-click the exe, `dotnet run`, IDE, a shortcut, a terminal in another folder) | Map files and the logger exe are found by **relative path** | [07 § Q3](07-checks.md#q3) |
 | **The exact error text**, if any | There are no log files. The exception printed to the console is the only record | Ask them to start it from an already-open terminal so the text stays ([06 § Capturing a crash](06-diagnostics.md#capture)) |
@@ -91,7 +91,7 @@
 
 **Symptom [inferred]:** "how do I exit?", "ESC doesn't quit", "the logger window stays open after the game closes".
 
-1. Which game? Only `ConsoleGame`, `ConsoleGame.Ecs` and `Swarm` quit on `ESC` (`Stop()`). In TerraForM and TerraForM.Ecs `ESC` opens the menu. Others have no quit key. → **Cause:** no quit path ([04 § F3](04-flows.md#f3)). **Fix:** close the console window. Stop.
+1. Which game? Only `ConsoleGame`, `ConsoleGame.Ecs`, `Swarm`, `PhysicsSandbox`, `PhysicsShowcase` and `EternalDigger` quit on `ESC` (`Stop()`). In TerraForM and TerraForM.Ecs `ESC` opens the menu. Others have no quit key. → **Cause:** no quit path ([04 § F3](04-flows.md#f3)). **Fix:** close the console window. Stop.
 2. Logger stays open after the game exits → **Cause:** `Log.Stop` is never reached, because `RenderConsole.Close` calls `Environment.Exit(0)` first, and the logger only exits on a `SocketException` ([04 § F4](04-flows.md#f4)). How the logger sees the closed connection is **[external]** and unverified. **Fix:** close the logger window. Escalate if it spins CPU.
 
 <a id="p6"></a>
@@ -169,19 +169,130 @@
 1. **Cause:** `Assets/Story/story-NO.txt` (and `story-EN.txt`) are not used by code or copied to output. The story is hard-coded English in `Sprites.Story`. **Fix:** feature request. Stop.
 
 <a id="p16"></a>
-## P16 — Lua: script fails to load / entity does nothing / F5 changes nothing
+## P16 — Launcher: game shows "(not built)" / won't start / window stops at "Press any key"
+
+1. Menu never appears, message `No Launcher.csproj found above ...` → **Cause:** the launcher exe was copied or run
+   outside its build output ([04 § F10](04-flows.md#f10) step 1). **Fix:** `dotnet run --project Examples/Launcher` from
+   the repository. Stop.
+2. A game shows `(not built)`, or starting it says `... is not built: <path>. Run dotnet build.` → [07 § Q10](07-checks.md#q10).
+   **Cause:** that exe is not at the path shown, which uses the launcher's own configuration (`Debug`/`Release`). A
+   Release launcher does not see Debug games. **Fix:** `dotnet build` (or `-c Release`) of the launcher, which builds every
+   listed game. Stop.
+3. Game window stays open on `Press any key to continue . . .` → the game exited non-zero (crashed) and `pause` kept the window open. The exception text is above it. Continue with [P1](#p1) step 1 using that text. Stop.
+4. `Could not start ...` → `Win32Exception` from `Process.Start` (`conhost.exe` missing or blocked). Escalate with the message. Stop.
+<a id="p17"></a>
+## P17 — EternalDigger: stuck, can't dig, can't place or buy ladders, can't find ore
+
+Rules: [03 § EternalDigger](03-rules.md#eternal-digger). Flows: [04 § F11](04-flows.md#f11), [F12](04-flows.md#f12).
+
+1. Stuck at the bottom of a pit, up does nothing → **Cause:** up only works with a ladder in the miner's own tile
+   (`Mine.IsSupported`, `MinerControlSystem.Control`). **Fix:** place ladders with `SPACE` on the way down; with none
+   left, hold `R` for 1.5 s (rescue, the bag is lost). The HUD shows `NO LADDERS LEFT!` underground at 0 ladders. Stop.
+2. Can't dig down from the grass, or into the side walls → **Cause:** grass and bedrock are unbreakable
+   (`Tiles.IsBreakable`). **Fix:** go down the shaft under the `MINE` frame (column 21). Stop.
+3. `SPACE` places no ladder → **Cause:** one of: 0 ladders, still at the surface (row ≤ 10), the tile already has one,
+   or the miner was mid-move/falling (keys aren't read then). Stop.
+4. `E` does nothing at the house → **Cause:** must stand still right in front of the door (columns 3–6) or the shop
+   counter (columns 8–11); a prompt or panel appears there. At the door with an empty bag, or at the counter without
+   enough gold for the selected item, only a dust puff shows (the price is red). `↑`/`↓` at the counter change what
+   `E` buys. The `BLASTING` shed sells nothing itself. Stop.
+5. Lost all ore → **Cause:** a rescue (`R` held 1.5 s) empties the bag by design. Stop.
+5a. "Climbing got slow", "the miner crawls up the ladder" → **Cause:** a heavy bag (HUD bag value yellow, backpack
+    `▓`): each 10 weight over the capacity (20, +10 per bag tier) makes climbing up 20% slower. **Fix:** sell at the
+    door, or buy the bag upgrade. Stop.
+6a. "The light keeps shrinking", "the lamp flickers", "it's all dark now" → **Cause:** lamp oil. It burns underground
+    (1 unit per 3 s of 100); below 30 the cone shrinks and flickers, at 0 only the close radius is lit. **Fix:** fill
+    the lamp at the shop counter (`FILL LAMP`, 2g per unit); a better lamp burns less. Outlines and glints still show
+    the way, or hold `R`. Stop.
+6. "Ore is invisible", "everything is black" → **Cause:** only lit tiles show colour; remembered tiles are grey outlines
+   without ore (`TerrainRenderSystem`). **Fix:** watch for glints (twinkles near the miner, also through rock) and point
+   the headlamp by moving/digging towards the ore. Stop.
+7. Different mine every time → **Cause:** the seed defaults to `Environment.TickCount`. **Fix:** pass a number as
+   the first argument for a repeatable mine. Stop.
+8. "My progress is gone", "no CONTINUE" → **Cause:** one of: the game was closed without `ESC` (progress since the
+   last sale, purchase or 60 s underground autosave is lost); NEW MINE was confirmed (replaces the slot); the save was
+   unreadable (the title said so; the file is now `save.dat.bad`, [Q11](07-checks.md#q11)); or ` SAVE FAILED` showed
+   (the folder isn't writable). Stop.
+9. "Can't build the lift", "E does nothing at the lift" → **Cause:** building needs standing still at columns 23–24 on
+   row 9 and 200g (+100g per segment built; the prompt price is red when short). Calling needs standing still on a
+   landing in column 21: row 9 or the bottom row; mid-shaft, `E` does nothing. In the car, `E` does nothing: use ↑/↓.
+   Stop.
+10. "Can't dig at 110 m", "TOO HARD" → **Cause:** the obsidian wall (`Tiles.WallDepth`, 3–5 tiles); the shovel can't
+    break it by design. **Fix:** select the blasting slot at the shop counter (`↓`), buy the kit (2500g) and sticks (100g), hold `E` 0.5 s
+    facing the wall, walk away. Same reason the lift stops at 100 m (blast column 21 to go deeper). Stop.
+11. "Holding E does nothing", "can't plant dynamite" → **Cause:** one of: no kit or no sticks (HUD `DYNAMITE <n>`), on
+    the surface, on a lift landing without sticks (there `E` is the lift), facing air instead of rock (hold an arrow with `E` to aim; else the lamp points the way you last
+    moved or dug), moving, or `E` wasn't released since the last stick. A dust puff means it was refused. Stop.
+12. "I want my ladders back" → `SPACE` while standing in a ladder takes it back (not the grass-row one). Taking the
+    one that holds you up drops you to the next floor. Stop.
+13. "Fell all the way down the shaft" → **Cause:** a built lift digs out the shaft; without ladders there a step into it
+    falls to the bottom landing. No damage. Stop.
+14. "My lamp went out", "something exploded", "GAS!" → **Cause:** a gas pocket (green shimmer, caves from 50 m) flared
+    because the lit lamp came within 2 tiles. By design: the lamp relights after 3 s and loses 5 oil; nothing is hurt.
+    Stop.
+15. "The lamp is weaker below 110 m", "oil runs out fast down there" → **Cause:** darkness by design: act 2 rock cuts the
+    cone by 2 tiles; black damp (`BLACK DAMP` floated up, `░` grey walls) halves it and doubles the burn. Leave the area.
+    Stop.
+16. "Debris or sparks disappear right next to the miner" → **Cause:** by design. No particle is drawn on his 4 × 2
+   cells, and at most 6 (dimmed) are drawn in the tile around him, so he stays readable (`ParticleRenderSystem`). Stop.
+
+<a id="p18"></a>
+## P18 — Physics: bodies pass through each other / sink / no hit / hit reported twice or late
+
+Applies to PhysicsSandbox, Asteroids.Ecs and any game on `ConsoleEngine.Physics`. Rules: [03 § Physics](03-rules.md#physics),
+flow: [04 § F13](04-flows.md#f13).
+
+1. Bodies overlap and keep going → check, in order: a filter or pair rule excludes the pair (step 2 below; in Asteroids.Ecs
+   asteroids pass through each other by design); one body is static or kinematic and the other too (no contact between
+   them); the dynamic body has no `Velocity` (handled as static). Otherwise escalate with the body sizes and speeds. Stop.
+2. Bodies sink a little into each other or into the floor, more in a tall stack → by design: each contact settles about
+   `PhysicsSystem.LinearSlop` (0.005 cells) deep, and contacts are soft springs. A deep overlap is pushed out at most
+   `ContactPushMaxSpeed` (3 cells/s), so it takes a moment. Stop.
+3. No event at all for a pair → check, in order: both have a `Collider` and a `Position`; the `Category`/`Mask` bits accept
+   each other both ways (`default(Collider)` has `Mask` 0); not both static (a `Collider` without `RigidBody` is static);
+   not both sensors; a non-sensor pair has a dynamic body. Any of these → skipped silently ([04 § F13](04-flows.md#f13)
+   step 4). Stop.
+4. A body never moves → it has no `Velocity`, is `BodyType.Static`, or `PhysicsSystem` was added to `Simulation` or not
+   at all instead of `FixedSimulation`. Stop.
+5. The same hit handled several times, or hits missed → the reacting system reads the events from `Simulation` instead of
+   after `PhysicsSystem` in `FixedSimulation` ([03 § Physics](03-rules.md#physics)). Stop.
+6. Rigid bodies move too fast, or faster at a higher FPS → the scene adds `new MovementSystem()` without the filter, so they are
+   moved twice. Use `new MovementSystem(Query.Without<RigidBody>())` ([03 § Physics](03-rules.md#physics)). Stop.
+7. Asteroids.Ecs: one bullet removed two asteroids → by design when it touches both in the same step ([03 § Asteroids.Ecs
+   row](03-rules.md)). Stop.
+8. A raycast or box cast misses a body that is clearly there → queries see the world as at the end of the last physics
+   step; a body created or moved by game code since then shows up after the next step. Sensors are never reported, and
+   the query mask must include the collider's `Category`. Stop.
+9. Dynamic bodies fall through a `TileGrid` → the body's `Collider.Mask` must include `TileGrid.Category` (default 1),
+   and it must be dynamic with a `Velocity`. Only through a wall one tile thick: a body pushed more than half a tile
+   into it (a heavy pile, a squeeze) is pushed out through the far face. Make walls at least two tiles thick. Stop.
+10. Bodies hang in the air, don't fall after gravity changed, or don't react → they are asleep (`RigidBody.IsSleeping`,
+   drawn dark grey in PhysicsShowcase). Changing `Gravity` doesn't wake them (as Box2D): clear `IsSleeping`. A body that
+   never sleeps keeps moving faster than 0.05 cells/s (no damping, a moving platform). Stop.
+11. A box doesn't turn when hit off-centre → it needs both `Rotation` and `AngularVelocity`. Stop.
+11b. An outline is drawn one row inside the floor it rests on → the outline system draws a corner in the cell it lies in,
+   and a resting body sits `LinearSlop` into the floor. Draw outlines through cell centres (PhysicsShowcase:
+   `OutlineShape.ThroughCellCentres`). A character falls through a moving or turning platform → the physics never
+   pushes a character: move it with the platform first (PhysicsShowcase: `PlayerMoveSystem.TryGetPlatformVelocity`).
+   Stop.
+12. Platformer.Ecs: player stuck, falls through the floor, or can't jump → check the debug overlay (F1): `HIT: Floor`
+   while standing means landing works and `AIR` should be `False`. A jump pressed in the air waits for the landing (by
+   design, as the original). Otherwise escalate with `POS`, `VEL` and `HIT`. Stop.
+
+<a id="p19"></a>
+## P19 — Lua: script fails to load / entity does nothing / F5 changes nothing
 
 **Symptom [inferred]:** "my Lua script doesn't run", "the object just stands still", "I edited the script and
 pressed F5 but nothing changed", "error about lua54.dll".
 
 1. Crash at startup with `LuaScriptException` (`Lua script '<name>': …`) → read the message ([06 § Lua](06-diagnostics.md)):
-   - .NET file message (`Could not find file…`) → **Cause:** the script is not in the output folder. `LuaRuntime.Load` resolves relative paths against the exe's folder, not the working directory ([04 § F10](04-flows.md#f10) step 1). **Fix:** set `CopyToOutputDirectory` for `Assets/Scripts/*.lua` in the game's `.csproj` ([07 § Q10](07-checks.md#q10)). Stop.
+   - .NET file message (`Could not find file…`) → **Cause:** the script is not in the output folder. `LuaRuntime.Load` resolves relative paths against the exe's folder, not the working directory ([04 § F15](04-flows.md#f15) step 1). **Fix:** set `CopyToOutputDirectory` for `Assets/Scripts/*.lua` in the game's `.csproj` ([07 § Q12](07-checks.md#q12)). Stop.
    - `<name>:<line>: …` → **Cause:** syntax or runtime error at that line. **Fix:** fix the script. Stop.
    - `the script must return a table` → **Cause:** the file does not end with `return <module>`. **Fix:** add it ([03 § Lua](03-rules.md#lua)). Stop.
-2. `DllNotFoundException` for `lua54` → **Cause:** the native library is missing from `runtimes/<rid>/native/`, usually a partial copy of the output folder ([07 § Q10](07-checks.md#q10)). **Fix:** rebuild or copy the whole output folder. Stop.
+2. `DllNotFoundException` for `lua54` → **Cause:** the native library is missing from `runtimes/<rid>/native/`, usually a partial copy of the output folder ([07 § Q12](07-checks.md#q12)). **Fix:** rebuild or copy the whole output folder. Stop.
 3. Entity does nothing:
    - It has the `ScriptFaulted` tag / `LuaScriptSystem.GetError(entity)` is set (Scripted demo: red error line at the bottom) → **Cause:** a Lua error stopped it ([03 § Lua](03-rules.md#lua)). `unknown field '…' on an entity` means the script wrote a field that is not a component field (often a typo like `self.X`, or own state that belongs in `self.data`). `self.vx needs a Velocity component on the entity` means the entity lacks that component. `self.x must be a number` means a wrong type. **Fix:** fix the script and reload. Stop.
-   - Not faulted → is the hook named exactly `on_update` on the **returned module table**, does the entity have the script's `Component`, and is a `LuaScriptSystem` in the scene's `Simulation` group? Any missing → **Cause:** hook never runs (silent, [04 § F10](04-flows.md#f10) step 7, [F11](04-flows.md#f11)). Stop.
+   - Not faulted → is the hook named exactly `on_update` on the **returned module table**, does the entity have the script's `Component`, and is a `LuaScriptSystem` in the scene's `Simulation` group? Any missing → **Cause:** hook never runs (silent, [04 § F15](04-flows.md#f15) step 7, [F16](04-flows.md#f16)). Stop.
    - `on_render` draws nothing → no `LuaRenderSystem` in `Presentation`, or it was added before a render system that draws over it. Stop.
    - Moves in the script but stays put on screen → the move happened in `on_render`, whose field changes are not copied back ([03 § Lua](03-rules.md#lua)). **Fix:** move in `on_update`. Stop.
    - Not drawn at all → the entity has no `Glyph`, or the scene has no `GlyphRenderSystem`. Stop.

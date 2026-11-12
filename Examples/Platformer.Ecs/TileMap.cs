@@ -1,11 +1,12 @@
 using System;
+using ConsoleEngine.Physics;
+using Microsoft.Xna.Framework;
 
 namespace Platformer.Ecs;
 
 /// <summary>
-/// The level as a grid of characters, for collision lookups in O(1). Each map cell is one tile of
-/// <see cref="TileWidth"/> x <see cref="TileHeight"/> console cells. Walls are also spawned as entities, but only to
-/// draw them.
+/// The level as a grid of characters. Each map cell is one tile of <see cref="TileWidth"/> x <see cref="TileHeight"/>
+/// console cells. Collisions use <see cref="ToTileGrid"/>; walls are also spawned as entities, but only to draw them.
 /// </summary>
 public sealed class TileMap
 {
@@ -50,11 +51,19 @@ public sealed class TileMap
 
     public static bool IsWall(char tile) => tile is not ('.' or Outside);
 
-    /// <summary>
-    /// The tile under a world position in cells. Truncates towards zero like <c>Examples/Platformer</c>, so
-    /// positions between -1 and 0 tiles still hit column/row 0.
-    /// </summary>
-    public char GetTile(float x, float y) => GetTileAt((int)(x / TileWidth), (int)(y / TileHeight));
+    /// <summary>The walls as the engine's collision grid, tile (0, 0) at world (0, 0).</summary>
+    public TileGrid ToTileGrid()
+    {
+        var grid = new TileGrid(Width, Height, new Vector2(TileWidth, TileHeight));
+        for (var row = 0; row < Height; row++)
+        for (var column = 0; column < _rows[row].Length; column++)
+        {
+            if (IsWall(_rows[row][column]))
+                grid.SetSolid(column, row);
+        }
+
+        return grid;
+    }
 
     /// <summary>The tile at a map column and row, or <see cref="Outside"/>.</summary>
     public char GetTileAt(int column, int row)

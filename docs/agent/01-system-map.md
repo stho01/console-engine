@@ -6,19 +6,27 @@ Nothing is hosted and nothing is exposed to the internet. Every unit is a local 
 
 | Project (path) | Kind | Purpose |
 |---|---|---|
-| `ConsoleEngine` (`ConsoleEngine/ConsoleEngine.csproj`) | Library, NuGet `PackageVersion` 0.2.0, `GeneratePackageOnBuild` | `GameBase` game loop, `RenderConsole`, `Input`, `GameTime`, `SceneManager`, `Log`, `Deque<T>`, ECS (namespace `ConsoleEngine.Ecs`: `World`, `Query`, `CommandBuffer`, `EntitySystem`, `SystemGroup`, `EcsScene<TGame>`, built-in components and systems). Runs only inside an `EcsScene` or game code that calls it |
+| `ConsoleEngine` (`ConsoleEngine/ConsoleEngine.csproj`) | Library, NuGet `PackageVersion` 0.2.0, `GeneratePackageOnBuild` | `GameBase` game loop, `RenderConsole`, `Input`, `GameTime`, `SceneManager`, `Log`, `Deque<T>`, ECS (namespace `ConsoleEngine.Ecs`: `World`, `Query`, `CommandBuffer`, `EntitySystem`, `SystemGroup`, `EcsScene<TGame>`, `FixedTimestep`, built-in components and systems). Runs only inside an `EcsScene` or game code that calls it |
+| `ConsoleEngine.Physics` (`ConsoleEngine.Physics/ConsoleEngine.Physics.csproj`) | Library, NuGet `PackageVersion` 0.2.0, `GeneratePackageOnBuild`. Optional | 2D physics on the ECS (namespace `ConsoleEngine.Physics`): `PhysicsSystem` (implements `IPhysicsEvents` and `IPhysicsQueries`), `RigidBody`, `Collider`, `AngularVelocity`, `PolygonLibrary`, `TileGrid`, `CharacterMover`, `Interpolation`/`InterpolationSystem`, events. Depends on `ConsoleEngine` only; the engine knows nothing about it. Used by Asteroids.Ecs, PhysicsSandbox, PhysicsShowcase and Platformer.Ecs |
 | `ConsoleEngine.Abstractions` | Library | `IConsoleHandler`, `IInputHandler`, `Pixel`, `FontInfo`, `Key`, `KeyState` |
 | `ConsoleEngine.Windows` (`Libs/ConsoleEngine.Windows`, namespace `ConsoleEngine.Native`) | Library | Win32 implementation: `ConsoleHandler`, `InputHandler`, P/Invoke in `LowLevel/Kernel32.cs`, `LowLevel/User32.cs` |
 | `ConsoleEngine.Logger` (`Libs/ConsoleEngine.Logger`) | **Exe** `ConsoleEngine.Logger.exe` | Separate console window that shows `Log.WriteLine` output and FPS. Referenced by `ConsoleEngine.csproj`, so the build copies it next to every game |
 | `Microsoft.Xna.Framework` (`Libs/Microsoft.Xna.Framework`) | Library | Math types (`Vector2`, `Point`, `Rectangle`, `Matrix`…) copied from MonoGame |
 | `TerraForM` (`Examples/TerraForM`) | Exe | Mars-rover puzzle game: scenes, maps in `Assets/Maps/*.txt`, scoring |
 | `TerraForM.Tests` | NUnit test project | One test: `Rover_PowerIsDepletedWhenRemainingPowerIsZeroOrLess` |
-| `ConsoleEngine.Tests` (`ConsoleEngine.Tests/`) | NUnit test project | Engine tests: `RenderConsole`, `Sprite`, `SceneManager`, `GameTime.Interval`, `Deque<T>`, `ArrayExtensions`, ECS (`Ecs/`: `World`, `Query`, `CommandBuffer`, `SystemGroup`, `EcsScene`, `Archetype`, `ComponentMask`, `Systems/`), Lua (`Scripting/LuaScriptSystemTests`). Uses `Fakes/`, no Win32 |
-| `ConsoleEngine.Benchmarks` (`ConsoleEngine.Benchmarks/`) | **Exe**, BenchmarkDotNet 0.15.8 | `Baseline/OopUpdateBenchmarks` (list of classes vs. struct arrays), `Ecs/WorldBenchmarks`, `Ecs/QueryBenchmarks`, `Ecs/CommandBufferBenchmarks`, `Ecs/RenderBenchmarks`, `Scripting/LuaScriptBenchmarks` (Lua vs. C# system). Built by CI, never run by CI |
+| `ConsoleEngine.Tests` (`ConsoleEngine.Tests/`) | NUnit test project | Engine tests: `RenderConsole`, `Sprite`, `SceneManager`, `GameTime.Interval`, `Deque<T>`, `ArrayExtensions`, ECS (`Ecs/`: `World`, `Query`, `CommandBuffer`, `SystemGroup`, `EcsScene`, `FixedTimestep`, `Archetype`, `ComponentMask`, `Systems/`), Lua (`Scripting/LuaScriptSystemTests`). Uses `Fakes/`, no Win32 |
+| `ConsoleEngine.Physics.Tests` (`ConsoleEngine.Physics.Tests/`) | NUnit test project | Physics tests: `Collision`, `SpatialHashGrid`, `PhysicsSystem` (rules, events), `PhysicsSolverTests` (contact response over whole steps), `TileGridTests`, `PhysicsQueryTests`, `CharacterMoverTests`, `RotationTests`, `TileContactTests`, `SleepTests`, `InterpolationTests`. `InternalsVisibleTo` from `ConsoleEngine.Physics` |
+| `ConsoleEngine.Benchmarks` (`ConsoleEngine.Benchmarks/`) | **Exe**, BenchmarkDotNet 0.15.8 | `Baseline/OopUpdateBenchmarks` (list of classes vs. struct arrays), `Ecs/WorldBenchmarks`, `Ecs/QueryBenchmarks`, `Physics/BruteForceCollisionBenchmarks` (all-pairs circle test, the baseline) and `Physics/PhysicsStepBenchmarks` (one whole `PhysicsSystem` step on the same bodies), `Physics/PhysicsQueryBenchmarks` (1 000 raycasts / box casts), `Scripting/LuaScriptBenchmarks` (`LuaScriptSystem` vs. the same logic in C#). Built by CI, never run by CI |
 | `ConsoleEngine.Scripting` (`ConsoleEngine.Scripting/`) | Library (not packed) | Lua 5.4 scripting for ECS entities on KeraLua 1.4.11: components `Script`, `ScriptFaulted`, systems `LuaScriptSystem`, `LuaRenderSystem`, and `LuaRuntime`, `LuaScript`, `LuaScriptException`. Only games that reference it get Lua |
 | `Scripted` (`Examples/Scripted`) | Exe | ECS demo: a player and 30 fireflies, each scripted in `Assets/Scripts/*.lua`. F5 reloads the scripts |
 | `Snake`, `Asteroids`, `Platformer`, `ConsoleGame` and their ECS ports `Snake.Ecs`, `Asteroids.Ecs`, `Platformer.Ecs`, `ConsoleGame.Ecs`, `TerraForM.Ecs` (`Examples/*`) | Exe | Small demo games. Each `*.Ecs` project is the same game rebuilt on the ECS (`ConsoleEngine.Ecs`) for comparison |
 | `Swarm` (`Examples/Swarm`) | Exe | ECS-only stress test: 100 000 particles (first argument) chasing a moving attractor |
+| `PhysicsSandbox` (`Examples/PhysicsSandbox`) | Exe | ECS-only physics demo: balls and boxes dropped into a walled box with two ledges and a moving platform (`ConsoleEngine.Physics`) |
+| `PhysicsShowcase` (`Examples/PhysicsShowcase`) | Exe | ECS-only demo of every physics feature: tile level, turning boxes and polygons, a kinematic platform and windmill, a sensor zone, collision layers, a player with `MoveAndSlide`, a raycast laser, an overlap blast, sleeping and interpolation |
+| `Launcher` (`Examples/Launcher`) | **Exe** `Launcher.exe`, no engine dependency (plain `System.Console`) | Text menu that starts the ECS games (`GameCatalog.Games`: Snake.Ecs, Asteroids.Ecs, Platformer.Ecs, TerraForM.Ecs, ConsoleGame.Ecs, Swarm, PhysicsSandbox, PhysicsShowcase, EternalDigger, Scripted). Build-order `ProjectReference`s (`ReferenceOutputAssembly=false, Private=false as default metadata`) make building it build those games, without copying anything into its output |
+| `Launcher.Tests` (`Examples/Launcher.Tests`) | NUnit test project | `LauncherMenu` keys, `GameLocator` paths, and that every `GameCatalog` game has a `ProjectReference` in `Launcher.csproj` |
+| `EternalDigger` (`Examples/EternalDigger`) | Exe | ECS-only digging game: dig ore in an endless mine, sell it at the house, buy ladders. Design: `docs/design/eternal-digger.md` |
+| `EternalDigger.Tests` | NUnit test project | `MineTests`, `TilesTests`, `ShopTests`, `LightMapTests`, `ParticleLooksTests`, `MinerControlSystemTests` (plays frames with scripted `MinerInput`, no keyboard), `MinerVisibilityTests` (renders into a `RenderConsole` over `Fakes/FakeConsoleHandler`), `ElevatorTests`, `DynamiteTests`, `ShopCounterTests`, `UpgradesTests`, `LampOilTests`, `BagWeightTests`, `SaveFileTests`, `SaveSystemTests` (temp folders), `TitleMenuTests`, `InventorySystemTests`, `DeepCampTests`, `GasTests`, `DarknessTests`, `ProgressTests` |
 
 Hard dependency: **Windows only.** `ConsoleHandler` and `InputHandler` call `kernel32.dll`/`user32.dll` directly
 (`GetStdHandle`, `WriteConsoleOutputW`, `SetCurrentConsoleFontEx`, `GetAsyncKeyState`…). No other platform
@@ -42,6 +50,7 @@ macOS/Linux). Besides KeraLua's own calls, `LuaNative.lua_tolstring` and `LuaNat
 
 | Link | Direction | Detail | Where |
 |---|---|---|---|
+| Launcher → game process | spawn | `Process.Start` of `%SystemRoot%System32nhost.exe cmd.exe /c ".<ProjectName>.exe || pause"` with `UseShellExecute = true` and `WorkingDirectory` = the exe's folder, so the game gets a **classic console window** even when Windows Terminal is the default terminal. The launcher waits for conhost to exit (`WaitForExit`), so one game runs at a time. Exe path: `Examples/<ProjectName>/<launcher's output path, e.g. bin/Debug/net11.0>/<ProjectName>.exe`. **On macOS and Linux** there is no conhost: the apphost has no extension (`<ProjectName>`) and is started directly (`UseShellExecute = false`, same working directory), inheriting the launcher's terminal | `GameRunner.Run`, `GameRunner.BuildArguments`, `GameLocator.GetExecutablePath` |
 | Game → console window | out | Whole frame written each frame with `WriteConsoleOutput` | `ConsoleHandler.Render` |
 | Keyboard → game | in | `GetAsyncKeyState(i)` polled for all 256 virtual keys every frame | `InputHandler.Update` |
 | Game → logger | out, TCP | Game **listens** on `Dns.GetHostEntry("localhost").AddressList[0]`, port **11000** (hard-coded). No auth. Messages are UTF-8 and end with `'\0'` | `Log` static ctor, `Log.Start` |
@@ -66,6 +75,9 @@ callbacks that run on the game loop thread ([03 § Intervals](03-rules.md#interv
 | `ConsoleGame.Game` | 64 × 64 | 8×8 Consolas | `ShowFps = true`, `EnableLogger = true` |
 | `ConsoleEcsGame` | 64 × 64 | 8×8 Consolas | `ShowFps = true`, `EnableLogger = true` |
 | `SwarmGame` | 160 × 100 | 6×6 Consolas | `Name = "Swarm (ECS)"`, `EnableLogger = true`, `ShowFps = true`. First command-line argument = starting particle count (default 100 000) |
+| `PhysicsSandboxGame` | 100 × 60 | 10×10 Consolas (square cells, so circles look round) | `Name = "Physics Sandbox"`, `ShowFps = true` |
+| `PhysicsShowcaseGame` | 120 × 60 | 10×10 Consolas (square cells) | `Name = "Physics Showcase"`, `ShowFps = true` |
+| `EternalDiggerGame` | 120 × 48 (`Layout.ScreenWidth` × `Layout.ScreenHeight`) | 8×16 Consolas | `Name = "EternalDigger"`. First command-line argument = seed for a NEW MINE (default `Environment.TickCount`); CONTINUE uses the saved seed. Reads and writes `<LocalApplicationData>/EternalDigger/save.dat` (+ `.tmp`, `.bad`). No logger, no FPS |
 | `ScriptedGame` | 80 × 40 | 12×12 Consolas | `ShowFps = true` |
 
 `GameBase(width, height, fontWidth, fontHeight)` always uses face `"Consolas"`.
@@ -85,7 +97,7 @@ There is no dev/staging/prod split. What changes behaviour:
 
 ## CI
 
-`.github/workflows/build-and-test.yml`: on push/PR to `main`, `windows-latest`, .NET 10.0.x,
+`.github/workflows/build-and-test.yml`: on push/PR to `main`, `windows-latest`, .NET 11.0.x,
 `dotnet restore` → `dotnet build --no-restore` → `dotnet test --no-build` with `--settings coverage.runsettings
 --collect:"XPlat Code Coverage"` → `dotnet reportgenerator` (local tool from `dotnet-tools.json`). The Markdown summary
 goes to the job summary, and the HTML report is uploaded as the `coverage-report` artifact. There is no coverage
