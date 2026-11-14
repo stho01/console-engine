@@ -258,7 +258,7 @@ Examples/
                                   on N, kart lights; KartLamps: light_ markers, glowing lenses), Components/ (Kart with its Index,
                                   PlayerKart tag, Bot), KartEntity (a kart's physics body),
                                   KartFrame (physics <-> kart frame, kart world matrix), KartModel (Kartster part
-                                  folders), Track (exported ribbon + spline + terrain + scenery + power-up pads; road
+                                  folders), KartLod (levels of detail by vertex clustering), Track (exported ribbon + spline + terrain + scenery + power-up pads; road
                                   triangle grid, TryGetGround: highest road under a probe, else terrain), Terrain
                                   (terrain.txt heightmap, tiles), Scenery (scenery file: model instances +
                                   triangle cells, culled per bounding sphere), Driving/ (Kartster-like planar kart
@@ -291,7 +291,7 @@ Examples/
                                   TextFormat, Shapes, UiColors, Hud + HudState, Minimap, RaceResults, IKartsterMenus,
                                   IUiLayer, ViewEffects: glitch flip and smoke wash), Scenes/Menus/ (MenuScreen,
                                   MenuItem, MenuKeys, TitleScene, SelectKartScene, SelectTrackScene, ResultsScene)
-  Kartster.Tests/               KartModelTests, TrackTests, ShippedTracksTests, SceneryTests, KartPhysicsSystemTests,
+  Kartster.Tests/               KartModelTests, KartLodTests, TrackTests, ShippedTracksTests, SceneryTests, KartPhysicsSystemTests,
                                   KartFrameTests, KartInputSystemTests, Driving/KartDynamicsTests, Driving/KartReferenceTests,
                                   Driving/KartCatalogTests,
                                   Effects/EffectsTests (skid marks, slide smoke), Lighting/KartLightsTests, Race/ (RaceMarkersTests,

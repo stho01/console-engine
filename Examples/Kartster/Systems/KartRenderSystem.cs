@@ -15,8 +15,9 @@ namespace Kartster.Systems;
 /// the slide smoke through the game's renderer, seen by a chase camera that eases towards its place behind the
 /// <paramref name="player"/>'s kart, so turns swing it round instead of snapping. Draws the karts where their
 /// interpolation puts them (<c>RenderOffset</c>), so add it after the <c>InterpolationSystem</c>. Shadows, night and the
-/// karts' lights come from <see cref="KartLights"/>. With <see cref="PowerUps"/>, the power-ups' effects on the
-/// picture: a kart is drawn at its <see cref="KartEffects.DrawScale"/>, the camera shakes while the player's
+/// karts' lights come from <see cref="KartLights"/>. Every kart but the player's is drawn at its level of detail
+/// (<see cref="KartLod"/>, built here once) for its distance from the camera. With <see cref="PowerUps"/>, the
+/// power-ups' effects on the picture: a kart is drawn at its <see cref="KartEffects.DrawScale"/>, the camera shakes while the player's
 /// <see cref="KartEffects.SteeringNoise"/> runs, and it sets the game's <see cref="KartsterGame.MirrorView"/> (glitch)
 /// and <see cref="KartsterGame.ViewDarkness"/> (<see cref="PowerUpField.SmokeCover"/> at the eye).
 /// </summary>
@@ -41,6 +42,7 @@ public sealed class KartRenderSystem(Entity player, KartsterGame game, Mesh[] ka
 
     private Query _karts;
     private readonly Matrix4x4[] _kartWorlds = new Matrix4x4[kartMeshes.Length]; // by Kart.Index, this frame
+    private readonly KartLod[] _lods = Array.ConvertAll(kartMeshes, mesh => new KartLod(mesh));
     private readonly KartLights _lights = new(kartMeshes, game.KartFolders, game.Track.Name, game.Renderer.Width,
         game.Renderer.Height);
     private Vector3 _eye;
@@ -96,8 +98,15 @@ public sealed class KartRenderSystem(Entity player, KartsterGame game, Mesh[] ka
         track.Scenery.Draw(renderer, viewProjection, _eye, KartsterGame.ToSun);
         renderer.Draw(skidMarks.Mesh, Matrix4x4.Identity, viewProjection, KartsterGame.ToSun);
         _lights.DrawShadows(renderer, viewProjection, _kartWorlds);
+        var playerIndex = World.Get<Kart>(player).Index;
+        var pixelsPerMeter = renderer.Height * game.Projection.M22 / 2f;
         for (var i = 0; i < kartMeshes.Length; i++)
-            renderer.Draw(kartMeshes[i], _kartWorlds[i], viewProjection, KartsterGame.ToSun);
+        {
+            var mesh = i == playerIndex
+                ? kartMeshes[i]
+                : _lods[i].Pick(Vector3.Distance(_eye, _kartWorlds[i].Translation), pixelsPerMeter);
+            renderer.Draw(mesh, _kartWorlds[i], viewProjection, KartsterGame.ToSun);
+        }
         _lights.DrawLenses(renderer, viewProjection, _kartWorlds);
         PowerUps?.Draw(renderer, viewProjection, KartsterGame.ToSun, deltaSeconds);
 

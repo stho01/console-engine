@@ -380,8 +380,12 @@ HUD-en ankres i spillerens region, men har samme størrelse (`Docs/hud.md`). Tas
 - **Ikke modellert** (karten kjører annerledes enn i originalen): krengning og velting, hjullåsing (elephant),
   lightcycle som lener seg og lysveggen, banana som svever, delorelei som flyr, hektor som spøkelse og whosp som robot.
   Detaljer i `docs/agent/03-rules.md` (raden «Kart catalog»).
-- **Risiko:** de ekte bilene har 20 000–40 000 trekanter hver (olabil 3 200); mange av dem i et løp koster
-  rasteriseringstid. Ingen LOD ennå.
+- **Risiko (løst i bølge 4):** de ekte bilene har 20 000–40 000 trekanter hver (olabil 3 200). `KartLod` bygger tre
+  forenklede utgaver per kart ved lasting (vertex clustering på 4, 10 og 25 cm, farger og glass beholdes) og
+  `KartRenderSystem` velger etter avstand (spillerens kart alltid full). Seks tunge karter på Star Circuit og
+  Norbergring, CPU: 8,7–9,4 til 4,1–4,5 ms om dagen, 20–22 til 8,5–9,2 ms om natten (også fordi `Rasterizer` nå kaster
+  baksidene før skyggeleggingen); GPU 1,7–1,8 til 0,8 ms. Natten er fortsatt over 6 ms: 4 ms av den er nattscenen uten
+  karter (lys per piksel).
 ### Status: P2 (resten av power-upene)
 Levert på grenen til P2. Regler og tall i `docs/agent/03-rules.md` (Kartster-raden om power-ups).
 - **Med, som originalen:** Invulnerable (5 s: farer, bokser, Joika, røyk, magnet, sperrer og tog går forbi; 1000×
