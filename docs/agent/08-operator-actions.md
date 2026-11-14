@@ -60,14 +60,14 @@ team's process differs.
 | Scripted | `F5` | Reload all Lua scripts from the output folder | `ScriptReloadSystem` → `LuaRuntime.ReloadAll` |
 | Scripted | ESC | Quit (`Stop()`) | `ScriptedGame.OnUpdate` |
 | Kartster (track) | W / S / A D / SPACE (held) | Gas / brake, then reverse / steer left/right (ramped) / handbrake | `KartInputSystem` → `KartControls` → `KartPhysicsSystem` |
-| Kartster (track) | R | Back to the start, standing still (restarts `TrackScene`) | `KartsterGame.OnUpdate` |
+| Kartster (track) | R | Every kart back on the grid, standing still (restarts `TrackScene`) | `KartsterGame.OnUpdate` |
 | Kartster (garage) | A D / W S / Q E (held), SPACE | Orbit left/right / up/down, zoom in/out, auto-spin on/off | `GarageScene.OnUpdate` |
 | Kartster | ENTER / TAB / ESC | Track/garage / next kart (on the track: from the start) / quit | `KartsterGame.OnUpdate` |
 | Kartster | G | Switch between the CPU `Rasterizer` and the OpenGL `GlRenderer`; stays on the CPU (title `CPU (no GPU)`) when OpenGL 3.3 isn't available | `KartsterGame.ToggleGpu` |
 | Kartster | `--gpu` (command-line flag, any position) | Start on the GPU renderer | `Program.cs` |
 | Kartster | C | Switch between 16 colours and 24-bit colour (`Console.TrueColor`); stays on 16 colours (title `16 colours (no 24-bit)`) when the console can't show 24-bit | `KartsterGame.OnUpdate`, `MatchConsoleColors` |
 | Kartster | `--truecolor` (command-line flag, any position) | Start in 24-bit colour | `Program.cs` |
-| Kartster | first / second command-line argument | Folder of kart folders (e.g. Kartster's `Content/3D/Rendered/Karts`) / folder of exported tracks | `Program.cs` |
+| Kartster | first / second command-line argument | Folder of kart folders (e.g. Kartster's `Content/3D/Rendered/Karts`; the bots still take theirs from `Assets/Karts`) / folder of exported tracks | `Program.cs` |
 
 There is **no** way to skip a TerraForM level, choose a map, reset the score, or enable TerraForM debug mode without a
 code change.

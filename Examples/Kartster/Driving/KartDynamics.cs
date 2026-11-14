@@ -237,7 +237,8 @@ public sealed class KartDynamics
         EngineRpm = KartEngine.GetRpm(tuning, gear, wheelSpeed);
     }
 
-    private static float GetSteerAngleDegrees(KartTuning tuning, float forwardSpeed)
+    /// <summary>Front-wheel angle at full lock (Steer = ±1) at this speed, before caster. Public for the bots.</summary>
+    public static float GetSteerAngleDegrees(KartTuning tuning, float forwardSpeed)
     {
         var speed = MathF.Abs(forwardSpeed);
         var fade = Math.Clamp((speed - SteerFadeStartSpeed) / (SteerFadeEndSpeed - SteerFadeStartSpeed), 0f, 1f);

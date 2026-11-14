@@ -230,10 +230,12 @@ Examples/
   Scripted/                       Lua demo on ECS: Scenes/ScriptedScene, Systems/ (reload, error line),
                                   Assets/Scripts/ player.lua, firefly.lua (copied to output)
   Kartster/                     3D experiment: KartsterGame (shared IRenderer3D, palette, sky, karts, track;
-                                  Enter/Tab/R/Esc), Scenes/ (TrackScene: EcsScene at 120 Hz, GarageScene: orbit
-                                  camera), Systems/ (KartInputSystem, KartPhysicsSystem, KartGroundSystem,
-                                  KartEffectsSystem, KartRenderSystem), Effects/ (SkidMarks, SlideSmoke, KartWheels),
-                                  Components/Kart, KartEntity (the kart's physics body),
+                                  Enter/Tab/R/Esc), Scenes/ (TrackScene: EcsScene at 120 Hz, player + 5 bots on a
+                                  grid (GridSlot, CreateKarts, AddDriving), GarageScene: orbit camera), Systems/
+                                  (KartInputSystem, KartPhysicsSystem, KartGroundSystem, KartEffectsSystem,
+                                  KartRenderSystem, all karts), Bots/ (BotDriverSystem, BotRoutePlan),
+                                  Effects/ (SkidMarks, SlideSmoke, KartWheels), Components/ (Kart with its Index,
+                                  PlayerKart tag, Bot), KartEntity (a kart's physics body),
                                   KartFrame (physics <-> kart frame), KartModel (Kartster part folders), Track
                                   (exported ribbon + spline + scenery), Scenery (scenery file: model instances +
                                   triangle cells, culled per bounding sphere), Driving/ (Kartster-like planar kart
@@ -243,7 +245,8 @@ Examples/
                                   countdown, gates, laps, positions), Racer, RacePhase, RaceProgress (component),
                                   RaceSystem), Assets/Karts/ (olabil, wagon), Assets/Tracks/ (star-circuit: ribbon,
                                   spline, scenery.txt, race.txt) and Assets/Scenery/ (Pipe.obj from Kartster,
-                                  Box.obj), exported from Kartster, copied to output,
+                                  Box.obj), exported from Kartster, copied to output, Bots/ (BotDriverSystem,
+                                  BotRoutePlan), Components/ (Kart with Index, PlayerKart, Bot),
                                   Ui/ (pixel UI kit: IPixelTarget, PaletteTarget, RgbTarget, PixelFont 3×5,
                                   TextFormat, Shapes, UiColors, Hud + HudState, RaceResults, IKartsterMenus,
                                   IUiLayer), Scenes/Menus/ (MenuScreen, MenuItem, MenuKeys, TitleScene,
@@ -252,7 +255,8 @@ Examples/
                                   KartFrameTests, KartInputSystemTests, Driving/KartDynamicsTests, Driving/KartReferenceTests,
                                   Effects/EffectsTests (skid marks, slide smoke), Race/ (RaceMarkersTests,
                                   RaceSessionTests, RaceSystemTests), Ui/ (PixelFont, TextFormat, PixelTarget, Hud,
-                                  Menu tests; UiPreview writes ui-preview/*.ppm to the output)
+                                  Menu tests; UiPreview writes ui-preview/*.ppm to the output), Bots/BotDriverSystemTests,
+                                  Bots/RaceTests (grid, input, headless 3-bot race, kart collisions, allocation)
 .github/workflows/                build-and-test.yml
 ```
 

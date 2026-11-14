@@ -8,7 +8,8 @@ namespace Kartster.Effects;
 /// Grey smoke off a sliding axle, as Kartster's slide smoke (<c>KartParticleEmitters.EmitSlideSmoke</c>): each wheel
 /// of an axle sliding past <see cref="SlidingThreshold"/> puffs up to <see cref="RatePerWheel"/> a second, thrown out
 /// of the corner and drifting up, growing from 0.25 m to 1.1 m and fading out. A fixed pool of puffs, drawn as
-/// camera-facing quads with screen-door transparency; nothing is allocated while driving.
+/// camera-facing quads with screen-door transparency; nothing is allocated while driving. One pool for all karts:
+/// each frame <see cref="Emit"/> per kart, then <see cref="Advance"/> once.
 /// </summary>
 public sealed class SlideSmoke
 {
@@ -29,7 +30,7 @@ public sealed class SlideSmoke
     private static readonly Vector3 Color = new Vector3(210, 205, 200) / 255f;
 
     private readonly Puff[] _puffs = new Puff[MaximumPuffs];
-    private readonly float[] _accumulators = new float[KartWheels.Count];
+    private readonly float[] _accumulators;
     private readonly Random _random;
     private int _next;
 
@@ -37,9 +38,11 @@ public sealed class SlideSmoke
     //** ctor
     //**********************************************************
 
-    public SlideSmoke(int seed = 1)
+    /// <param name="kartCount">How many karts puff (each wheel keeps its own rate).</param>
+    public SlideSmoke(int seed = 1, int kartCount = 1)
     {
         _random = new Random(seed);
+        _accumulators = new float[kartCount * KartWheels.Count];
         var indices = new int[MaximumPuffs * 6];
         for (var i = 0; i < MaximumPuffs; i++)
         {
@@ -85,10 +88,20 @@ public sealed class SlideSmoke
     //** public methods
     //**********************************************************
 
-    /// <param name="velocity">The kart's velocity, m/s.</param>
-    /// <param name="right">The kart's right on the ground, unit length.</param>
+    /// <summary>One kart: <see cref="Emit"/>, then <see cref="Advance"/>.</summary>
     public void Update(in KartWheels wheels, Vector3 velocity, Vector3 right, float frontSlip, float rearSlip,
         float seconds)
+    {
+        Emit(wheels, velocity, right, frontSlip, rearSlip, seconds);
+        Advance(seconds);
+    }
+
+    /// <summary>Puffs this frame's smoke off one kart's sliding axles.</summary>
+    /// <param name="velocity">The kart's velocity, m/s.</param>
+    /// <param name="right">The kart's right on the ground, unit length.</param>
+    /// <param name="kart">Which kart, 0..kartCount-1.</param>
+    public void Emit(in KartWheels wheels, Vector3 velocity, Vector3 right, float frontSlip, float rearSlip,
+        float seconds, int kart = 0)
     {
         // Thrown along the kart's right, signed by which way it is sliding, so the cloud leaves the outside.
         var slideDirection = Vector3.Dot(velocity, right) >= 0f ? right : -right;
@@ -96,21 +109,26 @@ public sealed class SlideSmoke
         {
             var slip = KartWheels.IsFront(wheel) ? frontSlip : rearSlip;
             var rate = Math.Clamp((slip - SlidingThreshold) / FullSlideSlip, 0f, 1f) * RatePerWheel;
+            ref var accumulator = ref _accumulators[kart * KartWheels.Count + wheel];
             if (rate <= 0f)
             {
-                _accumulators[wheel] = 0f;
+                accumulator = 0f;
                 continue;
             }
 
             // Rates need accumulators: at a high frame rate most frames owe a fraction of a puff.
-            _accumulators[wheel] += rate * seconds;
-            while (_accumulators[wheel] >= 1f)
+            accumulator += rate * seconds;
+            while (accumulator >= 1f)
             {
-                _accumulators[wheel] -= 1f;
+                accumulator -= 1f;
                 Spawn(wheels[wheel], velocity * 0.1f + slideDirection * (slip * 0.3f));
             }
         }
+    }
 
+    /// <summary>Moves and ages every puff by <paramref name="seconds"/>.</summary>
+    public void Advance(float seconds)
+    {
         var drag = 1f / (1f + Drag * seconds);
         for (var i = 0; i < _puffs.Length; i++)
         {

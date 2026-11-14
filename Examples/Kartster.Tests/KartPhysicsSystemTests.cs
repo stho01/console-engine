@@ -27,7 +27,7 @@ public class KartPhysicsSystemTests
     {
         using var world = new World();
         var kart = KartEntity.Create(world, tuning, Vector2.Zero, 0f);
-        var group = Physics(world, kart, tuning);
+        var group = Physics(world, tuning);
         var dynamics = new KartDynamics(tuning);
         var reference = new KartBody();
 
@@ -57,7 +57,7 @@ public class KartPhysicsSystemTests
         using var world = new World();
         var tuning = KartCatalog.Kart;
         var kart = KartEntity.Create(world, tuning, Vector2.Zero, 0f);
-        var group = Physics(world, kart, tuning);
+        var group = Physics(world, tuning);
         world.Get<KartControls>(kart) = new KartControls { Throttle = 1f, Steer = 0.5f };
         for (var step = 0; step < 120; step++)
             group.Update(Step);
@@ -88,10 +88,10 @@ public class KartPhysicsSystemTests
         Assert.That(body.Forward.X, Is.LessThan(0f)); // left of -Z is -X
     }
 
-    private static SystemGroup Physics(World world, Entity kart, KartTuning tuning)
+    private static SystemGroup Physics(World world, KartTuning tuning)
     {
         var group = new SystemGroup(world);
-        group.Add(new KartPhysicsSystem(kart, tuning));
+        group.Add(new KartPhysicsSystem(tuning));
         group.Add(new PhysicsSystem { SubstepCount = 1, EnableSleep = false });
         return group;
     }

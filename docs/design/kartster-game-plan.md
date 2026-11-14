@@ -113,6 +113,17 @@ FixedSimulation.Add(new RaceSystem(race)); // kjører etter KartGroundSystem
 // og i KartInputSystem / BotDriverSystem: if (!race.CanDrive) controls = default;
 ```
 
+## 5b. Flere karter og bots: status
+
+- **Flere karter og bots (B):** levert. `TrackScene` lager spilleren og 5 bots (`DefaultBotCount`) på et
+  midlertidig rutenett (`TrackScene.GridSlot`: to i bredden, ±2 m, rader 6 m fra hverandre bak ruteavstand 0).
+  `Components/Kart.Index` peker inn i per-kart-tilstand (`KartDynamics`, ruteplan, mesh); `PlayerKart` og `Bot`
+  skiller dem. `Bots/BotDriverSystem` (fast steg) er en enkel Earl–Merlin: ruteplan med svingfart og bremsing,
+  pure pursuit mot et punkt på egen fil, ferdighet 0,8–0,3, tilbake på veien og rygging når den sitter fast.
+  Kollisjon mellom karter går gjennom boksene (restitusjon 0,1, friksjon 0,3). Ved fletting: bytt `GridSlot` mot
+  R sitt rutenett, la botene lese `RaceProgress` i stedet for egen `Bot.Progress`, og la `KartsterGame` gi ut
+  kartmappene sine (botene leser `Assets/Karts` selv). Mangler: trafikk (forbikjøring), dytting, power-ups.
+
 ## 6. Åpne spørsmål
 
 - Lyd: konsollen har bare `Console.Beep`. Foreløpig ingen lyd.

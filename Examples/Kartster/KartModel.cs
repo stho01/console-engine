@@ -85,6 +85,22 @@ public static class KartModel
         return new Mesh(positions.ToArray(), indices.ToArray(), colors.ToArray());
     }
 
+    /// <summary>
+    /// The same kart with the triangles coloured <paramref name="from"/> (the player colour it was loaded with) in
+    /// <paramref name="to"/>. Shares the positions and indices, so one loaded kart serves every colour.
+    /// </summary>
+    public static Mesh Recolor(Mesh mesh, Vector3 from, Vector3 to)
+    {
+        var colors = (Vector3[])mesh.TriangleColors.Clone();
+        for (var t = 0; t < colors.Length; t++)
+        {
+            if (colors[t] == from)
+                colors[t] = to;
+        }
+
+        return new Mesh(mesh.Positions, mesh.Indices, colors);
+    }
+
     //**********************************************************
     //** internals
     //**********************************************************

@@ -8,7 +8,8 @@ namespace Kartster.Effects;
 /// Dark strips on the road behind the wheels while the kart skids, as Kartster's <c>KartSkidMarks</c>: a skid is the
 /// rear axle letting go (from <see cref="MarkingSlip"/> of rear slip), and the front wheels join in from
 /// <see cref="FrontMarkingShare"/> of the rear's slip (a spin). Front slip alone is just turning hard and leaves none.
-/// Only on asphalt. A fixed ring of segments: the oldest are written over, nothing is allocated while driving.
+/// Only on asphalt. One fixed ring of segments for all karts, so more karts don't cost more to draw: the oldest are
+/// written over, nothing is allocated while driving.
 /// </summary>
 public sealed class SkidMarks
 {
@@ -27,8 +28,8 @@ public sealed class SkidMarks
     private const float WidthMeters = 0.25f;
 
     private readonly Vector3 _roadColor;
-    private readonly Vector3[] _lastPoints = new Vector3[KartWheels.Count];
-    private readonly bool[] _marking = new bool[KartWheels.Count];
+    private readonly Vector3[] _lastPoints;
+    private readonly bool[] _marking;
     private int _next;
 
     //**********************************************************
@@ -36,9 +37,12 @@ public sealed class SkidMarks
     //**********************************************************
 
     /// <param name="roadColor">The asphalt colour the marks darken.</param>
-    public SkidMarks(Vector3 roadColor)
+    /// <param name="kartCount">How many karts lay marks (each keeps its own strips).</param>
+    public SkidMarks(Vector3 roadColor, int kartCount = 1)
     {
         _roadColor = roadColor;
+        _lastPoints = new Vector3[kartCount * KartWheels.Count];
+        _marking = new bool[kartCount * KartWheels.Count];
         var indices = new int[MaximumSegments * 6];
         for (var i = 0; i < MaximumSegments; i++)
         {
@@ -67,7 +71,8 @@ public sealed class SkidMarks
     //**********************************************************
 
     /// <summary>Lays marks for this frame from where the wheels are and how much each axle slips.</summary>
-    public void Update(in KartWheels wheels, float frontSlip, float rearSlip, bool onAsphalt)
+    /// <param name="kart">Which kart, 0..kartCount-1.</param>
+    public void Update(in KartWheels wheels, float frontSlip, float rearSlip, bool onAsphalt, int kart = 0)
     {
         var rearMarks = onAsphalt && rearSlip >= MarkingSlip;
         var frontMarks = rearMarks && frontSlip >= FrontMarkingShare * rearSlip;
@@ -75,27 +80,28 @@ public sealed class SkidMarks
         for (var wheel = 0; wheel < KartWheels.Count; wheel++)
         {
             var isFront = KartWheels.IsFront(wheel);
+            var slot = kart * KartWheels.Count + wheel;
             if (!(isFront ? frontMarks : rearMarks))
             {
-                _marking[wheel] = false;
+                _marking[slot] = false;
                 continue;
             }
 
             var point = wheels[wheel] + new Vector3(0f, LiftMeters, 0f);
-            if (!_marking[wheel] || Vector3.Distance(point, _lastPoints[wheel]) > LongestSegmentMeters)
+            if (!_marking[slot] || Vector3.Distance(point, _lastPoints[slot]) > LongestSegmentMeters)
             {
-                _marking[wheel] = true;
-                _lastPoints[wheel] = point;
+                _marking[slot] = true;
+                _lastPoints[slot] = point;
                 continue;
             }
 
-            if (Vector3.Distance(point, _lastPoints[wheel]) < SegmentMeters)
+            if (Vector3.Distance(point, _lastPoints[slot]) < SegmentMeters)
                 continue;
 
             var slip = isFront ? frontSlip : rearSlip;
             var darkness = MathF.Min(slip / DarkestSlip, 1f) * DarkestShare;
-            AddSegment(_lastPoints[wheel], point, _roadColor * (1f - darkness));
-            _lastPoints[wheel] = point;
+            AddSegment(_lastPoints[slot], point, _roadColor * (1f - darkness));
+            _lastPoints[slot] = point;
         }
     }
 
