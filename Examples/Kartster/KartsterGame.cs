@@ -9,6 +9,7 @@ using ConsoleEngine.Infrastructure.Inputs;
 using ConsoleEngine.Rendering3D;
 using ConsoleEngine.Rendering3D.OpenGL;
 using Kartster.Driving;
+using Kartster.Race;
 using Kartster.Scenes;
 
 namespace Kartster;
@@ -34,6 +35,7 @@ public class KartsterGame(string kartsFolder, string tracksFolder, bool startOnG
     private const float FieldOfView = 50f * MathF.PI / 180f;
     private const float NearPlane = 0.2f;
     private const float FarPlane = 400f;
+    private const int DefaultLaps = 3;
 
     public static readonly Vector3 ToSun = Vector3.Normalize(new Vector3(0.5f, 0.8f, 0.3f));
     private static readonly Vector3 PlayerColor = new(0.1f, 0.35f, 0.85f);
@@ -82,6 +84,14 @@ public class KartsterGame(string kartsFolder, string tracksFolder, bool startOnG
     /// <summary>Null when there is no track: then only the garage runs.</summary>
     public Track Track { get; private set; }
 
+    /// <summary>The track's <c>race.txt</c>; null when it has none (then the race uses a stand-in grid and line).</summary>
+    public RaceMarkers Markers { get; private set; }
+
+    /// <summary>The kart folders, sorted: the player picks one, the bots take them in turn.</summary>
+    public string[] KartFolders => _kartFolders;
+
+    private int RaceLaps => Markers?.LapCount ?? DefaultLaps;
+
     //**********************************************************
     //** game
     //**********************************************************
@@ -103,7 +113,11 @@ public class KartsterGame(string kartsFolder, string tracksFolder, bool startOnG
         var ribbons = Directory.Exists(tracksFolder) ? Directory.GetFiles(tracksFolder, "*.ribbon.obj") : [];
         Array.Sort(ribbons, StringComparer.Ordinal);
         if (ribbons.Length > 0)
-            Track = Track.Load(tracksFolder, Path.GetFileName(ribbons[0])[..^".ribbon.obj".Length]);
+        {
+            var id = Path.GetFileName(ribbons[0])[..^".ribbon.obj".Length];
+            Track = Track.Load(tracksFolder, id);
+            Markers = File.Exists(Path.Combine(tracksFolder, id + ".race.txt")) ? RaceMarkers.Load(tracksFolder, id) : null;
+        }
 
         for (var y = 0; y < ScreenHeight; y++)
         for (var x = 0; x < ScreenWidth; x++)
@@ -117,7 +131,7 @@ public class KartsterGame(string kartsFolder, string tracksFolder, bool startOnG
             ToggleGpu();
 
         if (Track != null)
-            Scenes.Set(new TrackScene());
+            Scenes.Set(new TrackScene(RaceLaps));
         else
             Scenes.Set(new GarageScene());
 
@@ -140,13 +154,13 @@ public class KartsterGame(string kartsFolder, string tracksFolder, bool startOnG
         {
             LoadKart((_kartIndex + 1) % _kartFolders.Length);
             if (onTrack)
-                Scenes.Set(new TrackScene()); // the new kart's model and tuning, from the start
+                Scenes.Set(new TrackScene(RaceLaps)); // the new kart's model and tuning, from the start
         }
 
         if (input.GetKey(Key.ENTER).Pressed && Track != null)
-            Scenes.Set(onTrack ? new GarageScene() : new TrackScene());
+            Scenes.Set(onTrack ? new GarageScene() : new TrackScene(RaceLaps));
         else if (onTrack && input.GetKey(Key.R).Pressed)
-            Scenes.Set(new TrackScene());
+            Scenes.Set(new TrackScene(RaceLaps));
 
         if (input.GetKey(Key.G).Pressed)
             ToggleGpu();

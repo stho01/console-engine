@@ -1,6 +1,5 @@
 using System;
 using System.Collections.Generic;
-using System.IO;
 using System.Numerics;
 using ConsoleEngine.Ecs;
 using ConsoleEngine.Ecs.Components;
@@ -10,20 +9,25 @@ using Kartster.Bots;
 using Kartster.Components;
 using Kartster.Driving;
 using Kartster.Effects;
+using Kartster.Race;
 using Kartster.Systems;
+using PlanarVector2 = System.Numerics.Vector2;
 using XnaVector2 = Microsoft.Xna.Framework.Vector2;
 
 namespace Kartster.Scenes;
 
 /// <summary>
-/// A race on the track: the player's kart and <see cref="BotCount"/> bots on a starting grid behind route distance 0,
+/// A race on the track: the player's kart and <see cref="BotCount"/> bots on the track's starting grid
+/// (<see cref="RaceMarkers.Grid"/>; the player on pole, as Kartster lines the keyboard player up before the bots),
 /// driven by Kartster's kart model (<see cref="KartPhysicsSystem"/>) on the engine's <see cref="PhysicsSystem"/> at
-/// Kartster's 120 steps per second, with a chase camera behind the player. Bots drive by the
-/// <see cref="BotDriverSystem"/> and race in the other kart folders' karts, each in its own colour. Karts push each
-/// other through their box colliders. The game restarts the scene for R and Tab.
+/// Kartster's 120 steps per second, with a chase camera behind the player. A <see cref="RaceSession"/> run by the
+/// <see cref="RaceSystem"/> counts laps; nobody moves during its countdown. Bots drive by the
+/// <see cref="BotDriverSystem"/> in the game's kart folders' karts, each in its own colour. Karts push each other
+/// through their box colliders.
 /// </summary>
+/// <param name="lapCount">Laps to race, at least 1.</param>
 /// <param name="botCount">Bots on the grid besides the player.</param>
-public sealed class TrackScene(int botCount = TrackScene.DefaultBotCount) : EcsScene<KartsterGame>
+public sealed class TrackScene(int lapCount, int botCount = TrackScene.DefaultBotCount) : EcsScene<KartsterGame>
 {
     //**********************************************************
     //** fields
@@ -37,9 +41,18 @@ public sealed class TrackScene(int botCount = TrackScene.DefaultBotCount) : EcsS
 
     public const int DefaultBotCount = 5;
 
-    /// <summary>Starting grid: metres between rows, and either side of the centerline.</summary>
+    /// <summary>The player's grid slot: the front, as Kartster lines up the keyboard player before the bots.</summary>
+    public const int PlayerSlot = 0;
+
+    /// <summary>
+    /// Stand-in starting grid for a track without <c>race.txt</c>: metres between rows, and either side of the
+    /// centerline. Rows are also this far apart where the exported grid runs out (Kartster's <c>ExtendGrid</c>).
+    /// </summary>
     public const float GridRowSpacing = 6f;
     public const float GridSideOffset = 2f;
+
+    /// <summary>How far either side of its point the stand-in start line reaches, metres.</summary>
+    public const float StandInLineReach = 20f;
 
     /// <summary>
     /// <see cref="Bot.Skill"/> of the front bot, and how much less the last one has. Kept under 1, the bots' best
@@ -69,6 +82,10 @@ public sealed class TrackScene(int botCount = TrackScene.DefaultBotCount) : EcsS
     //**********************************************************
 
     public int BotCount => botCount;
+    public int LapCount => lapCount;
+
+    /// <summary>The race; karts are registered by <see cref="Kart.Index"/>.</summary>
+    public RaceSession Race { get; private set; }
 
     /// <summary>The player's kart model.</summary>
     public KartDynamics Dynamics => _physics.GetDynamics(World.Get<Kart>(_player).Index);
@@ -81,12 +98,12 @@ public sealed class TrackScene(int botCount = TrackScene.DefaultBotCount) : EcsS
     //**********************************************************
 
     /// <summary>
-    /// Where grid slot <paramref name="slot"/> is: two karts a row, <see cref="GridSideOffset"/> left (even slots) and
-    /// right (odd) of the centerline, rows <see cref="GridRowSpacing"/> apart, the first half a row behind route
-    /// distance 0. Returns the kart position (world axes) and the way the route runs there.
+    /// Where grid slot <paramref name="slot"/> is on a track without <c>race.txt</c>: two karts a row,
+    /// <see cref="GridSideOffset"/> left (even slots) and right (odd) of the centerline, rows
+    /// <see cref="GridRowSpacing"/> apart, the first half a row behind route distance 0. Returns the kart position
+    /// (world axes) and the way the route runs there.
     /// </summary>
-    /// <remarks>shortcut: a made-up grid; swap for the race's exported grid (<c>race.txt</c>) once it exists.</remarks>
-    public static (Vector3 Position, Vector3 Forward) GridSlot(Track track, int slot)
+    public static (Vector3 Position, Vector3 Forward) StandInGridSlot(Track track, int slot)
     {
         var row = slot / 2;
         var (center, forward) = track.Sample(-GridRowSpacing * (row + 0.5f));
@@ -95,22 +112,63 @@ public sealed class TrackScene(int botCount = TrackScene.DefaultBotCount) : EcsS
     }
 
     /// <summary>
-    /// Creates one kart per tuning on the grid, slot = <see cref="Kart.Index"/> = the tuning's index. The kart at
-    /// <paramref name="playerIndex"/> gets <see cref="PlayerKart"/>, the others a <see cref="Bot"/>: the nearer the
-    /// front, the more skilled (<see cref="TopBotSkill"/> at the front, <see cref="BotSkillSpread"/> less at the
-    /// back), each on its own lane.
+    /// Where the kart in grid slot <paramref name="slot"/> starts: <paramref name="markers"/>' grid slot; past its
+    /// end, as Kartster's <c>ExtendGrid</c>, <see cref="GridRowSpacing"/> behind the kart two slots ahead; with no
+    /// markers (or fewer than two slots), <see cref="StandInGridSlot"/>.
     /// </summary>
-    public static Entity[] CreateKarts(World world, Track track, KartTuning[] tunings, int playerIndex)
+    public static GridSlot StartingSlot(Track track, RaceMarkers markers, int slot)
+    {
+        var grid = markers?.Grid ?? [];
+        if (slot < grid.Length)
+            return grid[slot];
+
+        if (grid.Length >= 2)
+        {
+            var ahead = StartingSlot(track, markers, slot - 2);
+            var (sin, cos) = MathF.SinCos(ahead.Heading);
+            var forward = new PlanarVector2(-sin, -cos); // heading 0 faces -Z, positive turns left
+            return ahead with { Position = ahead.Position - forward * GridRowSpacing };
+        }
+
+        var (position, direction) = StandInGridSlot(track, slot);
+        return new GridSlot(new PlanarVector2(position.X, position.Z), KartFrame.HeadingOf(direction));
+    }
+
+    /// <summary>
+    /// The race on <paramref name="track"/> over <paramref name="laps"/> laps: <paramref name="markers"/>' start line
+    /// and checkpoints, or without markers a start line across the centerline at route distance 0 and no checkpoints.
+    /// </summary>
+    public static RaceSession CreateSession(Track track, RaceMarkers markers, int laps)
+    {
+        if (markers != null)
+            return new RaceSession(markers.Start, markers.Checkpoints, laps);
+
+        var (point, forward) = track.Sample(0f);
+        var line = new RaceGate(new PlanarVector2(point.X, point.Z),
+            PlanarVector2.Normalize(new PlanarVector2(forward.X, forward.Z)), StandInLineReach, StandInLineReach);
+        return new RaceSession(line, [], laps);
+    }
+
+    /// <summary>
+    /// Creates one kart per tuning on the grid (<see cref="StartingSlot"/>) at the road's height, slot =
+    /// <see cref="Kart.Index"/> = the tuning's index. The kart at <paramref name="playerIndex"/> gets
+    /// <see cref="PlayerKart"/>, the others a <see cref="Bot"/>: the nearer the front, the more skilled
+    /// (<see cref="TopBotSkill"/> at the front, <see cref="BotSkillSpread"/> less at the back), each on its own lane.
+    /// With a <paramref name="race"/>, every kart gets a <see cref="RaceProgress"/> and is registered by its index in
+    /// grid order (the player as human), so the race starts ranked as the grid.
+    /// </summary>
+    public static Entity[] CreateKarts(World world, Track track, RaceMarkers markers, KartTuning[] tunings,
+        int playerIndex, RaceSession race = null)
     {
         var karts = new Entity[tunings.Length];
         var bots = playerIndex >= 0 && playerIndex < tunings.Length ? tunings.Length - 1 : tunings.Length;
         var botNumber = 0;
         for (var i = 0; i < tunings.Length; i++)
         {
-            var (position, forward) = GridSlot(track, i);
-            var kart = KartEntity.Create(world, tunings[i], new XnaVector2(position.X, position.Z),
-                KartFrame.HeadingOf(forward), i);
-            world.Get<Kart>(kart).Height = position.Y;
+            var slot = StartingSlot(track, markers, i);
+            var kart = KartEntity.Create(world, tunings[i], new XnaVector2(slot.Position.X, slot.Position.Y),
+                slot.Heading, i);
+            track.TryGetRoadHeight(new Vector3(slot.Position.X, 0f, slot.Position.Y), out world.Get<Kart>(kart).Height);
             if (i == playerIndex)
             {
                 world.Add(kart, new PlayerKart());
@@ -126,6 +184,12 @@ public sealed class TrackScene(int botCount = TrackScene.DefaultBotCount) : EcsS
                 botNumber++;
             }
 
+            if (race != null)
+            {
+                world.Add(kart, new RaceProgress());
+                race.Register(i, isHuman: i == playerIndex);
+            }
+
             karts[i] = kart;
         }
 
@@ -134,18 +198,22 @@ public sealed class TrackScene(int botCount = TrackScene.DefaultBotCount) : EcsS
 
     /// <summary>
     /// The fixed-step systems that drive the karts, in run order: <see cref="BotDriverSystem"/> →
-    /// <see cref="KartPhysicsSystem"/> → <see cref="PhysicsSystem"/> → <see cref="KartGroundSystem"/>.
+    /// <see cref="KartPhysicsSystem"/> → <see cref="PhysicsSystem"/> → <see cref="KartGroundSystem"/>, then, with a
+    /// <paramref name="race"/>, its <see cref="RaceSystem"/> (and the bots hold still during its countdown).
     /// </summary>
-    public static KartPhysicsSystem AddDriving(SystemGroup fixedStep, Track track, KartTuning[] tunings)
+    public static KartPhysicsSystem AddDriving(SystemGroup fixedStep, Track track, KartTuning[] tunings,
+        RaceSession race = null)
     {
         var physics = new KartPhysicsSystem(tunings);
-        fixedStep.Add(new BotDriverSystem(track, physics));
+        fixedStep.Add(new BotDriverSystem(track, physics, race));
         fixedStep.Add(physics);
         // One substep, so a step integrates the kart model's forces exactly once, as Kartster's single 1/120 s step
         // does (the force is held through all substeps, and the tyres cancel a whole step's sideways speed). Kart
         // contacts are soft (30 Hz at one substep) and over-damped, which is enough for karts pushing each other.
         fixedStep.Add(new PhysicsSystem { SubstepCount = 1, EnableSleep = false });
         fixedStep.Add(new KartGroundSystem(track));
+        if (race != null)
+            fixedStep.Add(new RaceSystem(race));
         return physics;
     }
 
@@ -157,20 +225,20 @@ public sealed class TrackScene(int botCount = TrackScene.DefaultBotCount) : EcsS
     {
         var track = Game.Track;
         var count = botCount + 1;
-        var playerIndex = count - 1; // the back of the grid
         var tunings = new KartTuning[count];
         var meshes = new Mesh[count];
-        LoadBotKarts(tunings, meshes, playerIndex);
-        tunings[playerIndex] = Game.Tuning;
-        meshes[playerIndex] = Game.Kart;
+        LoadBotKarts(tunings, meshes, PlayerSlot);
+        tunings[PlayerSlot] = Game.Tuning;
+        meshes[PlayerSlot] = Game.Kart;
 
-        var karts = CreateKarts(World, track, tunings, playerIndex);
-        _player = karts[playerIndex];
+        Race = CreateSession(track, Game.Markers, lapCount);
+        var karts = CreateKarts(World, track, Game.Markers, tunings, PlayerSlot, Race);
+        _player = karts[PlayerSlot];
 
         FixedTimestep = new FixedTimestep(StepSeconds, MaxStepsPerFrame);
-        _physics = AddDriving(FixedSimulation, track, tunings);
+        _physics = AddDriving(FixedSimulation, track, tunings, Race);
 
-        Simulation.Add(new KartInputSystem());
+        Simulation.Add(new KartInputSystem(race: Race));
 
         var skidMarks = new SkidMarks(Track.Asphalt, count);
         var smoke = new SlideSmoke(kartCount: count);
@@ -184,16 +252,11 @@ public sealed class TrackScene(int botCount = TrackScene.DefaultBotCount) : EcsS
     //**********************************************************
 
     /// <summary>
-    /// Bots take the kart folders in turn, each kart's parts loaded once and recoloured per bot. Without kart folders
-    /// they drive the player's kart, in its colour.
+    /// Bots take the game's kart folders in turn, each kart's parts loaded once and recoloured per bot.
     /// </summary>
     private void LoadBotKarts(KartTuning[] tunings, Mesh[] meshes, int playerIndex)
     {
-        // shortcut: the game's kart folder (its first argument) isn't visible here, so this reads the default one;
-        // take KartsterGame's folder list once it exposes it.
-        var folder = Path.Combine("Assets", "Karts");
-        var folders = Directory.Exists(folder) ? Directory.GetDirectories(folder) : [];
-        Array.Sort(folders, StringComparer.Ordinal);
+        var folders = Game.KartFolders;
         var loaded = new Dictionary<string, Mesh>();
         var botNumber = 0;
         for (var i = 0; i < tunings.Length; i++)
@@ -201,17 +264,10 @@ public sealed class TrackScene(int botCount = TrackScene.DefaultBotCount) : EcsS
             if (i == playerIndex)
                 continue;
 
-            if (folders.Length == 0)
-            {
-                tunings[i] = Game.Tuning;
-                meshes[i] = Game.Kart;
-                continue;
-            }
-
             var kartFolder = folders[botNumber % folders.Length];
             if (!loaded.TryGetValue(kartFolder, out var mesh))
                 loaded[kartFolder] = mesh = KartModel.Load(kartFolder, BodyKey);
-            tunings[i] = KartCatalog.ForKart(Path.GetFileName(kartFolder));
+            tunings[i] = KartCatalog.ForKart(System.IO.Path.GetFileName(kartFolder));
             meshes[i] = KartModel.Recolor(mesh, BodyKey, BotColors[botNumber % BotColors.Length]);
             botNumber++;
         }

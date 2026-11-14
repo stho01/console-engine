@@ -6,6 +6,7 @@ using ConsoleEngine.Ecs.Components;
 using ConsoleEngine.Physics;
 using Kartster.Components;
 using Kartster.Driving;
+using Kartster.Race;
 using Kartster.Scenes;
 using Kartster.Systems;
 using NUnit.Framework;
@@ -36,7 +37,7 @@ public class RaceTests
         var track = StarCircuit.Value;
         using var world = new World();
 
-        var karts = TrackScene.CreateKarts(world, track, Tunings(6), playerIndex: 5);
+        var karts = TrackScene.CreateKarts(world, track, null, Tunings(6), playerIndex: 5);
 
         Assert.That(karts, Has.Length.EqualTo(6));
         for (var i = 0; i < karts.Length; i++)
@@ -59,7 +60,7 @@ public class RaceTests
     public void KartInputSystem_KeysHeld_WritesOnlyThePlayersControls()
     {
         using var world = new World();
-        var karts = TrackScene.CreateKarts(world, StarCircuit.Value, Tunings(2), playerIndex: 1);
+        var karts = TrackScene.CreateKarts(world, StarCircuit.Value, null, Tunings(2), playerIndex: 1);
         var group = new SystemGroup(world);
         group.Add(new KartInputSystem(key => key is Key.W or Key.D));
 
@@ -79,13 +80,15 @@ public class RaceTests
         var track = StarCircuit.Value;
         using var world = new World();
         var tunings = Tunings(3);
-        var karts = TrackScene.CreateKarts(world, track, tunings, playerIndex: -1);
+        var markers = RaceMarkers.Load(Path.Combine("Assets", "Tracks"), "star-circuit");
+        var race = TrackScene.CreateSession(track, markers, laps: 5);
+        var karts = TrackScene.CreateKarts(world, track, markers, tunings, playerIndex: -1, race);
         var group = new SystemGroup(world);
-        TrackScene.AddDriving(group, track, tunings);
+        TrackScene.AddDriving(group, track, tunings, race);
         var reversals = new int[karts.Length];
         var reversing = new bool[karts.Length];
 
-        for (var step = 0; step < 60 * 120; step++)
+        for (var step = 0; step < (60 + RaceSession.CountdownSeconds) * 120; step++)
         {
             group.Update(Step);
             for (var i = 0; i < karts.Length; i++)
@@ -100,10 +103,12 @@ public class RaceTests
         for (var i = 0; i < karts.Length; i++)
         {
             var bot = world.Get<Bot>(karts[i]);
-            TestContext.Out.WriteLine($"bot {i} ({tunings[i].Mass} kg, skill {bot.Skill:0.0}): {bot.Progress:0} m, " +
-                                      $"{bot.Progress / 60f * 3.6f:0} km/h average, " +
-                                      $"lap {track.Length / bot.Progress * 60f:0.0} s");
-            Assert.That(bot.Progress, Is.GreaterThan(500f), $"bot {i} drives on");
+            var progress = world.Get<RaceProgress>(karts[i]);
+            var gates = progress.CompletedLaps * (markers.Checkpoints.Length + 1) + progress.NextCheckpointIndex;
+            TestContext.Out.WriteLine($"bot {i} ({tunings[i].Mass} kg, skill {bot.Skill:0.0}): {gates} gates, " +
+                                      $"best lap {progress.BestLapSeconds:0.0} s");
+            Assert.That(progress.CompletedLaps, Is.GreaterThanOrEqualTo(1), $"bot {i} drives on");
+            Assert.That(progress.MissedCheckpoints, Is.Zero, $"bot {i} follows the route");
             Assert.That(reversals[i], Is.LessThanOrEqualTo(2), $"bot {i} got stuck");
         }
     }
@@ -169,7 +174,7 @@ public class RaceTests
         var track = StarCircuit.Value;
         using var world = new World();
         var tunings = Tunings(6);
-        var karts = TrackScene.CreateKarts(world, track, tunings, playerIndex: 5);
+        var karts = TrackScene.CreateKarts(world, track, null, tunings, playerIndex: 5);
         var group = new SystemGroup(world);
         TrackScene.AddDriving(group, track, tunings);
         world.Get<KartControls>(karts[5]) = new KartControls { Throttle = 1f, Steer = 0.2f };

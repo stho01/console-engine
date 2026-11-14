@@ -231,7 +231,8 @@ Examples/
                                   Assets/Scripts/ player.lua, firefly.lua (copied to output)
   Kartster/                     3D experiment: KartsterGame (shared IRenderer3D, palette, sky, karts, track;
                                   Enter/Tab/R/Esc), Scenes/ (TrackScene: EcsScene at 120 Hz, player + 5 bots on a
-                                  grid (GridSlot, CreateKarts, AddDriving), GarageScene: orbit camera), Systems/
+                                  the race.txt grid (StartingSlot, StandInGridSlot, CreateSession,
+                                  CreateKarts, AddDriving), GarageScene: orbit camera), Systems/
                                   (KartInputSystem, KartPhysicsSystem, KartGroundSystem, KartEffectsSystem,
                                   KartRenderSystem, all karts), Bots/ (BotDriverSystem, BotRoutePlan),
                                   Effects/ (SkidMarks, SlideSmoke, KartWheels), Components/ (Kart with its Index,
@@ -254,7 +255,7 @@ Examples/
   Kartster.Tests/               KartModelTests, TrackTests, SceneryTests, KartPhysicsSystemTests,
                                   KartFrameTests, KartInputSystemTests, Driving/KartDynamicsTests, Driving/KartReferenceTests,
                                   Effects/EffectsTests (skid marks, slide smoke), Race/ (RaceMarkersTests,
-                                  RaceSessionTests, RaceSystemTests), Ui/ (PixelFont, TextFormat, PixelTarget, Hud,
+                                  RaceSessionTests, RaceSystemTests, RaceWiringTests), Ui/ (PixelFont, TextFormat, PixelTarget, Hud,
                                   Menu tests; UiPreview writes ui-preview/*.ppm to the output), Bots/BotDriverSystemTests,
                                   Bots/RaceTests (grid, input, headless 3-bot race, kart collisions, allocation)
 .github/workflows/                build-and-test.yml

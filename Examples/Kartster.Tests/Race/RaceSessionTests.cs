@@ -79,6 +79,20 @@ public class RaceSessionTests
     }
 
     [Test]
+    public void GapToLeader_SameGate_IsTheTimeBehindWhoGotThereFirst()
+    {
+        var session = Racing(3, 1, 2);
+        Assert.That(session.GapToLeader(2), Is.Zero, "no gate yet");
+
+        Drive(session, 1, Grid, 160, secondsPerMeter: 0.1f); // the line at 1 s, the first checkpoint at 11 s
+        Drive(session, 2, Grid, 160, secondsPerMeter: 0.1f); // the same, 12 s later
+
+        Assert.That(session.Get(1).GateSeconds, Is.EqualTo(11f).Within(1e-3f));
+        Assert.That(session.GapToLeader(1), Is.Zero.Within(1e-4f));
+        Assert.That(session.GapToLeader(2), Is.EqualTo(12f).Within(1e-3f));
+    }
+
+    [Test]
     public void Update_DuringCountdown_PassesGatesButCountsNoLap()
     {
         var session = Session();

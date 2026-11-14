@@ -4,6 +4,7 @@ using ConsoleEngine.Ecs;
 using ConsoleEngine.Infrastructure.Inputs;
 using Kartster.Components;
 using Kartster.Driving;
+using Kartster.Race;
 
 namespace Kartster.Systems;
 
@@ -11,10 +12,12 @@ namespace Kartster.Systems;
 /// Reads the keys each frame into the <see cref="PlayerKart"/>'s <see cref="KartControls"/> (bots have the
 /// <c>BotDriverSystem</c>), which the fixed step reads: W gas, S brake
 /// (reverse once stopped), A/D steer, Space handbrake. Pedals are on or off; the steering ramps as Kartster's keyboard
-/// steering does (<see cref="RampSteer"/>).
+/// steering does (<see cref="RampSteer"/>). While the <paramref name="race"/> can't drive (the countdown) the controls
+/// are held at zero, the wheel straight, as Kartster zeroes every driving input.
 /// </summary>
 /// <param name="isHeld">Whether a key is held; null reads <c>Input.Instance</c> (tests pass their own).</param>
-public sealed class KartInputSystem(Func<Key, bool> isHeld = null) : EntitySystem
+/// <param name="race">Null: always drives.</param>
+public sealed class KartInputSystem(Func<Key, bool> isHeld = null, RaceSession race = null) : EntitySystem
 {
     //**********************************************************
     //** fields
@@ -58,6 +61,13 @@ public sealed class KartInputSystem(Func<Key, bool> isHeld = null) : EntitySyste
 
     protected override void OnUpdate(float deltaSeconds)
     {
+        if (race is { CanDrive: false })
+        {
+            foreach (var chunk in _players.GetChunks())
+                chunk.GetSpan<KartControls>()[..chunk.Count].Clear();
+            return;
+        }
+
         var throttle = _isHeld(Key.W) ? 1f : 0f;
         var brake = _isHeld(Key.S) ? 1f : 0f;
         var handbrake = _isHeld(Key.SPACE);

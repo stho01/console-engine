@@ -123,18 +123,6 @@ public sealed class BotRoutePlan
     public float SpeedAhead(int sample, float metresAhead) =>
         _speeds[Wrap(sample + (int)MathF.Round(metresAhead / Spacing))];
 
-    /// <summary>Samples from <paramref name="from"/> to <paramref name="to"/>, the short way round a closed track.</summary>
-    public int StepsBetween(int from, int to)
-    {
-        var steps = to - from;
-        if (!_isClosed)
-            return steps;
-        var half = _points.Length / 2;
-        if (steps > half) steps -= _points.Length;
-        else if (steps < -half) steps += _points.Length;
-        return steps;
-    }
-
     //**********************************************************
     //** internals
     //**********************************************************

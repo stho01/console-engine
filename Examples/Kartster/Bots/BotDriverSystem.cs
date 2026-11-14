@@ -5,6 +5,7 @@ using ConsoleEngine.Ecs.Components;
 using ConsoleEngine.Physics;
 using Kartster.Components;
 using Kartster.Driving;
+using Kartster.Race;
 using Kartster.Systems;
 
 namespace Kartster.Bots;
@@ -24,10 +25,12 @@ namespace Kartster.Bots;
 /// </list>
 /// <see cref="Bot.Skill"/> (0..1) moves every number from Earl's towards Merlin's. Runs in the fixed step, before the
 /// <see cref="KartPhysicsSystem"/>: it reads only what the physics changes, so a bot drives the same at any frame rate
-/// and a headless test drives exactly as the game does; a decision costs a few hundred nanoseconds.
+/// and a headless test drives exactly as the game does; a decision costs a few hundred nanoseconds. While the
+/// <paramref name="race"/> can't drive (the countdown) every bot's controls are held at zero and it decides nothing.
 /// </summary>
+/// <param name="race">Null: always drives.</param>
 [UpdateBefore(typeof(KartPhysicsSystem))]
-public sealed class BotDriverSystem(Track track, KartPhysicsSystem physics) : EntitySystem
+public sealed class BotDriverSystem(Track track, KartPhysicsSystem physics, RaceSession race = null) : EntitySystem
 {
     //**********************************************************
     //** fields
@@ -89,8 +92,6 @@ public sealed class BotDriverSystem(Track track, KartPhysicsSystem physics) : En
         var speed = Vector2.Dot(body.Velocity, forward);
 
         var sample = plan.Locate(body.Position, bot.Sample);
-        if (bot.Sample >= 0)
-            bot.Progress += plan.StepsBetween(bot.Sample, sample) * plan.Spacing;
         bot.Sample = sample;
 
         bot.OffRoadSeconds = surface == Surface.Asphalt ? 0f : bot.OffRoadSeconds + seconds;
@@ -168,6 +169,12 @@ public sealed class BotDriverSystem(Track track, KartPhysicsSystem physics) : En
             var bots = chunk.GetSpan<Bot>();
             var karts = chunk.GetSpan<Kart>();
             var controls = chunk.GetSpan<KartControls>();
+            if (race is { CanDrive: false })
+            {
+                controls[..chunk.Count].Clear();
+                continue;
+            }
+
             var positions = chunk.GetSpan<Position>();
             var rotations = chunk.GetSpan<Rotation>();
             var velocities = chunk.GetSpan<Velocity>();

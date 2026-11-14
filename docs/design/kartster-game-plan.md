@@ -85,7 +85,7 @@ Levert i bølge 1, ikke koblet inn ennå (`KartsterGame` starter fortsatt på `T
 
 ## 5. Løpsregler (`Race/`): status
 
-Ferdig i bølge 1, ikke koblet inn ennå (`TrackScene` eies av B). Reglene er originalens, med tall og kilder i
+Ferdig i bølge 1, koblet inn i `TrackScene` i bølge 2. Reglene er originalens, med tall og kilder i
 `docs/agent/03-rules.md` (Kartster-raden om løpsregler).
 
 - `RaceMarkers.Load(folder, id)` leser `<id>.race.txt`. `RaceSession` er ren logikk: `Register(id, isHuman)`, per
@@ -120,9 +120,10 @@ FixedSimulation.Add(new RaceSystem(race)); // kjører etter KartGroundSystem
   `Components/Kart.Index` peker inn i per-kart-tilstand (`KartDynamics`, ruteplan, mesh); `PlayerKart` og `Bot`
   skiller dem. `Bots/BotDriverSystem` (fast steg) er en enkel Earl–Merlin: ruteplan med svingfart og bremsing,
   pure pursuit mot et punkt på egen fil, ferdighet 0,8–0,3, tilbake på veien og rygging når den sitter fast.
-  Kollisjon mellom karter går gjennom boksene (restitusjon 0,1, friksjon 0,3). Ved fletting: bytt `GridSlot` mot
-  R sitt rutenett, la botene lese `RaceProgress` i stedet for egen `Bot.Progress`, og la `KartsterGame` gi ut
-  kartmappene sine (botene leser `Assets/Karts` selv). Mangler: trafikk (forbikjøring), dytting, power-ups.
+  Kollisjon mellom karter går gjennom boksene (restitusjon 0,1, friksjon 0,3). Flettet i bølge 2: rutenettet kommer fra
+  `race.txt` (`TrackScene.StartingSlot`; `StandInGridSlot` bare når banen mangler den), `Bot.Progress` er fjernet
+  (den var bare en målestokk for testene, som nå leser `RaceProgress`), og botene tar kartmappene fra
+  `KartsterGame.KartFolders`. Mangler: trafikk (forbikjøring), dytting, power-ups.
 
 ## 6. Åpne spørsmål
 

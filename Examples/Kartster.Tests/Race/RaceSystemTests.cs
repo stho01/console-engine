@@ -20,7 +20,7 @@ public class RaceSystemTests
     private static (SystemGroup Group, Entity Kart) Race(World world, RaceSession session, float x)
     {
         var kart = world.Create(new Position(new Vector2(x, 0)), new Components.Kart(), new RaceProgress());
-        session.Register(kart.Id);
+        session.Register(world.Get<Components.Kart>(kart).Index);
         var group = new SystemGroup(world);
         group.Add(new RaceSystem(session));
         return (group, kart);

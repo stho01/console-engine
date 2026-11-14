@@ -15,9 +15,6 @@ public struct Bot
     /// <summary>Nearest route-plan sample last step; -1 before the first.</summary>
     public int Sample;
 
-    /// <summary>Metres driven along the route since the start, laps included (backwards counts down).</summary>
-    public float Progress;
-
     /// <summary>Seconds asking for throttle and going nowhere.</summary>
     public float StuckSeconds;
 

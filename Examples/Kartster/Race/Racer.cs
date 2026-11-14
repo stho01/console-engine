@@ -41,6 +41,9 @@ public struct Racer
     /// <summary>Race position, 1 for the leader, as of the last <see cref="RaceSession.UpdatePositions"/>.</summary>
     public int Position;
 
+    /// <summary>Race time when it passed its last gate (forwards); the leader's HUD time.</summary>
+    public float GateSeconds;
+
     /// <summary>Straight-line metres to the next gate's point, for ranking karts level on gates.</summary>
     public float DistanceToNextGate;
 

@@ -31,6 +31,7 @@ public sealed class RaceSession
     private readonly Dictionary<int, int> _indexById = [];
     private Racer[] _racers = [];
     private int[] _order = []; // racer indices from the leader back
+    private readonly float[] _firstAtGate; // race time the first kart reached each gate ordinal, -1 before
     private int _finishedCount;
 
     //**********************************************************
@@ -45,6 +46,8 @@ public sealed class RaceSession
         _start = start;
         _checkpoints = checkpoints;
         LapCount = lapCount;
+        _firstAtGate = new float[lapCount * (checkpoints.Length + 1) + 1];
+        Array.Fill(_firstAtGate, -1f);
     }
 
     //**********************************************************
@@ -93,6 +96,20 @@ public sealed class RaceSession
 
     /// <summary>The racer in <paramref name="position"/> (1 = leader) at the last <see cref="UpdatePositions"/>.</summary>
     public ref readonly Racer GetAtPosition(int position) => ref _racers[_order[position - 1]];
+
+    /// <summary>
+    /// Seconds <paramref name="id"/> is behind the kart that reached its last gate first, as Kartster's gaps per
+    /// gate: finished karts by finish time, 0 before the first gate.
+    /// </summary>
+    public float GapToLeader(int id)
+    {
+        ref readonly var racer = ref _racers[IndexOf(id)];
+        var ordinal = racer.HasFinished ? _firstAtGate.Length - 1 : GatesPassed(racer);
+        var seconds = racer.HasFinished ? racer.FinishTimeSeconds : racer.GateSeconds;
+        return (uint)ordinal < (uint)_firstAtGate.Length && _firstAtGate[ordinal] >= 0f
+            ? seconds - _firstAtGate[ordinal]
+            : 0f;
+    }
 
     /// <summary>
     /// Runs the countdown or the clock. The race starts at 0 on the step the countdown runs out, without the
@@ -190,6 +207,7 @@ public sealed class RaceSession
             {
                 racer.LapStarted = true;
                 racer.NextCheckpointIndex = 0;
+                ReachGate(ref racer);
             }
 
             return;
@@ -208,6 +226,7 @@ public sealed class RaceSession
                 racer.NextCheckpointIndex = 0;
             }
 
+            ReachGate(ref racer);
             return;
         }
 
@@ -242,6 +261,18 @@ public sealed class RaceSession
             : (RaceGate?)null;
         if (afterNext is { } gate && gate.Cross(from, to) > 0)
             racer.MissedCheckpoints++;
+    }
+
+    /// <summary>Notes when the kart got to the gate it just passed, and the first kart's time there.</summary>
+    private void ReachGate(ref Racer racer)
+    {
+        if (Phase != RacePhase.Racing)
+            return;
+
+        racer.GateSeconds = RaceTimeSeconds;
+        var ordinal = GatesPassed(racer);
+        if ((uint)ordinal < (uint)_firstAtGate.Length && _firstAtGate[ordinal] < 0f)
+            _firstAtGate[ordinal] = RaceTimeSeconds;
     }
 
     /// <summary>Kartster's <c>RaceSession.ReportProgress</c>: a lap lands only when the count goes up.</summary>
