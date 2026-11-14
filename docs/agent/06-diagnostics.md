@@ -156,6 +156,17 @@ using [04](04-flows.md).
 | `HOUSE UPGRADE!` / `TOOL SHOP OPEN` (yellow, floating) | `FloatingTextRenderSystem.HouseUpgradeText`, `ToolShopOpenText` | A sale reached a gold milestone / first time below the wall |
 | ` EternalDigger `, `SHOP`, `MINE` | `HouseRenderSystem` (house sign, shop, shaft frame) | Scenery |
 
+### SkyStack screen text (`SkyStackTexts`)
+
+| Text | Where | Meaning |
+|---|---|---|
+| `Run. Jump. Bounce. Don't look down.`, `PRESS SPACE TO CLIMB` (blinking), `← → / A D  run      SPACE / ↑ / W  jump      ESC  quit`, `Run fast to jump higher. Skip floors to chain combos.` | `TitleScene` | Title screen |
+| `BEST SCORE <n>`, `BEST FLOOR <n>` | `TitleScene.DrawBest` | Shown once a run in this session scored more than 0 |
+| `SKYSTACK`, `FLOOR`, `SCORE`, `BEST`, `COMBO`, `x<jumps>  <floors> floors` + timer bar, `SPEED` + 6 level blocks or `reach floor 5`, `ZONE` + zone name, `← → A D   run`, `SPACE ↑ W jump`, `ESC       title` | `HudRenderSystem` | HUD right of the tower |
+| `THE TOWER RISES!` / `FASTER!` (red, blinking, 2 s) | `MessageRenderSystem` | The view started rising / got faster |
+| `COMBO <floors> FLOORS  +<points>` (yellow, 2 s) | `MessageRenderSystem.DrawComboResult` | A combo of 2+ jumps paid out |
+| `YOU FELL!`, `FLOOR`, `SCORE`, `BEST COMBO`, `NEW BEST!`, `SPACE  climb again`, `ESC    title` | `MessageRenderSystem.DrawGameOver` | Game-over box; the two key lines appear after 0.75 s |
+
 ### TerraForM screen text (`HudTexts`, `Sprites`)
 
 | Text | Where | Meaning |

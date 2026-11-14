@@ -557,3 +557,26 @@ tile is 4 × 2 cells (`Layout.TileWidth`/`TileHeight`). Row 0 is the top of the 
 | Loading | CONTINUE rebuilds the mine from the saved seed plus the saved changed tiles, and puts the miner standing on the saved tile with the saved facing and inventory. Unreadable save: red message on the title, only NEW MINE, file moved to `save.dat.bad` | `SaveFile.Load`, `SaveData.ApplyTo`, `SaveData.ToMiner` |
 | Save hint | After each save (or failed save), ` SAVED ` (Gray for 0.75 s, then DarkGray for 0.75 s) or ` SAVE FAILED` (red) at the right end of HUD row 1 | `HudSystem.DrawSavedHint`, `HudSystem.SavedHintSeconds` |
 
+
+<a id="skystack"></a>
+## SkyStack (`Examples/SkyStack`)
+
+An original tower climber drawn in pixels: every console cell shows two square pixels, one above the other (`▀` with
+foreground = upper pixel, background = lower pixel; `PixelCanvas.Present`), with a 6 × 12 font. The tower is an
+84 × 120 pixel canvas (`Layout.TowerWidth` × `Layout.ViewHeight`); the HUD right of it is plain text. All numbers below
+are pixels and seconds. World pixels grow downwards: floor `n` lies on world row `-n * Layout.FloorSpacing` (16).
+
+| Rule | Value | Identifier |
+|---|---|---|
+| Tower | Inside pixel columns 4–79 (`Layout.InnerLeft`/`InnerRight`), 4-pixel stone walls. Platforms are 3 pixels thick (`Layout.PlatformThickness`). Floor 0 and every 50th floor (`Tower.MilestoneEvery`) span the whole inside (milestones drawn white). Other floors: width `30 - floor / 10` (`StartWidth`, `NarrowEvery`) ± 4 (`WidthSpread`), at least 12 (`MinWidth`), at a random column. Each floor comes from a hash of seed and floor number: nothing is stored, the same seed gives the same tower. Every 10th floor (`LabelEvery`) has its number in the 3 × 5 `PixelFont` under the platform | `Tower.GetFloor`, `TowerRenderSystem` |
+| Zones | Every 50 floors a new colour zone: STONE, MOSS, BRICK, CRYSTAL, SKY, GOLD, then again from STONE. A row takes the zone of the platform above it. The HUD shows the zone of the floor last landed on | `TowerLooks.Zones`, `Tower.ZoneOf` |
+| Running | Climber is 6 × 10 pixels (`ClimbPhysics.BodyWidth`/`BodyHeight`). Held ← → / A D: 170 px/s² on a floor, 115 in the air, max 114 px/s. No key on a floor: friction 230 px/s²; in the air the speed is kept. The sprite looks the way it last ran (`Climber.Facing`) | `ClimbPhysics.Run` |
+| Walls | Hitting a wall reflects the climber and keeps 90 % of the speed (`WallBounce`), with a 0.15 s spark | `ClimbPhysics.BounceOffWalls` |
+| Jumping | While SPACE / ↑ / W is held and the climber stands on a floor, it jumps with `136 + 1.6 × |run speed|` px/s (`BaseJumpSpeed`, `RunJumpBonus`). Gravity 480 px/s², max fall 320 px/s. From standing still a jump reaches 19 px (one floor); at full speed about 106 px (6 floors) | `ClimbPhysics.JumpSpeed`, `Step` |
+| Landing | Platforms are one-way: only a falling climber lands, on the highest platform row passed this step that has at least one of its 6 pixel columns over it. Walking off an edge falls. A landing faster than 120 px/s raises dust | `ClimbPhysics.Fall`, `Floor.Supports`, `ClimberRenderSystem` |
+| Score | `HighestFloor × 10` (`RunStats.PointsPerFloor`) + combo points | `RunStats.Score` |
+| Combo | A landing 2+ floors above the last landing (`ComboMinFloors`) adds a combo jump and refills a 3 s timer (`ComboWindowSeconds`). Any other landing (also on the same or a lower floor) or the timer running out ends it. A combo of 2+ jumps (`ComboMinJumps`) pays `floors × jumps × 5` (`ComboPointsFactor`) and shows `COMBO <floors> FLOORS  +<points>` for 2 s. While a combo runs the jacket flashes and a trail follows. The end of a run pays a running combo | `RunStats.Land`, `Tick`, `EndCombo` |
+| Rising view | Still until the climber has landed on floor 5 (`Scroller.StartFloor`), then rises at 10 px/s (`BaseSpeed`), +6 px/s every 30 s (`SpeedPerLevel`, `LevelSeconds`) up to level 6. A climber less than 48 px (`CatchUpPixels`) below the top edge pulls the view up. Start and each level-up show `THE TOWER RISES!` / `FASTER!` for 2 s | `Scroller.Update` |
+| Game over | The whole climber below the bottom edge (`Scroller.HasLost`) ends the run (`RunStats.Finish`): the climber freezes red, the box shows floor, score and best combo, `NEW BEST!` when the score is the session's best. SPACE / ENTER after 0.75 s (`RestartSystem.DelaySeconds`) starts a new run with a new seed | `ScrollSystem`, `MessageRenderSystem`, `RestartSystem` |
+| Best score | Only in memory for the running process (`SkyStackGame.RecordRun` at game over). Leaving a run with ESC does not record it | `SkyStackGame.BestScore`, `BestFloor` |
+| Order | Fixed step (60/s): `ClimberMotionSystem` → `ScrollSystem` (combo timer, view, game over). Every frame: `ClimberInputSystem` → `RestartSystem`. Drawing: `TowerRenderSystem` → `ClimberRenderSystem` (both into the canvas) → `CanvasPresentSystem` → `MessageRenderSystem` → `HudRenderSystem` (text) | `TowerScene.OnCreate` |

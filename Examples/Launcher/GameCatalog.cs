@@ -18,6 +18,7 @@ internal static class GameCatalog
         new("Physics Showcase", "PhysicsShowcase",
             "1-5 shapes, Enter shower, A D W move, E blast, G gravity, I smooth, R clear"),
         new("EternalDigger", "EternalDigger", "Arrows walk/dig, Space ladder, E deliver/buy, hold R rescue"),
+        new("SkyStack", "SkyStack", "A D / arrows run, Space / W / Up jump, Esc title"),
         new("Scripted (Lua)", "Scripted", "Arrows move, F5 reload scripts, Esc quit")
     ];
 }

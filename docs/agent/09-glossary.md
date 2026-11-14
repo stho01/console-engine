@@ -107,3 +107,9 @@ Support/user words are **[inferred]**. The team may also use Norwegian terms. Ad
 | glint / sparkle | Twinkle that reveals ore in the dark | `GlintSystem`, `ParticleStyle.Glint` |
 | seed | Number that decides the mine's layout | `Mine(int seed)`, first command-line argument |
 
+| climber / player (SkyStack) | The SkyStack player, 2 × 2 cells | `Climber` component, `ClimbPhysics` |
+| tower / floor / platform / ledge (SkyStack) | The endless tower and its one-way platforms, numbered from the ground (0) up | `Tower`, `Floor`, `Tower.GetFloor` |
+| combo (SkyStack) | Landings 2+ floors higher in a row, each within 3 s of the last; pays `floors × jumps × 5` | `RunStats.ComboJumps`, `ComboFloors` |
+| scroll / rising view / speed level / "hurry" (SkyStack) | The view rising by itself after floor 5, faster every 30 s | `Scroller`, `Scroller.Level` |
+| zone (SkyStack) | The colour theme of 50 floors | `TowerLooks.Zones` |
+| pixel / half-block (SkyStack) | One of the two square pixels a console cell shows in SkyStack (`▀`: upper = foreground, lower = background) | `PixelCanvas`, `PixelSprite`, `PixelFont` |
