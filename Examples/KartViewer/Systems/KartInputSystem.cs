@@ -37,15 +37,11 @@ public sealed class KartInputSystem(Entity kart) : EntitySystem
     /// </summary>
     public static float RampSteer(float steer, float target, float seconds)
     {
+        // As Kartster's KeyboardKartController.Advance: letting go, or wanting the other side while the wheel is still
+        // on this one, moves at the return rate all the way to the target.
         seconds = Math.Clamp(seconds, 0f, MaxRampSecondsPerFrame);
-        var returning = steer != 0f && (MathF.Sign(target) != MathF.Sign(steer) || MathF.Abs(target) < MathF.Abs(steer));
-        if (!returning)
-            return MoveTowards(steer, target, seconds / SteerSeconds);
-
-        // shortcut: when the target is on the other side, the time left after reaching the centre is dropped (at most
-        // one frame of steering); carry it over if that ever shows.
-        var towards = MathF.Sign(target) == MathF.Sign(steer) ? target : 0f;
-        return MoveTowards(steer, towards, seconds / ReturnSeconds);
+        var returning = target == 0f || steer * target < 0f;
+        return MoveTowards(steer, target, seconds / (returning ? ReturnSeconds : SteerSeconds));
     }
 
     //**********************************************************

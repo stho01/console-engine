@@ -29,7 +29,7 @@ public class KartInputSystemTests
     }
 
     [Test]
-    public void RampSteer_OtherWay_ReturnsToCentreFirstThenSteersOut()
+    public void RampSteer_OtherWay_UnwindsAtReturnRateThenSteersOut()
     {
         var steer = Ramp(1f, -1f, 12);
         Assert.That(steer, Is.EqualTo(0f).Within(1e-4f));

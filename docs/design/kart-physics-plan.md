@@ -293,7 +293,7 @@ Kart og wagon treffer på tredje siffer; eneste avvik er olabil i sving (§ 10).
 | Steg | Innhold | Commit |
 |---|---|---|
 | 1 | `Force` i `ConsoleEngine.Physics`, tester, docs (`03-rules` § Physics, `physics-plan.md`) | `feat(physics): …` |
-| 2 | KartViewer banemodus på ECS og `PhysicsSystem`, foreløpig med dagens enkle modell over krefter | `refactor: …` |
+| 2 | KartViewer banemodus på ECS og `PhysicsSystem`, koblet rett på kart-modellen fra steg 3 (som ble ferdig først), med Kartsters tastatur-utjevning av styringen | `feat: …` |
 | 3 | Kart-modellen og tuning for de tre kartene, `KartDriving` fjernes | `feat: …` |
 | 4 | Referansetester mot tall målt fra Kartsters egen fysikk (`KartReferenceTests`) | `test: …` |
 
