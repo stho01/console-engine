@@ -45,12 +45,41 @@ Det gjør prosjektlederen når en bølge flettes inn.
   `scenery.txt` (S) og `race.txt` (R: start og mål, sjekkpunkter, startrutenett, antall runder). Eksportverktøyet
   ligger i scratchpad og bør inn i kartster-repoet som en kommando senere.
 
+### Status: UI-sett og menyer (U)
+
+Levert i bølge 1, ikke koblet inn ennå (`KartsterGame` starter fortsatt på `TrackScene`):
+
+- `Ui/IPixelTarget` (`Width`, `Height`, `Set(x, y, rgb)`, ignorerer piksler utenfor). `PaletteTarget` regner ut
+  nærmeste palettfarge selv (kvadratisk RGB-avstand, uten dither), så `ConsoleEngine.Rendering3D` er urørt.
+  `RgbTarget` skriver `0xRRGGBB` rett i en `uint[]`. Begge har `Frame` som kan byttes når rendereren byttes.
+- `Ui/PixelFont`: 3×5-glyfer, fast bredde (4 piksler per tegn), `DrawText`/`DrawTextOutlined`/`DrawCentered`/
+  `MeasureText` på `ReadOnlySpan<char>`. `TextFormat` skriver tall i en buffer som kalleren eier (`Time` = `m:ss.t`).
+- `Ui/Hud.Draw(target, in HudState)`: runde og klokke nede til venstre med stillingen over, fartsmåler nede til
+  høyre, power-up oppe til høyre, nedtelling/`GO!`/`FINISHED` oppe i midten. Øvre venstre hjørne er holdt av til
+  minikartet (bølge 3).
+- `Scenes/Menus/`: `MenuScreen` (ren logikk på `MenuKeys`, tegning), `TitleScene`, `SelectKartScene`,
+  `SelectTrackScene`, `ResultsScene(RaceResults)`. Alle er `IUiLayer`.
+
+**Kontrakt for bølge 2:**
+
+- `HudState` fylles hver frame av den som eier løpet (R: runde, antall runder, klokke, plassering, stilling,
+  nedtelling, `ShowGo`, `Finished`; B: antall karter; spilleren: fart i km/h). `HudStanding.Seconds` er lederens tid
+  for posisjon 1, ellers avstand til lederen. `PowerUp` er null til bølge 3.
+- `RaceResults(trackName, rows)` med én `ResultRow` per kart i målrekkefølge lages av R når løpet er ferdig, og gis
+  til `new ResultsScene(results)`.
+- `KartsterGame` implementerer `Ui/IKartsterMenus`: `KartNames`, `KartIndex`, `TrackNames`, `SelectKart(index)`,
+  `StartRace(trackIndex, laps)`; `Renderer`, `Projection`, `Kart` og `KartCenter` finnes allerede. Etter
+  `Renderer.Finish` i `OnRender` kaller spillet `(Scene as IUiLayer)?.DrawUi(target)`, og `TrackScene` tegner HUD-en
+  der. Spillets egne Enter/Esc/Tab/R må bare gjelde på banen, ellers krasjer de med menyene.
+- Palett-modus: `ScenePalette` har ikke gult, så UI-ets gule (valgt rad, nål, logo) blir det brune
+  (`0xB06A30`). Enten få inn én gul i paletten, eller godta det; 24-bit viser fargene som de er.
+
 ## 4. Bølger
 
 | Bølge | Innhold | Status |
 |---|---|---|
 | 0 | Kjøring, fysikk, GPU, rendering (tidligere planer) | Ferdig |
-| 1 | 24-bit farge (K), kulisser (S), UI-sett og menyer (U), løpsregler (R), flere karter og bots (B) | Startet |
+| 1 | 24-bit farge (K), kulisser (S), UI-sett og menyer (U), løpsregler (R), flere karter og bots (B) | Startet (U levert) |
 | 2 | Flette bølge 1, skjermflyt (meny → løp → resultater), HUD inn i løpet, vegger og kollisjoner, flere baner | – |
 | 3 | Power-ups, minikart, finpuss | – |
 

@@ -243,11 +243,16 @@ Examples/
                                   countdown, gates, laps, positions), Racer, RacePhase, RaceProgress (component),
                                   RaceSystem), Assets/Karts/ (olabil, wagon), Assets/Tracks/ (star-circuit: ribbon,
                                   spline, scenery.txt, race.txt) and Assets/Scenery/ (Pipe.obj from Kartster,
-                                  Box.obj), exported from Kartster, copied to output
+                                  Box.obj), exported from Kartster, copied to output,
+                                  Ui/ (pixel UI kit: IPixelTarget, PaletteTarget, RgbTarget, PixelFont 3×5,
+                                  TextFormat, Shapes, UiColors, Hud + HudState, RaceResults, IKartsterMenus,
+                                  IUiLayer), Scenes/Menus/ (MenuScreen, MenuItem, MenuKeys, TitleScene,
+                                  SelectKartScene, SelectTrackScene, ResultsScene)
   Kartster.Tests/               KartModelTests, TrackTests, SceneryTests, KartPhysicsSystemTests,
                                   KartFrameTests, KartInputSystemTests, Driving/KartDynamicsTests, Driving/KartReferenceTests,
                                   Effects/EffectsTests (skid marks, slide smoke), Race/ (RaceMarkersTests,
-                                  RaceSessionTests, RaceSystemTests)
+                                  RaceSessionTests, RaceSystemTests), Ui/ (PixelFont, TextFormat, PixelTarget, Hud,
+                                  Menu tests; UiPreview writes ui-preview/*.ppm to the output)
 .github/workflows/                build-and-test.yml
 ```
 

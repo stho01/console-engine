@@ -135,6 +135,16 @@ using [04](04-flows.md).
 | `<id>.race.txt: no 'laps' line` / `<id>.race.txt: no 'start' line` | `RaceMarkers.Parse` (`InvalidDataException`) | A required marker is missing |
 | `Kart <id> is already registered with the race` | `RaceSession.Register` (`ArgumentException`) | The same id registered twice |
 | `Kart <id> is not registered with the race` | `RaceSession.Update`/`Get` (`KeyNotFoundException`), so also `RaceSystem` | A kart with `RaceProgress` was not registered by `Entity.Id` |
+| `LAP <n>/<m>` then `<m:ss.t>` | `Hud.Draw` (bottom-left) | Race HUD lap line; only `<m:ss.t>` in a one-lap race. Not wired into the game yet |
+| `<pos>  <name>  <m:ss.t>` (leader) / `+<m:ss.t>` (others) | `Hud.Draw` (standings) | Name cut to 10 chars |
+| `POS <p>/<n>` | `Hud.Draw` | No standings given, more than one kart |
+| `<speed>` and `KM/H` | `Hud.Draw` (bottom-right dial) | Speed in km/h, rounded |
+| `<power-up name>` | `Hud.Draw` (top-right) | Whatever `HudState.PowerUp` holds |
+| `3`, `2`, `1`, `GO!`, `FINISHED` | `Hud.Draw` (top-centre) | Countdown, start, player finished |
+| `KARTSTER`, `PRESS ENTER`, `ESC QUIT` | `TitleScene` (`Logo`, `Prompt`, `Footer`) | Title menu (not wired yet) |
+| `SELECT KART`, `UP/DOWN CHOOSE   ENTER OK   ESC BACK` | `SelectKartScene` | Kart menu (not wired yet) |
+| `SELECT TRACK`, `TRACK`, `LAPS`, `START RACE`, `NONE`, `LEFT/RIGHT CHANGE   ENTER START   ESC BACK` | `SelectTrackScene` | Race setup menu; `NONE` when there are no tracks (not wired yet) |
+| `RESULTS`, `POS`, `NAME`, `TIME`, `BEST`, `DNF`, `ENTER RACE AGAIN   ESC TITLE` | `ResultsScene` | Results table (not wired yet) |
 
 ### Launcher (`LauncherTexts`, `GameLocator`)
 
