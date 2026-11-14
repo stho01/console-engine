@@ -1,6 +1,9 @@
 # Plan: GPU-rendering av 3D i ConsoleEngine
 
-Status (2026-11-14): fase 1 er ferdig (`ConsoleEngine.Rendering3D` og testprosjektet, KartViewer tegner gjennom
+Navn: `Examples/Kartster` er konsollversjonen i dette repoet (het `KartViewer` til 2026-11-14). «Kartster» alene
+betyr originalspillet (MonoGame) i `C:\Forse\kartster-server`.
+
+Status (2026-11-14): fase 1 er ferdig (`ConsoleEngine.Rendering3D` og testprosjektet, Kartster tegner gjennom
 `IRenderer3D`). Fase 2 og 3 er ikke startet.
 
 ## 1. Mål og ikke-mål
@@ -27,16 +30,16 @@ Status (2026-11-14): fase 1 er ferdig (`ConsoleEngine.Rendering3D` og testprosje
 ## 2. Forventet gevinst
 
 Målt i dag (320×180): cirka 2 ms per frame til 3D-tegning på CPU, og cirka 11 ms per frame totalt (93 FPS). Det meste
-går til konsoll-skrivingen. **GPU-en gjør ikke KartViewer merkbart raskere i dag.** Den gjør det mulig med mye tyngre
+går til konsoll-skrivingen. **GPU-en gjør ikke Kartster merkbart raskere i dag.** Den gjør det mulig med mye tyngre
 scener (mange karter, trær) og høyere oppløsning uten at CPU-tiden vokser. Fase 3 måler det.
 
 ## 3. Arkitektur
 
 | Prosjekt | Innhold | Avhengigheter |
 |---|---|---|
-| `ConsoleEngine.Rendering3D` (nytt, valgfritt) | `Mesh`, `ObjFile`, `ConsolePalette`, `IRenderer3D`, `Rasterizer` (CPU), flyttet fra `Examples/KartViewer/Rendering/` | Bare .NET (`System.Numerics`) |
+| `ConsoleEngine.Rendering3D` (nytt, valgfritt) | `Mesh`, `ObjFile`, `ConsolePalette`, `IRenderer3D`, `Rasterizer` (CPU), flyttet fra `Examples/Kartster/Rendering/` | Bare .NET (`System.Numerics`) |
 | `ConsoleEngine.Rendering3D.OpenGL` (nytt, valgfritt) | `GlRenderer : IRenderer3D` | `ConsoleEngine.Rendering3D`, Silk.NET.OpenGL, Silk.NET.Windowing (skjult GLFW-vindu for kontekst) |
-| `ConsoleEngine.Rendering3D.Tests` (nytt) | Rasterizer- og palett-testene flyttet fra KartViewer.Tests, pluss GPU-mot-CPU-tester | Begge |
+| `ConsoleEngine.Rendering3D.Tests` (nytt) | Rasterizer- og palett-testene flyttet fra Kartster.Tests, pluss GPU-mot-CPU-tester | Begge |
 
 **Grensesnittet** (forslag, finjusteres i fase 1):
 
@@ -58,7 +61,7 @@ public interface IRenderer3D : IDisposable
 **Slik ble fase 1:** grensesnittet er som over. `ConsoleEngine.Rendering3D` pakkes som NuGet (`GeneratePackageOnBuild`,
 0.2.0) akkurat som `ConsoleEngine.Physics`, og ligger i solution-mappa `Engine`. Testprosjektet ligger i roten av
 solution, som `ConsoleEngine.Physics.Tests`. Det fantes ingen egne palett-tester; `ScreenDoorTests` ble flyttet
-sammen med `RasterizerTests` og OBJ-testene, mens `Load_ShippedKart_SkipsMarkerParts` ble i KartViewer.Tests
+sammen med `RasterizerTests` og OBJ-testene, mens `Load_ShippedKart_SkipsMarkerParts` ble i Kartster.Tests
 (`KartModelTests`), fordi den trenger kart-filene. `SkidMarks` og `SlideSmoke.BuildQuads` kaller `MarkChanged()`.
 
 ## 4. Slik tegner GPU-en
@@ -97,9 +100,9 @@ sammen med `RasterizerTests` og OBJ-testene, mens `Load_ShippedKart_SkipsMarkerP
 
 | Fase | Innhold | Hvem |
 |---|---|---|
-| 1 | `ConsoleEngine.Rendering3D` + testprosjekt. 3D-koden flyttes fra KartViewer, `IRenderer3D`, `Mesh.Version`. KartViewer bruker biblioteket, uten endret oppførsel | Agent |
+| 1 | `ConsoleEngine.Rendering3D` + testprosjekt. 3D-koden flyttes fra Kartster, `IRenderer3D`, `Mesh.Version`. Kartster bruker biblioteket, uten endret oppførsel | Agent |
 | 2 | `ConsoleEngine.Rendering3D.OpenGL` med `GlRenderer` og GPU-testene | Agent (etter fase 1) |
-| 3 | KartViewer: `G` bytter CPU/GPU, `--gpu`-argument, rendereren står i tittelen, fallback til CPU. Benchmark av CPU mot GPU i `ConsoleEngine.Benchmarks` | Prosjektleder |
+| 3 | Kartster: `G` bytter CPU/GPU, `--gpu`-argument, rendereren står i tittelen, fallback til CPU. Benchmark av CPU mot GPU i `ConsoleEngine.Benchmarks` | Prosjektleder |
 
 ## 7. Åpne spørsmål og risiko
 

@@ -59,11 +59,11 @@ team's process differs.
 | Scripted | ←→↑↓ | Move the player | `player.lua` |
 | Scripted | `F5` | Reload all Lua scripts from the output folder | `ScriptReloadSystem` → `LuaRuntime.ReloadAll` |
 | Scripted | ESC | Quit (`Stop()`) | `ScriptedGame.OnUpdate` |
-| KartViewer (track) | W / S / A D / SPACE (held) | Gas / brake, then reverse / steer left/right (ramped) / handbrake | `KartInputSystem` → `KartControls` → `KartPhysicsSystem` |
-| KartViewer (track) | R | Back to the start, standing still (restarts `TrackScene`) | `KartViewerGame.OnUpdate` |
-| KartViewer (garage) | A D / W S / Q E (held), SPACE | Orbit left/right / up/down, zoom in/out, auto-spin on/off | `GarageScene.OnUpdate` |
-| KartViewer | ENTER / TAB / ESC | Track/garage / next kart (on the track: from the start) / quit | `KartViewerGame.OnUpdate` |
-| KartViewer | first / second command-line argument | Folder of kart folders (e.g. Kartster's `Content/3D/Rendered/Karts`) / folder of exported tracks | `Program.cs` |
+| Kartster (track) | W / S / A D / SPACE (held) | Gas / brake, then reverse / steer left/right (ramped) / handbrake | `KartInputSystem` → `KartControls` → `KartPhysicsSystem` |
+| Kartster (track) | R | Back to the start, standing still (restarts `TrackScene`) | `KartsterGame.OnUpdate` |
+| Kartster (garage) | A D / W S / Q E (held), SPACE | Orbit left/right / up/down, zoom in/out, auto-spin on/off | `GarageScene.OnUpdate` |
+| Kartster | ENTER / TAB / ESC | Track/garage / next kart (on the track: from the start) / quit | `KartsterGame.OnUpdate` |
+| Kartster | first / second command-line argument | Folder of kart folders (e.g. Kartster's `Content/3D/Rendered/Karts`) / folder of exported tracks | `Program.cs` |
 
 There is **no** way to skip a TerraForM level, choose a map, reset the score, or enable TerraForM debug mode without a
 code change.

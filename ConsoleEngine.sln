@@ -74,9 +74,9 @@ Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "ConsoleEngine.Scripting", "
 EndProject
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Scripted", "Examples\Scripted\Scripted.csproj", "{9B3E5D17-8A2C-4F60-B1D4-7E9C2A5F3B08}"
 EndProject
-Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "KartViewer", "Examples\KartViewer\KartViewer.csproj", "{C3D1A2B4-5E6F-4A70-8B91-2C3D4E5F6A71}"
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Kartster", "Examples\Kartster\Kartster.csproj", "{C3D1A2B4-5E6F-4A70-8B91-2C3D4E5F6A71}"
 EndProject
-Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "KartViewer.Tests", "Examples\KartViewer.Tests\KartViewer.Tests.csproj", "{C3D1A2B4-5E6F-4A70-8B91-2C3D4E5F6A72}"
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Kartster.Tests", "Examples\Kartster.Tests\Kartster.Tests.csproj", "{C3D1A2B4-5E6F-4A70-8B91-2C3D4E5F6A72}"
 EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution

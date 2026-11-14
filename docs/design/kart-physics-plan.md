@@ -1,7 +1,10 @@
-# Plan: Kartster-lik kart-fysikk i KartViewer
+# Plan: Kartster-lik kart-fysikk i `Examples/Kartster`
+
+Navn: `Examples/Kartster` er konsollversjonen i dette repoet (het `KartViewer` til 2026-11-14). «Kartster» alene
+betyr originalspillet (MonoGame) i `C:\Forse\kartster-server`.
 
 Status (2026-11-14): ferdig. Steg 1–4 er implementert: `Force` i `ConsoleEngine.Physics` (§ 4), banemodus kjører
-kart-modellen (`Examples/KartViewer/Driving/`, § 6) over ECS og `PhysicsSystem` på 120 Hz (§ 5), og
+kart-modellen (`Examples/Kartster/Driving/`, § 6) over ECS og `PhysicsSystem` på 120 Hz (§ 5), og
 `KartReferenceTests` viser at Kart, olabil og wagon treffer tallene målt fra Kartsters egen fysikk innenfor
 toleransene (§ 7). Eneste kjente avvik er olabil i svinger (ingen karosseri-rulling, § 10). Leke-modellen
 `KartDriving` er fjernet.
@@ -13,7 +16,7 @@ er relative til `src/Kartster/` der. Linjenumre er fra 2026-11-14 og kan ha flyt
 
 **Mål**
 
-- Karten i KartViewer skal kjøre som i Kartster på flat bakke: samme toppfart, akselerasjon, bremselengde,
+- Karten i Kartster skal kjøre som i Kartster på flat bakke: samme toppfart, akselerasjon, bremselengde,
   svingradius, skrens og håndbrekk-drift, innenfor en toleranse vi måler (§ 7).
 - Vi skriver vår egen modell etter Kartsters formler og tuning, ikke kopierer koden. Feltnavn og enheter følger
   Kartsters `RigidBodyKartTuning`, så tall kan flyttes over én til én.
@@ -38,7 +41,7 @@ er relative til `src/Kartster/` der. Linjenumre er fra 2026-11-14 og kan ha flyt
 |---|---|
 | `ConsoleEngine.Physics` | 2D rigid body-motor i Box2D v3-stil: substeg, Soft Step-kontaktløser, rotasjon, demping, sleeping, boks-collider med riktig treghetsmoment |
 | Krefter på en kropp | **Mangler.** Spillkode kan bare sette `Velocity`/`AngularVelocity` direkte |
-| KartViewer | `GameBase`-spill uten ECS. Banemodus kjører `KartDriving` (fjernet i steg 2, se § 5) |
+| Kartster | `GameBase`-spill uten ECS. Banemodus kjører `KartDriving` (fjernet i steg 2, se § 5) |
 | Kartster | Rigid body på 120 Hz, dekkrefter per aksel, motor med effekt og girkasse, vektoverføring, underlag |
 
 Bil på flat bakke er et 2D-problem sett ovenfra. Det passer motoren: verdens (x, z) blir fysikkens (x, y).
@@ -174,7 +177,7 @@ alle substeg. Med 120 Hz fast steg og 1 substeg (eller dekkene regnet per steg m
 Skal vi trenge å regne krefter per substeg, er det et avvik fra Box2D og må begrunnes. Foreslått: start med 120 Hz og
 mål.
 
-## 5. Steg 2: KartViewer over på ECS
+## 5. Steg 2: Kartster over på ECS
 
 **Status (2026-11-14):** ferdig, og med Kartster-modellen fra steg 3 direkte (ikke dagens enkle modell først).
 `Scenes/TrackScene` (`EcsScene`, `FixedTimestep(1/120, 8)`): `KartPhysicsSystem` → `PhysicsSystem` (`SubstepCount =
@@ -200,9 +203,9 @@ nytt. `KartDriving` er fjernet.
 ## 6. Steg 3: kart-modellen
 
 **Status (2026-11-14):** modellen er bygget som ren C# uten ECS og uten `ConsoleEngine.Physics`, i
-`Examples/KartViewer/Driving/` (namespace `KartViewer.Driving`). `KartDynamics.ComputeForces(in KartBody, in
+`Examples/Kartster/Driving/` (namespace `Kartster.Driving`). `KartDynamics.ComputeForces(in KartBody, in
 KartControls, Surface, dt)` gir `KartForces` (netto kraft i tyngdepunktet + girmoment), og `KartIntegrator.Step` er
-semi-implisitt Euler. Avvik fra tabellen under står i § 10. Testene er `Examples/KartViewer.Tests/Driving/
+semi-implisitt Euler. Avvik fra tabellen under står i § 10. Testene er `Examples/Kartster.Tests/Driving/
 KartDynamicsTests.cs`. Koblet inn i spillet i steg 2 (§ 5).
 
 Målt med `KartIntegrator` på 1/120 s, full gass på flat asfalt (Joyride):
@@ -272,7 +275,7 @@ Manøvrene:
 5. Gress: som 1 på gress hele tiden.
 6. Håndbrekk: full gass til ≥ 13,889 m/s, så 1 s full høyrelås og håndbrekk uten gass/brems; kursendring.
 
-`Examples/KartViewer.Tests/Driving/KartReferenceTests.cs` kjører de samme manøvrene med `KartDynamics` +
+`Examples/Kartster.Tests/Driving/KartReferenceTests.cs` kjører de samme manøvrene med `KartDynamics` +
 `KartIntegrator` og har Kartsters tall som konstanter. Toleransene er de over, pluss ±15 % for håndbrekk-svingen.
 
 | Mål | Kart: Kartster / vår | olabil: Kartster / vår | wagon: Kartster / vår |
@@ -293,7 +296,7 @@ Kart og wagon treffer på tredje siffer; eneste avvik er olabil i sving (§ 10).
 | Steg | Innhold | Commit |
 |---|---|---|
 | 1 | `Force` i `ConsoleEngine.Physics`, tester, docs (`03-rules` § Physics, `physics-plan.md`) | `feat(physics): …` |
-| 2 | KartViewer banemodus på ECS og `PhysicsSystem`, koblet rett på kart-modellen fra steg 3 (som ble ferdig først), med Kartsters tastatur-utjevning av styringen | `feat: …` |
+| 2 | Kartster banemodus på ECS og `PhysicsSystem`, koblet rett på kart-modellen fra steg 3 (som ble ferdig først), med Kartsters tastatur-utjevning av styringen | `feat: …` |
 | 3 | Kart-modellen og tuning for de tre kartene, `KartDriving` fjernes | `feat: …` |
 | 4 | Referansetester mot tall målt fra Kartsters egen fysikk (`KartReferenceTests`) | `test: …` |
 
@@ -317,7 +320,7 @@ Hvert steg bygges, testes og prøvekjøres for seg.
 - **Hvor mye av vektoverføringen** som trengs for å treffe tallene i § 7: start med lengde og side, uten
   karosseri-rulling.
 
-**Avvik i steg 3 slik det er bygget (`Examples/KartViewer/Driving/`):**
+**Avvik i steg 3 slik det er bygget (`Examples/Kartster/Driving/`):**
 
 - **Filer:** ingen `AxleGrip.cs`. Dekkmodellen er `KartDynamics.ApplyTyre`/`ApplySteering`, lengdekreftene per aksel
   er `KartTraction` (Kartsters navn), motor, turtall og girvalg er `KartEngine`, og `KartTuning` har også
