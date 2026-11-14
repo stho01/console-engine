@@ -19,14 +19,14 @@ namespace KartViewer;
 /// -Z forward. The game holds what both scenes share: rasterizer, sky, projection, the karts and the track.
 /// </summary>
 public class KartViewerGame(string kartsFolder, string tracksFolder)
-    : GameBase(ScreenWidth, ScreenHeight, fontWidth: 4, fontHeight: 4)
+    : GameBase(ScreenWidth, ScreenHeight, fontWidth: 3, fontHeight: 3)
 {
     //**********************************************************
     //** fields
     //**********************************************************
 
-    private const int ScreenWidth = 240;
-    private const int ScreenHeight = 135;
+    private const int ScreenWidth = 320;
+    private const int ScreenHeight = 180;
     private const float FieldOfView = 50f * MathF.PI / 180f;
     private const float NearPlane = 0.2f;
     private const float FarPlane = 400f;
