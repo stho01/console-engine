@@ -59,6 +59,9 @@ team's process differs.
 | Scripted | ←→↑↓ | Move the player | `player.lua` |
 | Scripted | `F5` | Reload all Lua scripts from the output folder | `ScriptReloadSystem` → `LuaRuntime.ReloadAll` |
 | Scripted | ESC | Quit (`Stop()`) | `ScriptedGame.OnUpdate` |
+| KartViewer | A D / W S / Q E (held) | Orbit left/right / up/down, zoom in/out | `KartViewerGame.OnUpdate` |
+| KartViewer | TAB / SPACE / ESC | Next kart / auto-spin on/off / quit | `KartViewerGame.OnUpdate` |
+| KartViewer | first command-line argument | Folder of kart folders, e.g. Kartster's `Content/3D/Rendered/Karts`, to view every kart | `Program.cs` |
 
 There is **no** way to skip a TerraForM level, choose a map, reset the score, or enable TerraForM debug mode without a
 code change.

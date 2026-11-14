@@ -33,6 +33,7 @@
       <ProjectReference Include="..\PhysicsShowcase\PhysicsShowcase.csproj" />
       <ProjectReference Include="..\EternalDigger\EternalDigger.csproj" />
       <ProjectReference Include="..\Scripted\Scripted.csproj" />
+      <ProjectReference Include="..\KartViewer\KartViewer.csproj" />
     </ItemGroup>
 
     <ItemGroup>

@@ -6,9 +6,9 @@ repository and can be grepped.
 
 **What this system is:** a Windows-only .NET 11 library that draws games into a console window via Win32 P/Invoke
 (`ConsoleEngine`, `ConsoleEngine.Windows`), an optional out-of-process TCP logger (`ConsoleEngine.Logger`), optional
-Lua 5.4 scripting for ECS entities (`ConsoleEngine.Scripting`), and fifteen example games (`TerraForM`, `Snake`,
+Lua 5.4 scripting for ECS entities (`ConsoleEngine.Scripting`), and sixteen example games (`TerraForM`, `Snake`,
 `Asteroids`, `Platformer`, `ConsoleGame`, an ECS port `*.Ecs` of each, the ECS stress test `Swarm`, the physics demos
-`PhysicsSandbox` and `PhysicsShowcase`, the ECS game `EternalDigger`, and the Lua demo `Scripted`), plus `Launcher`, a
+`PhysicsSandbox` and `PhysicsShowcase`, the ECS game `EternalDigger`, the Lua demo `Scripted`, and the 3D experiment `KartViewer`), plus `Launcher`, a
 text menu that starts the ECS games. There is **no server, no database, no
 queue, no tenant, no log file**. Each game is a single local process. See [01-system-map](01-system-map.md).
 

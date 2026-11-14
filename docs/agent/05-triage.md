@@ -5,7 +5,7 @@
 
 | Fact | Why | How to get it |
 |---|---|---|
-| **Which game** (TerraForM, Snake, Asteroids, Platformer, ConsoleGame, their `.Ecs` ports, Swarm, PhysicsSandbox, PhysicsShowcase, EternalDigger, Scripted, or their own game on `ConsoleEngine`) | Rules differ per game ([03](03-rules.md)) | Ask, or the exe name |
+| **Which game** (TerraForM, Snake, Asteroids, Platformer, ConsoleGame, their `.Ecs` ports, Swarm, PhysicsSandbox, PhysicsShowcase, EternalDigger, Scripted, KartViewer, or their own game on `ConsoleEngine`) | Rules differ per game ([03](03-rules.md)) | Ask, or the exe name |
 | **OS and console host** | Windows only. Windows Terminal ignores the sizing/font calls **[external]** | [07 § Q1, Q2](07-checks.md#q1) |
 | **How it was launched and from which folder** (double-click the exe, `dotnet run`, IDE, a shortcut, a terminal in another folder) | Map files and the logger exe are found by **relative path** | [07 § Q3](07-checks.md#q3) |
 | **The exact error text**, if any | There are no log files. The exception printed to the console is the only record | Ask them to start it from an already-open terminal so the text stays ([06 § Capturing a crash](06-diagnostics.md#capture)) |

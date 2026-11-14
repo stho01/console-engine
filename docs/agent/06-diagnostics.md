@@ -93,6 +93,15 @@ Runtime exceptions without repo-authored text (message comes from .NET and varie
 `IndexOutOfRangeException`, `NullReferenceException`, `TypeInitializationException`. Match by **type + stack frame**
 using [04](04-flows.md).
 
+### KartViewer
+
+| Text | Emitted by | Meaning |
+|---|---|---|
+| `No kart folders in <full path>` | `KartViewerGame.OnInitialize` (`DirectoryNotFoundException`) | The karts folder (default `Assets/Karts`, relative to the working directory) has no sub-folders |
+| `No kart parts (*.obj) in <folder>` | `KartModel.Load` (`InvalidDataException`) | A kart folder has no drawable OBJ parts |
+| `<path>:<line>: a face needs at least three corners` | `ObjFile.Read` (`InvalidDataException`) | Broken OBJ file |
+| `KartViewer - <kart> (<n> triangles) - <fps> fps` (window title) | `KartViewerGame.OnInitialize` interval, every 250 ms | Running |
+
 ### Launcher (`LauncherTexts`, `GameLocator`)
 
 `{0}` is the game title (`GameEntry.Title`, e.g. `Snake (ECS)`).
