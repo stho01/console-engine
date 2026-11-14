@@ -42,8 +42,9 @@ Det gjør prosjektlederen når en bølge flettes inn.
   `PlayerKart`. Input skriver `KartControls` for spilleren, `BotDriverSystem` for bots. `KartPhysicsSystem`
   håndterer alle karter.
 - **Banedata:** én eksport per bane fra originalen, med originalens egen kode: `ribbon.obj`, `spline.obj`,
-  `scenery.txt` (S) og `race.txt` (R: start og mål, sjekkpunkter, startrutenett, antall runder). Eksportverktøyet
-  ligger i scratchpad og bør inn i kartster-repoet som en kommando senere.
+  `scenery.txt` (S) og `race.txt` (R: start og mål, sjekkpunkter, startrutenett, antall runder). Eksportverktøyet er
+  `tools/KartsterExport/` (`list`, `export <outDir> <trackId...>`, én `ITrackExporter`-klasse per fil; bruk i
+  `tools/KartsterExport/README.md`). Det står ikke i løsningen, fordi det trenger originalens kildekode.
 
 ### Status: UI-sett og menyer (U)
 
@@ -98,7 +99,7 @@ Ferdig i bølge 1, koblet inn i `TrackScene` i bølge 2. Reglene er originalens,
 - `race.txt` (format i `Race/RaceMarkers.cs`), meter i planet (x = verdens X, y = verdens Z):
   `laps <n>`, `start x y fremX fremY venstre høyre`, `checkpoint …` (samme felt, i rute-rekkefølge),
   `grid x y heading` (i rutenett-rekkefølge, 8 plasser). Eksportert med originalens `SelectRoute`, `GetLapCount`,
-  `RaceGatePlane.Create` og `GetStartingLocation` av `RaceExport` i scratchpad.
+  `RaceGatePlane.Create` og `GetStartingLocation` av `RaceExporter` i `tools/KartsterExport/`.
 
 Kobling i `TrackScene.OnCreate` (B eller prosjektlederen):
 

@@ -154,3 +154,16 @@ In the same kind of window the game opens in:
 Build 14393 (Windows 10 1607) or newer and an orange block → VT works in that console, so `SetTrueColor` should
 succeed. Literal `[48;2;...` text instead → VT is not available there ([P2](05-triage.md#p2) step 7). **[external]**:
 PowerShell turns VT on for its own output, so an orange block is strong, not certain, evidence for the game.
+
+<a id="q15"></a>
+## Q15 — Can this checkout export Kartster tracks? (developer checkout)
+
+From the repo root:
+```powershell
+Test-Path C:\Forse\kartster-server\src\Kartster\Kartster.csproj; Test-Path C:\Forse\kartster-server\src\Kartster\bin
+```
+`tools/KartsterExport` references the original Kartster's `Kartster.csproj` through `KartsterRoot` (default
+`C:\Forse\kartster-server`; another folder needs `-p:KartsterRoot=<folder>`). `False` on the first line → no
+original here, so no exporting; the game itself only needs the files already in `Examples/Kartster/Assets/Tracks`.
+`False` on the second → build the original first (`dotnet build src/Kartster/Kartster.csproj` in its folder). Then
+`dotnet run --project tools/KartsterExport -- list` prints the built-in track ids.

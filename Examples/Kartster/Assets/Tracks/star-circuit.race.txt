@@ -1,4 +1,4 @@
-# star-circuit race markers, exported from Kartster by RaceExport (route lap). Format: Examples/Kartster/Race/RaceMarkers.cs
+# star-circuit race markers, exported from Kartster by KartsterExport (route lap). Format: Examples/Kartster/Race/RaceMarkers.cs
 # metres, planar: x = world X, y = world Z. forward is the gate's normal (along the road), left/right its reach
 # either side of the point, right = (-forward.y, forward.x). heading: 0 faces -Z, positive is turned left
 laps 3

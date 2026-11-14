@@ -1,4 +1,4 @@
-# star-circuit scenery, exported from Kartster by TrackExport. Format: Examples/Kartster/Scenery.cs
+# star-circuit scenery, exported from Kartster by KartsterExport. Format: Examples/Kartster/Scenery.cs
 # model <name> x y z yawDegrees scaleX scaleY scaleZ r g b
 # tri x1 y1 z1 x2 y2 z2 x3 y3 z3 r g b   (counter-clockwise seen from the front)
 tri -133.12 0 -121.95 -132.12 0 -121.95 -132.12 1.2 -121.95 0.84 0.2 0.2

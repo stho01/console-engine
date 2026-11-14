@@ -35,6 +35,7 @@ scripting loads the native `lua54.dll` that the KeraLua package ships for each r
 | ECS (entities, components, archetypes, chunks) | `ConsoleEngine/Ecs/`, design and phases in [`docs/design/ecs-plan.md`](docs/design/ecs-plan.md) |
 | 2D physics (bodies, circles/boxes/polygons, rotation, forces and torque (`Force`), broadphase, Soft Step contact solver, contact/sensor events, tile grid, sleeping, interpolation, raycasts and box casts, `CharacterMover.MoveAndSlide`) | `ConsoleEngine.Physics/` (own assembly and NuGet package, optional), rules in [`docs/agent/03-rules.md` § Physics](docs/agent/03-rules.md#physics), design and phases in [`docs/design/physics-plan.md`](docs/design/physics-plan.md). Examples: `Examples/PhysicsShowcase` (every feature), `Examples/PhysicsSandbox` (solver), `Examples/Asteroids.Ecs` (sensors, layers), `Examples/Platformer.Ecs` (tile grid, character controller) |
 | Performance measurements | `ConsoleEngine.Benchmarks/` (BenchmarkDotNet) |
+| Exporting Kartster tracks (ribbon, spline, scenery, race markers) from the original game | `tools/KartsterExport/` and its [`README.md`](tools/KartsterExport/README.md): `list`, `export <outDir> <trackId...>`, one `ITrackExporter` class per file. Not in the solution: needs the original's source (`KartsterRoot`, default `C:\Forse\kartster-server`) |
 | Lua scripting: components, `self` fields, hooks, errors, reload | [`docs/agent/03-rules.md § Lua`](docs/agent/03-rules.md#lua), `ConsoleEngine.Scripting/`, `Examples/Scripted` |
 | 3D rendering (`IRenderer3D`, software `Rasterizer`, OpenGL `GlRenderer`, near-plane clipping, OBJ models, 16-colour dithering or 24-bit true colour with alpha blending) | `ConsoleEngine.Rendering3D/` (own assembly and NuGet package, optional), GPU renderer in `ConsoleEngine.Rendering3D.OpenGL/` (same picture; callers fall back to `Rasterizer` when `GlRenderer.TryCreate` fails), GPU plan in [`docs/design/gpu-rendering-plan.md`](docs/design/gpu-rendering-plan.md), rules in [`docs/agent/03-rules.md`](docs/agent/03-rules.md) (Kartster rows) |
 | Why KeraLua, and what Lua costs per entity | `ConsoleEngine.Benchmarks/README.md` |
@@ -73,6 +74,7 @@ Every name in `docs/agent/` is grep-able. Search for the identifier you are inte
 | `ConsoleEngine.Rendering3D.Tests` | `ConsoleEngine.Rendering3D.Tests/` | NUnit 5 | ConsoleEngine.Rendering3D |
 | `ConsoleEngine.Rendering3D.OpenGL.Tests` | `ConsoleEngine.Rendering3D.OpenGL.Tests/` | NUnit 5, `[Category("Gpu")]`, ignored without OpenGL 3.3 (CI) | ConsoleEngine.Rendering3D.OpenGL |
 | `ConsoleEngine.Benchmarks` | `ConsoleEngine.Benchmarks/` | Exe: BenchmarkDotNet 0.15.8 | ConsoleEngine, Physics, Scripting |
+| `KartsterExport` | `tools/KartsterExport/` | Exe, **not in `ConsoleEngine.sln`**: exports the original Kartster's tracks | the original's `Kartster.csproj` (`$(KartsterRoot)`) |
 
 All projects: `net11.0`, `LangVersion` 15, `TreatWarningsAsErrors` = `True`. Solution: `ConsoleEngine.sln`.
 
@@ -273,6 +275,9 @@ Examples/
                                   Menu, MenuFlow tests; UiPreview writes ui-preview/*.ppm to the output), Bots/BotDriverSystemTests,
                                   Bots/RaceTests (grid, input, headless 3-bot race, kart collisions, allocation),
                                   Collision/TrackCollisionTests (file, walls, pipe, race with walls, allocation)
+tools/
+  KartsterExport/                 track exporter (not in the solution): Program (list, export), ITrackExporter,
+                                  RibbonExporter, SplineExporter, SceneryExporter, RaceExporter, README.md
 .github/workflows/                build-and-test.yml
 ```
 
