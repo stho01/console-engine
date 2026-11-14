@@ -125,6 +125,16 @@ using [04](04-flows.md).
 | `Kartster - <kart> on <track> - <n> km/h - gear <g> - <rpm> rpm - <CPU\|GPU\|CPU (no GPU)> 3D <ms> ms - <colours> - <fps> fps` (window title; 3D = `Clear` to `Finish`, smoothed) | `KartsterGame.OnInitialize` interval, every 250 ms | Running, track mode |
 | `Kartster - <kart> (<n> triangles) - <CPU\|GPU\|CPU (no GPU)> 3D <ms> ms - <colours> - <fps> fps` (window title) | `KartsterGame.OnInitialize` interval, every 250 ms | Running, garage mode |
 | `<colours>` in the titles: `24-bit`, `16 colours`, or `16 colours (no 24-bit)` | `KartsterGame.ColorLabel` | 24-bit on / off / asked for (`--truecolor`, C) but `Console.TrueColorActive` is false ([05 § P2](05-triage.md#p2) step 7) |
+| `<id>.race.txt:<line>: unknown marker '<word>'` | `RaceMarkers.Parse` (`InvalidDataException`) | A line is not `laps`, `start`, `checkpoint` or `grid` |
+| `<id>.race.txt:<line>: '<marker>' needs <n> numbers, got <m>` | `RaceMarkers.Parse` (`InvalidDataException`) | Wrong number of values on a marker line |
+| `<id>.race.txt:<line>: '<word>' is not a number` | `RaceMarkers.Parse` (`InvalidDataException`) | Not an invariant-culture finite number |
+| `<id>.race.txt:<line>: '<marker>' needs a forward direction, not zero` | `RaceMarkers.Parse` (`InvalidDataException`) | A gate's forward is (0, 0) |
+| `<id>.race.txt:<line>: '<marker>' needs left and right of 0 or more` | `RaceMarkers.Parse` (`InvalidDataException`) | A gate's reach is negative |
+| `<id>.race.txt:<line>: laps must be a whole number of at least 1` | `RaceMarkers.Parse` (`InvalidDataException`) | Bad `laps` value |
+| `<id>.race.txt:<line>: '<marker>' is given twice` | `RaceMarkers.Parse` (`InvalidDataException`) | A second `laps` or `start` line |
+| `<id>.race.txt: no 'laps' line` / `<id>.race.txt: no 'start' line` | `RaceMarkers.Parse` (`InvalidDataException`) | A required marker is missing |
+| `Kart <id> is already registered with the race` | `RaceSession.Register` (`ArgumentException`) | The same id registered twice |
+| `Kart <id> is not registered with the race` | `RaceSession.Update`/`Get` (`KeyNotFoundException`), so also `RaceSystem` | A kart with `RaceProgress` was not registered by `Entity.Id` |
 
 ### Launcher (`LauncherTexts`, `GameLocator`)
 

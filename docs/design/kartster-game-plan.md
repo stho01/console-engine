@@ -20,7 +20,7 @@ Det gjør prosjektlederen når en bølge flettes inn.
 |---|---|---|---|
 | UI-sett | `Ui/` | Agent U | `PixelFont`, `IPixelTarget`, HUD-tegning, menyskjerm-rammeverk |
 | Menyer | `Scenes/Menus/` | Agent U | Tittel, velg kart, velg bane, resultater, som scener |
-| Løpsregler | `Race/` | Agent R | `RaceSession` (ren logikk), `RaceSystem`, banemarkører (`<id>.race.txt`) |
+| Løpsregler | `Race/` | Agent R | `RaceSession` (ren logikk), `RaceSystem`, banemarkører (`<id>.race.txt`). Ferdig, se § 5 |
 | Flere karter og bots | `Bots/`, `KartEntity`, `Systems/` | Agent B | N karter, `BotDriverSystem`, kollisjon mellom karter |
 | 24-bit farge | motor + `KartsterGame` | Agent K | `RenderConsole.TrueColor`, VT-utgang, `--truecolor` |
 | Kulisser | `Scenery*` | Agent S | `<id>.scenery.txt`, modeller, kulling |
@@ -54,7 +54,37 @@ Det gjør prosjektlederen når en bølge flettes inn.
 | 2 | Flette bølge 1, skjermflyt (meny → løp → resultater), HUD inn i løpet, vegger og kollisjoner, flere baner | – |
 | 3 | Power-ups, minikart, finpuss | – |
 
-## 5. Åpne spørsmål
+## 5. Løpsregler (`Race/`): status
+
+Ferdig i bølge 1, ikke koblet inn ennå (`TrackScene` eies av B). Reglene er originalens, med tall og kilder i
+`docs/agent/03-rules.md` (Kartster-raden om løpsregler).
+
+- `RaceMarkers.Load(folder, id)` leser `<id>.race.txt`. `RaceSession` er ren logikk: `Register(id, isHuman)`, per
+  fast steg `Advance(sekunder)`, `Update(id, forrige, nå)` for hver kart og `UpdatePositions()`. `CanDrive` er false
+  under nedtellingen (3 s); den som skriver `KartControls` holder kartene stille. `RaceSystem` gjør stegene for alle
+  entiteter med `Components.Kart`, `Position` og `RaceProgress`, og speiler `Racer` inn i `RaceProgress`.
+- Avvik fra originalen: plassering etter porter og så rett avstand til neste port (originalen: runder pluss
+  ruteavstand rundt banen); klokken går i faste steg (originalen: per frame); ingen høydegrenser på portene; ingen
+  `Retire`/`Rejoin`, tider per port (gap) eller autopilot. Bare lukkede ruter.
+- `race.txt` (format i `Race/RaceMarkers.cs`), meter i planet (x = verdens X, y = verdens Z):
+  `laps <n>`, `start x y fremX fremY venstre høyre`, `checkpoint …` (samme felt, i rute-rekkefølge),
+  `grid x y heading` (i rutenett-rekkefølge, 8 plasser). Eksportert med originalens `SelectRoute`, `GetLapCount`,
+  `RaceGatePlane.Create` og `GetStartingLocation` av `RaceExport` i scratchpad.
+
+Kobling i `TrackScene.OnCreate` (B eller prosjektlederen):
+
+```csharp
+var markers = RaceMarkers.Load(Path.Combine("Assets", "Tracks"), track.Name);
+var race = new RaceSession(markers);
+var slot = markers.Grid[0]; // karten står bak startlinjen; Sample(0) er 60 m før den på Star Circuit
+_kart = KartEntity.Create(World, Game.Tuning, new Vector2(slot.Position.X, slot.Position.Y), slot.Heading);
+World.Add(_kart, new RaceProgress());
+race.Register(_kart.Id, isHuman: true);
+FixedSimulation.Add(new RaceSystem(race)); // kjører etter KartGroundSystem
+// og i KartInputSystem / BotDriverSystem: if (!race.CanDrive) controls = default;
+```
+
+## 6. Åpne spørsmål
 
 - Lyd: konsollen har bare `Console.Beep`. Foreløpig ingen lyd.
 - Splitscreen for flere spillere: ikke i denne planen.
