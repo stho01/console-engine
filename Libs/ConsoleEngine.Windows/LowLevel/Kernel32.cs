@@ -45,6 +45,12 @@ internal static class Kernel32
     [DllImport("kernel32.dll", SetLastError = true, CharSet = CharSet.Unicode)]
     internal static extern bool SetConsoleScreenBufferSize(IntPtr hConsoleOutput, Coord dwSize);
         
+    [DllImport("kernel32.dll", SetLastError = true)]
+    internal static extern bool GetConsoleScreenBufferInfoEx(IntPtr hConsoleOutput, ref ConsoleScreenBufferInfoEx info);
+
+    [DllImport("kernel32.dll", SetLastError = true)]
+    internal static extern bool SetConsoleScreenBufferInfoEx(IntPtr hConsoleOutput, ref ConsoleScreenBufferInfoEx info);
+
     [DllImport("user32.dll")]
     internal static extern int GetAsyncKeyState(int vKeys);
         

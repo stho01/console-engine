@@ -14,6 +14,7 @@ public sealed class ConsoleHandler : IConsoleHandler
     private readonly IntPtr _consoleOutBuffer;
     private readonly CharInfo[] _chars;
     private SmallRect _writeRegion;
+    private uint[] _originalColorTable;
         
     public ConsoleHandler(int width, int height, FontInfo fontInfo)
     {
@@ -94,9 +95,52 @@ public sealed class ConsoleHandler : IConsoleHandler
         WriteConsoleOutput(_consoleOutBuffer, _chars, resolution, Coord.Zero, ref _writeRegion);
     }
 
-    public void Close()
+    public void SetPalette(ReadOnlySpan<uint> colors)
     {
-        // close console (?)
+        if (!TryGetBufferInfo(out var info))
+            return;
+
+        if (_originalColorTable == null)
+        {
+            _originalColorTable = (uint[])info.ColorTable.Clone();
+            // Stop() ends the process with Environment.Exit, which skips Close().
+            AppDomain.CurrentDomain.ProcessExit += (_, _) => RestorePalette();
+        }
+
+        for (var i = 0; i < info.ColorTable.Length && i < colors.Length; i++)
+        {
+            var rgb = colors[i];
+            info.ColorTable[i] = ((rgb & 0xFF) << 16) | (rgb & 0xFF00) | ((rgb >> 16) & 0xFF); // RRGGBB -> COLORREF
+        }
+
+        SetBufferInfo(ref info);
+    }
+
+    public void Close() => RestorePalette();
+
+    /// <summary>Gives the console its own colours back, if <see cref="SetPalette"/> changed them.</summary>
+    private void RestorePalette()
+    {
+        if (_originalColorTable == null || !TryGetBufferInfo(out var info))
+            return;
+
+        info.ColorTable = _originalColorTable;
+        SetBufferInfo(ref info);
+    }
+
+    private bool TryGetBufferInfo(out ConsoleScreenBufferInfoEx info)
+    {
+        info = new ConsoleScreenBufferInfoEx { cbSize = (uint)Marshal.SizeOf<ConsoleScreenBufferInfoEx>() };
+        return GetConsoleScreenBufferInfoEx(_consoleOutBuffer, ref info);
+    }
+
+    private void SetBufferInfo(ref ConsoleScreenBufferInfoEx info)
+    {
+        // SetConsoleScreenBufferInfoEx shrinks the window by one cell (a long-standing conhost quirk) unless right
+        // and bottom are grown by one first.
+        var window = info.srWindow;
+        info.srWindow = new SmallRect(window.Left, window.Top, (short)(window.Right + 1), (short)(window.Bottom + 1));
+        SetConsoleScreenBufferInfoEx(_consoleOutBuffer, ref info);
     }
 
     private static ushort GetColorValue(ConsoleColor fg, ConsoleColor bg) => (ushort)((int)fg | ((int)bg<<4));

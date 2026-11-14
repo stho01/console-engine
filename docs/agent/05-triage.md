@@ -60,6 +60,7 @@
 3. Font face: the face is `"Consolas"` for every example. If the user's own game passes another `FontInfo.FontFace`, is that font installed and ≤ 31 characters (`ConsoleFontInfoEx.FaceName` `SizeConst = 32`)? If not → **Cause:** `SetCurrentConsoleFontEx` fails silently. **Fix:** use an installed console font. Stop.
 4. The user resized/maximised the window → `Resizeable` is false by default, so the Maximize/Size menu items are removed. Dragging the border may still work **[external]**. **Cause:** the buffer is fixed at construction. **Fix:** restart the game without resizing. Stop.
 5. Their own game reads `Console.FontInfo` and gets 14×14 → **Cause:** getter returns the ctor default, not the applied font ([02](02-state-model.md)). **Fix:** escalate as a bug. Stop.
+6. Colours are wrong (KartViewer: purple/red sky, garish road), or another console's colours changed after a game → **Cause:** `RenderConsole.Palette` remaps the 16 colours ([04 § F1](04-flows.md#f1) step 7b). Windows Terminal and terminals without true colour ignore it **[external]**, so the game's colour indices show as default colours. **Fix:** run in `conhost` (`start-conhost.cmd`, `run-game.ps1`). The original colours come back on exit (`Close()`, `ProcessExit`); a process that was killed leaves them changed until that console window closes.
 
 <a id="p3"></a>
 ## P3 — Keys don't work / react in other windows / presses missed

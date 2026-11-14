@@ -37,6 +37,33 @@ public class RenderConsoleTests
     }
 
     [Test]
+    public void Initialize_WithPalette_SendsItToTheConsoleAfterInitializing()
+    {
+        var palette = new uint[16];
+        palette[15] = 0x123456;
+        _console.Palette = palette;
+
+        _console.Initialize();
+
+        Assert.That(_handler.Initialized, Is.True);
+        Assert.That(_handler.Palette, Is.EqualTo(palette));
+    }
+
+    [Test]
+    public void Initialize_WithoutPalette_LeavesTheConsoleColours()
+    {
+        _console.Initialize();
+
+        Assert.That(_handler.Palette, Is.Null);
+    }
+
+    [Test]
+    public void Palette_WithoutSixteenColours_Throws()
+    {
+        Assert.Throws<ArgumentException>(() => _console.Palette = new uint[8]);
+    }
+
+    [Test]
     public void DrawChar_InsideBounds_WritesPixelAtRowMajorIndex()
     {
         _console.Draw(3, 2, 'X', ConsoleColor.Red, ConsoleColor.Blue);

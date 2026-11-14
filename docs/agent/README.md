@@ -32,7 +32,7 @@ Tags used throughout:
 | User says something like… | Playbook |
 |---|---|
 | "It crashes on start", "the window flashes and closes", "nothing happens when I run it" | [P1](05-triage.md#p1) |
-| "Window is the wrong size", "there are scrollbars", "font is tiny/huge", "picture is garbled/wrapped" | [P2](05-triage.md#p2) |
+| "Window is the wrong size", "there are scrollbars", "font is tiny/huge", "picture is garbled/wrapped", "colours are wrong" | [P2](05-triage.md#p2) |
 | "Keys don't work", "it reacts to keys when I'm in another window", "some key presses are missed" | [P3](05-triage.md#p3) |
 | "Logger window doesn't open", "logger is empty", "where is the FPS counter?", "log lines are cut off" | [P4](05-triage.md#p4) |
 | "I can't quit the game", "logger window stays open after the game closes" | [P5](05-triage.md#p5) |

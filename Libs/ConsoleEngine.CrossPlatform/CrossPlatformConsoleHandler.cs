@@ -21,6 +21,7 @@ public sealed class CrossPlatformConsoleHandler : IConsoleHandler
     private Pixel[] _previous;
     private readonly StringBuilder _frame = new();
     private readonly bool _trueColor;
+    private readonly (byte R, byte G, byte B)[] _palette = [.. CampbellPalette];
     private bool _halfBlocks;
     private int _columns;
     private int _rows;
@@ -52,6 +53,14 @@ public sealed class CrossPlatformConsoleHandler : IConsoleHandler
         _columns = Width;
         _rows = _halfBlocks ? (Height + 1) / 2 : Height;
         _previous = new Pixel[_columns * _rows];
+        _fullRedraw = true;
+    }
+
+    /// <summary>Used by true-colour terminals only; the 16 ANSI colours are the terminal's own.</summary>
+    public void SetPalette(ReadOnlySpan<uint> colors)
+    {
+        for (var i = 0; i < _palette.Length && i < colors.Length; i++)
+            _palette[i] = ((byte)(colors[i] >> 16), (byte)(colors[i] >> 8), (byte)colors[i]);
         _fullRedraw = true;
     }
 
@@ -237,8 +246,8 @@ public sealed class CrossPlatformConsoleHandler : IConsoleHandler
     {
         if (_trueColor)
         {
-            var (fr, fgG, fb) = Palette[fg];
-            var (br, bgG, bb) = Palette[bg];
+            var (fr, fgG, fb) = _palette[fg];
+            var (br, bgG, bb) = _palette[bg];
             _frame.Append(Esc).Append("[38;2;").Append(fr).Append(';').Append(fgG).Append(';').Append(fb)
                 .Append(";48;2;").Append(br).Append(';').Append(bgG).Append(';').Append(bb).Append('m');
         }
@@ -335,7 +344,7 @@ public sealed class CrossPlatformConsoleHandler : IConsoleHandler
     ];
 
     /// <summary>ConsoleColor (index) to RGB, the Windows console (Campbell) palette so games look the same as on Windows.</summary>
-    private static readonly (byte R, byte G, byte B)[] Palette =
+    private static readonly (byte R, byte G, byte B)[] CampbellPalette =
     [
         (0, 0, 0),       // Black
         (0, 55, 218),    // DarkBlue

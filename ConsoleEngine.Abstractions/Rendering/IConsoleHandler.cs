@@ -18,6 +18,13 @@ public interface IConsoleHandler
     /// aren't square. Called before <see cref="InitializeConsole"/>.
     /// </summary>
     void SetPixelMode(bool pixelMode) { }
+
+    /// <summary>
+    /// Replaces the RGB colour each <see cref="ConsoleColor"/> shows as: 16 entries, <c>0xRRGGBB</c>, in
+    /// <see cref="ConsoleColor"/> order. Called after <see cref="InitializeConsole"/>. Consoles that can't change their
+    /// colours ignore it.
+    /// </summary>
+    void SetPalette(ReadOnlySpan<uint> colors) { }
     void Render(Span<Pixel> pixels);
     void Close();
 }

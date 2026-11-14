@@ -19,6 +19,7 @@ public class FakeConsoleHandler(int width, int height) : IConsoleHandler
     public bool? CursorVisible { get; private set; }
     public bool? IsResizable { get; private set; }
     public bool Initialized { get; private set; }
+    public uint[] Palette { get; private set; }
 
     public Pixel PixelAt(int x, int y) => LastFrame[y * Width + x];
 
@@ -27,6 +28,7 @@ public class FakeConsoleHandler(int width, int height) : IConsoleHandler
     public void SetCursorVisible(bool visible) => CursorVisible = visible;
     public void Resizable(bool resizable) => IsResizable = resizable;
     public void SetFont(FontInfo fontInfo) => Font = fontInfo;
+    public void SetPalette(ReadOnlySpan<uint> colors) => Palette = colors.ToArray();
     public void Render(Span<Pixel> pixels) => LastFrame = pixels.ToArray();
     public void Close() { }
 }

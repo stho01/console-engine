@@ -15,6 +15,7 @@ public class RenderConsole
     private readonly Pixel[] _pixels;
     private FontInfo _fontInfo;
     private Pixel _clearColor = Pixel.Blank;
+    private uint[] _palette;
         
     //**********************************************************
     //** ctor:
@@ -70,6 +71,22 @@ public class RenderConsole
     /// where the font itself is square.
     /// </summary>
     public bool PixelMode { get; set; }
+
+    /// <summary>
+    /// The RGB colour each <see cref="ConsoleColor"/> shows as: 16 entries, <c>0xRRGGBB</c>, in <see cref="ConsoleColor"/>
+    /// order. Null (the default) keeps the console's own colours. Set it before the game is initialized. Windows and
+    /// true-colour terminals apply it, others ignore it.
+    /// </summary>
+    public uint[] Palette
+    {
+        get => _palette;
+        set
+        {
+            if (value != null && value.Length != 16)
+                throw new ArgumentException("A palette needs exactly 16 colours.", nameof(value));
+            _palette = value;
+        }
+    }
         
     //**********************************************************
     //** public methods:
@@ -233,6 +250,8 @@ public class RenderConsole
     {
         _consoleHandler.SetPixelMode(PixelMode);
         _consoleHandler.InitializeConsole();
+        if (_palette != null)
+            _consoleHandler.SetPalette(_palette);
         if (!Resizeable)
             _consoleHandler.Resizable(false);
             
