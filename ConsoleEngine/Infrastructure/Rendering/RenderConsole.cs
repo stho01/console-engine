@@ -16,6 +16,17 @@ public class RenderConsole
     private FontInfo _fontInfo;
     private Pixel _clearColor = Pixel.Blank;
     private uint[] _palette;
+    private bool _trueColor;
+    private bool _initialized;
+    private uint[] _foregroundRgb = [];   // allocated the first time true colour is on
+    private uint[] _backgroundRgb = [];
+
+    /// <summary>The Windows console's default colours, for <see cref="DrawRgb"/> without a <see cref="Palette"/>.</summary>
+    private static readonly uint[] CampbellPalette =
+    [
+        0x000000, 0x0037DA, 0x13A10E, 0x3A96DD, 0xC50F1F, 0x881798, 0xC19C00, 0xCCCCCC,
+        0x767676, 0x3B78FF, 0x16C60C, 0x61D6D6, 0xE74856, 0xB4009E, 0xF9F1A5, 0xF2F2F2
+    ];
         
     //**********************************************************
     //** ctor:
@@ -87,6 +98,29 @@ public class RenderConsole
             _palette = value;
         }
     }
+
+    /// <summary>
+    /// Ask for 24-bit colour: <see cref="DrawRgb"/> then shows its exact colours. Set it before the game is initialized
+    /// or while it runs. Off (the default) is the 16-colour console. Whether the console could do it is
+    /// <see cref="TrueColorActive"/>.
+    /// </summary>
+    public bool TrueColor
+    {
+        get => _trueColor;
+        set
+        {
+            _trueColor = value;
+            if (_initialized)
+                ApplyTrueColor();
+        }
+    }
+
+    /// <summary>
+    /// True when the console shows 24-bit colour (after initialization, with <see cref="TrueColor"/> on). False when it
+    /// can't (an old Windows console, a terminal without it): <see cref="DrawRgb"/> then draws the nearest of the 16
+    /// colours.
+    /// </summary>
+    public bool TrueColorActive { get; private set; }
         
     //**********************************************************
     //** public methods:
@@ -135,7 +169,31 @@ public class RenderConsole
             _pixels[index].Char = character;
             _pixels[index].ForegroundColor = foregroundColor;
             _pixels[index].BackgroundColor = backgroundColor;
+            if (TrueColorActive)
+                UsePalette(index, 1);
         }
+    }
+
+    /// <summary>
+    /// Draws a character in 24-bit colour, <c>0xRRGGBB</c>. Shown exactly while <see cref="TrueColorActive"/>,
+    /// otherwise as the nearest <see cref="Palette"/> colour (the console's default colours without one).
+    /// </summary>
+    public void DrawRgb(int x, int y, char character, uint foregroundRgb, uint backgroundRgb)
+    {
+        if (x < 0 || x >= Width || y < 0 || y >= Height)
+            return;
+
+        var index = y * Width + x;
+        _pixels[index].Char = character;
+        if (TrueColorActive)
+        {
+            _foregroundRgb[index] = foregroundRgb & 0xFFFFFF;
+            _backgroundRgb[index] = backgroundRgb & 0xFFFFFF;
+            return;
+        }
+
+        _pixels[index].ForegroundColor = NearestColor(foregroundRgb);
+        _pixels[index].BackgroundColor = NearestColor(backgroundRgb);
     }
 
     public void Draw(int x, int y, Span<string> rows, ConsoleColor foregroundColor = ConsoleColor.White, ConsoleColor backgroundColor = ConsoleColor.Black)
@@ -147,6 +205,8 @@ public class RenderConsole
             _pixels[index].Char = rows[dataY][dataX]; // < rows & cols are flipped 
             _pixels[index].ForegroundColor = foregroundColor;
             _pixels[index].BackgroundColor = backgroundColor;
+            if (TrueColorActive)
+                UsePalette(index, 1);
         }
     }
 
@@ -233,6 +293,8 @@ public class RenderConsole
         for (var i = 0; i < _pixels.Length; i++) {
             _pixels[i] = _clearColor;
         }
+        if (TrueColorActive)
+            UsePalette(0, _pixels.Length);
     }
 
     public void SetTitle(string title) => _consoleHandler.SetTitle(title);
@@ -256,9 +318,30 @@ public class RenderConsole
             _consoleHandler.Resizable(false);
             
         SetCursorVisible(!HideCursor);
+        _initialized = true;
+        if (_trueColor)
+            ApplyTrueColor();
     }
-        
-    internal void Display() => _consoleHandler.Render(_pixels);
+
+    internal void Display()
+    {
+        if (TrueColorActive)
+            _consoleHandler.Render(_pixels, _foregroundRgb, _backgroundRgb);
+        else
+            _consoleHandler.Render(_pixels);
+    }
+
+    /// <summary>
+    /// Cells from <paramref name="start"/> show their <see cref="Pixel"/>'s colours again, not the last
+    /// <see cref="DrawRgb"/> ones. For code that writes <see cref="Pixels"/> directly. No-op without true colour.
+    /// </summary>
+    internal void UsePalette(int start, int length)
+    {
+        if (!TrueColorActive)
+            return;
+        _foregroundRgb.AsSpan(start, length).Fill(IConsoleHandler.PaletteColor);
+        _backgroundRgb.AsSpan(start, length).Fill(IConsoleHandler.PaletteColor);
+    }
 
     /// <summary>
     /// The frame buffer, index <c>y * Width + x</c>. For the engine's ECS render systems, which clip once per entity
@@ -267,4 +350,39 @@ public class RenderConsole
     internal Span<Pixel> Pixels => _pixels;
 
     internal void Restore() => _consoleHandler.Close();
+
+    private void ApplyTrueColor()
+    {
+        TrueColorActive = _consoleHandler.SetTrueColor(_trueColor);
+        if (!TrueColorActive)
+            return;
+
+        if (_foregroundRgb.Length == 0)
+        {
+            _foregroundRgb = new uint[_pixels.Length];
+            _backgroundRgb = new uint[_pixels.Length];
+        }
+        UsePalette(0, _pixels.Length); // what is drawn so far was drawn in palette colours
+    }
+
+    /// <summary>The <see cref="ConsoleColor"/> closest to <paramref name="rgb"/> (squared RGB distance).</summary>
+    private ConsoleColor NearestColor(uint rgb)
+    {
+        var palette = _palette ?? CampbellPalette;
+        var best = 0;
+        var bestDistance = int.MaxValue;
+        for (var i = 0; i < palette.Length; i++)
+        {
+            var dr = (int)((rgb >> 16) & 0xFF) - (int)((palette[i] >> 16) & 0xFF);
+            var dg = (int)((rgb >> 8) & 0xFF) - (int)((palette[i] >> 8) & 0xFF);
+            var db = (int)(rgb & 0xFF) - (int)(palette[i] & 0xFF);
+            var distance = dr * dr + dg * dg + db * db;
+            if (distance < bestDistance)
+            {
+                bestDistance = distance;
+                best = i;
+            }
+        }
+        return (ConsoleColor)best;
+    }
 }

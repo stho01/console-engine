@@ -21,6 +21,12 @@ public class FakeConsoleHandler(int width, int height) : IConsoleHandler
     public bool Initialized { get; private set; }
     public uint[] Palette { get; private set; }
 
+    /// <summary>Whether <see cref="SetTrueColor"/> can turn 24-bit colour on.</summary>
+    public bool SupportsTrueColor { get; set; } = true;
+    public bool? TrueColorRequested { get; private set; }
+    public uint[] LastForegroundRgb { get; private set; } = [];
+    public uint[] LastBackgroundRgb { get; private set; } = [];
+
     public Pixel PixelAt(int x, int y) => LastFrame[y * Width + x];
 
     public void InitializeConsole() => Initialized = true;
@@ -30,5 +36,18 @@ public class FakeConsoleHandler(int width, int height) : IConsoleHandler
     public void SetFont(FontInfo fontInfo) => Font = fontInfo;
     public void SetPalette(ReadOnlySpan<uint> colors) => Palette = colors.ToArray();
     public void Render(Span<Pixel> pixels) => LastFrame = pixels.ToArray();
+
+    public bool SetTrueColor(bool trueColor)
+    {
+        TrueColorRequested = trueColor;
+        return trueColor && SupportsTrueColor;
+    }
+
+    public void Render(Span<Pixel> pixels, ReadOnlySpan<uint> foregroundRgb, ReadOnlySpan<uint> backgroundRgb)
+    {
+        LastFrame = pixels.ToArray();
+        LastForegroundRgb = foregroundRgb.ToArray();
+        LastBackgroundRgb = backgroundRgb.ToArray();
+    }
     public void Close() { }
 }

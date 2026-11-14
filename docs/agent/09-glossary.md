@@ -8,6 +8,7 @@ Support/user words are **[inferred]**. The team may also use Norwegian terms. Ad
 | the engine | The shared library | `ConsoleEngine` project, namespace `ConsoleEngine` |
 | window / screen | The console window and its cell buffer | `RenderConsole`, `ConsoleHandler`, `IConsoleHandler` |
 | pixel / cell / character | One console cell | `Pixel` (`Char`, `ForegroundColor`, `BackgroundColor`) |
+| 24-bit / true colour / RGB colours | Any `0xRRGGBB` colour per cell instead of the 16 console colours | `RenderConsole.TrueColor`, `TrueColorActive`, `DrawRgb`, `IConsoleHandler.SetTrueColor`, `IConsoleHandler.PaletteColor` |
 | resolution / size | Columns × rows of cells | `GameBase(width, height, …)`, `RenderConsole.Width`/`Height`/`Area` |
 | font size | Pixel size of each cell | `FontInfo` (`FontFace`, `FontWidth`, `FontHeight`), `ConsoleHandler.SetFont` |
 | logger / log window | Second console window for messages/FPS | `ConsoleEngine.Logger.exe`, `Log`, `GameBase.EnableLogger` |

@@ -25,6 +25,30 @@ public interface IConsoleHandler
     /// colours ignore it.
     /// </summary>
     void SetPalette(ReadOnlySpan<uint> colors) { }
+
+    /// <summary>
+    /// A value in the RGB spans of <see cref="Render(Span{Pixel}, ReadOnlySpan{uint}, ReadOnlySpan{uint})"/> that means
+    /// "this cell shows its <see cref="Pixel"/>'s <see cref="ConsoleColor"/>" (as the palette shows it).
+    /// </summary>
+    const uint PaletteColor = 0xFFFFFFFF;
+
+    /// <summary>
+    /// Turns 24-bit colour output on or off; after <see cref="InitializeConsole"/>, also while the game runs. Returns
+    /// whether the console now shows the RGB colours of
+    /// <see cref="Render(Span{Pixel}, ReadOnlySpan{uint}, ReadOnlySpan{uint})"/>. Consoles that can't return false.
+    /// </summary>
+    bool SetTrueColor(bool trueColor) => false;
+
     void Render(Span<Pixel> pixels);
+
+    /// <summary>
+    /// Renders a 24-bit frame, called instead of <see cref="Render(Span{Pixel})"/> while <see cref="SetTrueColor"/>
+    /// returned true. <paramref name="foregroundRgb"/> and <paramref name="backgroundRgb"/> hold <c>0xRRGGBB</c> per
+    /// cell, or <see cref="PaletteColor"/>; <paramref name="pixels"/> holds the characters. Consoles without 24-bit
+    /// colour show the pixels' own colours.
+    /// </summary>
+    void Render(Span<Pixel> pixels, ReadOnlySpan<uint> foregroundRgb, ReadOnlySpan<uint> backgroundRgb) =>
+        Render(pixels);
+
     void Close();
 }

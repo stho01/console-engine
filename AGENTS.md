@@ -253,6 +253,15 @@ Examples/
   → `Scenes.Render` → `OnRender` → `Display` (one `WriteConsoleOutput`) → `Scenes.Cleanup`. Details are in
   [`docs/agent/03-rules.md`](docs/agent/03-rules.md#frame-loop).
 - Drawing writes into one preallocated `Pixel[]` (`RenderConsole._pixels`). Nothing touches the console until `Display`.
+- 24-bit colour (issue 6) is opt-in and additive: `RenderConsole.TrueColor = true` (before `Initialize` or at run
+  time), then `DrawRgb(x, y, char, foregroundRgb, backgroundRgb)` with `0xRRGGBB`. The colours live in two
+  preallocated `uint[]`s next to `_pixels` (allocated the first time it is on); a cell drawn in a `ConsoleColor`
+  holds `IConsoleHandler.PaletteColor` there, so palette and RGB drawing mix. `TrueColorActive` says whether the
+  console really shows it (`IConsoleHandler.SetTrueColor` returned true); if not, `DrawRgb` draws the nearest of the
+  16 colours (`Palette`, else the console defaults). The handler gets the frame through the default interface method
+  `Render(pixels, foregroundRgb, backgroundRgb)` (default: `Render(pixels)`), so other handlers need no change.
+  Why this shape: it is what terminals do (SGR `38;2`/`48;2` per cell), it changes no existing signature and costs a
+  palette game one predictable branch per `Draw`. Rules in [03 § True colour](docs/agent/03-rules.md#true-colour).
 - ECS games use an `EcsScene<TGame>`: it owns a `World`, runs its `Simulation` systems in `Scenes.Update` and its
   `Presentation` systems in `Scenes.Render`, and applies each group's `CommandBuffer` after the group
   ([`docs/agent/04-flows.md` F9](docs/agent/04-flows.md#f9)).

@@ -28,6 +28,23 @@ Every frame, in this order: `GameTime.Update()` → `Input.Instance.Update()` �
 - Why: conhost's cost scales with the rows written, unchanged or not, and it is almost the whole cost of a frame
   (numbers in `AGENTS.md` § Performance).
 
+<a id="true-colour"></a>
+### True colour (`RenderConsole.TrueColor`, `DrawRgb`)
+
+- Off by default: palette games never call `IConsoleHandler.SetTrueColor` and render through `Render(pixels)`.
+- `RenderConsole.TrueColor = true` asks for 24-bit colour: in `Initialize` (after `SetPalette`) or, while the game
+  runs, right away. `TrueColorActive` is the handler's answer (`SetTrueColor`); setting `TrueColor = false` turns it
+  off again.
+- While `TrueColorActive`: `DrawRgb(x, y, char, foregroundRgb, backgroundRgb)` stores `0xRRGGBB` (top byte dropped)
+  per cell; every `ConsoleColor` draw (`Draw`, `DrawLine`, `Draw(Span<string>)`, `Clear`, `GlyphRenderSystem`,
+  `SpriteRenderSystem`, Lua `console.draw`) stores `IConsoleHandler.PaletteColor`, so the last draw of a cell wins.
+  Turning it on marks every cell `PaletteColor`. `Display` calls `Render(pixels, foregroundRgb, backgroundRgb)`.
+- While not active (off, or the console can't): `DrawRgb` stores the nearest `ConsoleColor` by squared RGB distance,
+  over `Palette` or, without one, the Windows defaults (Campbell). Out-of-screen `DrawRgb` is ignored, like `Draw`.
+- Handlers: `IConsoleHandler.SetTrueColor` and the RGB `Render` are default interface methods (`false`, and
+  `Render(pixels)`). `CrossPlatformConsoleHandler` keeps the defaults, so `DrawRgb` shows the nearest palette colour
+  there.
+
 <a id="fps"></a>
 ### Frame-rate dependence
 
