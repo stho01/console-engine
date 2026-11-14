@@ -114,3 +114,6 @@ Support/user words are **[inferred]**. The team may also use Norwegian terms. Ad
 | scroll / rising view / speed level / "hurry" (SkyStack) | The view rising by itself after floor 5, faster every 30 s | `Scroller`, `Scroller.Level` |
 | zone (SkyStack) | The colour theme of 50 floors | `TowerLooks.Zones` |
 | pixel / half-block (SkyStack) | One of the two square pixels a console cell shows in SkyStack (`▀`: upper = foreground, lower = background) | `PixelCanvas`, `PixelSprite`, `PixelFont` |
+| power-up pad / box (Kartster) | A spot on the road that hands out a power-up to a kart with an empty slot; back 5 s after it is taken | `PowerUpPad`, `PowerUpField.Pads`, `<id>.powerups.txt` |
+| reel / slot (Kartster) | What a kart holds: a spinning reel for 2.5 s after a pad, then one power-up and its charges | `PowerUpField.Showing`, `Held`, `Charges` |
+| banana / lapskaus / Joika (Kartster) | Power-ups: a peel left on the road, a can fired straight ahead, a can that chases the kart one place ahead | `PowerUpKind.Banana`, `Lapskaus`, `HomingJoika` |

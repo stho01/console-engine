@@ -5,6 +5,7 @@ using ConsoleEngine.Ecs.Components;
 using ConsoleEngine.Rendering3D;
 using Kartster.Components;
 using Kartster.Effects;
+using Kartster.PowerUps;
 
 namespace Kartster.Systems;
 
@@ -32,6 +33,13 @@ public sealed class KartRenderSystem(Entity player, KartsterGame game, Mesh[] ka
     private bool _hasEye;
 
     //**********************************************************
+    //** props
+    //**********************************************************
+
+    /// <summary>The race's pads, hazards and cans, drawn after the karts; null: none.</summary>
+    public PowerUpView PowerUps { get; init; }
+
+    //**********************************************************
     //** lifecycle
     //**********************************************************
 
@@ -56,6 +64,7 @@ public sealed class KartRenderSystem(Entity player, KartsterGame game, Mesh[] ka
         track.Scenery.Draw(renderer, viewProjection, _eye, KartsterGame.ToSun);
         renderer.Draw(skidMarks.Mesh, Matrix4x4.Identity, viewProjection, KartsterGame.ToSun);
         DrawKarts(renderer, viewProjection);
+        PowerUps?.Draw(renderer, viewProjection, KartsterGame.ToSun, deltaSeconds);
 
         var look = Vector3.Normalize(target - _eye);
         var cameraRight = Vector3.Normalize(Vector3.Cross(look, Vector3.UnitY));

@@ -60,7 +60,7 @@ public class SceneryTests
     {
         var track = Track.Load(Path.Combine("Assets", "Tracks"), "star-circuit");
 
-        Assert.That(track.Scenery.ModelCount, Is.GreaterThan(10)); // pipes and power-up boxes
+        Assert.That(track.Scenery.ModelCount, Is.EqualTo(10)); // the pipes (the power-up pads are PowerUpView's)
         Assert.That(track.Scenery.TriangleCount, Is.GreaterThan(1000)); // fences, signs, the start/finish line
     }
 

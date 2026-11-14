@@ -253,15 +253,20 @@ Examples/
                                   Effects/ (SkidMarks, SlideSmoke, KartWheels), Components/ (Kart with its Index,
                                   PlayerKart tag, Bot), KartEntity (a kart's physics body),
                                   KartFrame (physics <-> kart frame), KartModel (Kartster part folders), Track
-                                  (exported ribbon + spline + scenery), Scenery (scenery file: model instances +
+                                  (exported ribbon + spline + scenery + power-up pads), Scenery (scenery file: model instances +
                                   triangle cells, culled per bounding sphere), Driving/ (Kartster-like planar kart
                                   model: KartDynamics computes force + yaw torque per step, KartIntegrator, KartTuning,
                                   KartCatalog, KartEngine, KartTraction, KartLoadTransfer, Surface), Collision/ (TrackCollision: loads
                                   <id>.collision.txt, walls and posts as static bodies), Race/ (race
                                   rules: RaceMarkers loads <id>.race.txt, RaceGate, GridSlot, RaceSession (pure:
                                   countdown, gates, laps, positions, gaps), RaceReport (HUD state), Racer, RacePhase, RaceProgress (component),
-                                  RaceSystem, AutopilotSystem, RaceFinish), Assets/Karts/ (olabil, wagon), Assets/Tracks/
-                                  (star-circuit, star-rally, prism-loop, eight-ball: ribbon, spline, scenery.txt, race.txt each,
+                                  RaceSystem, AutopilotSystem, RaceFinish),
+                                  PowerUps/ (Kartster's power-ups: PowerUpField (pure: pads, reel, draw, hazards, cans),
+                                  PowerUpCatalog, PowerUpKind/PowerUpAim, KartEffects, KartEffectTuning, BotPowerUps,
+                                  PowerUpSystem (fixed step; Add wires it all), PowerUpInputSystem (E/T/B), PowerUpView,
+                                  PowerUpPads (powerups.txt)),
+                                  Assets/Karts/ (olabil, wagon), Assets/Tracks/
+                                  (star-circuit, star-rally, prism-loop, eight-ball: ribbon, spline, scenery.txt, race.txt, powerups.txt each,
                                   star-circuit also collision.txt; written by tools/KartsterExport) and Assets/Scenery/
                                   (Pipe.obj from Kartster, Box.obj), copied to output, Bots/ (see above),
                                   Components/ (Kart with Index, PlayerKart, Bot),
@@ -277,7 +282,8 @@ Examples/
                                   Menu, MenuFlow tests; UiPreview writes ui-preview/*.ppm to the output), Bots/BotDriverSystemTests,
                                   Bots/RaceTests (grid, input, headless 3-bot race, kart collisions, allocation),
                                   Bots/BotTrafficTests (road widths, passing, following, leaning, 6-bot race),
-                                  Collision/TrackCollisionTests (file, walls, pipe, race with walls, allocation)
+                                  Collision/TrackCollisionTests (file, walls, pipe, race with walls, allocation),
+                                  PowerUps/ (PowerUpFieldTests, PowerUpSystemTests)
 tools/
   KartsterExport/                 track exporter (not in the solution): Program (list, export), ITrackExporter,
                                   RibbonExporter, SplineExporter, SceneryExporter, RaceExporter, README.md

@@ -9,8 +9,9 @@ namespace Kartster;
 /// <summary>
 /// A Kartster track as its editor exports it (<c>Docs/track-meshes.md</c> in Kartster): <c>&lt;id&gt;.ribbon.obj</c>
 /// is the road surface and its edge walls, <c>&lt;id&gt;.spline.obj</c> the centerline, one vertex per metre, sections
-/// in route order. Plus a flat chequered ground under it all, and the scenery from <c>&lt;id&gt;.scenery.txt</c> when
-/// there is one (models from the <c>Scenery</c> folder beside the tracks folder).
+/// in route order. Plus a flat chequered ground under it all, the scenery from <c>&lt;id&gt;.scenery.txt</c> when
+/// there is one (models from the <c>Scenery</c> folder beside the tracks folder) and the power-up pads from
+/// <c>&lt;id&gt;.powerups.txt</c>.
 /// </summary>
 public sealed class Track
 {
@@ -79,6 +80,9 @@ public sealed class Track
     public bool IsClosed { get; }
     public Scenery Scenery { get; private set; } = Scenery.Empty;
 
+    /// <summary>Power-up pad centres (world axes) from <c>&lt;id&gt;.powerups.txt</c>; none without the file.</summary>
+    public Vector3[] PowerUpPads { get; private set; } = [];
+
     //**********************************************************
     //** public methods
     //**********************************************************
@@ -118,6 +122,7 @@ public sealed class Track
         var scenery = Path.Combine(folder, id + ".scenery.txt");
         if (File.Exists(scenery))
             track.Scenery = Scenery.Load(scenery, Path.Combine(folder, "..", "Scenery"), track.GroundHeight);
+        track.PowerUpPads = PowerUps.PowerUpPads.Load(folder, id);
 
         return track;
     }

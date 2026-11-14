@@ -23,6 +23,7 @@ internal static class GameCatalog
         new("Starguard", "Starguard", "A D / arrows move, Space fire, Enter restart"),
         new("Scripted (Lua)", "Scripted", "Arrows move, F5 reload scripts, Esc quit"),
         new("Kartster (3D)", "Kartster",
-            "Menus arrows Enter Esc; race W gas, S brake, A D steer, Space handbrake, R restart, Enter/Esc pause; G GPU, C 24-bit")
+            "Menus arrows Enter Esc; race W gas, S brake, A D steer, Space handbrake, E power-up (T throw, B drop), " +
+            "R restart, Enter/Esc pause; G GPU, C 24-bit")
     ];
 }

@@ -124,7 +124,7 @@ FixedSimulation.Add(new RaceSystem(race)); // kjører etter KartGroundSystem
   Kollisjon mellom karter går gjennom boksene (restitusjon 0,1, friksjon 0,3). Flettet i bølge 2: rutenettet kommer fra
   `race.txt` (`TrackScene.StartingSlot`; `StandInGridSlot` bare når banen mangler den), `Bot.Progress` er fjernet
   (den var bare en målestokk for testene, som nå leser `RaceProgress`), og botene tar kartmappene fra
-  `KartsterGame.KartFolders`. Trafikk og dytting kom i bølge 3 (§ 8, O). Mangler: power-ups.
+  `KartsterGame.KartFolders`. Trafikk og dytting kom i bølge 3 (§ 8, O). Power-ups: se § 8 (P).
 
 ## 6. Åpne spørsmål
 
@@ -148,7 +148,7 @@ Ferdig. Detaljer og tall står i `docs/agent/03-rules.md` (Kartster-radene), tas
   topp 3 med navn og avstand per port (`RaceSession.GapToLeader`), nedtelling, `GO!`, `FINISHED`. Tegnes etter
   `Renderer.Finish` gjennom `PaletteTarget` eller `RgbTarget`.
 
-**Igjen til bølge 3:** power-ups (`HudState.PowerUp` er null), vegger og kollisjon mot dem, flere baner (menyen tar
+**Igjen til bølge 3:** power-ups (levert, § 8), vegger og kollisjon mot dem, flere baner (menyen tar
 alle `*.ribbon.obj` i mappen allerede), minikart (øvre venstre hjørne er holdt av), autopilot for en spiller i mål og
 bots som kjøres ferdig, forbikjøring og dytting for botene, pause.
 
@@ -237,3 +237,21 @@ Levert, bare i `Bots/`. Tall og regler står i `docs/agent/03-rules.md` (raden �
 - **`BotDriverSystem`:** samme konstruktør og samme `Drive`; nytt er en `Drive`-overlast med fil, fartsgrense og
   tempo, og egenskapene `RubberBanding`, `Wanders`, `Road`, `GetTraffic`, `GetLaneOffset`. Ikke gjort: dytte tilbake
   (trenger kontakthendelser), power-ups.
+
+### Status: power-ups (P)
+
+Levert på grenen til P. Regler og tall står i `docs/agent/03-rules.md` (Kartster-raden om power-ups), tastene i
+`08-operator-actions.md`.
+
+- **Med:** puter fra `<id>.powerups.txt` (eksportert med originalens `TrackPowerUpPadResolver`, de 9 på Star Circuit;
+  boksene er tatt ut av `scenery.txt`), plukk ved å kjøre gjennom (1,2 m), 5 s til de er tilbake, én power-up om gangen,
+  hjulet (48 trekk, 2,5 s, stopp med et trykk), trekning fra `normal`-settet vektet etter plassering med en seedet
+  `Random`; Speed Boost, Engine Tune, Grip Tune, Bananas (slipp og kast), Lapskaus og Homing Joika (enkel og trippel,
+  skutt eller sluppet bak); effektene gjennom `KartPhysicsSystem.Effects`; bots etter originalens `Simple`-regler;
+  HUD-navnet; E/T/B (B i stedet for G, som er GPU-bryteren).
+- **Utenfor:** de 17 andre typene, hopp (planet), vegger for boksene (V), bots som leter etter puter eller kjører
+  rundt farer (O eier linjen), lyd og partikler.
+- **Rørt utenfor `PowerUps/`:** `TrackScene` (`PowerUpSystem.Add`, `PowerUpView` på `KartRenderSystem`,
+  `HudState.PowerUp`), `KartPhysicsSystem.Effects`, `KartRenderSystem.PowerUps`, en `ComputeForces`-overlast med ferdig
+  tuning i `KartDynamics`, `Track.PowerUpPads`, `star-circuit.scenery.txt` (9 `model Box`-linjer ut) og
+  `star-circuit.powerups.txt`. Eksportverktøy T må skrive putene til `powerups.txt` og ikke som `Box` i `scenery.txt`.

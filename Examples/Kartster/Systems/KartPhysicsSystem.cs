@@ -3,6 +3,7 @@ using ConsoleEngine.Ecs.Components;
 using ConsoleEngine.Physics;
 using Kartster.Components;
 using Kartster.Driving;
+using Kartster.PowerUps;
 
 namespace Kartster.Systems;
 
@@ -49,6 +50,12 @@ public sealed class KartPhysicsSystem : EntitySystem
 
     public int KartCount => _dynamics.Length;
 
+    /// <summary>
+    /// Power-up effects laid over each kart's tuning before its step (Kartster's <c>KartEffectTuning</c>, the one seam
+    /// through which they reach the kart model); null: none.
+    /// </summary>
+    public KartEffectTuning Effects { get; set; }
+
     //**********************************************************
     //** public methods
     //**********************************************************
@@ -80,7 +87,10 @@ public sealed class KartPhysicsSystem : EntitySystem
                 var index = karts[i].Index;
                 var body = KartFrame.ToBody(positions[i].Value, rotations[i].Radians, velocities[i].Value,
                     angularVelocities[i].Value);
-                var kartForces = _dynamics[index].ComputeForces(body, controls[i], karts[i].Surface, deltaSeconds);
+                var effectTuning = Effects?.Get(index, _dynamics[index], karts[i].Surface);
+                var kartForces = effectTuning == null
+                    ? _dynamics[index].ComputeForces(body, controls[i], karts[i].Surface, deltaSeconds)
+                    : _dynamics[index].ComputeForces(body, controls[i], effectTuning, deltaSeconds);
                 forces[i].Add(KartFrame.ToPhysicsForce(kartForces.Force));
                 forces[i].AddTorque(KartFrame.ToPhysicsTorque(kartForces.Torque) * _torqueScales[index]);
             }

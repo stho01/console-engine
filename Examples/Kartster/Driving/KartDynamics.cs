@@ -114,12 +114,18 @@ public sealed class KartDynamics
     /// <summary>The tuning a surface turns this kart's into: grip, rolling drag and the governed engine.</summary>
     public KartTuning GetTuning(Surface surface) => _surfaceTunings[(int)surface];
 
-    public KartForces ComputeForces(in KartBody body, in KartControls controls, Surface surface, float dt)
+    public KartForces ComputeForces(in KartBody body, in KartControls controls, Surface surface, float dt) =>
+        ComputeForces(body, controls, _surfaceTunings[(int)surface], dt);
+
+    /// <summary>
+    /// As the surface overload, on <paramref name="tuning"/>: this kart's tuning with its surface (and power-up
+    /// effects, <c>PowerUps.KartEffectTuning</c>) already laid over it.
+    /// </summary>
+    public KartForces ComputeForces(in KartBody body, in KartControls controls, KartTuning tuning, float dt)
     {
         if (dt <= 0f)
             return default;
 
-        var tuning = _surfaceTunings[(int)surface];
         var throttle = Math.Clamp(controls.Throttle, 0f, 1f) - Math.Clamp(controls.Brake, 0f, 1f);
         var steering = Math.Clamp(controls.Steer, -1f, 1f);
         var handbrake = controls.Handbrake;

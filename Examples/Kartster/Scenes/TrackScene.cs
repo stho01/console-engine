@@ -12,6 +12,7 @@ using Kartster.Collision;
 using Kartster.Components;
 using Kartster.Driving;
 using Kartster.Effects;
+using Kartster.PowerUps;
 using Kartster.Race;
 using Kartster.Scenes.Menus;
 using Kartster.Systems;
@@ -28,7 +29,8 @@ namespace Kartster.Scenes;
 /// Kartster's 120 steps per second, with a chase camera behind the player. A <see cref="RaceSession"/> run by the
 /// <see cref="RaceSystem"/> counts laps; nobody moves during its countdown. Bots drive by the
 /// <see cref="BotDriverSystem"/> in the game's kart folders' karts, each in its own colour. Karts push each other
-/// through their box colliders and stop at the track's walls and posts (<see cref="TrackCollision"/>). The HUD
+/// through their box colliders and stop at the track's walls and posts (<see cref="TrackCollision"/>). Kartster's
+/// power-ups (<see cref="PowerUpSystem.Add"/>): pads, bots using them, E/T/B for the player. The HUD
 /// (<see cref="Hud"/>, filled by a <see cref="RaceReport"/>) is drawn over the 3D picture, with the
 /// <see cref="Minimap"/> in its top-left corner. Keys: R restarts the race from the grid, Enter or Esc pauses
 /// (<see cref="PauseMenu"/>: RESUME, RESTART, QUIT TO TITLE). Once the player has finished, the
@@ -102,6 +104,7 @@ public sealed class TrackScene(int lapCount, int botCount = TrackScene.DefaultBo
     private Query _karts;
     private PlanarVector2[] _kartPositions;
     private uint[] _kartColors;
+    private PowerUpSystem _powerUps;
 
     //**********************************************************
     //** props
@@ -269,6 +272,7 @@ public sealed class TrackScene(int lapCount, int botCount = TrackScene.DefaultBo
 
         FixedTimestep = _raceTimestep = new FixedTimestep(StepSeconds, MaxStepsPerFrame);
         _physics = AddDriving(FixedSimulation, track, tunings, Race);
+        _powerUps = PowerUpSystem.Add(FixedSimulation, Simulation, track, _physics, Race);
         FixedSimulation.Add(new AutopilotSystem());
         _finish = new RaceFinish(Race, FixedSimulation, StepSeconds);
 
@@ -282,7 +286,8 @@ public sealed class TrackScene(int lapCount, int botCount = TrackScene.DefaultBo
         var smoke = new SlideSmoke(kartCount: count);
         Presentation.Add(new InterpolationSystem(FixedTimestep));
         _effects = Presentation.Add(new KartEffectsSystem(_physics, skidMarks, smoke));
-        Presentation.Add(new KartRenderSystem(_player, Game, meshes, skidMarks, smoke));
+        Presentation.Add(new KartRenderSystem(_player, Game, meshes, skidMarks, smoke)
+            { PowerUps = new PowerUpView(_powerUps.Field) });
     }
 
     /// <summary>
@@ -298,6 +303,7 @@ public sealed class TrackScene(int lapCount, int botCount = TrackScene.DefaultBo
         }
 
         _report.FillHud(ref _hudState, Speed * MetresPerSecondToKmh);
+        _hudState.PowerUp = _powerUps.HudName(PlayerSlot);
         _hud.Draw(target, _hudState);
 
         foreach (var chunk in _karts.GetChunks())
