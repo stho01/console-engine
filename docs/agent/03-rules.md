@@ -53,8 +53,14 @@ Every frame, in this order: `GameTime.Update()` → `Input.Instance.Update()` �
 - While not active (off, or the console can't): `DrawRgb` stores the nearest `ConsoleColor` by squared RGB distance,
   over `Palette` or, without one, the Windows defaults (Campbell). Out-of-screen `DrawRgb` is ignored, like `Draw`.
 - Handlers: `IConsoleHandler.SetTrueColor` and the RGB `Render` are default interface methods (`false`, and
-  `Render(pixels)`). `CrossPlatformConsoleHandler` keeps the defaults, so `DrawRgb` shows the nearest palette colour
-  there.
+  `Render(pixels)`). `CrossPlatformConsoleHandler.SetTrueColor(true)` is true only on a true-colour terminal
+  (`CONSOLE_ENGINE_COLORS=truecolor`, or else `COLORTERM` = `truecolor`/`24bit`, read once in the constructor);
+  elsewhere it returns false and `DrawRgb` shows the nearest palette colour. While on, its RGB `Render` writes each
+  changed cell's `38;2;r;g;b;48;2;r;g;b` (`PaletteColor` = the pixel's `ConsoleColor` from its `SetPalette`
+  palette, by default Campbell), diffed against the last frame like palette frames; in half-block (pixel) mode the
+  top pixel's RGB is the foreground of `▀`, the bottom one's the background. A switch between palette and RGB frames
+  redraws the whole screen. No allocation per frame once the frame text has reached its size
+  (`CrossPlatformConsoleHandlerTests`).
 
 <a id="fps"></a>
 ### Frame-rate dependence

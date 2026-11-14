@@ -155,6 +155,10 @@ Build 14393 (Windows 10 1607) or newer and an orange block → VT works in that 
 succeed. Literal `[48;2;...` text instead → VT is not available there ([P2](05-triage.md#p2) step 7). **[external]**:
 PowerShell turns VT on for its own output, so an orange block is strong, not certain, evidence for the game.
 
+macOS/Linux (`CrossPlatformConsoleHandler`): `echo $COLORTERM $CONSOLE_ENGINE_COLORS`. `truecolor` or `24bit` (or
+`CONSOLE_ENGINE_COLORS=truecolor`) → 24-bit is used; anything else → 16 colours. `printf '\e[48;2;255;128;0m  orange?
+\e[0m\n'` shows whether the terminal can, if the variable is missing.
+
 <a id="q15"></a>
 ## Q15 — Can this checkout export Kartster tracks? (developer checkout)
 

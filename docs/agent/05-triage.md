@@ -64,8 +64,10 @@
 7. A game in 24-bit colour (`RenderConsole.TrueColor`, Kartster `--truecolor`/C) shows 16 colours, banded or
    dithered → is `RenderConsole.TrueColorActive` false (Kartster: title says `16 colours (no 24-bit)`)? → **Cause:**
    `SetConsoleMode` with `ENABLE_VIRTUAL_TERMINAL_PROCESSING` failed ([04 § F1](04-flows.md#f1) step 9b): Windows
-   older than 10 1607, or output not a console **[external]**; `DrawRgb` then draws the nearest palette colour. Check
-   [07 § Q14](07-checks.md#q14). **Fix:** a newer Windows; otherwise accept 16 colours. Stop.
+   older than 10 1607, or output not a console **[external]**; on macOS/Linux the terminal doesn't say it is
+   true-colour (`COLORTERM`); `DrawRgb` then draws the nearest palette colour. Check [07 § Q14](07-checks.md#q14).
+   **Fix:** a newer Windows; on macOS/Linux `CONSOLE_ENGINE_COLORS=truecolor` if the terminal can; otherwise accept
+   16 colours. Stop.
 8. 24-bit colour is on and the game is much slower than in 16 colours, in conhost → **Cause:** conhost parses every
    colour change of the VT text; frames with many per-cell colour changes cost 5–7× the palette write (numbers in
    `AGENTS.md` § Performance). **Fix:** turn 24-bit off (Kartster: C), or the developer makes the picture smoother.

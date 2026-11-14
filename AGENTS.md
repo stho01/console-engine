@@ -57,6 +57,7 @@ Every name in `docs/agent/` is grep-able. Search for the identifier you are inte
 | `ConsoleEngine.Rendering3D.OpenGL` | `ConsoleEngine.Rendering3D.OpenGL/` | Library (NuGet): `GlRenderer : IRenderer3D` on OpenGL 3.3 core in a hidden GLFW window (Silk.NET 2.23.0). Optional | Rendering3D |
 | `ConsoleEngine.Scripting` | `ConsoleEngine.Scripting/` | Library (not packed): Lua 5.4 scripting for ECS entities (KeraLua 1.4.11). Optional | ConsoleEngine |
 | `ConsoleEngine.Windows` | `Libs/ConsoleEngine.Windows/` | Library, namespace `ConsoleEngine.Native` | Abstractions |
+| `ConsoleEngine.CrossPlatform` | `Libs/ConsoleEngine.CrossPlatform/` | Library: ANSI/VT terminal handlers (macOS, Linux) | Abstractions |
 | `ConsoleEngine.Logger` | `Libs/ConsoleEngine.Logger/` | Exe: TCP log viewer (port 11000) | — |
 | `Microsoft.Xna.Framework` | `Libs/Microsoft.Xna.Framework/` | Library: math types | — |
 | `TerraForM`, `Snake`, `Asteroids`, `Platformer`, `ConsoleGame`, their ports `<Game>.Ecs`, `Swarm` (ECS stress test), `PhysicsSandbox` and `PhysicsShowcase` (physics demos) and `EternalDigger`, `SkyStack` and `Starguard` (ECS games) | `Examples/*` | Exe | ConsoleEngine |
@@ -180,7 +181,8 @@ ConsoleEngine.Physics.Tests/      physics tests (Collision, SpatialHashGrid, Phy
                                   PhysicsQueryTests, CharacterMoverTests, RotationTests, TileContactTests, SleepTests,
                                   InterpolationTests, ForceTests)
 ConsoleEngine.Tests/              engine unit tests (mirrors ConsoleEngine/ folders), Fakes/ (console handler, scene),
-                                  Scripting/ (LuaScriptSystemTests), Native/ (ConsoleHandler row diff)
+                                  Scripting/ (LuaScriptSystemTests), Native/ (ConsoleHandler row diff,
+                                  CrossPlatformConsoleHandler frame text)
 ConsoleEngine.Rendering3D/        3D (namespace ConsoleEngine.Rendering3D): IRenderer3D, Rasterizer (CPU), Mesh
                                   (Version/MarkChanged), ObjFile, ConsolePalette
 ConsoleEngine.Rendering3D.Tests/  RasterizerTests, ScreenDoorTests, TrueColorTests, ObjFileTests, MeshTests
@@ -199,6 +201,7 @@ ConsoleEngine.Abstractions/
   Rendering/  IConsoleHandler, Pixel, FontInfo
 Libs/
   ConsoleEngine.Windows/          ConsoleHandler, VtFrame (24-bit VT text), InputHandler, LowLevel/ (P/Invoke + structs)
+  ConsoleEngine.CrossPlatform/    CrossPlatformConsoleHandler (ANSI/VT terminals, 16 or 24-bit), CrossPlatformInputHandler
   ConsoleEngine.Logger/           Program.cs (logger exe)
   Microsoft.Xna.Framework/        Vector2/3/4, Point, Rectangle, Matrix, …
 Examples/
@@ -314,6 +317,8 @@ tools/
   console really shows it (`IConsoleHandler.SetTrueColor` returned true); if not, `DrawRgb` draws the nearest of the
   16 colours (`Palette`, else the console defaults). The handler gets the frame through the default interface method
   `Render(pixels, foregroundRgb, backgroundRgb)` (default: `Render(pixels)`), so other handlers need no change.
+  Windows (`ConsoleHandler` + `VtFrame`) and `CrossPlatformConsoleHandler` (true-colour terminals only, by
+  `COLORTERM`) implement it.
   Why this shape: it is what terminals do (SGR `38;2`/`48;2` per cell), it changes no existing signature and costs a
   palette game one predictable branch per `Draw`. Rules in [03 § True colour](docs/agent/03-rules.md#true-colour).
 - ECS games use an `EcsScene<TGame>`: it owns a `World`, runs its `Simulation` systems in `Scenes.Update` and its
@@ -495,9 +500,9 @@ Use [Conventional Commits 1.0.0](https://www.conventionalcommits.org/en/v1.0.0/#
 | `style` | Formatting only |
 | `chore` | Anything else |
 
-- **Scopes** (optional): `engine`, `abstractions`, `windows`, `logger`, `xna`, `terraform`, `snake`, `asteroids`,
-  `physics`, `scripting`, `benchmarks`, `platformer`, `consolegame`, `swarm`, `physicssandbox`, `physicsshowcase`,
-  `scripted`, `starguard`, `launcher`, `skystack`, `docs`, `ci`.
+- **Scopes** (optional): `engine`, `abstractions`, `windows`, `crossplatform`, `logger`, `xna`, `terraform`, `snake`,
+  `asteroids`, `physics`, `scripting`, `benchmarks`, `platformer`, `consolegame`, `swarm`, `physicssandbox`,
+  `physicsshowcase`, `scripted`, `starguard`, `launcher`, `skystack`, `docs`, `ci`.
 - **Description:** imperative, lower case, no trailing period. For example `fix(terraform): reset score on restart`.
 - **Breaking changes** to the public `ConsoleEngine` API or target framework: `!` after the type/scope and/or a
   `BREAKING CHANGE:` footer. For example `chore!: net8.0` (#10).

@@ -368,3 +368,5 @@ Levert på grenen til P2. Regler og tall i `docs/agent/03-rules.md` (Kartster-ra
 - **Bots dytter tilbake:** `BotDriverSystem.Contacts` (settes i `TrackScene.AddDriving`) leser `ContactBeginEvents`;
   `BotTraffic.BumpedBy`/`Bumped`/`AWasBumper`, `BotDriverSystem.BumpsBack`/`IsBumpingBack`. Regler i
   `docs/agent/03-rules.md` (Kartster-raden om bot-trafikk).
+- **24-bit i cross-platform:** `CrossPlatformConsoleHandler.SetTrueColor`/RGB-`Render` på true-colour-terminaler
+  (`COLORTERM`), så `--truecolor`/C virker også på macOS og Linux. Regler i `docs/agent/03-rules.md` § True colour.
