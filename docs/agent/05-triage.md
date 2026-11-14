@@ -150,6 +150,7 @@
 
 1. Level vanished when the menu opened (TerraForM `ESC`) → **Cause:** `Push` pauses the level and paused scenes don't render ([03 § Scenes](03-rules.md#scenes)). **Fix:** press `H` to return. Stop.
 2. Old characters stay on screen → is `ClearScreenOnEachFrame = false` (Snake, or their own game)? → **Cause:** buffer not cleared (`GameBase.Start`). Their game must blank cells itself. Stop.
+3. Text printed with `System.Console.Write` (or by another program) stays on screen, or cells stay wrong after it, on Windows → **Cause:** `ConsoleHandler.Render` writes only the rows that changed in the game's frame ([03 § Console output](03-rules.md#console-output)), so it never overwrites what something else wrote until the game draws something different there. **Fix:** draw through `RenderConsole` instead of `System.Console`. Stop.
 
 <a id="p13"></a>
 ## P13 — Snake goes off screen / can't lose

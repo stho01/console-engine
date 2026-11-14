@@ -175,7 +175,7 @@ ConsoleEngine.Physics.Tests/      physics tests (Collision, SpatialHashGrid, Phy
                                   PhysicsQueryTests, CharacterMoverTests, RotationTests, TileContactTests, SleepTests,
                                   InterpolationTests, ForceTests)
 ConsoleEngine.Tests/              engine unit tests (mirrors ConsoleEngine/ folders), Fakes/ (console handler, scene),
-                                  Scripting/ (LuaScriptSystemTests)
+                                  Scripting/ (LuaScriptSystemTests), Native/ (ConsoleHandler row diff)
 ConsoleEngine.Rendering3D/        3D (namespace ConsoleEngine.Rendering3D): IRenderer3D, Rasterizer (CPU), Mesh
                                   (Version/MarkChanged), ObjFile, ConsolePalette
 ConsoleEngine.Rendering3D.Tests/  RasterizerTests, ScreenDoorTests, ObjFileTests, MeshTests
@@ -186,7 +186,8 @@ ConsoleEngine.Scripting/          Script + ScriptFaulted (components), LuaScript
                                   LowLevel/LuaNative.cs (direct lua54 P/Invoke)
 ConsoleEngine.Benchmarks/         BenchmarkDotNet: Baseline/ (OOP vs. struct arrays), Ecs/ (World, Query),
                                   Physics/ (brute-force baseline, whole PhysicsSystem step, queries),
-                                  Scripting/ (Lua vs. C# system, mover.lua)
+                                  Scripting/ (Lua vs. C# system, mover.lua),
+                                  Rendering/ (per-cell Draw copy, ConsoleHandler row diff)
 ConsoleEngine.Abstractions/
   Inputs/  IInputHandler, Key, KeyState
   Rendering/  IConsoleHandler, Pixel, FontInfo
@@ -256,8 +257,9 @@ Examples/
 - The engine depends on `IConsoleHandler`/`IInputHandler`. **Win32 lives only in `ConsoleEngine.Windows`.** Keep it
   that way: a future macOS backend (issue 7) must be able to replace that project alone. One known leak:
   `GameBase` and `Input` currently `new` up `ConsoleHandler`/`InputHandler` directly.
-- Win32 return values are currently ignored. When touching `ConsoleHandler`, prefer checking them over adding more
-  silent calls.
+- Win32 return values are mostly ignored. `ConsoleHandler.Render` checks `WriteConsoleOutput` (a failed write makes
+  the next frame rewrite every row). When touching `ConsoleHandler`, prefer checking them over adding more silent
+  calls. `ConsoleEngine.Windows` has `InternalsVisibleTo` for `ConsoleEngine.Tests` and `ConsoleEngine.Benchmarks`.
 - Lua scripts are ECS behaviour: `LuaRuntime(game)` → `Load` → put `LuaScript.Component` (a `Script` component) on
   an entity → `LuaScriptSystem` (simulation) runs `on_start`/`on_update`, `LuaRenderSystem` (presentation) runs
   `on_render`. A script sees the entity as `self`, whose fields are its components: `x`/`y` (`Position`),
@@ -299,6 +301,24 @@ fix when nearby:
 - TerraForM `World.Intersects` allocates a `List` per call.
 - `SceneManager` calls `GC.Collect()` on unload.
 - `Rover`/Asteroids `Player` move without `Delta`.
+
+**Where a frame's console time goes** (measured in a classic conhost window, Consolas, every cell a background colour,
+mean ms per frame over 1000 frames, 200 at 480×270):
+
+| Size @ font | Per-cell `Draw` copy | `Pixel`→`CharInfo` | `WriteConsoleOutput`, all rows | random-colour frame |
+|---|---|---|---|---|
+| 240×135 @ 4×4 | 0.14 | 0.02 | 7.2 | 16 |
+| 320×180 @ 3×3 | 0.3 | 0.04 | 21–33 | 62 |
+| 480×270 @ 2×2 | 0.6 | 0.09 | 102 | 229 |
+
+- The managed side is under 2 % of it. The write is conhost painting: its cost grows with the rows written (also when
+  they are unchanged) and with the number of colour changes along a row (dithering, noise), and conhost runs a core
+  flat out. The `CharInfo[]` is blittable, so the P/Invoke marshaller copies nothing.
+- So `ConsoleHandler.Render` writes only the rows from the first to the last changed one
+  ([03 § Console output](docs/agent/03-rules.md#console-output)). A frame whose top 40 % is unchanged costs 18 ms instead
+  of 33 ms at 320×180; an unchanged frame 0.04 ms; a frame where every row changes the same as before.
+- For speed, leave cells unchanged where you can (a static sky, HUD) and avoid needless per-cell colour alternation.
+  Copying a whole frame of colours through `Draw` per cell is fine (0.3 ms at 320×180).
 
 Tag performance work as `perf:` commits.
 

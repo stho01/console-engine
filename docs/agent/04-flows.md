@@ -38,7 +38,7 @@ the final `Width`/`Height`, because those come from the ctor arguments.
 | 5 | Game `OnUpdate` | game | — | — |
 | 6 | Render top scene | `SceneManager.Render` → `Scene.Render` | No scene → skipped. `IsPaused` → `return` | Scene not drawn |
 | 7 | Game `OnRender` | game | — | — |
-| 8 | Write buffer to console | `ConsoleHandler.Render` → `WriteConsoleOutput` | fails: ignored | Silent: screen not updated |
+| 8 | Write buffer to console | `ConsoleHandler.Render`: converts `Pixel`s to `CharInfo`s, `FindChangedRows` against the last written frame, then one `WriteConsoleOutput` of the rows from the first to the last changed one | No row changed → no write. First frame, after `InitializeConsole`, or after a failed write (`_shownCharsValid == false`) → all rows. Write fails → `_shownCharsValid = false` | Silent: screen not updated this frame, the next frame rewrites every row |
 | 9 | Unload queued scenes, `GC.Collect()` | `SceneManager.Cleanup` | Queue empty → `return` | — |
 
 <a id="f3"></a>

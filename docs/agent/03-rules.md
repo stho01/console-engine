@@ -16,6 +16,18 @@ Every frame, in this order: `GameTime.Update()` → `Input.Instance.Update()` �
 - `Thread.Sleep(100)` runs once before the loop. There is **no frame cap**: the loop runs as fast as the machine
   allows.
 
+<a id="console-output"></a>
+### Console output (`ConsoleHandler.Render`, Windows)
+
+- `Display` hands the whole frame to `ConsoleHandler.Render`, which converts it to `CharInfo`s and compares it with the
+  frame it wrote last (`ConsoleHandler.FindChangedRows`). It writes only the rows from the **first to the last changed
+  row**, in one `WriteConsoleOutput`. A frame equal to the last one writes nothing.
+- All rows are written on the first frame, after `InitializeConsole`, and after a failed `WriteConsoleOutput`.
+- Anything else that writes into the console buffer (e.g. `System.Console.Write`) is not noticed: those cells stay
+  wrong until the game draws something different there.
+- Why: conhost's cost scales with the rows written, unchanged or not, and it is almost the whole cost of a frame
+  (numbers in `AGENTS.md` § Performance).
+
 <a id="fps"></a>
 ### Frame-rate dependence
 
