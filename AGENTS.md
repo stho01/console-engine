@@ -191,7 +191,7 @@ ConsoleEngine.Scripting/          Script + ScriptFaulted (components), LuaScript
                                   LuaRuntime (Lua state, engine API, hook trampoline), LuaScript (module, reload),
                                   LowLevel/LuaNative.cs (direct lua54 P/Invoke)
 ConsoleEngine.Benchmarks/         BenchmarkDotNet: Baseline/ (OOP vs. struct arrays), Ecs/ (World, Query),
-                                  Physics/ (brute-force baseline, whole PhysicsSystem step, queries),
+                                  Physics/ (brute-force baseline, whole PhysicsSystem step, static-heavy step, queries),
                                   Scripting/ (Lua vs. C# system, mover.lua),
                                   Rendering/ (per-cell Draw copy, ConsoleHandler row diff)
 ConsoleEngine.Abstractions/

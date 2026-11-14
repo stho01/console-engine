@@ -226,6 +226,10 @@ as wide on screen unless the font is square, as in PhysicsSandbox and PhysicsSho
 - Game systems read the events through `IPhysicsEvents` (`PhysicsSystem` implements it), so another physics engine
   could stand in behind the same components and events.
 - A dynamic or kinematic body needs a `Velocity`; without one it is handled as **static** (never moves, never pushed).
+- Broadphase: two `SpatialHashGrid`s. Moving bodies' grid is rebuilt every step; the static bodies' grid only when a
+  static body is added or removed, or its body index or bounding box changed (moving, turning or changing the
+  `Collider` of a static from game code works, it is compared every step). Static pairs are never tested. Queries
+  look in both grids.
 - `PhysicsSystem` (add it to `FixedSimulation`; `DefaultCellSize` 8 cells; `Gravity` default 0; `SubstepCount` 4;
   `ContactHertz` 30, capped at a quarter of the substep rate, doubled for contacts with a static or kinematic body;
   `ContactDampingRatio` 10; `ContactPushMaxSpeed` 3 cells/s; `RestitutionThreshold` 1 cell/s; `EnableSleep` on;

@@ -51,7 +51,21 @@ public sealed partial class PhysicsSystem : EntitySystem, IPhysicsEvents, IPhysi
     /// <summary>A body turning slower than this, radians/s (2°/s), counts as still for sleeping (Box2D's default).</summary>
     public const float AngularSleepTolerance = 2f * MathF.PI / 180f;
 
+    /// <summary>The moving (dynamic and kinematic) bodies, rebuilt every step.</summary>
     private readonly SpatialHashGrid _grid;
+
+    /// <summary>The static bodies, rebuilt only when one is added, removed, moved, turned or reshaped.</summary>
+    private readonly SpatialHashGrid _staticGrid;
+
+    /// <summary>This step's body indices of the moving bodies, in body order.</summary>
+    private readonly ArrayBuffer<int> _movingBodies = new();
+
+    /// <summary>Body indices and bounding boxes of the static bodies <see cref="_staticGrid"/> was built from.</summary>
+    private readonly ArrayBuffer<int> _staticBodies = new();
+
+    private readonly ArrayBuffer<StaticBounds> _staticBounds = new();
+    private int _staticCount;
+    private bool _staticsChanged;
     private readonly PairCache _pairCache = new();
     private readonly ArrayBuffer<BodyProxy> _proxies = new();
     private readonly ArrayBuffer<BodyShape> _shapes = new();
@@ -96,7 +110,11 @@ public sealed partial class PhysicsSystem : EntitySystem, IPhysicsEvents, IPhysi
     /// Broadphase cell size in cells. About the size of a typical body: much smaller puts big bodies in many cells,
     /// much bigger tests many far-apart pairs.
     /// </param>
-    public PhysicsSystem(float cellSize = DefaultCellSize) => _grid = new SpatialHashGrid(cellSize);
+    public PhysicsSystem(float cellSize = DefaultCellSize)
+    {
+        _grid = new SpatialHashGrid(cellSize);
+        _staticGrid = new SpatialHashGrid(cellSize);
+    }
 
     //**********************************************************
     //** props
@@ -193,8 +211,12 @@ public sealed partial class PhysicsSystem : EntitySystem, IPhysicsEvents, IPhysi
         Gather(deltaSeconds);
 
         _candidates.Clear();
-        _grid.Build(_proxies.AsSpan());
+        _grid.Build(_proxies.AsSpan(), _movingBodies.AsSpan());
+        if (_staticsChanged)
+            _staticGrid.Build(_proxies.AsSpan(), _staticBodies.AsSpan());
         _grid.FindPairs(_candidates);
+        if (_staticGrid.EntryCount > 0)
+            _grid.FindPairs(_staticGrid, _candidates);
 
         _contacts.Clear();
         _contactBegins.Clear();
@@ -252,6 +274,9 @@ public sealed partial class PhysicsSystem : EntitySystem, IPhysicsEvents, IPhysi
         var bodyEntities = _entities.Resize(count);
         _indexStamp++;
         _anySleeping = false;
+        _movingBodies.Clear();
+        _staticCount = 0;
+        _staticsChanged = false;
         var index = 0;
 
         foreach (var chunk in _colliders.GetChunks())
@@ -312,7 +337,18 @@ public sealed partial class PhysicsSystem : EntitySystem, IPhysicsEvents, IPhysi
                 sim.Friction = collider.Friction;
                 sim.Restitution = collider.Restitution;
                 bodyEntities[index] = entities[i];
+                if (sim.Type == BodyType.Static)
+                    NoteStatic(index, proxy);
+                else
+                    _movingBodies.Add(index);
             }
+        }
+
+        if (_staticCount != _staticBodies.Count)
+        {
+            _staticBodies.Truncate(_staticCount);
+            _staticBounds.Truncate(_staticCount);
+            _staticsChanged = true;
         }
 
         _tileBody = -1;
@@ -322,6 +358,31 @@ public sealed partial class PhysicsSystem : EntitySystem, IPhysicsEvents, IPhysi
             states[count] = BodyState.AtRest;
             sims[count] = default;
         }
+    }
+
+    /// <summary>
+    /// Counts a static body and compares it with the same static of the last step: a different body index or bounding
+    /// box means <see cref="_staticGrid"/> must be rebuilt. Bounds cover a changed position, rotation or collider.
+    /// </summary>
+    private void NoteStatic(int body, in BodyProxy proxy)
+    {
+        var k = _staticCount++;
+        var bounds = new StaticBounds(proxy.Center, proxy.Extents);
+        if (k < _staticBodies.Count)
+        {
+            if (_staticBodies[k] == body && _staticBounds[k].Equals(bounds))
+                return;
+
+            _staticBodies[k] = body;
+            _staticBounds[k] = bounds;
+        }
+        else
+        {
+            _staticBodies.Add(body);
+            _staticBounds.Add(bounds);
+        }
+
+        _staticsChanged = true;
     }
 
     private void ReadBody(in RigidBody rigidBody, Vector2 velocity, float spin, bool canTurn, in BodyShape shape,
@@ -1131,4 +1192,7 @@ public sealed partial class PhysicsSystem : EntitySystem, IPhysicsEvents, IPhysi
         interpolation.PreviousRadians = radians;
         interpolation.HasPrevious = true;
     }
+
+    /// <summary>A static body's bounding box as the static grid holds it.</summary>
+    private readonly record struct StaticBounds(Vector2 Center, Vector2 Extents);
 }

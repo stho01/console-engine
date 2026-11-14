@@ -360,3 +360,6 @@ Levert på grenen til P2. Regler og tall i `docs/agent/03-rules.md` (Kartster-ra
   (ingen etterslep, `Alpha` står stille); `Presentation` går videre. `TrackScene.SetPaused` bruker den, og
   `FlowSystem` (pausetastene) går nå først i `Presentation`. Omveien med en `FixedTimestep` på `float.MaxValue`
   (`PauseMenu.Timestep`) er borte.
+- **Statiske kropper i broadphase:** `PhysicsSystem` holder de statiske kroppene i et eget `SpatialHashGrid` som bare
+  bygges på nytt når en statisk kropp legges til, fjernes, flyttes, dreies eller får ny `Collider`.
+  `StaticBodiesStepBenchmarks`: 30 statiske 12,1 → 10,8 µs, 150: 21,5 → 14,6 µs, 1000: 95 → 40 µs per steg.

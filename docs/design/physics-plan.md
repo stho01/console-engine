@@ -143,7 +143,11 @@ etter gruppen, som i dag.
 - **Cellestørrelse** ≥ en typisk kropp. Kropper som er større enn en celle legges i alle cellene de dekker.
 - **Duplikate par:** et par rapporteres bare i cellen som inneholder minimumshjørnet av overlappet deres.
 - **Utenfor gridet:** posisjonen klemmes inn til kantcellene (eller hashes), så ingenting faller ut.
-- Statiske kropper bygges inn i gridet bare når de endres, ikke hvert steg.
+- Statiske kropper bygges inn i gridet bare når de endres, ikke hvert steg. Gjort (2026-11-14): `PhysicsSystem` har to
+  `SpatialHashGrid`-er, ett for kropper som beveger seg (bygges hvert steg) og ett for statiske (`_staticGrid`). Gather
+  sammenligner hver statisk kropps indeks og omsluttende boks med forrige steg (`NoteStatic`); bare ved forskjell, ny
+  eller fjernet kropp bygges det statiske gridet på nytt. Par: bevegelig–bevegelig i sitt grid, bevegelig–statisk
+  ved oppslag i det statiske gridet; statisk–statisk testes aldri. Spørringer ser i begge. Måling i § 12b.
 - Filteret (`Category`/`Mask`) sjekkes før narrowphase.
 
 ### Statisk tilegrid
@@ -429,6 +433,20 @@ denne økten): sirkler uten tyngdekraft med demping 1/s, satt i ro i 600 steg, d
 - Med sleeping er en scene i ro raskere enn i fase 4. Ved 10 000 sovende kropper går mesteparten av tiden til gather og
   broadphase, som fortsatt kjøres for sovende kropper (§ 12c).
 - 0 B allokert per steg i alle tilfellene.
+
+### Statiske kropper i broadphase (2026-11-14)
+
+`StaticBodiesStepBenchmarks` (16 dynamiske baller, N statiske bokser + 4 lange vegger, 1/120 s, uten sleep), `--job short
+--inProcess --affinity 1`, med andre agenter kjørende på maskinen, 0 B allokert:
+
+| Statiske | Før | Etter |
+|---:|---:|---:|
+| 30 | 12,1 µs | 10,8 µs |
+| 150 | 21,5 µs | 14,6 µs |
+| 1000 | 95,0 µs | 39,9 µs |
+
+`PhysicsStepBenchmarks` (bare dynamiske kropper) er uendret innenfor støyen (for eksempel 1000 uten sleep: 1 023 µs før,
+1 061 µs etter).
 
 ### 12c. Det som gjenstår
 
