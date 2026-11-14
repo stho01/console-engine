@@ -325,3 +325,16 @@ HUD-en ankres i spillerens region, men har samme størrelse (`Docs/hud.md`). Tas
    over hele skjermen.
 6. **Tester:** visningsoppsett, input-ruting (spiller 2 påvirker bare sin kart), to mennesker i `RaceSession`
    (venter på begge), `ViewportTarget` klipper til sin halvdel.
+### Status K2: alle karter
+- **Levert.** `Assets/Karts` har 20 av originalens 22 karter (OBJ med 4 desimaler, uten kommentarer, LF; om lag 10 MB,
+  2,5 MB komprimert). `KartCatalog` har tuningen til hver av dem felt for felt (inkludert chassis, girkasse, styring,
+  grep, bremser, tyngdepunkt og treghet), med Joyride. `KartModel` kjenner fargeordene til de nye kartene, glass er
+  gjennomsiktig (`Mesh.TriangleOpacity`), `muted` følger spillerfargen, og markører (`muffler`, `thrust`, `pose_`,
+  `joint_`, `radar_pivot` …) og deler som bare finnes på boost eller i roboten tegnes ikke.
+- **Utelatt:** `unicycle` (ett hjul, ingen aksler; trenger originalens `KartUnicycle`) og `mcluring` (grepet kommer
+  fra downforce, som `KartDynamics` ikke har; tuningen ligger i `KartCatalog.McLuring`).
+- **Ikke modellert** (karten kjører annerledes enn i originalen): krengning og velting, hjullåsing (elephant),
+  lightcycle som lener seg og lysveggen, banana som svever, delorelei som flyr, hektor som spøkelse og whosp som robot.
+  Detaljer i `docs/agent/03-rules.md` (raden «Kart catalog»).
+- **Risiko:** de ekte bilene har 20 000–40 000 trekanter hver (olabil 3 200); mange av dem i et løp koster
+  rasteriseringstid. Ingen LOD ennå.

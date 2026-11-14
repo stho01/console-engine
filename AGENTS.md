@@ -268,7 +268,7 @@ Examples/
                                   laps recorded per fixed step (TimeTrialSystem, GhostLap, GhostPose), the best lap
                                   as a see-through ghost (GhostRenderSystem) and in GhostFile under
                                   %LOCALAPPDATA%/Kartster/ghosts),
-                                  Assets/Karts/ (olabil, wagon), Assets/Tracks/
+                                  Assets/Karts/ (20 of Kartster's karts, 10 MB OBJ), Assets/Tracks/
                                   (star-circuit, star-rally, prism-loop, eight-ball: ribbon, spline, scenery.txt, race.txt, powerups.txt,
                                   collision.txt each; written by tools/KartsterExport) and Assets/Scenery/
                                   (Pipe.obj from Kartster, Box.obj), copied to output, Bots/ (see above),
@@ -279,6 +279,7 @@ Examples/
                                   SelectKartScene, SelectTrackScene, ResultsScene)
   Kartster.Tests/               KartModelTests, TrackTests, ShippedTracksTests, SceneryTests, KartPhysicsSystemTests,
                                   KartFrameTests, KartInputSystemTests, Driving/KartDynamicsTests, Driving/KartReferenceTests,
+                                  Driving/KartCatalogTests,
                                   Effects/EffectsTests (skid marks, slide smoke), Race/ (RaceMarkersTests,
                                   RaceSessionTests, RaceSystemTests, RaceReportTests, RaceWiringTests, RaceEndingTests),
                                   Modes/TimeTrialTests (ghost recording/playback, ghost file, a lap alone), Ui/ (PixelFont, TextFormat,
