@@ -137,6 +137,31 @@ public class KartReferenceTests
         Assert.That(headingChange, Is.EqualTo(Kartster[name].HandbrakeHeadingChange).Within(15).Percent);
     }
 
+    // Kartster, same harness: full throttle to 31.5 m/s, then full right lock through the keyboard ramp (0.25 s out)
+    // with the throttle held for 3 s. Kartster neither drifts here (body slip under 2.5°) nor should we.
+    [TestCase("Kart", -83.3f)]
+    [TestCase("olabil", -75.1f)]
+    [TestCase("wagon", -95.2f)]
+    public void HeadingChange_FullRightLockFor3SecondsAtTopSpeed_MatchesKartster(string name, float kartsterDegrees)
+    {
+        var kart = Start(name, out var body);
+        DriveTo(kart, ref body, 31.5f);
+        var startHeading = body.Heading;
+        var maxSlipDegrees = 0f;
+        var steer = 0f;
+        for (var i = 0; i < 3 * StepsPerSecond; i++)
+        {
+            steer = MathF.Min(steer + Dt / 0.25f, 1f);
+            Step(kart, ref body, new KartControls { Throttle = 1f, Steer = steer }, Surface.Asphalt);
+            var slip = MathF.Atan2(Vector2.Dot(body.Velocity, body.Right), Vector2.Dot(body.Velocity, body.Forward));
+            maxSlipDegrees = MathF.Max(maxSlipDegrees, MathF.Abs(float.RadiansToDegrees(slip)));
+        }
+
+        var headingChange = float.RadiansToDegrees(body.Heading - startHeading);
+        Assert.That(headingChange, Is.EqualTo(kartsterDegrees).Within(10).Percent);
+        Assert.That(maxSlipDegrees, Is.LessThan(3f));
+    }
+
     //**********************************************************
     //** internals
     //**********************************************************
