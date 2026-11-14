@@ -37,7 +37,7 @@ scripting loads the native `lua54.dll` that the KeraLua package ships for each r
 | Performance measurements | `ConsoleEngine.Benchmarks/` (BenchmarkDotNet) |
 | Exporting Kartster tracks (ribbon, spline, scenery, race markers, collision, power-up pads) from the original game | `tools/KartsterExport/` and its [`README.md`](tools/KartsterExport/README.md): `list`, `export <outDir> <trackId...>`, one `ITrackExporter` class per file. Not in the solution: needs the original's source (`KartsterRoot`, default `C:\Forse\kartster-server`) |
 | Lua scripting: components, `self` fields, hooks, errors, reload | [`docs/agent/03-rules.md § Lua`](docs/agent/03-rules.md#lua), `ConsoleEngine.Scripting/`, `Examples/Scripted` |
-| 3D rendering (`IRenderer3D`, software `Rasterizer`, OpenGL `GlRenderer`, near-plane clipping, OBJ models, 16-colour dithering or 24-bit true colour with alpha blending) | `ConsoleEngine.Rendering3D/` (own assembly and NuGet package, optional), GPU renderer in `ConsoleEngine.Rendering3D.OpenGL/` (same picture; callers fall back to `Rasterizer` when `GlRenderer.TryCreate` fails), GPU plan in [`docs/design/gpu-rendering-plan.md`](docs/design/gpu-rendering-plan.md), rules in [`docs/agent/03-rules.md`](docs/agent/03-rules.md) (Kartster rows) |
+| 3D rendering (`IRenderer3D`, software `Rasterizer`, OpenGL `GlRenderer`, near-plane clipping, OBJ models, 16-colour dithering or 24-bit true colour with alpha blending, lighting: `SceneLighting` ambient + sun + up to 16 per-pixel point/spot `PointLight`s) | `ConsoleEngine.Rendering3D/` (own assembly and NuGet package, optional), GPU renderer in `ConsoleEngine.Rendering3D.OpenGL/` (same picture; callers fall back to `Rasterizer` when `GlRenderer.TryCreate` fails), GPU plan in [`docs/design/gpu-rendering-plan.md`](docs/design/gpu-rendering-plan.md), rules in [`docs/agent/03-rules.md`](docs/agent/03-rules.md) (Kartster rows, "3D (any game)" lighting row) |
 | Why KeraLua, and what Lua costs per entity | `ConsoleEngine.Benchmarks/README.md` |
 | How to use the engine | `Examples/Snake` (smallest), `Examples/TerraForM` (scenes, assets, tests), `Examples/<Game>.Ecs` (ECS port of each game: components, systems, queries, `EcsScene`; compare with `Examples/<Game>`. `Snake.Ecs` is the smallest, `TerraForM.Ecs` the fullest), `Examples/Swarm` (ECS at scale, system ordering attributes), `Examples/PhysicsSandbox` (physics: bodies, colliders, fixed step, kinematic platform), `Examples/PhysicsShowcase` (every physics feature), `Examples/EternalDigger` (a full original ECS game: endless grid world, particle effects, lighting; start at [`Examples/EternalDigger/README.md`](Examples/EternalDigger/README.md), design contract in [`docs/design/eternal-digger.md`](docs/design/eternal-digger.md)), `Examples/Starguard` (ECS-only game with every system unit-tested through `Starguard.Tests/Battle`) |
 | Build/test pipeline | `.github/workflows/build-and-test.yml` |
@@ -183,11 +183,12 @@ ConsoleEngine.Physics.Tests/      physics tests (Collision, SpatialHashGrid, Phy
 ConsoleEngine.Tests/              engine unit tests (mirrors ConsoleEngine/ folders), Fakes/ (console handler, scene),
                                   Scripting/ (LuaScriptSystemTests), Native/ (ConsoleHandler row diff,
                                   CrossPlatformConsoleHandler frame text)
-ConsoleEngine.Rendering3D/        3D (namespace ConsoleEngine.Rendering3D): IRenderer3D, Rasterizer (CPU), Mesh
+ConsoleEngine.Rendering3D/        3D (namespace ConsoleEngine.Rendering3D): IRenderer3D, Rasterizer (CPU), SceneLighting +
+                                  PointLight, Mesh
                                   (Version/MarkChanged), ObjFile, ConsolePalette
-ConsoleEngine.Rendering3D.Tests/  RasterizerTests, ScreenDoorTests, TrueColorTests, ObjFileTests, MeshTests
+ConsoleEngine.Rendering3D.Tests/  RasterizerTests, ScreenDoorTests, TrueColorTests, LightingTests, ObjFileTests, MeshTests
 ConsoleEngine.Rendering3D.OpenGL/ GlRenderer (OpenGL 3.3: R8UI or RGBA8 framebuffer, shaders, per-mesh GPU cache)
-ConsoleEngine.Rendering3D.OpenGL.Tests/  GlRendererTests, GlRendererTrueColorTests (GPU vs. CPU pixels,
+ConsoleEngine.Rendering3D.OpenGL.Tests/  GlRendererTests, GlRendererTrueColorTests, LitScenes (GPU vs. CPU pixels, lights,
                                   allocation, fallback)
 ConsoleEngine.Scripting/          Script + ScriptFaulted (components), LuaScriptSystem, LuaRenderSystem,
                                   LuaRuntime (Lua state, engine API, hook trampoline), LuaScript (module, reload),

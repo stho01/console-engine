@@ -31,6 +31,17 @@ public interface IRenderer3D : IDisposable
     /// </summary>
     uint[] Rgb { get; }
 
+    /// <summary>
+    /// The light of the following <see cref="Draw"/> calls; null: ambient 0.35 and sun 0.65, no local lights. Both
+    /// <c>Clear</c>s set it back to null, so set it after <c>Clear</c>, each frame. Read at each <see cref="Draw"/>.
+    /// The default implementation (for renderers written before it) ignores it.
+    /// </summary>
+    SceneLighting Lighting
+    {
+        get => null;
+        set { }
+    }
+
     /// <summary>Starts a palette-mode frame on <paramref name="background"/> (Width × Height).</summary>
     /// <exception cref="InvalidOperationException">The renderer is in true-colour mode.</exception>
     void Clear(ReadOnlySpan<ConsoleColor> background);
@@ -39,7 +50,7 @@ public interface IRenderer3D : IDisposable
     /// <exception cref="InvalidOperationException">The renderer is in palette mode.</exception>
     void Clear(ReadOnlySpan<uint> backgroundRgb);
 
-    /// <param name="toLight">Unit vector from the scene towards the light, in world space.</param>
+    /// <param name="toLight">Unit vector from the scene towards the sun, in world space.</param>
     void Draw(Mesh mesh, Matrix4x4 world, Matrix4x4 viewProjection, Vector3 toLight);
 
     /// <summary>Ends the frame: <see cref="Colors"/> or <see cref="Rgb"/> holds it (a GPU renderer reads it back).</summary>

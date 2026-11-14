@@ -147,6 +147,8 @@ public class GlRendererTrueColorTests
         using var gpu = CreateOrIgnore(width, height);
         var floor = Mesh.CreateFloor(80, 40, new Vector3(0.2f, 0.6f, 0.3f), new Vector3(0.7f, 0.5f, 0.2f));
         var smoke = Quad(0, Vector3.One, 0.4f);
+        var lighting = new SceneLighting(); // a headlight on the floor: lit pixels, light uniforms on each draw
+        lighting.Add(new PointLight(new Vector3(0, 1, 5), Vector3.One * 3, 20f, -Vector3.UnitZ, 0.85f));
         var background = new uint[width * height];
         var viewProjection = Matrix4x4.CreateLookAt(new Vector3(0, 3, 10), Vector3.Zero, Vector3.UnitY)
                              * Matrix4x4.CreatePerspectiveFieldOfView(MathF.PI / 3, 16f / 9, 0.1f, 200);
@@ -168,11 +170,24 @@ public class GlRendererTrueColorTests
         void Frame()
         {
             gpu.Clear(background);
+            gpu.Lighting = lighting;
             gpu.Draw(floor, Matrix4x4.Identity, viewProjection, Vector3.UnitY);
             gpu.Draw(smoke, Matrix4x4.Identity, viewProjection, Vector3.UnitZ);
             gpu.Finish();
         }
     }
+
+    [Test]
+    public void Draw_PointLight_LightsLikeCpu() =>
+        AssertLit(Compare(LitScenes.PointLight(ViewProjection)), LitScenes.PointLight(ViewProjection, false));
+
+    [Test]
+    public void Draw_SpotLight_LightsLikeCpu() =>
+        AssertLit(Compare(LitScenes.SpotLight(ViewProjection)), LitScenes.SpotLight(ViewProjection, false));
+
+    [Test]
+    public void Draw_ColouredLightsAmbientAndSun_LightLikeCpu() =>
+        AssertLit(Compare(LitScenes.ColouredLights(ViewProjection)), LitScenes.ColouredLights(ViewProjection, false));
 
     //**********************************************************
     //** helpers
@@ -250,6 +265,22 @@ public class GlRendererTrueColorTests
                                   $"{MaxChannelDifference} ({agreement:P2} agree), largest difference {maxDifference}");
         Assert.That(agreement, Is.GreaterThanOrEqualTo(MinAgreement));
         return gpu;
+    }
+
+    /// <summary>The scene without its local lights differs from <paramref name="lit"/> in many pixels.</summary>
+    private static void AssertLit(IRenderer3D lit, Action<IRenderer3D> withoutLights)
+    {
+        using var cpu = new Rasterizer(Size, Size, ConsolePalette.Campbell, trueColor: true);
+        Render(cpu, withoutLights);
+        var changed = 0;
+        for (var i = 0; i < cpu.Rgb.Length; i++)
+        {
+            if (MaxChannelDifferenceOf(cpu.Rgb[i], lit.Rgb[i]) > MaxChannelDifference)
+                changed++;
+        }
+
+        TestContext.Out.WriteLine($"{changed} pixels lit by the local lights");
+        Assert.That(changed, Is.GreaterThan(Size * Size / 20));
     }
 
     private static int MaxChannelDifferenceOf(uint a, uint b)

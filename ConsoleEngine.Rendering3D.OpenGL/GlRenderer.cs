@@ -9,7 +9,8 @@ namespace ConsoleEngine.Rendering3D.OpenGL;
 
 /// <summary>
 /// Draws meshes on the GPU (OpenGL 3.3 core, hidden GLFW window) into an off-screen palette-index image and reads it
-/// back in <see cref="Finish"/>. The picture is the one <see cref="Rasterizer"/> draws: same flat light, dither,
+/// back in <see cref="Finish"/>. The picture is the one <see cref="Rasterizer"/> draws: same flat light, the same
+/// per-pixel local lights (<see cref="Lighting"/>, in the fragment shader), dither,
 /// palette lookup, screen-door transparency, culling and near-plane clipping; only edge pixels can differ.
 /// In <see cref="TrueColor"/> mode the image is RGBA8 instead, with its own fragment shader (its output type differs
 /// from the palette index's), the background copied in by <c>Clear</c> and see-through triangles alpha-blended in a
@@ -34,23 +35,64 @@ public sealed class GlRenderer : IRenderer3D
         uniform mat4 uWorldViewProjection;
         uniform mat4 uWorld;
         uniform vec3 uToLight;
+        uniform vec3 uAmbient;
+        uniform vec3 uSunColor;
         uniform bool uUnlit;
         flat out vec3 vColor;
+        flat out vec3 vAlbedo;
+        flat out vec3 vNormal;
         flat out float vOpacity;
+        out vec3 vWorld;
         void main() {
             gl_Position = uWorldViewProjection * vec4(aPosition, 1.0);
             gl_Position.z = 2.0 * gl_Position.z - gl_Position.w; // System.Numerics z 0..1 -> GL -w..w
-            vColor = uUnlit
-                ? aColor
-                : aColor * (0.35 + 0.65 * max(0.0, dot(normalize(mat3(uWorld) * aNormal), uToLight)));
+            vec3 normal = normalize(mat3(uWorld) * aNormal);
+            vColor = uUnlit ? aColor : aColor * (uAmbient + uSunColor * max(0.0, dot(normal, uToLight)));
+            vAlbedo = aColor;
+            vNormal = normal;
+            vWorld = (uWorld * vec4(aPosition, 1.0)).xyz;
             vOpacity = aOpacity;
         }
         """;
 
-    private const string FragmentShader = """
-        #version 330 core
+    /// <summary>
+    /// The flat colour plus the local lights at this pixel, as <c>SceneLighting.Contribution</c> computes them;
+    /// shared by both fragment shaders. <c>uLightCount</c> is 0 for unlit meshes.
+    /// </summary>
+    private const string LightsShader = """
         flat in vec3 vColor;
+        flat in vec3 vAlbedo;
+        flat in vec3 vNormal;
         flat in float vOpacity;
+        in vec3 vWorld;
+        uniform int uLightCount;
+        uniform vec3 uLightPosition[16];
+        uniform vec3 uLightColor[16];
+        uniform vec3 uLightDirection[16];
+        uniform float uLightRadius[16];
+        uniform float uLightCone[16];
+        vec3 shade() {
+            if (uLightCount == 0)
+                return vColor;
+            vec3 sum = vec3(0.0);
+            for (int i = 0; i < uLightCount; i++) {
+                vec3 toLight = uLightPosition[i] - vWorld;
+                float squared = dot(toLight, toLight);
+                float fraction = clamp(1.0 - squared / (uLightRadius[i] * uLightRadius[i]), 0.0, 1.0);
+                if (fraction <= 0.0)
+                    continue;
+                vec3 direction = toLight / max(sqrt(squared), 0.001);
+                float facing = clamp(dot(vNormal, direction), 0.0, 1.0);
+                float cone = uLightCone[i] < -0.5
+                    ? 1.0
+                    : smoothstep(uLightCone[i], uLightCone[i] + 0.08, -dot(direction, uLightDirection[i]));
+                sum += uLightColor[i] * (fraction * fraction * facing * cone);
+            }
+            return vColor + vAlbedo * sum;
+        }
+        """;
+
+    private const string FragmentShader = """
         uniform usampler3D uNearest;
         uniform float uDither[16];
         uniform int uHeight;
@@ -62,21 +104,18 @@ public sealed class GlRenderer : IRenderer3D
             int cell = ((y & 3) << 2) | (x & 3);
             if (vOpacity < 1.0 && (Bayer[cell] + 0.5) / 16.0 >= vOpacity)
                 discard;
-            ivec3 rgb = ivec3(clamp(vColor + uDither[cell], 0.0, 1.0) * 31.0 + 0.5);
+            ivec3 rgb = ivec3(clamp(shade() + uDither[cell], 0.0, 1.0) * 31.0 + 0.5);
             paletteIndex = texelFetch(uNearest, ivec3(rgb.b, rgb.g, rgb.r), 0).r;
         }
         """;
 
     private const string TrueColorFragmentShader = """
-        #version 330 core
-        flat in vec3 vColor;
-        flat in float vOpacity;
         uniform bool uBlendedPass;
         out vec4 color;
         void main() {
             if ((vOpacity < 1.0) != uBlendedPass)
                 discard; // opaque triangles in the first pass, see-through ones in the second
-            color = vec4(clamp(vColor, 0.0, 1.0), vOpacity);
+            color = vec4(clamp(shade(), 0.0, 1.0), vOpacity);
         }
         """;
 
@@ -94,6 +133,19 @@ public sealed class GlRenderer : IRenderer3D
     private readonly int _toLightLocation;
     private readonly int _unlitLocation;
     private readonly int _blendedPassLocation;
+    private readonly int _ambientLocation;
+    private readonly int _sunColorLocation;
+    private readonly int _lightCountLocation;
+    private readonly int _lightPositionLocation;
+    private readonly int _lightColorLocation;
+    private readonly int _lightDirectionLocation;
+    private readonly int _lightRadiusLocation;
+    private readonly int _lightConeLocation;
+    private readonly float[] _lightPositions = new float[SceneLighting.MaxLights * 3];
+    private readonly float[] _lightColors = new float[SceneLighting.MaxLights * 3];
+    private readonly float[] _lightDirections = new float[SceneLighting.MaxLights * 3];
+    private readonly float[] _lightRadii = new float[SceneLighting.MaxLights];
+    private readonly float[] _lightCones = new float[SceneLighting.MaxLights];
 
     // shortcut: a mesh stays on the GPU until Dispose; add eviction if games create meshes per level or per frame.
     private readonly Dictionary<Mesh, GpuMesh> _meshes = new();
@@ -144,6 +196,14 @@ public sealed class GlRenderer : IRenderer3D
             _worldLocation = _gl.GetUniformLocation(_program, "uWorld");
             _toLightLocation = _gl.GetUniformLocation(_program, "uToLight");
             _unlitLocation = _gl.GetUniformLocation(_program, "uUnlit");
+            _ambientLocation = _gl.GetUniformLocation(_program, "uAmbient");
+            _sunColorLocation = _gl.GetUniformLocation(_program, "uSunColor");
+            _lightCountLocation = _gl.GetUniformLocation(_program, "uLightCount");
+            _lightPositionLocation = _gl.GetUniformLocation(_program, "uLightPosition");
+            _lightColorLocation = _gl.GetUniformLocation(_program, "uLightColor");
+            _lightDirectionLocation = _gl.GetUniformLocation(_program, "uLightDirection");
+            _lightRadiusLocation = _gl.GetUniformLocation(_program, "uLightRadius");
+            _lightConeLocation = _gl.GetUniformLocation(_program, "uLightCone");
             if (trueColor)
             {
                 _blendedPassLocation = _gl.GetUniformLocation(_program, "uBlendedPass");
@@ -190,6 +250,9 @@ public sealed class GlRenderer : IRenderer3D
     /// <summary>The true-colour frame, <c>0xRRGGBB</c>, after <see cref="Finish"/>. Empty in palette mode.</summary>
     public uint[] Rgb { get; }
 
+    /// <inheritdoc/>
+    public SceneLighting Lighting { get; set; }
+
     //**********************************************************
     //** public methods
     //**********************************************************
@@ -223,6 +286,7 @@ public sealed class GlRenderer : IRenderer3D
 
         MakeCurrent();
         background.CopyTo(_background);
+        Lighting = null;
         _gl.ClearBuffer(BufferKind.Color, 0, _clearColor.AsSpan()); // glClear is undefined on an integer target
         _gl.ClearBuffer(BufferKind.Depth, 0, _clearDepth.AsSpan());
     }
@@ -245,9 +309,10 @@ public sealed class GlRenderer : IRenderer3D
             BlitFramebufferFilter.Nearest);
         _gl.BindFramebuffer(FramebufferTarget.Framebuffer, _framebuffer);
         _gl.ClearBuffer(BufferKind.Depth, 0, _clearDepth.AsSpan());
+        Lighting = null;
     }
 
-    /// <param name="toLight">Unit vector from the scene towards the light, in world space.</param>
+    /// <param name="toLight">Unit vector from the scene towards the sun, in world space.</param>
     public unsafe void Draw(Mesh mesh, Matrix4x4 world, Matrix4x4 viewProjection, Vector3 toLight)
     {
         var gpuMesh = Upload(mesh);
@@ -258,6 +323,7 @@ public sealed class GlRenderer : IRenderer3D
         _gl.UniformMatrix4(_worldLocation, 1, false, &world.M11);
         _gl.Uniform3(_toLightLocation, toLight.X, toLight.Y, toLight.Z);
         _gl.Uniform1(_unlitLocation, mesh.IsUnlit ? 1 : 0);
+        UploadLighting(mesh.IsUnlit);
         _gl.BindVertexArray(gpuMesh.VertexArray);
         var vertexCount = (uint)(mesh.TriangleCount * 3);
         if (!TrueColor)
@@ -343,6 +409,48 @@ public sealed class GlRenderer : IRenderer3D
             _window.GLContext.MakeCurrent(); // another renderer on this thread made its context current
     }
 
+    /// <summary>The ambient, the sun's colour and the local lights (none for an unlit mesh) of the next draw.</summary>
+    private unsafe void UploadLighting(bool unlit)
+    {
+        var ambient = Lighting?.Ambient ?? SceneLighting.DefaultAmbient;
+        var sunColor = Lighting?.SunColor ?? SceneLighting.DefaultSunColor;
+        _gl.Uniform3(_ambientLocation, ambient.X, ambient.Y, ambient.Z);
+        _gl.Uniform3(_sunColorLocation, sunColor.X, sunColor.Y, sunColor.Z);
+
+        var lights = unlit || Lighting == null ? default : Lighting.Lights;
+        _gl.Uniform1(_lightCountLocation, lights.Length);
+        if (lights.Length == 0)
+            return;
+
+        for (var i = 0; i < lights.Length; i++)
+        {
+            ref readonly var light = ref lights[i];
+            Store(_lightPositions, i, light.Position);
+            Store(_lightColors, i, light.Color);
+            Store(_lightDirections, i, light.Direction);
+            _lightRadii[i] = light.Radius;
+            _lightCones[i] = light.ConeCosine;
+        }
+
+        var count = (uint)lights.Length;
+        fixed (float* positions = _lightPositions, colors = _lightColors, directions = _lightDirections)
+        fixed (float* radii = _lightRadii, cones = _lightCones)
+        {
+            _gl.Uniform3(_lightPositionLocation, count, positions);
+            _gl.Uniform3(_lightColorLocation, count, colors);
+            _gl.Uniform3(_lightDirectionLocation, count, directions);
+            _gl.Uniform1(_lightRadiusLocation, count, radii);
+            _gl.Uniform1(_lightConeLocation, count, cones);
+        }
+
+        static void Store(float[] values, int index, Vector3 value)
+        {
+            values[index * 3] = value.X;
+            values[index * 3 + 1] = value.Y;
+            values[index * 3 + 2] = value.Z;
+        }
+    }
+
     private void FinishTrueColor()
     {
         _gl.ReadPixels(0, 0, (uint)Width, (uint)Height, PixelFormat.Bgra, PixelType.UnsignedInt8888Rev,
@@ -426,7 +534,7 @@ public sealed class GlRenderer : IRenderer3D
     {
         var program = _gl.CreateProgram();
         var vertex = CompileShader(ShaderType.VertexShader, VertexShader);
-        var fragment = CompileShader(ShaderType.FragmentShader, fragmentShader);
+        var fragment = CompileShader(ShaderType.FragmentShader, "#version 330 core\n" + LightsShader + fragmentShader);
         _gl.AttachShader(program, vertex);
         _gl.AttachShader(program, fragment);
         _gl.LinkProgram(program);

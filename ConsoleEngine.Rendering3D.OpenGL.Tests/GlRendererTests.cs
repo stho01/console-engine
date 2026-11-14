@@ -213,6 +213,15 @@ public class GlRendererTests
         Compare(r => r.Draw(Triangle(0, White), Matrix4x4.Identity, ViewProjection, Vector3.UnitZ));
     }
 
+    [Test]
+    public void Draw_PointLight_LightsLikeCpu() => Compare(LitScenes.PointLight(ViewProjection));
+
+    [Test]
+    public void Draw_SpotLight_LightsLikeCpu() => Compare(LitScenes.SpotLight(ViewProjection));
+
+    [Test]
+    public void Draw_ColouredLightsAmbientAndSun_LightLikeCpu() => Compare(LitScenes.ColouredLights(ViewProjection));
+
     //**********************************************************
     //** helpers
     //**********************************************************
