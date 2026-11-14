@@ -81,7 +81,7 @@ Levert i bølge 1, koblet inn i bølge 2 (`KartsterGame` starter på `TitleScene
 | 0 | Kjøring, fysikk, GPU, rendering (tidligere planer) | Ferdig |
 | 1 | 24-bit farge (K), kulisser (S), UI-sett og menyer (U), løpsregler (R), flere karter og bots (B) | Ferdig |
 | 2 | Flette bølge 1, skjermflyt (meny → løp → resultater), HUD inn i løpet | Ferdig (§ 7); vegger og flere baner flyttet til 3 |
-| 3 | Power-ups, vegger, flere baner, minikart, finpuss | – |
+| 3 | Power-ups (P), vegger og kollisjoner (V), flere baner og eksportverktøy (T), minikart, pause og avslutning (M), bots som kjører forbi (O) | Startet (§ 8) |
 
 ## 5. Løpsregler (`Race/`): status
 
@@ -150,3 +150,15 @@ Ferdig. Detaljer og tall står i `docs/agent/03-rules.md` (Kartster-radene), tas
 **Igjen til bølge 3:** power-ups (`HudState.PowerUp` er null), vegger og kollisjon mot dem, flere baner (menyen tar
 alle `*.ribbon.obj` i mappen allerede), minikart (øvre venstre hjørne er holdt av), autopilot for en spiller i mål og
 bots som kjøres ferdig, forbikjøring og dytting for botene, pause.
+
+## 8. Bølge 3: eierskap
+
+| Agent | Oppgave | Eier | Rører ellers (minst mulig) |
+|---|---|---|---|
+| P | Power-ups som i originalen: bokser på banen, plukk opp, bruk, effekter | `PowerUps/` | Én registrering i `TrackScene`, en krok i `KartPhysicsSystem` for effekter på tuning, `HudState.PowerUp` |
+| V | Vegger og kollisjon med gjerder, rør og ribbon-vegger | `Collision/` | Én registrering i `TrackScene`; kollisjonsdata i baneeksporten |
+| T | Eksportverktøyet inn i repoet (`tools/KartsterExport/`), flere baner, tre-modeller | `tools/`, `Assets/` | Ingen kode i spillet utenom det banene trenger |
+| M | Minikart, pause, autopilot for ferdig spiller og avslutning for resten av feltet | `Ui/Minimap*`, `Race/` (avslutning), `Scenes/` (pause) | `TrackScene` for pause, HUD-utfylling |
+| O | Bots: forbikjøring, unngå andre karter, dytting | `Bots/` | Ingenting utenfor `Bots/` |
+
+Ingen endrer `KartsterGame.cs` uten å si det i rapporten. Prosjektlederen fletter `TrackScene` og HUD-utfyllingen.
