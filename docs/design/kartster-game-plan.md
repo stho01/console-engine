@@ -162,3 +162,25 @@ bots som kjøres ferdig, forbikjøring og dytting for botene, pause.
 | O | Bots: forbikjøring, unngå andre karter, dytting | `Bots/` | Ingenting utenfor `Bots/` |
 
 Ingen endrer `KartsterGame.cs` uten å si det i rapporten. Prosjektlederen fletter `TrackScene` og HUD-utfyllingen.
+
+### Status: vegger og kollisjoner (V)
+
+Levert. Regler og tall i `docs/agent/03-rules.md` (Kartster-raden om vegger).
+
+- **Originalen:** alt utenfor veien som karter treffer, ligger i kollisjonsmeshen (`LevelLoader.LoadCollisionMesh`):
+  ytterveggen og gjerdene som 0,5 m tykke bokser (`TrackFenceMesh`), rør som åttekantede stolper (`TrackPipes`), og på
+  andre baner porter, trær, bygninger osv. `RaceSimulation.ResolveKartVsCollisionMesh` løser dem med kartens egen
+  restitusjon 0,1 og friksjon 0,3. `WallFriction` 0,6 gjelder bare kantveggene (`KartWallConstraint`), som Star
+  Circuit ikke har (`WallHeight` 0). Ingen egen fartsregel: farten tapes bare gjennom restitusjon og friksjon.
+- **Data:** `<id>.collision.txt` (`segment x1 y1 x2 y2 halfThickness`, `circle x y radius`), eksportert av
+  `CollisionExport` i scratchpad med originalens `TrackGround`, `TrackFenceMesh.ThicknessMeters` og `TrackPipes.Place`.
+  Verktøyet nekter baner med kantvegger, porter, ruteender eller trær/bygninger til de er støttet. Star Circuit:
+  4 yttervegger, 15 gjerder, 10 rør.
+- **Kode:** `Collision/TrackCollision` (`Load`, `Parse`, `AddTo(World)`): statiske kropper, en dreid boks per segment og
+  en sirkel per rør, friksjon 0,3 og restitusjon 0,1 (parets friksjon `sqrt(0,3 × 0,3)` = 0,3). Én linje i
+  `TrackScene.OnCreate`. De 29 statiske kroppene koster omtrent 6–10 µs per fysikksteg med 6 karter, ingen allokering.
+- **Avvik og hull:** rør er sirkler (originalen: åttekant med hjørnene på radien); høyden er ikke med (ingen hopper
+  over gjerdene på Star Circuit); motorens kontaktløser er Box2D-myk (60 Hz mot statiske, ett delsteg) i stedet for
+  originalens impulser med 4 iterasjoner, og den bygger broadphase for statiske kropper på nytt hvert steg (et forslag
+  til motoren: hold statiske kropper i broadphase mellom stegene). Kantvegger (`KartWallConstraint`) og ghost-kart som
+  kjører gjennom vegger er ikke laget. Gnister ved treff (`KartWallContact`) mangler.

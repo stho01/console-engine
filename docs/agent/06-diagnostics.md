@@ -122,6 +122,11 @@ using [04](04-flows.md).
 | `<file>:<line>: '<text>' is not a number` | `Scenery.Parse` (`InvalidDataException`) | A value in a scenery line does not parse (invariant culture) |
 | `<file>:<line>: unknown line '<word>', expected model or tri` | `Scenery.Parse` (`InvalidDataException`) | A scenery line starts with something else |
 | `<file>:<line>: model file <full path> not found` | `Scenery.Parse` (`InvalidDataException`) | A `model` line names an OBJ that is not in the `Scenery` folder beside the tracks folder |
+| `<file>:<line>: expected 'segment x1 y1 x2 y2 halfThickness'` / `expected 'circle x y radius'` | `TrackCollision.Parse` (`InvalidDataException`) | A `segment` line without exactly 5 values, a `circle` line without exactly 3 |
+| `<file>:<line>: '<text>' is not a number` | `TrackCollision.Parse` (`InvalidDataException`) | A value does not parse (invariant culture) or is not finite |
+| `<file>:<line>: '<text>' must be more than 0` | `TrackCollision.Parse` (`InvalidDataException`) | A half thickness or radius of 0 or less |
+| `<file>:<line>: segment has no length` | `TrackCollision.Parse` (`InvalidDataException`) | Both end points are the same |
+| `<file>:<line>: unknown line '<word>', expected segment or circle` | `TrackCollision.Parse` (`InvalidDataException`) | A collision line starts with something else |
 | `Kartster - <kart> on <track> - <n> km/h - gear <g> - <rpm> rpm - <CPU\|GPU\|CPU (no GPU)> 3D <ms> ms - <colours> - <fps> fps` (window title; 3D = `Clear` to `Finish`, smoothed) | `KartsterGame.OnInitialize` interval, every 250 ms | Running, track mode |
 | `Kartster - <kart> (<n> triangles) - <CPU\|GPU\|CPU (no GPU)> 3D <ms> ms - <colours> - <fps> fps` (window title) | `KartsterGame.OnInitialize` interval, every 250 ms | Running, garage mode |
 | `Kartster - <scene type> - <CPU\|GPU\|CPU (no GPU)> 3D <ms> ms - <colours> - <fps> fps` (window title, e.g. `Kartster - TitleScene - CPU 3D 0.40 ms - 24-bit - 60 fps`) | `KartsterGame.OnInitialize` interval, every 250 ms | Running, a menu (`TitleScene`, `SelectKartScene`, `SelectTrackScene`, `ResultsScene`) |

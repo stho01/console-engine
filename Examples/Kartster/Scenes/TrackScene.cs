@@ -8,6 +8,7 @@ using ConsoleEngine.Infrastructure.Inputs;
 using ConsoleEngine.Physics;
 using ConsoleEngine.Rendering3D;
 using Kartster.Bots;
+using Kartster.Collision;
 using Kartster.Components;
 using Kartster.Driving;
 using Kartster.Effects;
@@ -27,9 +28,10 @@ namespace Kartster.Scenes;
 /// Kartster's 120 steps per second, with a chase camera behind the player. A <see cref="RaceSession"/> run by the
 /// <see cref="RaceSystem"/> counts laps; nobody moves during its countdown. Bots drive by the
 /// <see cref="BotDriverSystem"/> in the game's kart folders' karts, each in its own colour. Karts push each other
-/// through their box colliders. The HUD (<see cref="Hud"/>, filled by a <see cref="RaceReport"/>) is drawn over the
-/// 3D picture. Keys: R restarts the race from the grid, Esc leaves it for the title. When the race is over for the
-/// player (<see cref="RaceReport.Update"/>: <see cref="RaceReport.ResultsDelaySeconds"/> after their finish) the
+/// through their box colliders and stop at the track's walls and posts (<see cref="TrackCollision"/>). The HUD
+/// (<see cref="Hud"/>, filled by a <see cref="RaceReport"/>) is drawn over the 3D picture. Keys: R restarts the
+/// race from the grid, Esc leaves it for the title. When the race is over for the player
+/// (<see cref="RaceReport.Update"/>: <see cref="RaceReport.ResultsDelaySeconds"/> after their finish) the
 /// <see cref="ResultsScene"/> follows.
 /// </summary>
 /// <param name="lapCount">Laps to race, at least 1.</param>
@@ -249,6 +251,7 @@ public sealed class TrackScene(int lapCount, int botCount = TrackScene.DefaultBo
         Race = CreateSession(track, Game.Markers, lapCount);
         var karts = CreateKarts(World, track, Game.Markers, tunings, PlayerSlot, Race);
         _player = karts[PlayerSlot];
+        TrackCollision.Load(System.IO.Path.Combine("Assets", "Tracks"), track.Name).AddTo(World);
         _report = new RaceReport(Race, names, PlayerSlot);
 
         FixedTimestep = new FixedTimestep(StepSeconds, MaxStepsPerFrame);

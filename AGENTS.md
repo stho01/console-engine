@@ -252,11 +252,12 @@ Examples/
                                   (exported ribbon + spline + scenery), Scenery (scenery file: model instances +
                                   triangle cells, culled per bounding sphere), Driving/ (Kartster-like planar kart
                                   model: KartDynamics computes force + yaw torque per step, KartIntegrator, KartTuning,
-                                  KartCatalog, KartEngine, KartTraction, KartLoadTransfer, Surface), Race/ (race
+                                  KartCatalog, KartEngine, KartTraction, KartLoadTransfer, Surface), Collision/ (TrackCollision: loads
+                                  <id>.collision.txt, walls and posts as static bodies), Race/ (race
                                   rules: RaceMarkers loads <id>.race.txt, RaceGate, GridSlot, RaceSession (pure:
                                   countdown, gates, laps, positions, gaps), RaceReport (HUD state), Racer, RacePhase, RaceProgress (component),
                                   RaceSystem), Assets/Karts/ (olabil, wagon), Assets/Tracks/ (star-circuit: ribbon,
-                                  spline, scenery.txt, race.txt) and Assets/Scenery/ (Pipe.obj from Kartster,
+                                  spline, scenery.txt, race.txt, collision.txt) and Assets/Scenery/ (Pipe.obj from Kartster,
                                   Box.obj), exported from Kartster, copied to output, Bots/ (BotDriverSystem,
                                   BotRoutePlan), Components/ (Kart with Index, PlayerKart, Bot),
                                   Ui/ (pixel UI kit: IPixelTarget, PaletteTarget, RgbTarget, PixelFont 3×5,
@@ -268,7 +269,8 @@ Examples/
                                   Effects/EffectsTests (skid marks, slide smoke), Race/ (RaceMarkersTests,
                                   RaceSessionTests, RaceSystemTests, RaceReportTests, RaceWiringTests), Ui/ (PixelFont, TextFormat, PixelTarget, Hud,
                                   Menu, MenuFlow tests; UiPreview writes ui-preview/*.ppm to the output), Bots/BotDriverSystemTests,
-                                  Bots/RaceTests (grid, input, headless 3-bot race, kart collisions, allocation)
+                                  Bots/RaceTests (grid, input, headless 3-bot race, kart collisions, allocation),
+                                  Collision/TrackCollisionTests (file, walls, pipe, race with walls, allocation)
 .github/workflows/                build-and-test.yml
 ```
 
