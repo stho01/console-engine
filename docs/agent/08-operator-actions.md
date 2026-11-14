@@ -41,6 +41,7 @@ team's process differs.
 | Swarm | SPACE / BACKSPACE / ESC | +10 000 particles / −10 000 particles / quit | `SpawnControlSystem`, `SwarmGame.OnUpdate` |
 | PhysicsSandbox | SPACE / B / ENTER / R / ESC | Drop a ball / a box / 50 balls / remove all dropped / quit | `DropSystem`, `PhysicsSandboxGame.OnUpdate` |
 | PhysicsShowcase | 1–5 / ENTER / R / A D W / E / G / I / ESC | Drop ball, box, triangle, pentagon, ghost / 30 shapes / remove dropped / run and jump / blast / flip gravity / interpolation on-off / quit | `DropSystem`, `PlayerInputSystem`, `BlastSystem`, `SwitchSystem`, `PhysicsShowcaseGame.OnUpdate` |
+| Starguard | ← → or A D / SPACE (hold) / ENTER | Move / fire (one shot in flight) / new match after game over | `ControlsSystem` |
 | Launcher | ↑↓ (W/S, K/J), Home/End / ENTER, SPACE / 1–9 / ESC, Q | Select / start selected / start that entry / quit | `LauncherMenu.HandleKey` |
 | EternalDigger | ←→ / A D (held) | Walk, or dig the side tile | `MinerInput`, `MinerControlSystem` |
 | EternalDigger | ↑ + ← or → (held) | Jump two tiles sideways over a one-tile gap (both tiles must be open) | `MinerControlSystem.CanJump` |

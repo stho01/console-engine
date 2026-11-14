@@ -96,6 +96,27 @@ to `save.dat.bad` (`SaveFile.BadPath`) by `SaveFile.Load`. Not saved: motion, di
 the lamp direction (rebuilt from facing), riding (a rider is saved standing at the landing the car is heading for).
 
 <a id="map-format"></a>
+## Starguard state
+
+One `BattleScene` per match. Everything on screen is an entity. The rest lives in plain objects that `BattleScene.OnCreate`
+creates and hands to the systems, so a restart (a new scene) resets all of it except `StarguardGame.HighScore`.
+
+| Object | Fields | Notes |
+|---|---|---|
+| `Match` | `Score`, `Lives` (starts at 3), `Wave` (starts at 1), `IsOver`, `RespawnSecondsLeft` (`CannonDown` while > 0) | Changed by `CollisionSystem`, `CannonSystem`, `FormationSystem`, `WaveSystem` |
+| `Formation` | `Direction` (+1/−1), `Frame` (0/1), `SinceLastStep`, `StartCount` | `Reset` at the start of each wave |
+| `Controls` | `Move` (−1/0/+1), `Fire`, `Restart` | Written only by `ControlsSystem`, from `Input.Instance` |
+| `StarguardGame.HighScore` | int | Process lifetime only, never saved |
+
+| Entity | Components |
+|---|---|
+| Alien | `Position`, `SpriteRef`, `Hitbox`, `Alien` (`FirstFrame`, `Points`) |
+| Cannon | `Position`, `SpriteRef`, `Hitbox`, `Cannon` (`Speed`) |
+| Saucer | `Position`, `Velocity`, `SpriteRef`, `Hitbox`, `Saucer` (`Points`) |
+| Player / alien shot | `Position`, `Velocity`, `Glyph`, tag `PlayerShot` / `AlienShot` |
+| Shield cell | `Position`, `Glyph`, `ShieldCell` (`Health`) |
+| Explosion | `Position`, `SpriteRef`, `Lifetime` (0.25 s) |
+
 ## Map file format (`Examples/TerraForM/Assets/Maps/mapN.txt`)
 
 Parsed by `WorldLoader.Parse`. Copied to output by `TerraForM.csproj` (`CopyToOutputDirectory=Always`, map0–map4).
