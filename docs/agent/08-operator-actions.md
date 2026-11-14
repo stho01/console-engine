@@ -63,6 +63,8 @@ team's process differs.
 | Kartster (track) | R | Back to the start, standing still (restarts `TrackScene`) | `KartsterGame.OnUpdate` |
 | Kartster (garage) | A D / W S / Q E (held), SPACE | Orbit left/right / up/down, zoom in/out, auto-spin on/off | `GarageScene.OnUpdate` |
 | Kartster | ENTER / TAB / ESC | Track/garage / next kart (on the track: from the start) / quit | `KartsterGame.OnUpdate` |
+| Kartster | G | Switch between the CPU `Rasterizer` and the OpenGL `GlRenderer`; stays on the CPU (title `CPU (no GPU)`) when OpenGL 3.3 isn't available | `KartsterGame.ToggleGpu` |
+| Kartster | `--gpu` (command-line flag, any position) | Start on the GPU renderer | `Program.cs` |
 | Kartster | first / second command-line argument | Folder of kart folders (e.g. Kartster's `Content/3D/Rendered/Karts`) / folder of exported tracks | `Program.cs` |
 
 There is **no** way to skip a TerraForM level, choose a map, reset the score, or enable TerraForM debug mode without a

@@ -3,8 +3,8 @@
 Navn: `Examples/Kartster` er konsollversjonen i dette repoet (het `KartViewer` til 2026-11-14). «Kartster» alene
 betyr originalspillet (MonoGame) i `C:\Forse\kartster-server`.
 
-Status (2026-11-14): fase 1 og 2 er ferdige (`ConsoleEngine.Rendering3D` med testprosjekt, Kartster tegner gjennom
-`IRenderer3D`; `ConsoleEngine.Rendering3D.OpenGL` med `GlRenderer` og GPU-testene). Fase 3 er ikke startet.
+Status (2026-11-14): fase 1–3 er ferdige (`ConsoleEngine.Rendering3D` med testprosjekt, Kartster tegner gjennom
+`IRenderer3D`; `ConsoleEngine.Rendering3D.OpenGL` med `GlRenderer` og GPU-testene). Fase 3: Kartster bytter med G eller `--gpu` og faller tilbake til CPU. Første måling i conhost (Debug): 3D-delen 6,2 ms på CPU mot 1,5 ms på GPU.
 
 ## 1. Mål og ikke-mål
 

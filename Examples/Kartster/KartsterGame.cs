@@ -1,4 +1,5 @@
 using System;
+using System.Diagnostics;
 using System.IO;
 using System.Numerics;
 using ConsoleEngine;
@@ -6,19 +7,21 @@ using ConsoleEngine.Abstractions.Inputs;
 using ConsoleEngine.Infrastructure;
 using ConsoleEngine.Infrastructure.Inputs;
 using ConsoleEngine.Rendering3D;
+using ConsoleEngine.Rendering3D.OpenGL;
 using Kartster.Driving;
 using Kartster.Scenes;
 
 namespace Kartster;
 
 /// <summary>
-/// 3D experiment: Kartster karts and a Kartster track, drawn by an <see cref="IRenderer3D"/> (the software
-/// <see cref="Rasterizer"/>) with one console cell per pixel. Two scenes, swapped with Enter: on the track (<see cref="TrackScene"/>) you drive the kart
+/// 3D experiment: Kartster karts and a Kartster track, drawn by an <see cref="IRenderer3D"/> with one console cell
+/// per pixel: the software <see cref="Rasterizer"/>, or the OpenGL <see cref="GlRenderer"/> (G toggles, falls back to
+/// the CPU when OpenGL 3.3 isn't there). Two scenes, swapped with Enter: on the track (<see cref="TrackScene"/>) you drive the kart
 /// with Kartster's kart model on the engine's physics and a chase camera behind it; in the garage
 /// (<see cref="GarageScene"/>) the camera orbits the kart on a small floor. Kartster's axes: 1 unit is 1 metre, +Y up,
 /// -Z forward. The game holds what both scenes share: renderer, sky, projection, the karts and the track.
 /// </summary>
-public class KartsterGame(string kartsFolder, string tracksFolder)
+public class KartsterGame(string kartsFolder, string tracksFolder, bool startOnGpu = false)
     : GameBase(ScreenWidth, ScreenHeight, fontWidth: 3, fontHeight: 3)
 {
     //**********************************************************
@@ -47,14 +50,22 @@ public class KartsterGame(string kartsFolder, string tracksFolder)
     ]);
 
     private readonly ConsoleColor[] _sky = new ConsoleColor[ScreenWidth * ScreenHeight];
+    private const float RenderTimeSmoothing = 0.05f;
+
+    private readonly Rasterizer _cpu = new(ScreenWidth, ScreenHeight, ScenePalette);
     private string[] _kartFolders;
     private int _kartIndex;
+    private GlRenderer _gpu;
+    private bool _gpuUnavailable;
+    private long _frameStart;
+    private float _renderMilliseconds;
 
     //**********************************************************
     //** props
     //**********************************************************
 
-    public IRenderer3D Renderer { get; } = new Rasterizer(ScreenWidth, ScreenHeight, ScenePalette);
+    /// <summary>The GPU renderer when it is on, else the CPU one.</summary>
+    public IRenderer3D Renderer => _gpu != null ? _gpu : _cpu;
 
     public Matrix4x4 Projection { get; } = Matrix4x4.CreatePerspectiveFieldOfView(
         FieldOfView, (float)ScreenWidth / ScreenHeight, NearPlane, FarPlane);
@@ -98,6 +109,9 @@ public class KartsterGame(string kartsFolder, string tracksFolder)
             _sky[y * ScreenWidth + x] = ScenePalette.ToConsoleColor(sky, x, y);
         }
 
+        if (startOnGpu)
+            ToggleGpu();
+
         if (Track != null)
             Scenes.Set(new TrackScene());
         else
@@ -105,8 +119,9 @@ public class KartsterGame(string kartsFolder, string tracksFolder)
 
         GameTime.SetInterval(250, () => Console.SetTitle(Scene is TrackScene track
             ? $"Kartster - {KartName} on {Track.Name} - {track.Speed * 3.6f:0} km/h - gear {track.Dynamics.Gear} - " +
-              $"{track.Dynamics.EngineRpm:0} rpm - {GameTime.Fps} fps"
-            : $"Kartster - {KartName} ({Kart.TriangleCount} triangles) - {GameTime.Fps} fps"));
+              $"{track.Dynamics.EngineRpm:0} rpm - {RendererLabel} 3D {_renderMilliseconds:0.00} ms - {GameTime.Fps} fps"
+            : $"Kartster - {KartName} ({Kart.TriangleCount} triangles) - {RendererLabel} 3D " +
+              $"{_renderMilliseconds:0.00} ms - {GameTime.Fps} fps"));
     }
 
     protected override void OnUpdate()
@@ -128,13 +143,19 @@ public class KartsterGame(string kartsFolder, string tracksFolder)
         else if (onTrack && input.GetKey(Key.R).Pressed)
             Scenes.Set(new TrackScene());
 
+        if (input.GetKey(Key.G).Pressed)
+            ToggleGpu();
+
         // The scene's render (next in the frame) draws onto the sky.
+        _frameStart = Stopwatch.GetTimestamp();
         Renderer.Clear(_sky);
     }
 
     protected override void OnRender()
     {
         Renderer.Finish();
+        var milliseconds = (float)Stopwatch.GetElapsedTime(_frameStart).TotalMilliseconds;
+        _renderMilliseconds += (milliseconds - _renderMilliseconds) * RenderTimeSmoothing;
         var colors = Renderer.Colors;
         for (var y = 0; y < ScreenHeight; y++)
         for (var x = 0; x < ScreenWidth; x++)
@@ -144,6 +165,28 @@ public class KartsterGame(string kartsFolder, string tracksFolder)
     //**********************************************************
     //** internals
     //**********************************************************
+
+    private string RendererLabel => _gpu != null ? "GPU" : _gpuUnavailable ? "CPU (no GPU)" : "CPU";
+
+    /// <summary>
+    /// Switches between the CPU and the GPU renderer. The GPU one is made the first time (on the game-loop thread, as
+    /// OpenGL wants); if OpenGL 3.3 isn't there, the game stays on the CPU and says so in the title.
+    /// </summary>
+    private void ToggleGpu()
+    {
+        if (_gpu != null)
+        {
+            _gpu.Dispose();
+            _gpu = null;
+            return;
+        }
+
+        if (!GlRenderer.TryCreate(ScreenWidth, ScreenHeight, ScenePalette, out _gpu))
+        {
+            _gpu = null;
+            _gpuUnavailable = true;
+        }
+    }
 
     private void LoadKart(int index)
     {
