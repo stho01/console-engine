@@ -1,0 +1,29 @@
+# brands-hatch-indy race markers, exported from Kartster by KartsterExport (route lap). Format: Examples/Kartster/Race/RaceMarkers.cs
+# metres, planar: x = world X, y = world Z. forward is the gate's normal (along the road), left/right its reach
+# either side of the point, right = (-forward.y, forward.x). heading: 0 faces -Z, positive is turned left
+laps 3
+start -127.405 -153.598 0.90269 -0.43029 53 53
+checkpoint 1.394 -213.509 0.90978 -0.4151 53 53
+checkpoint 137.773 -257.673 0.9938 -0.11121 53 53
+checkpoint 271.615 -213.453 0.53181 0.84686 53 53
+checkpoint 302.103 -74.157 0.0728 0.99735 53 53
+checkpoint 299.614 75.725 -0.05156 0.99867 53 53
+checkpoint 223.804 150.785 -0.70335 -0.71084 53 53
+checkpoint 205.269 4.237 -0.04691 -0.9989 53 53
+checkpoint 154.578 -126.123 -0.87655 -0.48131 53 53
+checkpoint 9.301 -100.692 -0.96347 0.26783 53 53
+checkpoint -122.151 -42.874 -0.87947 0.47595 53 53
+checkpoint -241.777 44.353 -0.50351 0.86399 53 53
+checkpoint -264.7 184.667 -0.40161 0.91581 53 53
+checkpoint -376.107 262.742 -0.92534 -0.37913 53 53
+checkpoint -433.607 140.978 0.11031 -0.9939 53 53
+checkpoint -374.992 4.928 0.62065 -0.78409 53 53
+checkpoint -262.324 -83.558 0.86192 -0.50704 53 53
+grid -129.856 -154.091 -1.12594
+grid -129.919 -150.738 -1.12598
+grid -132.564 -152.8 -1.12598
+grid -132.627 -149.447 -1.12595
+grid -135.272 -151.509 -1.12589
+grid -135.336 -148.156 -1.12628
+grid -137.98 -150.219 -1.12616
+grid -138.043 -146.866 -1.12552

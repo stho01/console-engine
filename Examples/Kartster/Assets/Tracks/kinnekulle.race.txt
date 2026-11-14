@@ -1,0 +1,29 @@
+# kinnekulle race markers, exported from Kartster by KartsterExport (route lap). Format: Examples/Kartster/Race/RaceMarkers.cs
+# metres, planar: x = world X, y = world Z. forward is the gate's normal (along the road), left/right its reach
+# either side of the point, right = (-forward.y, forward.x). heading: 0 faces -Z, positive is turned left
+laps 3
+start -236.988 -114.922 0.98579 -0.16798 51 51
+checkpoint -93.768 -129.303 1 0.00169 51 51
+checkpoint 49.308 -115.558 0.97139 0.23747 51 51
+checkpoint 189.017 -80.13 0.97942 0.20182 51 30
+checkpoint 323.993 -114.826 0.89098 -0.45404 51 51
+checkpoint 452.901 -179.302 0.93558 -0.35312 51 51
+checkpoint 534.728 -87.412 -0.27988 0.96004 51 51
+checkpoint 421.643 -19.558 -0.99155 -0.12976 51 51
+checkpoint 281.014 -51.039 -0.98756 -0.15727 51 28
+checkpoint 158.751 1.046 -0.47221 0.88148 51 51
+checkpoint 79.092 116.706 -0.89243 0.4512 51 51
+checkpoint -39.711 73.954 -0.53607 -0.84417 51 51
+checkpoint -157.467 -5.641 -0.99976 0.02173 51 51
+checkpoint -249.077 84.686 -0.29124 0.95665 51 51
+checkpoint -365.093 95.417 -0.80708 -0.59044 51 51
+checkpoint -474.597 2.684 -0.44122 -0.8974 51 51
+checkpoint -384.284 -85.833 0.97157 -0.23676 51 51
+grid -239.21 -116.067 -1.40306
+grid -240.189 -112.858 -1.40349
+grid -242.167 -115.567 -1.40364
+grid -243.148 -112.359 -1.40375
+grid -245.125 -115.068 -1.40409
+grid -246.107 -111.861 -1.40413
+grid -248.084 -114.57 -1.40388
+grid -249.064 -111.363 -1.40361

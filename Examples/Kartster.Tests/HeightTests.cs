@@ -26,6 +26,7 @@ public class HeightTests
 {
     private const float Step = TrackScene.StepSeconds;
     private static readonly string TracksFolder = Path.Combine(AppContext.BaseDirectory, "Assets", "Tracks");
+    private static readonly Lazy<Track> Norbergring = new(() => Track.Load(TracksFolder, "norbergring"));
 
     //** slopes
 
@@ -169,12 +170,37 @@ public class HeightTests
         Assert.That(world.Get<Position>(kart).Value.Y, Is.LessThan(-10f), "drove right over the lower road");
     }
 
+    [TestCase(254, 0f)]
+    [TestCase(1121, 7f)]
+    public void Bridge_NorbergringRouteThroughTheCrossing_KeepsItsLevel(int metres, float level)
+    {
+        var track = Norbergring.Value;
+        using var world = new World();
+        var group = Driving(world, track);
+        var (point, forward) = track.Sample(metres - 15f);
+        var kart = Place(world, track, new Vector2(point.X, point.Z), KartFrame.HeadingOf(forward), point.Y);
+        world.Get<Velocity>(kart).Value = new Vector2(forward.X, forward.Z) * 15f;
+
+        for (var step = 0; step < 240; step++)
+        {
+            group.Update(Step);
+            Assert.That(world.Get<Kart>(kart).Height, Is.EqualTo(level).Within(1.5f), $"step {step}");
+        }
+
+        var position = world.Get<Position>(kart).Value;
+        var (crossing, _) = track.Sample(metres);
+        Assert.That(Vector2.Distance(position, new Vector2(crossing.X, crossing.Z)), Is.GreaterThan(5f), "drove past it");
+        Assert.That(world.Get<Kart>(kart).Surface, Is.EqualTo(Surface.Asphalt));
+    }
+
     //** road grid and terrain
 
     [TestCase("star-circuit")]
+    [TestCase("norbergring")]
+    [TestCase("dunsfold-neon")]
     public void TryGetRoadHeight_RandomPoints_FindsWhatEveryTriangleFinds(string id)
     {
-        var track = Track.Load(TracksFolder, id);
+        var track = id == "norbergring" ? Norbergring.Value : Track.Load(TracksFolder, id);
         var random = new Random(7);
         var hits = 0;
         for (var i = 0; i < 4000; i++)
@@ -226,12 +252,101 @@ public class HeightTests
         Assert.That(exception.Message, Is.EqualTo(message));
     }
 
+    [Test]
+    public void Load_Norbergring_HasTerrainUnderTheRoad()
+    {
+        var track = Norbergring.Value;
+
+        Assert.That(track.Terrain, Is.Not.Null);
+        Assert.That(track.Terrain.Tiles.Count, Is.GreaterThan(10));
+        for (var metres = 0f; metres < track.Length; metres += 25f)
+        {
+            var (point, _) = track.Sample(metres);
+            if (!track.Terrain.TryGetHeight(point.X, point.Z, out var ground, out _))
+                continue;
+            // The original fits it 5 cm under the road; under the bridge it is the lower road's.
+            Assert.That(ground, Is.LessThan(point.Y + 0.5f), $"{metres} m");
+        }
+    }
+
+    [Test]
+    public void Ground_KartOffTheRoadOnTerrain_StandsOnIt()
+    {
+        var track = Norbergring.Value;
+        using var world = new World();
+        var group = Driving(world, track);
+        var (point, forward) = track.Sample(600f);
+        var side = new Vector3(-forward.Z, 0f, forward.X) * 25f;
+        var spot = point + side;
+        Assume.That(track.TryGetRoadHeight(spot, out _), Is.False);
+        Assert.That(track.Terrain.TryGetHeight(spot.X, spot.Z, out var ground, out _), Is.True);
+        var kart = Place(world, track, new Vector2(spot.X, spot.Z), 0f, ground + 1f);
+
+        Run(group, 1f);
+
+        var position = world.Get<Position>(kart).Value;
+        track.Terrain.TryGetHeight(position.X, position.Y, out ground, out _);
+        Assert.That(world.Get<Kart>(kart).Height, Is.EqualTo(ground).Within(0.01f));
+        Assert.That(world.Get<Kart>(kart).Surface, Is.EqualTo(Surface.Grass));
+    }
+
     //** races
 
+    [TestCase("norbergring")]
+    [TestCase("dunsfold-neon")]
+    [TestCase("kinnekulle")]
+    [TestCase("brands-hatch-indy")]
+    public void Race_ThreeBotsOnATrackWithHeight_EveryBotCompletesALap(string id)
+    {
+        const int capSeconds = 240;
+        var track = id == "norbergring" ? Norbergring.Value : Track.Load(TracksFolder, id);
+        using var world = new World();
+        var tunings = new[] { KartCatalog.Olabil, KartCatalog.Wagon, KartCatalog.Kart };
+        var markers = RaceMarkers.Load(TracksFolder, id);
+        var race = TrackScene.CreateSession(track, markers, laps: 5);
+        var karts = TrackScene.CreateKarts(world, track, markers, tunings, playerIndex: -1, race);
+        var group = new SystemGroup(world);
+        TrackScene.AddDriving(group, track, tunings, race);
+        float lowest = float.MaxValue, highest = float.MinValue;
+
+        var steps = 0;
+        for (; steps < (capSeconds + RaceSession.CountdownSeconds) * 120 && !EveryKartLapped(); steps++)
+        {
+            group.Update(Step);
+            for (var i = 0; i < karts.Length; i++)
+            {
+                lowest = MathF.Min(lowest, world.Get<Kart>(karts[i]).Height);
+                highest = MathF.Max(highest, world.Get<Kart>(karts[i]).Height);
+            }
+        }
+
+        TestContext.Out.WriteLine($"{id}: every bot lapped after {steps / 120f - RaceSession.CountdownSeconds:0.0} s, " +
+                                  $"karts between {lowest:0.0} and {highest:0.0} m");
+        for (var i = 0; i < karts.Length; i++)
+        {
+            var progress = world.Get<RaceProgress>(karts[i]);
+            TestContext.Out.WriteLine($"bot {i}: {progress.CompletedLaps} laps, best {progress.BestLapSeconds:0.0} s");
+            Assert.That(progress.CompletedLaps, Is.GreaterThanOrEqualTo(1), $"bot {i} drives on");
+            Assert.That(progress.MissedCheckpoints, Is.Zero, $"bot {i} follows the route");
+        }
+
+        bool EveryKartLapped()
+        {
+            for (var i = 0; i < karts.Length; i++)
+            {
+                if (world.Get<RaceProgress>(karts[i]).CompletedLaps < 1)
+                    return false;
+            }
+
+            return true;
+        }
+    }
+
     [TestCase("star-circuit")]
+    [TestCase("norbergring")]
     public void FixedStep_SixKartsOnATrackWithHeight_DoesNotAllocate(string id)
     {
-        var track = Track.Load(TracksFolder, id);
+        var track = id == "norbergring" ? Norbergring.Value : Track.Load(TracksFolder, id);
         using var world = new World();
         var tunings = new KartTuning[6];
         Array.Fill(tunings, KartCatalog.Kart);
@@ -258,9 +373,13 @@ public class HeightTests
     //** drawing
 
     [TestCase("star-circuit")]
+    [TestCase("norbergring")]
+    [TestCase("dunsfold-neon")]
+    [TestCase("kinnekulle")]
+    [TestCase("brands-hatch-indy")]
     public void Draw_ChaseViewsRoundTheTrack_DrawsTheGroundAndPrintsTheFrameTime(string id)
     {
-        var track = Track.Load(TracksFolder, id);
+        var track = id == "norbergring" ? Norbergring.Value : Track.Load(TracksFolder, id);
         var sky = new uint[320 * 180];
         using var cpu = new ConsoleEngine.Rendering3D.Rasterizer(320, 180, KartsterGame.ScenePalette, trueColor: true);
         var cpuMs = Frames(cpu, track, sky, out var tiles);

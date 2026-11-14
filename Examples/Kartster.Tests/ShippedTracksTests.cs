@@ -13,6 +13,10 @@ public class ShippedTracksTests
 {
     private static readonly string Folder = Path.Combine(AppContext.BaseDirectory, "Assets", "Tracks");
 
+    // tools/KartsterExport's CollisionExporter skips these: trees, buildings, lamps, bridge pillars, tunnel ceilings.
+    private static readonly HashSet<string> TracksWithoutCollision =
+        ["brands-hatch-indy", "dunsfold-neon", "kinnekulle", "norbergring"];
+
     private static IEnumerable<string> TrackIds()
     {
         foreach (var ribbon in Directory.GetFiles(Folder, "*.ribbon.obj"))
@@ -36,12 +40,36 @@ public class ShippedTracksTests
     }
 
     [TestCaseSource(nameof(TrackIds))]
-    public void Load_ShippedTrack_HasWalls(string id)
+    public void Load_ShippedTrack_HasWallsUnlessTheExporterRefusesIt(string id)
     {
         var collision = TrackCollision.Load(Folder, id);
 
-        Assert.That(collision, Is.Not.SameAs(TrackCollision.Empty), "the exporter writes collision for every track");
+        if (TracksWithoutCollision.Contains(id))
+        {
+            Assert.That(collision, Is.SameAs(TrackCollision.Empty), "update TracksWithoutCollision");
+            return;
+        }
+
+        Assert.That(collision, Is.Not.SameAs(TrackCollision.Empty), "the exporter writes collision for this track");
         Assert.That(collision.Segments.Length + collision.Posts.Length, Is.GreaterThan(0));
+    }
+
+    [TestCaseSource(nameof(TrackIds))]
+    public void Load_ShippedTrack_TerrainIsUnderTheGrid(string id)
+    {
+        var track = Track.Load(Folder, id);
+        var markers = RaceMarkers.Load(Folder, id);
+
+        Assert.That(track.Terrain != null, Is.EqualTo(File.Exists(Path.Combine(Folder, id + ".terrain.txt"))));
+        if (track.Terrain == null)
+            return;
+        for (var i = 0; i < markers.Grid.Length; i++)
+        {
+            var slot = markers.Grid[i].Position;
+            Assert.That(track.TryGetRoadHeight(new Vector3(slot.X, 0f, slot.Y), out var road), Is.True);
+            Assert.That(track.Terrain.TryGetHeight(slot.X, slot.Y, out var ground, out _), Is.True, $"grid slot {i}");
+            Assert.That(ground, Is.LessThan(road + 0.1f), $"grid slot {i}: the terrain is under the road");
+        }
     }
 
     [TestCaseSource(nameof(TrackIds))]

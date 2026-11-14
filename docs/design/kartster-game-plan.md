@@ -267,6 +267,30 @@ Levert på grenen til P. Regler og tall står i `docs/agent/03-rules.md` (Kartst
   `star-circuit.powerups.txt`. `PowerUpExporter` i `tools/KartsterExport` skriver nå `powerups.txt` for alle fire baner (Star Circuit 9, Prism Loop 12,
   Eight Ball 9, Star Rally 9 puter), og `SceneryExporter` skriver ikke lenger putene som `Box`.
 
+### Status: høyde (H)
+
+Levert. Design og tall i `docs/design/kart-physics-plan.md` § 11, regler i `docs/agent/03-rules.md` (Kartster-radene
+Height og Tracks).
+
+- **Høyde:** den plane fysikkroppen beholdes; hver kart har høyde, loddrett fart, bakkenormal og `Airborne`
+  (`Components/Kart`). `KartGroundSystem` gjør tyngdekraft og ensidig støtte som originalens `KartGroundConstraint`;
+  `KartPhysicsSystem` gir tyngdekraften langs bakken som plan kraft og lasten (cos θ) til modellen; i lufta virker
+  hjulene ikke. Karten tegnes vippet etter bakken, kameraet følger høyden.
+- **Nivåer:** høyeste vei-trekant ikke mer enn 0,5 m over karten (`Track.TryGetGround`), gjennom et rutenett på 4 m
+  bygd én gang. Under en bru teller ikke dekket, på brua er det høyest.
+- **Terreng:** `TerrainExporter` skriver originalens `TrackTerrain` som `<id>.terrain.txt`; `Terrain` kjører og tegner
+  på det (fliser, kulling som kulissene). Sjakkbrettet er igjen for baner uten terreng.
+- **Nye baner:** `norbergring` (0–9,8 m, bro 7 m over egen vei), `dunsfold-neon` (0–9,2 m, to broer på 8 m),
+  `kinnekulle` (0,1–15,8 m) og `brands-hatch-indy` (0,8–25,9 m), 3,8 MB til sammen, pluss fire tremodeller. Tre boter
+  fullfører en runde på hver (beste rundetider 65, 101, 85 og 86 s). Ingen `collision.txt` på dem (eksportøren nekter
+  trær, bygninger, lykter, brusøyler). CPU-tegning med 40 jagekameravinkler: 3,4–7,2 ms per bilde mot 3,6 på Star
+  Circuit; GPU 1,5–2,7 ms.
+- **Valgt bort nå:** byene (`downtown`, `neon-city`: bygninger, lykter og tunneltak er ikke med i kulisse-eksporten,
+  så de blir tomme), fjellbanene (opptil 470 m), doserte `speedway` (2 MB skilt) og åpne ruter.
+- **Rørt utenfor eget område:** `KartRenderSystem` (to linjer: tegnekallet for bakken og kartens verdensmatrise),
+  `Scenery.FromMeshes` (for terrengflisene), `KartFrame.ToWorld`, `Components/Kart`, `ShippedTracksTests` (baner uten
+  kollisjon er listet).
+
 ## 9. Bølge 4: eierskap
 
 | Agent | Oppgave | Eier | Rører ellers (minst mulig, si det i rapporten) |
