@@ -136,7 +136,8 @@ dotnet-tools.json                 local tools (ReportGenerator)
 run-game.ps1                      build an example and start it in conhost
 AGENTS.md / CLAUDE.md             agent instructions (CLAUDE.md imports AGENTS.md)
 docs/agent/                       support/triage docs for agents (01–09 + README)
-docs/design/                      design plans (ecs-plan.md, physics-plan.md, eternal-digger.md)
+docs/design/                      design plans (ecs-plan.md, physics-plan.md, eternal-digger.md,
+                                  kart-physics-plan.md)
 ConsoleEngine/                    the engine
   GameBase.cs                       abstract game: Initialize/Start/Stop, frame loop
   Collections/Deque.cs              double-ended queue (used by Snake)
@@ -214,11 +215,12 @@ Examples/
   TerraForM.Tests/                RoverTests.cs
   Scripted/                       Lua demo on ECS: Scenes/ScriptedScene, Systems/ (reload, error line),
                                   Assets/Scripts/ player.lua, firefly.lua (copied to output)
-  KartViewer/                     3D experiment: KartViewerGame (track chase camera, garage orbit camera), KartModel
-                                  (Kartster part folders), Track (exported ribbon + spline), Rendering/ (Rasterizer,
-                                  Mesh, ObjFile, ConsolePalette), Assets/Karts/ (olabil, wagon) and Assets/Tracks/
-                                  (star-circuit), exported from Kartster, copied to output
-  KartViewer.Tests/               RasterizerTests, ObjFileTests, TrackTests
+  KartViewer/                     3D experiment: KartViewerGame (track chase camera, garage orbit camera),
+                                  KartDriving (arcade driving), KartModel (Kartster part folders), Track (exported
+                                  ribbon + spline), Rendering/ (Rasterizer, Mesh, ObjFile, ConsolePalette),
+                                  Assets/Karts/ (olabil, wagon) and Assets/Tracks/ (star-circuit), exported from
+                                  Kartster, copied to output
+  KartViewer.Tests/               RasterizerTests, ObjFileTests, TrackTests, KartDrivingTests
 .github/workflows/                build-and-test.yml
 ```
 

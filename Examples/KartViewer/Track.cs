@@ -56,7 +56,10 @@ public sealed class Track
         var size = MathF.Max(max.X - min.X, max.Z - min.Z) + 2 * GroundMargin;
         var tiles = (int)MathF.Ceiling(size / GroundTileSize);
         Ground = Mesh.CreateFloor(tiles * GroundTileSize, tiles, Grass, OtherGrass);
-        GroundWorld = Matrix4x4.CreateTranslation((min.X + max.X) / 2, min.Y - GroundDrop, (min.Z + max.Z) / 2);
+        GroundHeight = min.Y - GroundDrop;
+        GroundWorld = Matrix4x4.CreateTranslation((min.X + max.X) / 2, GroundHeight, (min.Z + max.Z) / 2);
+        GroundHalfSize = tiles * GroundTileSize / 2;
+        GroundCenter = new Vector3((min.X + max.X) / 2, GroundHeight, (min.Z + max.Z) / 2);
     }
 
     //**********************************************************
@@ -67,6 +70,9 @@ public sealed class Track
     public Mesh Road { get; }
     public Mesh Ground { get; }
     public Matrix4x4 GroundWorld { get; }
+    public float GroundHeight { get; }
+    public Vector3 GroundCenter { get; }
+    public float GroundHalfSize { get; }
     public float Length { get; }
     public bool IsClosed { get; }
 
@@ -115,9 +121,49 @@ public sealed class Track
         return (position, forward == Vector3.Zero ? -Vector3.UnitZ : Vector3.Normalize(forward));
     }
 
+    /// <summary>
+    /// Whether <paramref name="position"/> is above the road surface (seen from straight above), and the road's
+    /// height there.
+    /// </summary>
+    public bool TryGetRoadHeight(Vector3 position, out float height)
+    {
+        // shortcut: tests every road triangle, about 2 600 on Star Circuit, so microseconds. Put the triangles in a
+        // grid once tracks get big (Halvorsen has ten times as many).
+        var positions = Road.Positions;
+        var indices = Road.Indices;
+        for (var t = 0; t < Road.TriangleCount; t++)
+        {
+            if (Road.TriangleNormals[t].Y <= 0.5f) // walls
+                continue;
+
+            var a = positions[indices[t * 3]];
+            var b = positions[indices[t * 3 + 1]];
+            var c = positions[indices[t * 3 + 2]];
+            var area = Cross2D(a, b, c);
+            if (area == 0)
+                continue;
+
+            var weightA = Cross2D(b, c, position) / area;
+            var weightB = Cross2D(c, a, position) / area;
+            var weightC = 1 - weightA - weightB;
+            if (weightA >= 0 && weightB >= 0 && weightC >= 0)
+            {
+                height = weightA * a.Y + weightB * b.Y + weightC * c.Y;
+                return true;
+            }
+        }
+
+        height = GroundHeight;
+        return false;
+    }
+
     //**********************************************************
     //** internals
     //**********************************************************
+
+    /// <summary>Twice the signed area of a, b, p projected on the ground (x, z).</summary>
+    private static float Cross2D(Vector3 a, Vector3 b, Vector3 p) =>
+        (b.X - a.X) * (p.Z - a.Z) - (b.Z - a.Z) * (p.X - a.X);
 
     private Vector3 PositionAt(float distance)
     {

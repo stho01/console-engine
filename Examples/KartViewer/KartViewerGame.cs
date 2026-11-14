@@ -11,8 +11,8 @@ namespace KartViewer;
 
 /// <summary>
 /// 3D experiment: Kartster karts and a Kartster track, drawn by the software <see cref="Rasterizer"/> with one
-/// console cell per pixel. Two modes, swapped with Enter: on the track the kart drives along the centerline with a
-/// chase camera behind it; in the garage the camera orbits the kart on a small floor. Kartster's axes: 1 unit is
+/// console cell per pixel. Two modes, swapped with Enter: on the track you drive the kart (<see cref="KartDriving"/>)
+/// with a chase camera behind it; in the garage the camera orbits the kart on a small floor. Kartster's axes: 1 unit is
 /// 1 metre, +Y up, -Z forward.
 /// </summary>
 public class KartViewerGame(string kartsFolder, string tracksFolder)
@@ -34,11 +34,6 @@ public class KartViewerGame(string kartsFolder, string tracksFolder)
     private const float AutoSpinSpeed = 0.5f;
 
     // track
-    private const float StartSpeed = 15f;   // metres per second
-    private const float MaxSpeed = 40f;
-    private const float Acceleration = 12f; // metres per second²
-    private const float SideSpeed = 4f;     // metres per second across the road
-    private const float MaxSideOffset = 3f;
     private const float ChaseDistance = 5.5f;
     private const float ChaseHeight = 2.2f;
     private const float LookAhead = 4f;
@@ -79,9 +74,7 @@ public class KartViewerGame(string kartsFolder, string tracksFolder)
     private bool _autoSpin = true;
 
     // track
-    private float _routeDistance;
-    private float _speed = StartSpeed;
-    private float _sideOffset;
+    private KartDriving _driving;
     private Vector3 _cameraEye;
 
     //**********************************************************
@@ -107,7 +100,7 @@ public class KartViewerGame(string kartsFolder, string tracksFolder)
         {
             _track = Track.Load(tracksFolder, Path.GetFileName(ribbons[0])[..^".ribbon.obj".Length]);
             _onTrack = true;
-            _cameraEye = ChaseEye();
+            ResetToStart();
         }
 
         for (var y = 0; y < ScreenHeight; y++)
@@ -118,7 +111,7 @@ public class KartViewerGame(string kartsFolder, string tracksFolder)
         }
 
         GameTime.SetInterval(250, () => Console.SetTitle(_onTrack
-            ? $"KartViewer - {_kartName} on {_track.Name} - {_speed * 3.6f:0} km/h - {GameTime.Fps} fps"
+            ? $"KartViewer - {_kartName} on {_track.Name} - {MathF.Abs(_driving.Speed) * 3.6f:0} km/h - {GameTime.Fps} fps"
             : $"KartViewer - {_kartName} ({_kart.TriangleCount} triangles) - {GameTime.Fps} fps"));
     }
 
@@ -192,35 +185,36 @@ public class KartViewerGame(string kartsFolder, string tracksFolder)
 
     private void UpdateDriving(Input input, float seconds)
     {
-        if (input.GetKey(Key.W).Held) _speed += Acceleration * seconds;
-        if (input.GetKey(Key.S).Held) _speed -= Acceleration * seconds;
-        if (input.GetKey(Key.A).Held) _sideOffset -= SideSpeed * seconds;
-        if (input.GetKey(Key.D).Held) _sideOffset += SideSpeed * seconds;
-        _speed = Math.Clamp(_speed, 0, MaxSpeed);
-        _sideOffset = Math.Clamp(_sideOffset, -MaxSideOffset, MaxSideOffset);
+        if (input.GetKey(Key.R).Pressed)
+            ResetToStart();
 
-        _routeDistance += _speed * seconds;
-        if (!_track.IsClosed && _routeDistance >= _track.Length)
-            _routeDistance = 0; // an open track starts over
+        var onRoad = _track.TryGetRoadHeight(_driving.Position, out _);
+        var steer = (input.GetKey(Key.A).Held ? 1 : 0) - (input.GetKey(Key.D).Held ? 1 : 0);
+        _driving.Update(input.GetKey(Key.W).Held, input.GetKey(Key.S).Held, steer, onRoad, seconds);
+
+        // Stay on the ground square, standing on the road or the grass.
+        var position = _driving.Position;
+        var center = _track.GroundCenter;
+        var edge = _track.GroundHalfSize - 1;
+        position.X = Math.Clamp(position.X, center.X - edge, center.X + edge);
+        position.Z = Math.Clamp(position.Z, center.Z - edge, center.Z + edge);
+        _track.TryGetRoadHeight(position, out position.Y);
+        _driving.Position = position;
 
         // The camera eases towards its place behind the kart, so turns swing it round instead of snapping.
         _cameraEye = Vector3.Lerp(_cameraEye, ChaseEye(), 1 - MathF.Exp(-CameraStiffness * seconds));
     }
 
-    private (Vector3 Position, Vector3 Forward) KartPose()
-    {
-        var (position, forward) = _track.Sample(_routeDistance);
-        var right = Vector3.Normalize(Vector3.Cross(forward, Vector3.UnitY));
-        return (position + right * _sideOffset, forward);
-    }
+    private (Vector3 Position, Vector3 Forward) KartPose() => (_driving.Position, _driving.Forward);
 
-    private Vector3 ChaseEye()
-    {
-        if (_track == null)
-            return Vector3.Zero;
+    private Vector3 ChaseEye() => _driving.Position - _driving.Forward * ChaseDistance + Vector3.UnitY * ChaseHeight;
 
-        var (position, forward) = KartPose();
-        return position - forward * ChaseDistance + Vector3.UnitY * ChaseHeight;
+    /// <summary>Puts the kart standing still on the start of the route, facing along it.</summary>
+    private void ResetToStart()
+    {
+        var (position, forward) = _track.Sample(0);
+        _driving = new KartDriving(position, forward);
+        _cameraEye = ChaseEye();
     }
 
     private void LoadKart(int index)

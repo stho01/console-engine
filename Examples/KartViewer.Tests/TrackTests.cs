@@ -40,4 +40,24 @@ public class TrackTests
         Assert.That(forward.Length(), Is.EqualTo(1f).Within(1e-4f));
         Assert.That(Vector3.Dot(Vector3.Normalize(ahead - here), forward), Is.GreaterThan(0.95f));
     }
+
+    [Test]
+    public void TryGetRoadHeight_OnTheCenterline_IsOnTheRoad()
+    {
+        var track = StarCircuit();
+        var (onCenterline, _) = track.Sample(100);
+
+        Assert.That(track.TryGetRoadHeight(onCenterline, out var height), Is.True);
+        Assert.That(height, Is.EqualTo(onCenterline.Y).Within(0.01f));
+    }
+
+    [Test]
+    public void TryGetRoadHeight_FarOutside_IsGrassAtGroundHeight()
+    {
+        var track = StarCircuit();
+        var outside = track.GroundCenter + new Vector3(track.GroundHalfSize - 1, 0, track.GroundHalfSize - 1);
+
+        Assert.That(track.TryGetRoadHeight(outside, out var height), Is.False);
+        Assert.That(height, Is.EqualTo(track.GroundHeight));
+    }
 }
