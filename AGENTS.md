@@ -318,7 +318,8 @@ tools/
   palette game one predictable branch per `Draw`. Rules in [03 § True colour](docs/agent/03-rules.md#true-colour).
 - ECS games use an `EcsScene<TGame>`: it owns a `World`, runs its `Simulation` systems in `Scenes.Update` and its
   `Presentation` systems in `Scenes.Render`, and applies each group's `CommandBuffer` after the group
-  ([`docs/agent/04-flows.md` F9](docs/agent/04-flows.md#f9)).
+  ([`docs/agent/04-flows.md` F9](docs/agent/04-flows.md#f9)). For a pause menu set `IsSimulationPaused`: the fixed
+  and frame simulation stop with no time collected, `Presentation` (where the resume key is read) goes on.
 - The engine depends on `IConsoleHandler`/`IInputHandler`. **Win32 lives only in `ConsoleEngine.Windows`.** Keep it
   that way: a future macOS backend (issue 7) must be able to replace that project alone. One known leak:
   `GameBase` and `Input` currently `new` up `ConsoleHandler`/`InputHandler` directly.

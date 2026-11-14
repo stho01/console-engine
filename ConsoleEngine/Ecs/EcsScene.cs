@@ -38,6 +38,15 @@ public abstract class EcsScene<TGame> : Scene<TGame> where TGame : GameBase
     /// <summary>Drawing. Runs after the frame buffer was cleared and the simulation finished.</summary>
     protected SystemGroup Presentation { get; private set; }
 
+    /// <summary>
+    /// Freezes the game, for a pause menu: while true, neither <see cref="FixedSimulation"/> nor
+    /// <see cref="Simulation"/> runs and <see cref="FixedTimestep"/> gets no time, so its <see cref="FixedTimestep.Alpha"/>
+    /// stays put and resuming neither jumps nor catches up a backlog. <see cref="Presentation"/> still runs, so read
+    /// the keys that resume from a system there. Not <see cref="Scene.IsPaused"/>, which stops the whole scene while
+    /// another is pushed on top.
+    /// </summary>
+    public bool IsSimulationPaused { get; set; }
+
     /// <summary>What part of the world is on screen. Move it from a system to follow the player.</summary>
     protected Camera Camera { get; } = new();
 
@@ -75,9 +84,15 @@ public abstract class EcsScene<TGame> : Scene<TGame> where TGame : GameBase
     //** internals
     //**********************************************************
 
-    /// <summary>One frame of simulation: the fixed steps that are due, then <see cref="Simulation"/>.</summary>
+    /// <summary>
+    /// One frame of simulation: the fixed steps that are due, then <see cref="Simulation"/>. Nothing while
+    /// <see cref="IsSimulationPaused"/>.
+    /// </summary>
     internal void RunSimulation(float deltaSeconds)
     {
+        if (IsSimulationPaused)
+            return;
+
         var steps = FixedTimestep.Advance(deltaSeconds);
         var stepSeconds = FixedTimestep.StepSeconds;
         for (var i = 0; i < steps; i++)

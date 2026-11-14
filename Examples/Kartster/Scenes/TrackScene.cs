@@ -97,8 +97,6 @@ public sealed class TrackScene(int lapCount, int botCount = TrackScene.DefaultBo
     private RaceReport _report;
     private HudState _hudState;
     private readonly PauseMenu _pause = new();
-    private FixedTimestep _raceTimestep;
-    private KartInputSystem _input;
     private KartEffectsSystem _effects;
     private RaceFinish _finish;
     private bool _finishing;
@@ -272,20 +270,21 @@ public sealed class TrackScene(int lapCount, int botCount = TrackScene.DefaultBo
         TrackCollision.Load(System.IO.Path.Combine("Assets", "Tracks"), track.Name).AddTo(World);
         _report = new RaceReport(Race, names, PlayerSlot);
 
-        FixedTimestep = _raceTimestep = new FixedTimestep(StepSeconds, MaxStepsPerFrame);
+        FixedTimestep = new FixedTimestep(StepSeconds, MaxStepsPerFrame);
         _physics = AddDriving(FixedSimulation, track, tunings, Race);
         _powerUps = PowerUpSystem.Add(FixedSimulation, Simulation, track, _physics, Race);
         FixedSimulation.Add(new AutopilotSystem());
         _finish = new RaceFinish(Race, FixedSimulation, StepSeconds);
 
-        _input = Simulation.Add(new KartInputSystem(race: Race));
-        Simulation.Add(new FlowSystem(this));
+        Simulation.Add(new KartInputSystem(race: Race));
 
         _karts = World.Query(Query.With<Kart, Position>());
         _minimap = CreateMinimap(track, Game.Markers);
 
         var skidMarks = new SkidMarks(Track.Asphalt, count);
         var smoke = new SlideSmoke(kartCount: count);
+        // In Presentation, as the simulation stops while paused and the pause menu's keys must still be read.
+        Presentation.Add(new FlowSystem(this));
         Presentation.Add(new InterpolationSystem(FixedTimestep));
         _effects = Presentation.Add(new KartEffectsSystem(_physics, skidMarks, smoke));
         var render = Presentation.Add(new KartRenderSystem(_player, Game, meshes, skidMarks, smoke)
@@ -409,16 +408,16 @@ public sealed class TrackScene(int lapCount, int botCount = TrackScene.DefaultBo
     }
 
     /// <summary>
-    /// Stops or restarts the fixed step (<see cref="PauseMenu.Timestep"/>), the keys and the smoke; drawing goes on.
+    /// Stops or restarts the simulation (<see cref="EcsScene{TGame}.IsSimulationPaused"/>) and the smoke; drawing
+    /// goes on.
     /// </summary>
     private void SetPaused(bool paused)
     {
-        FixedTimestep = _pause.Timestep(_raceTimestep);
-        _input.Enabled = !paused;
+        IsSimulationPaused = paused;
         _effects.Enabled = !paused;
     }
 
-    /// <summary>Runs <see cref="UpdateFlow"/> once a frame, after the input.</summary>
+    /// <summary>Runs <see cref="UpdateFlow"/> once a frame, before the drawing, paused or not.</summary>
     private sealed class FlowSystem(TrackScene scene) : EntitySystem
     {
         protected override void OnUpdate(float deltaSeconds) => scene.UpdateFlow(deltaSeconds);

@@ -16,8 +16,8 @@ public enum PauseChoice
 /// <summary>
 /// The race's pause menu, after Kartster's (<c>PauseMenu</c>, <c>PauseOverlayRenderer</c>): a dimmed, frozen scene
 /// with "PAUSED" and RESUME, RESTART, QUIT TO TITLE on a <see cref="MenuScreen"/>. Esc resumes, as in Kartster. While
-/// open, <see cref="Timestep"/> hands the scene a timestep that never steps, so the race's fixed step and clock stop,
-/// and the race's own one keeps the time it had, so resuming neither jumps nor catches up a backlog.
+/// open, the scene sets <see cref="EcsScene{TGame}.IsSimulationPaused"/>, so the race's fixed step and clock stop and
+/// resuming neither jumps nor catches up a backlog.
 /// </summary>
 public sealed class PauseMenu
 {
@@ -30,10 +30,6 @@ public sealed class PauseMenu
     public const string Restart = "RESTART";
     public const string QuitToTitle = "QUIT TO TITLE";
     public const string Footer = "ENTER SELECT   ESC RESUME";
-
-    // shortcut: a step this long never comes due, so the engine's EcsScene (which has no pause) runs no fixed step;
-    // give EcsScene a pause flag if another game needs one.
-    private readonly FixedTimestep _frozen = new(float.MaxValue, 1);
 
     private readonly MenuScreen _menu =
         new(Title, [new MenuItem(Resume), new MenuItem(Restart), new MenuItem(QuitToTitle)], Footer)
@@ -78,9 +74,6 @@ public sealed class PauseMenu
             IsOpen = false;
         return choice;
     }
-
-    /// <summary>The timestep the scene should run: <paramref name="race"/>'s, or one that never steps while open.</summary>
-    public FixedTimestep Timestep(FixedTimestep race) => IsOpen ? _frozen : race;
 
     /// <summary>Every other pixel dark (the console has no alpha to dim with), then the menu.</summary>
     public void Draw(IPixelTarget target)

@@ -43,10 +43,15 @@ public class RaceEndingTests
         return (group, karts, race);
     }
 
-    /// <summary>One frame as <c>EcsScene.RunSimulation</c> runs it, with the timestep the pause menu hands out.</summary>
-    private static void Frame(SystemGroup group, PauseMenu pause, FixedTimestep race, float seconds)
+    /// <summary>
+    /// One frame as <c>EcsScene.RunSimulation</c> runs it, with <c>IsSimulationPaused</c> set while the pause menu is
+    /// open, as <c>TrackScene</c> does.
+    /// </summary>
+    private static void Frame(SystemGroup group, PauseMenu pause, FixedTimestep timestep, float seconds)
     {
-        var timestep = pause.Timestep(race);
+        if (pause.IsOpen)
+            return;
+
         var steps = timestep.Advance(seconds);
         for (var i = 0; i < steps; i++)
             group.Update(timestep.StepSeconds);

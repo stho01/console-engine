@@ -355,3 +355,8 @@ Levert på grenen til P2. Regler og tall i `docs/agent/03-rules.md` (Kartster-ra
   `BotTraffic` lener seg ikke på karter med `IsInvulnerable` eller `Mass > 1` (originalens `BotBumping`).
 - **Rørt utenfor `PowerUps/`:** bare dokumentasjon. `PowerUpSystem.Add` legger nå også til `PowerUpSteeringSystem` og
   `PowerUpContactSystem` (plassert med `UpdateBefore`/`UpdateAfter` rundt `KartPhysicsSystem`).
+### Status: motor (E)
+- **Pause i `EcsScene`:** `EcsScene.IsSimulationPaused` stopper `FixedSimulation` og `Simulation` uten å samle tid
+  (ingen etterslep, `Alpha` står stille); `Presentation` går videre. `TrackScene.SetPaused` bruker den, og
+  `FlowSystem` (pausetastene) går nå først i `Presentation`. Omveien med en `FixedTimestep` på `float.MaxValue`
+  (`PauseMenu.Timestep`) er borte.
