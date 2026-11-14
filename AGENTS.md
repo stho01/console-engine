@@ -260,14 +260,15 @@ Examples/
                                   rules: RaceMarkers loads <id>.race.txt, RaceGate, GridSlot, RaceSession (pure:
                                   countdown, gates, laps, positions, gaps), RaceReport (HUD state), Racer, RacePhase, RaceProgress (component),
                                   RaceSystem, AutopilotSystem, RaceFinish), Assets/Karts/ (olabil, wagon), Assets/Tracks/
-                                  (star-circuit: ribbon, spline, scenery.txt, race.txt, collision.txt) and Assets/Scenery/ (Pipe.obj from Kartster,
-                                  Box.obj), exported from Kartster, copied to output, Bots/ (BotDriverSystem,
+                                  (star-circuit, star-rally, prism-loop, eight-ball: ribbon, spline, scenery.txt, race.txt each,
+                                  star-circuit also collision.txt; written by tools/KartsterExport) and Assets/Scenery/
+                                  (Pipe.obj from Kartster, Box.obj), copied to output, Bots/ (BotDriverSystem,
                                   BotRoutePlan), Components/ (Kart with Index, PlayerKart, Bot),
                                   Ui/ (pixel UI kit: IPixelTarget, PaletteTarget, RgbTarget, PixelFont 3×5,
                                   TextFormat, Shapes, UiColors, Hud + HudState, Minimap, RaceResults, IKartsterMenus,
                                   IUiLayer), Scenes/Menus/ (MenuScreen, MenuItem, MenuKeys, TitleScene,
                                   SelectKartScene, SelectTrackScene, ResultsScene)
-  Kartster.Tests/               KartModelTests, TrackTests, SceneryTests, KartPhysicsSystemTests,
+  Kartster.Tests/               KartModelTests, TrackTests, ShippedTracksTests, SceneryTests, KartPhysicsSystemTests,
                                   KartFrameTests, KartInputSystemTests, Driving/KartDynamicsTests, Driving/KartReferenceTests,
                                   Effects/EffectsTests (skid marks, slide smoke), Race/ (RaceMarkersTests,
                                   RaceSessionTests, RaceSystemTests, RaceReportTests, RaceWiringTests, RaceEndingTests), Ui/ (PixelFont, TextFormat,

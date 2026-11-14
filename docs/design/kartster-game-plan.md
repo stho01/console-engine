@@ -203,3 +203,18 @@ Levert. Regler og tall i `docs/agent/03-rules.md` (Kartster-radene Minimap, Paus
   av `BotDriverSystem`; `KartInputSystem` hopper over karter med `Bot`. Etter 4 s `FINISHED` kjøres resten av feltet
   ferdig i 20 ms-skiver per frame («FINISHING RACE», «n/6 HOME») til alle er i mål eller tidsgrensen
   min(30 min, 2 × vinnertid + 30 s) stopper løpet (DNF). Resultatene får ekte tider. `Bots/` er urørt.
+
+### Status: T (eksport og baner)
+
+- `tools/KartsterExport/` (`list`, `export`) gjenskaper Star Circuit-filene byte for byte (bortsett fra
+  kommentarlinjen øverst i `scenery.txt` og `race.txt`). Power-ups (P) og kollisjon (V) blir hver sin
+  `ITrackExporter`-klasse i `Program.Exporters`.
+- Nye baner: `star-rally` (veihøyde 0–3,15 m), `prism-loop` (helt flat, 2,0 km runde) og `eight-ball` (0–0,1 m,
+  5 runder). Til sammen 1,8 MB nye filer. Ingen av dem trenger nye scenerimodeller: de har ingen trær.
+- Valgt bort: baner med bro over egen vei (`norbergring` 7 m, `dunsfold-neon` 8 m, `neon-city` 6 m: `KartGroundSystem`
+  tar første veitrekant under karten), vei under y = 0 (`downtown`, `skaevven`: gresset legges under laveste punkt,
+  så resten av veien svever), bakkete baner (10–60 m høydeforskjell; fysikken er plan og ser bort fra stigning),
+  doserte `speedway` (2 MB skilt) og alle åpne ruter (ingen `race.txt`).
+- Eneste kodeendring i spillet: `Track.Load` stopper senterlinjen ved første hopp over 2 m. Spline-eksporten har
+  alle grener etter ruten (Prism Loops `north-section-*`), så banen ble ellers ikke lukket.
+- Bakker, broer og terreng trenger høyde i fysikken (eller terreng under veien) før flere av originalens baner passer.

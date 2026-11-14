@@ -1,0 +1,20 @@
+# star-rally race markers, exported from Kartster by KartsterExport (route lap). Format: Examples/Kartster/Race/RaceMarkers.cs
+# metres, planar: x = world X, y = world Z. forward is the gate's normal (along the road), left/right its reach
+# either side of the point, right = (-forward.y, forward.x). heading: 0 faces -Z, positive is turned left
+laps 3
+start 32.761 118.992 0.99961 -0.02792 18.5 23.5
+checkpoint 115.179 17.851 -0.0003 -1 10.5 10.5
+checkpoint 39.773 -103.983 -0.99998 -0.00583 15.5 17.5
+checkpoint -106.747 -59.961 -0.14109 0.99 25.5 26.5
+checkpoint -46.406 -63.038 0.64483 -0.76433 30.5 25.5
+checkpoint 62.032 -13.714 -0.89525 0.44556 29.5 37.5
+checkpoint 57.787 60.285 -0.43588 0.90001 27.5 21.5
+checkpoint -96.973 78.84 -0.69732 0.71676 29.5 49.5
+grid 30.724 117.546 -1.54537
+grid 29.297 120.581 -1.54777
+grid 27.731 117.615 -1.54969
+grid 26.293 120.645 -1.55114
+grid 24.735 117.674 -1.55211
+grid 23.289 120.7 -1.55387
+grid 21.74 117.725 -1.55516
+grid 20.286 120.748 -1.55597

@@ -22,6 +22,7 @@ public sealed class Track
     private const float GroundTileSize = 8f;
     private const float GroundDrop = 0.3f;   // below the road, so the two never fight in the depth buffer
     private const float TangentSpan = 3f;    // metres either side of a point used for its direction
+    private const float MaxPointSpacing = 2f; // the spline has a point per metre; a longer step is another branch
 
     public static readonly Vector3 Asphalt = new(0.33f, 0.33f, 0.35f);
     private static readonly Vector3 WallColor = new(0.8f, 0.78f, 0.72f);
@@ -96,12 +97,15 @@ public sealed class Track
         for (var t = 0; t < road.TriangleCount; t++)
             road.TriangleColors[t] = road.TriangleNormals[t].Y > 0.5f ? Asphalt : WallColor;
 
-        // The spline file has only points and polylines; the points in file order are the route.
+        // The spline file has only points and polylines; the points in file order are the route, up to the first jump.
+        // After it come the track's other branches (Prism Loop's north section), which are not part of the route.
         var splinePoints = new List<Vector3>();
         ObjFile.Read(Path.Combine(folder, id + ".spline.obj"), splinePoints, []);
         var centerline = new List<Vector3>(splinePoints.Count);
         foreach (var point in splinePoints)
         {
+            if (centerline.Count > 0 && Vector3.DistanceSquared(centerline[^1], point) > MaxPointSpacing * MaxPointSpacing)
+                break;
             // Neighbouring sections share their boundary point.
             if (centerline.Count == 0 || Vector3.DistanceSquared(centerline[^1], point) > 1e-6f)
                 centerline.Add(point);
