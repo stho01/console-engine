@@ -109,7 +109,7 @@ public class RaceReportTests
     }
 
     [Test]
-    public void Update_PlayerFinished_ResultsAfterTheDelayWithTheRestDnf()
+    public void Update_PlayerFinished_ResultsAfterTheDelayWithStragglersDnfAtTheCap()
     {
         var session = Session(laps: 1);
         session.Advance(RaceSession.CountdownSeconds);
@@ -125,7 +125,18 @@ public class RaceReportTests
 
         Assert.That(report.Update(RaceReport.ResultsDelaySeconds - 0.1f), Is.False, "FINISHED shows first");
         Assert.That(report.Update(0.2f), Is.True);
+        Assert.That(session.Phase, Is.EqualTo(RacePhase.Racing), "the rest are finished by a RaceFinish");
+
+        // Nobody else gets home: the clock runs to the cap (twice the winner's time plus 30 s), then the race stops.
+        using var world = new ConsoleEngine.Ecs.World();
+        var clock = new ConsoleEngine.Ecs.SystemGroup(world);
+        clock.Add(new ClockSystem(session));
+        var finish = new RaceFinish(session, clock, 0.1f);
+        Assert.That(finish.Step(100_000), Is.True);
         Assert.That(session.Phase, Is.EqualTo(RacePhase.Finished));
+        Assert.That(session.RaceTimeSeconds, Is.EqualTo(RaceFinish.CapSeconds(session)).Within(0.11f));
+        Assert.That(RaceFinish.CapSeconds(session),
+            Is.EqualTo(session.Get(Player).FinishTimeSeconds * RaceFinish.WinnerFactor + RaceFinish.SlackSeconds));
 
         var results = report.Results("STAR-CIRCUIT");
         Assert.That(results.TrackName, Is.EqualTo("STAR-CIRCUIT"));
@@ -159,5 +170,10 @@ public class RaceReportTests
             report.FillHud(ref hud, frame);
 
         Assert.That(GC.GetAllocatedBytesForCurrentThread() - before, Is.Zero);
+    }
+
+    private sealed class ClockSystem(RaceSession session) : ConsoleEngine.Ecs.EntitySystem
+    {
+        protected override void OnUpdate(float deltaSeconds) => session.Advance(deltaSeconds);
     }
 }

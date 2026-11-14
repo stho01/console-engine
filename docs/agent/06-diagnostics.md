@@ -113,6 +113,8 @@ using [04](04-flows.md).
 
 | Text | Emitted by | Meaning |
 |---|---|---|
+| `PAUSED`, `RESUME`, `RESTART`, `QUIT TO TITLE`, `ENTER SELECT   ESC RESUME` (pause overlay) | `PauseMenu` constants | The race is paused (Enter or Esc) |
+| `FINISHING RACE` and `<n>/<karts> HOME` (full screen) | `RaceFinish.Draw` | The player finished 4 s ago; the karts still out are being run to the line (at most 2 × the winner's time + 30 s of race time, then DNF) |
 | `No kart folders in <full path>` | `KartsterGame.OnInitialize` (`DirectoryNotFoundException`) | The karts folder (default `Assets/Karts`, relative to the working directory) has no sub-folders |
 | `No kart parts (*.obj) in <folder>` | `KartModel.Load` (`InvalidDataException`) | A kart folder has no drawable OBJ parts |
 | `<path>:<line>: a face needs at least three corners` | `ObjFile.Read` (`InvalidDataException`) | Broken OBJ file |
@@ -150,7 +152,7 @@ using [04](04-flows.md).
 | `KARTSTER`, `PRESS ENTER`, `SPACE GARAGE   ESC QUIT` | `TitleScene` (`Logo`, `Prompt`, `Footer`) | Title menu, the first scene |
 | `SELECT KART`, `UP/DOWN CHOOSE   ENTER OK   ESC BACK` | `SelectKartScene` | Kart menu |
 | `SELECT TRACK`, `TRACK`, `LAPS`, `START RACE`, `NONE`, `LEFT/RIGHT CHANGE   ENTER START   ESC BACK` | `SelectTrackScene` | Race setup menu; `NONE` when there are no tracks (then Enter does nothing) |
-| `RESULTS`, `POS`, `NAME`, `TIME`, `BEST`, `DNF`, `ENTER RACE AGAIN   ESC TITLE` | `ResultsScene` | Results table, 4 s after the player finishes; the track name in upper case |
+| `RESULTS`, `POS`, `NAME`, `TIME`, `BEST`, `DNF`, `ENTER RACE AGAIN   ESC TITLE` | `ResultsScene` | Results table once the race is over: 4 s of `FINISHED` after the player finishes, then `FINISHING RACE` until everybody is home or the cap; the track name in upper case |
 
 ### Launcher (`LauncherTexts`, `GameLocator`)
 

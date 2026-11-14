@@ -68,7 +68,9 @@ team's process differs.
 | Kartster (select kart) | UP DOWN / ENTER / ESC | Highlight and choose a kart (loads at once) / race setup / title | `SelectKartScene.OnUpdate` |
 | Kartster (select track) | UP DOWN / LEFT RIGHT / ENTER / ESC | Choose a row / change track or laps (1–5) / start the race / kart menu | `SelectTrackScene.OnUpdate` |
 | Kartster (race) | W / S / A D / SPACE (held) | Gas / brake, then reverse / steer left/right (ramped) / handbrake | `KartInputSystem` → `KartControls` → `KartPhysicsSystem` |
-| Kartster (race) | R / ESC | Every kart back on the grid, countdown again (restarts `TrackScene`, same laps) / leave the race for the title | `TrackScene.UpdateFlow` |
+| Kartster (race) | R | Every kart back on the grid, countdown again (restarts `TrackScene`, same laps) | `TrackScene.UpdateFlow` |
+| Kartster (race) | ENTER or ESC | Pause: the race stops, `PAUSED` menu over it | `TrackScene.UpdateFlow`, `PauseMenu` |
+| Kartster (paused) | UP DOWN / ENTER / ESC | Choose RESUME, RESTART or QUIT TO TITLE / pick it / resume | `PauseMenu.Update` |
 | Kartster (results) | ENTER / ESC | Race again (race setup) / title | `ResultsScene.OnUpdate` |
 | Kartster (garage) | A D / W S / Q E (held), SPACE, TAB, ESC | Orbit left/right / up/down, zoom in/out, auto-spin on/off, next kart (also chosen for the race), title | `GarageScene.OnUpdate` |
 | Kartster (any scene) | G | Switch between the CPU `Rasterizer` and the OpenGL `GlRenderer`; stays on the CPU (title `CPU (no GPU)`) when OpenGL 3.3 isn't available | `KartsterGame.ToggleGpu` |

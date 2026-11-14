@@ -68,26 +68,18 @@ public sealed class RaceReport(RaceSession session, string[] names, int playerId
     }
 
     /// <summary>
-    /// Counts the time since the player finished (or the race ended); <see cref="ResultsDelaySeconds"/> later it stops
-    /// the race, whoever is still out unfinished (DNF), and says the results are due.
+    /// Counts the time since the player finished (or the race ended): "FINISHED" shows for
+    /// <see cref="ResultsDelaySeconds"/> while the autopilot drives on, then the karts still out are finished by a
+    /// <see cref="RaceFinish"/>, and then the results are due.
     /// </summary>
-    /// <remarks>
-    /// shortcut: Kartster's autopilot takes over a finished player and fast-forwards the bots left
-    /// (<c>FinishRemaining</c>); here they just don't finish. Run the fixed step on for them if DNFs bother players.
-    /// </remarks>
-    /// <returns>True once the results should show.</returns>
+    /// <returns>True once the delay is over (every frame after it).</returns>
     public bool Update(float seconds)
     {
         if (session.Phase != RacePhase.Finished && !session.Get(playerId).HasFinished)
             return false;
 
         _finishedSeconds += seconds;
-        if (_finishedSeconds < ResultsDelaySeconds)
-            return false;
-
-        session.Stop();
-        session.UpdatePositions();
-        return true;
+        return _finishedSeconds >= ResultsDelaySeconds;
     }
 
     /// <summary>The finishing order on <paramref name="trackName"/>, one row per kart. Allocates; call once.</summary>

@@ -6,7 +6,7 @@ namespace Kartster.Ui;
 /// The race HUD, laid out like Kartster's on a 320×180 screen and anchored to the target's corners: "LAP 2/3" and the
 /// clock bottom-left with the standings on top, a dial speedometer in km/h bottom-right, the power-up top-right
 /// (nothing when empty), the countdown, "GO!" and "FINISHED" top-centre. All text has a dark outline so it reads over
-/// the road. The top-left corner is kept free for the minimap (wave 3). One instance per game; it allocates nothing
+/// the road. The top-left corner is the <see cref="Minimap"/>'s. One instance per game; it allocates nothing
 /// per frame.
 /// </summary>
 public sealed class Hud

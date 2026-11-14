@@ -1,6 +1,6 @@
 # Plan: Kartster som spillbart spill
 
-Status (2026-11-14): bølge 1 og 2 er ferdige (§ 7), bølge 3 gjenstår.
+Status (2026-11-14): bølge 1 og 2 er ferdige (§ 7), bølge 3 er i gang (§ 8: minikart, pause og avslutning levert).
 
 Navn: `Examples/Kartster` er konsollversjonen i dette repoet. «Kartster» alene betyr originalspillet (MonoGame) i
 `C:\Forse\kartster-server`, som vi henter regler, tall og data fra, men aldri endrer.
@@ -55,8 +55,8 @@ Levert i bølge 1, koblet inn i bølge 2 (`KartsterGame` starter på `TitleScene
 - `Ui/PixelFont`: 3×5-glyfer, fast bredde (4 piksler per tegn), `DrawText`/`DrawTextOutlined`/`DrawCentered`/
   `MeasureText` på `ReadOnlySpan<char>`. `TextFormat` skriver tall i en buffer som kalleren eier (`Time` = `m:ss.t`).
 - `Ui/Hud.Draw(target, in HudState)`: runde og klokke nede til venstre med stillingen over, fartsmåler nede til
-  høyre, power-up oppe til høyre, nedtelling/`GO!`/`FINISHED` oppe i midten. Øvre venstre hjørne er holdt av til
-  minikartet (bølge 3).
+  høyre, power-up oppe til høyre, nedtelling/`GO!`/`FINISHED` oppe i midten. Øvre venstre hjørne er
+  minikartet (`Ui/Minimap`, bølge 3).
 - `Scenes/Menus/`: `MenuScreen` (ren logikk på `MenuKeys`, tegning), `TitleScene`, `SelectKartScene`,
   `SelectTrackScene`, `ResultsScene(RaceResults)`. Alle er `IUiLayer`.
 
@@ -94,7 +94,7 @@ Ferdig i bølge 1, koblet inn i `TrackScene` i bølge 2. Reglene er originalens,
   entiteter med `Components.Kart`, `Position` og `RaceProgress`, og speiler `Racer` inn i `RaceProgress`.
 - Avvik fra originalen: plassering etter porter og så rett avstand til neste port (originalen: runder pluss
   ruteavstand rundt banen); klokken går i faste steg (originalen: per frame); ingen høydegrenser på portene; ingen
-  `Retire`/`Rejoin`, tider per port (gap) eller autopilot. Bare lukkede ruter.
+  `Retire`/`Rejoin`, tider per port (gap). Autopilot og avslutning kom i bølge 3 (§ 8). Bare lukkede ruter.
 - `race.txt` (format i `Race/RaceMarkers.cs`), meter i planet (x = verdens X, y = verdens Z):
   `laps <n>`, `start x y fremX fremY venstre høyre`, `checkpoint …` (samme felt, i rute-rekkefølge),
   `grid x y heading` (i rutenett-rekkefølge, 8 plasser). Eksportert med originalens `SelectRoute`, `GetLapCount`,
@@ -136,11 +136,11 @@ Ferdig. Detaljer og tall står i `docs/agent/03-rules.md` (Kartster-radene), tas
 
 - **Flyt:** `TitleScene` → `SelectKartScene` → `SelectTrackScene` → `TrackScene` (løpet) → `ResultsScene`.
   `KartsterGame` er `IKartsterMenus` og leser bare G og C selv; alle andre taster hører til scenen. Fra tittelen
-  åpner Space garasjen (Esc tilbake, Tab neste kart). I løpet: R starter på nytt, Esc går til tittelen (ingen pause).
+  åpner Space garasjen (Esc tilbake, Tab neste kart). I løpet: R starter på nytt, Esc går til tittelen (bølge 3: Enter/Esc gir pause, § 8).
 - **Løpet:** rutenettet fra `race.txt`, spilleren først (pole), som originalen stiller tastaturspilleren foran
   botene. `RaceSession` per løp med antall runder fra menyen; kartene registreres med `Kart.Index`. Ingen kjører
   under nedtellingen. 4 s etter at spilleren er i mål (originalens `ResultsDelaySeconds`) stoppes løpet og
-  resultatene vises; de som ikke er i mål får DNF (originalen kjører dem ferdig med autopilot og `FinishRemaining`).
+  resultatene vises; de som ikke er i mål får DNF (originalen kjører dem ferdig med autopilot og `FinishRemaining`; gjort i bølge 3, § 8).
 - **Palett:** gult `0xFFD23F` i `ScenePalette` i stedet for mellomgrått `0x949497` (ditheres fra naboene); gult
   er også banens kantsteiner og dekkstabler og gule kartdeler.
 - **HUD:** `RaceReport.FillHud` fyller `HudState` hver frame uten allokering: fart, runde, klokke, plassering,
@@ -184,3 +184,21 @@ Levert. Regler og tall i `docs/agent/03-rules.md` (Kartster-raden om vegger).
   originalens impulser med 4 iterasjoner, og den bygger broadphase for statiske kropper på nytt hvert steg (et forslag
   til motoren: hold statiske kropper i broadphase mellom stegene). Kantvegger (`KartWallConstraint`) og ghost-kart som
   kjører gjennom vegger er ikke laget. Gnister ved treff (`KartWallContact`) mangler.
+
+### Status M: minikart, pause og avslutning
+
+Levert. Regler og tall i `docs/agent/03-rules.md` (Kartster-radene Minimap, Pause og Race end), taster i
+`08-operator-actions.md`.
+
+- **Minikart** (`Ui/Minimap`): hele banen nordvendt, skalert inn i 48×48 px oppe til venstre, senterlinjen hvit med
+  mørk skygge, hvit strek over startlinjen, botene som prikker i karosserifargen, spilleren som gul pil. Polylinjen
+  regnes ut én gang per bane; ingen allokering per frame. Avvik: originalen dreier kartet med spilleren og viser
+  110 m rundt.
+- **Pause** (`Scenes/PauseMenu`): Enter (originalens tast) eller Esc åpner PAUSED med RESUME, RESTART, QUIT TO TITLE
+  (`MenuScreen`); Esc fortsetter. Mens det er pause får scenen et `FixedTimestep` som aldri går, så fast steg og
+  klokke står og løpets eget tidssteg beholder akkumulatoren (ingen etterslep). Esc går altså ikke lenger rett til
+  tittelen (originalen: Esc går til lobbyen).
+- **Avslutning** (`Race/AutopilotSystem`, `Race/RaceFinish`): spilleren i mål får en `Bot` (Merlin) og kjøres videre
+  av `BotDriverSystem`; `KartInputSystem` hopper over karter med `Bot`. Etter 4 s `FINISHED` kjøres resten av feltet
+  ferdig i 20 ms-skiver per frame («FINISHING RACE», «n/6 HOME») til alle er i mål eller tidsgrensen
+  min(30 min, 2 × vinnertid + 30 s) stopper løpet (DNF). Resultatene får ekte tider. `Bots/` er urørt.

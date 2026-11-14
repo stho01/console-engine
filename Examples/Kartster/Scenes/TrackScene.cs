@@ -29,10 +29,12 @@ namespace Kartster.Scenes;
 /// <see cref="RaceSystem"/> counts laps; nobody moves during its countdown. Bots drive by the
 /// <see cref="BotDriverSystem"/> in the game's kart folders' karts, each in its own colour. Karts push each other
 /// through their box colliders and stop at the track's walls and posts (<see cref="TrackCollision"/>). The HUD
-/// (<see cref="Hud"/>, filled by a <see cref="RaceReport"/>) is drawn over the 3D picture. Keys: R restarts the
-/// race from the grid, Esc leaves it for the title. When the race is over for the player
-/// (<see cref="RaceReport.Update"/>: <see cref="RaceReport.ResultsDelaySeconds"/> after their finish) the
-/// <see cref="ResultsScene"/> follows.
+/// (<see cref="Hud"/>, filled by a <see cref="RaceReport"/>) is drawn over the 3D picture, with the
+/// <see cref="Minimap"/> in its top-left corner. Keys: R restarts the race from the grid, Enter or Esc pauses
+/// (<see cref="PauseMenu"/>: RESUME, RESTART, QUIT TO TITLE). Once the player has finished, the
+/// <see cref="AutopilotSystem"/> drives their kart on; <see cref="RaceReport.ResultsDelaySeconds"/> later a
+/// <see cref="RaceFinish"/> runs the race to its end for the karts still out, then the <see cref="ResultsScene"/>
+/// follows.
 /// </summary>
 /// <param name="lapCount">Laps to race, at least 1.</param>
 /// <param name="botCount">Bots on the grid besides the player.</param>
@@ -78,8 +80,7 @@ public sealed class TrackScene(int lapCount, int botCount = TrackScene.DefaultBo
     /// Bot body colours, by bot number (cycled): entries of <c>KartsterGame.ScenePalette</c> (brown, white,
     /// near-black, navy, pale blue), so their lit shades stay near colours palette mode has.
     /// </summary>
-    private static readonly Vector3[] BotColors =
-        [Rgb(0xB06A30), Rgb(0xF0F0F0), Rgb(0x2B2B2D), Rgb(0x0F2A78), Rgb(0xA2BEF0)];
+    private static readonly uint[] BotRgb = [0xB06A30, 0xF0F0F0, 0x2B2B2D, 0x0F2A78, 0xA2BEF0];
 
     /// <summary>Loads kart parts in this colour, never drawn: <see cref="KartModel.Recolor"/> replaces it.</summary>
     private static readonly Vector3 BodyKey = new(-1f);
@@ -91,6 +92,16 @@ public sealed class TrackScene(int lapCount, int botCount = TrackScene.DefaultBo
     private KartPhysicsSystem _physics;
     private RaceReport _report;
     private HudState _hudState;
+    private readonly PauseMenu _pause = new();
+    private FixedTimestep _raceTimestep;
+    private KartInputSystem _input;
+    private KartEffectsSystem _effects;
+    private RaceFinish _finish;
+    private bool _finishing;
+    private Minimap _minimap;
+    private Query _karts;
+    private PlanarVector2[] _kartPositions;
+    private uint[] _kartColors;
 
     //**********************************************************
     //** props
@@ -243,6 +254,8 @@ public sealed class TrackScene(int lapCount, int botCount = TrackScene.DefaultBo
         var tunings = new KartTuning[count];
         var meshes = new Mesh[count];
         var names = new string[count];
+        _kartColors = new uint[count];
+        _kartPositions = new PlanarVector2[count];
         LoadBotKarts(tunings, meshes, names, PlayerSlot);
         tunings[PlayerSlot] = Game.Tuning;
         meshes[PlayerSlot] = Game.Kart;
@@ -254,24 +267,63 @@ public sealed class TrackScene(int lapCount, int botCount = TrackScene.DefaultBo
         TrackCollision.Load(System.IO.Path.Combine("Assets", "Tracks"), track.Name).AddTo(World);
         _report = new RaceReport(Race, names, PlayerSlot);
 
-        FixedTimestep = new FixedTimestep(StepSeconds, MaxStepsPerFrame);
+        FixedTimestep = _raceTimestep = new FixedTimestep(StepSeconds, MaxStepsPerFrame);
         _physics = AddDriving(FixedSimulation, track, tunings, Race);
+        FixedSimulation.Add(new AutopilotSystem());
+        _finish = new RaceFinish(Race, FixedSimulation, StepSeconds);
 
-        Simulation.Add(new KartInputSystem(race: Race));
+        _input = Simulation.Add(new KartInputSystem(race: Race));
         Simulation.Add(new FlowSystem(this));
+
+        _karts = World.Query(Query.With<Kart, Position>());
+        _minimap = CreateMinimap(track, Game.Markers);
 
         var skidMarks = new SkidMarks(Track.Asphalt, count);
         var smoke = new SlideSmoke(kartCount: count);
         Presentation.Add(new InterpolationSystem(FixedTimestep));
-        Presentation.Add(new KartEffectsSystem(_physics, skidMarks, smoke));
+        _effects = Presentation.Add(new KartEffectsSystem(_physics, skidMarks, smoke));
         Presentation.Add(new KartRenderSystem(_player, Game, meshes, skidMarks, smoke));
     }
 
-    /// <summary>The HUD, after the 3D frame is finished.</summary>
+    /// <summary>
+    /// The HUD and minimap after the 3D frame is finished, then the pause menu over them; while the race is being
+    /// finished, only <see cref="RaceFinish.Draw"/>.
+    /// </summary>
     public void DrawUi(IPixelTarget target)
     {
+        if (_finishing && !_pause.IsOpen)
+        {
+            _finish.Draw(target);
+            return;
+        }
+
         _report.FillHud(ref _hudState, Speed * MetresPerSecondToKmh);
         _hud.Draw(target, _hudState);
+
+        foreach (var chunk in _karts.GetChunks())
+        {
+            var karts = chunk.GetSpan<Kart>();
+            var positions = chunk.GetSpan<Position>();
+            for (var i = 0; i < chunk.Count; i++)
+                _kartPositions[karts[i].Index] = new PlanarVector2(positions[i].Value.X, positions[i].Value.Y);
+        }
+
+        _minimap.Draw(target, _kartPositions, _kartColors, PlayerSlot, World.Get<Rotation>(_player).Radians);
+        _pause.Draw(target);
+    }
+
+    /// <summary>
+    /// The minimap of <paramref name="track"/>, its start tick on <paramref name="markers"/>' start line, or without
+    /// markers across route distance 0.
+    /// </summary>
+    public static Minimap CreateMinimap(Track track, RaceMarkers markers)
+    {
+        if (markers != null)
+            return Minimap.FromTrack(track, markers.Start.Point, markers.Start.Forward);
+
+        var (point, forward) = track.Sample(0f);
+        return Minimap.FromTrack(track, new PlanarVector2(point.X, point.Z),
+            PlanarVector2.Normalize(new PlanarVector2(forward.X, forward.Z)));
     }
 
     //**********************************************************
@@ -296,22 +348,64 @@ public sealed class TrackScene(int lapCount, int botCount = TrackScene.DefaultBo
             if (!loaded.TryGetValue(kartFolder, out var mesh))
                 loaded[kartFolder] = mesh = KartModel.Load(kartFolder, BodyKey);
             tunings[i] = KartCatalog.ForKart(System.IO.Path.GetFileName(kartFolder));
-            meshes[i] = KartModel.Recolor(mesh, BodyKey, BotColors[botNumber % BotColors.Length]);
+            var rgb = BotRgb[botNumber % BotRgb.Length];
+            meshes[i] = KartModel.Recolor(mesh, BodyKey, Rgb(rgb));
+            _kartColors[i] = rgb;
             names[i] = $"{System.IO.Path.GetFileName(kartFolder).ToUpperInvariant()} {botNumber + 1}";
             botNumber++;
         }
     }
 
-    /// <summary>R: the same race again; Esc: the title; the results once the race is over for the player.</summary>
+    /// <summary>
+    /// Enter or Esc: pause; while paused, the <see cref="PauseMenu"/>'s keys. R: the same race again. Once the race is
+    /// over for the player, it is finished (<see cref="RaceFinish"/>) and the results follow.
+    /// </summary>
     private void UpdateFlow(float seconds)
     {
         var input = Input.Instance;
-        if (input.GetKey(Key.ESCAPE).Pressed)
-            Game.Scenes.Set(new TitleScene());
+        if (_pause.IsOpen)
+        {
+            switch (_pause.Update(MenuKeys.From(input)))
+            {
+                case PauseChoice.Resume:
+                    SetPaused(false);
+                    break;
+                case PauseChoice.Restart:
+                    Game.Scenes.Set(new TrackScene(lapCount, botCount));
+                    break;
+                case PauseChoice.QuitToTitle:
+                    Game.Scenes.Set(new TitleScene());
+                    break;
+            }
+
+            return;
+        }
+
+        if (input.GetKey(Key.ESCAPE).Pressed || input.GetKey(Key.ENTER).Pressed)
+        {
+            _pause.Open();
+            SetPaused(true);
+        }
         else if (input.GetKey(Key.R).Pressed)
+        {
             Game.Scenes.Set(new TrackScene(lapCount, botCount));
+        }
         else if (_report.Update(seconds))
-            Game.Scenes.Set(new ResultsScene(_report.Results(Game.Track.Name.ToUpperInvariant())));
+        {
+            _finishing = true;
+            if (_finish.Update())
+                Game.Scenes.Set(new ResultsScene(_report.Results(Game.Track.Name.ToUpperInvariant())));
+        }
+    }
+
+    /// <summary>
+    /// Stops or restarts the fixed step (<see cref="PauseMenu.Timestep"/>), the keys and the smoke; drawing goes on.
+    /// </summary>
+    private void SetPaused(bool paused)
+    {
+        FixedTimestep = _pause.Timestep(_raceTimestep);
+        _input.Enabled = !paused;
+        _effects.Enabled = !paused;
     }
 
     /// <summary>Runs <see cref="UpdateFlow"/> once a frame, after the input.</summary>
@@ -320,6 +414,6 @@ public sealed class TrackScene(int lapCount, int botCount = TrackScene.DefaultBo
         protected override void OnUpdate(float deltaSeconds) => scene.UpdateFlow(deltaSeconds);
     }
 
-    private static Vector3 Rgb(int rgb) =>
+    private static Vector3 Rgb(uint rgb) =>
         new Vector3((rgb >> 16) & 0xFF, (rgb >> 8) & 0xFF, rgb & 0xFF) / 255f;
 }

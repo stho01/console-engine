@@ -241,9 +241,10 @@ Examples/
                                   Assets/Scripts/ player.lua, firefly.lua (copied to output)
   Kartster/                     Kartster in the console: KartsterGame (IKartsterMenus: shared IRenderer3D,
                                   palette, sky, karts, tracks; G/C; draws IUiLayer), Scenes/ (TrackScene: the race,
-                                  EcsScene at 120 Hz, HUD, R/Esc, results after the finish, player + 5 bots on a
+                                  EcsScene at 120 Hz, HUD + minimap, R, Enter/Esc pause, autopilot and
+                                  RaceFinish after the player's finish, then results, player + 5 bots on a
                                   the race.txt grid (StartingSlot, StandInGridSlot, CreateSession,
-                                  CreateKarts, AddDriving), GarageScene: orbit camera, from the title), Systems/
+                                  CreateKarts, AddDriving), PauseMenu, GarageScene: orbit camera, from the title), Systems/
                                   (KartInputSystem, KartPhysicsSystem, KartGroundSystem, KartEffectsSystem,
                                   KartRenderSystem, all karts), Bots/ (BotDriverSystem, BotRoutePlan),
                                   Effects/ (SkidMarks, SlideSmoke, KartWheels), Components/ (Kart with its Index,
@@ -256,18 +257,19 @@ Examples/
                                   <id>.collision.txt, walls and posts as static bodies), Race/ (race
                                   rules: RaceMarkers loads <id>.race.txt, RaceGate, GridSlot, RaceSession (pure:
                                   countdown, gates, laps, positions, gaps), RaceReport (HUD state), Racer, RacePhase, RaceProgress (component),
-                                  RaceSystem), Assets/Karts/ (olabil, wagon), Assets/Tracks/ (star-circuit: ribbon,
-                                  spline, scenery.txt, race.txt, collision.txt) and Assets/Scenery/ (Pipe.obj from Kartster,
+                                  RaceSystem, AutopilotSystem, RaceFinish), Assets/Karts/ (olabil, wagon), Assets/Tracks/
+                                  (star-circuit: ribbon, spline, scenery.txt, race.txt, collision.txt) and Assets/Scenery/ (Pipe.obj from Kartster,
                                   Box.obj), exported from Kartster, copied to output, Bots/ (BotDriverSystem,
                                   BotRoutePlan), Components/ (Kart with Index, PlayerKart, Bot),
                                   Ui/ (pixel UI kit: IPixelTarget, PaletteTarget, RgbTarget, PixelFont 3×5,
-                                  TextFormat, Shapes, UiColors, Hud + HudState, RaceResults, IKartsterMenus,
+                                  TextFormat, Shapes, UiColors, Hud + HudState, Minimap, RaceResults, IKartsterMenus,
                                   IUiLayer), Scenes/Menus/ (MenuScreen, MenuItem, MenuKeys, TitleScene,
                                   SelectKartScene, SelectTrackScene, ResultsScene)
   Kartster.Tests/               KartModelTests, TrackTests, SceneryTests, KartPhysicsSystemTests,
                                   KartFrameTests, KartInputSystemTests, Driving/KartDynamicsTests, Driving/KartReferenceTests,
                                   Effects/EffectsTests (skid marks, slide smoke), Race/ (RaceMarkersTests,
-                                  RaceSessionTests, RaceSystemTests, RaceReportTests, RaceWiringTests), Ui/ (PixelFont, TextFormat, PixelTarget, Hud,
+                                  RaceSessionTests, RaceSystemTests, RaceReportTests, RaceWiringTests, RaceEndingTests), Ui/ (PixelFont, TextFormat,
+                                  PixelTarget, Hud, Minimap,
                                   Menu, MenuFlow tests; UiPreview writes ui-preview/*.ppm to the output), Bots/BotDriverSystemTests,
                                   Bots/RaceTests (grid, input, headless 3-bot race, kart collisions, allocation),
                                   Collision/TrackCollisionTests (file, walls, pipe, race with walls, allocation)

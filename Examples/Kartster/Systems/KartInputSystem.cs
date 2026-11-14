@@ -9,8 +9,8 @@ using Kartster.Race;
 namespace Kartster.Systems;
 
 /// <summary>
-/// Reads the keys each frame into the <see cref="PlayerKart"/>'s <see cref="KartControls"/> (bots have the
-/// <c>BotDriverSystem</c>), which the fixed step reads: W gas, S brake
+/// Reads the keys each frame into the <see cref="PlayerKart"/>'s <see cref="KartControls"/> (bots, and a player on
+/// autopilot with a <see cref="Bot"/>, have the <c>BotDriverSystem</c>), which the fixed step reads: W gas, S brake
 /// (reverse once stopped), A/D steer, Space handbrake. Pedals are on or off; the steering ramps as Kartster's keyboard
 /// steering does (<see cref="RampSteer"/>). While the <paramref name="race"/> can't drive (the countdown) the controls
 /// are held at zero, the wheel straight, as Kartster zeroes every driving input.
@@ -57,7 +57,7 @@ public sealed class KartInputSystem(Func<Key, bool> isHeld = null, RaceSession r
     //** lifecycle
     //**********************************************************
 
-    protected override void OnCreate() => _players = World.Query(Query.With<PlayerKart, KartControls>());
+    protected override void OnCreate() => _players = World.Query(Query.With<PlayerKart, KartControls>().Without<Bot>());
 
     protected override void OnUpdate(float deltaSeconds)
     {
