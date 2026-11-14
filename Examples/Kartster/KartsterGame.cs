@@ -11,21 +11,24 @@ using ConsoleEngine.Rendering3D.OpenGL;
 using Kartster.Driving;
 using Kartster.Race;
 using Kartster.Scenes;
+using Kartster.Scenes.Menus;
 using Kartster.Ui;
 
 namespace Kartster;
 
 /// <summary>
-/// 3D experiment: Kartster karts and a Kartster track, drawn by an <see cref="IRenderer3D"/> with one console cell
-/// per pixel: the software <see cref="Rasterizer"/>, or the OpenGL <see cref="GlRenderer"/> (G toggles, falls back to
-/// the CPU when OpenGL 3.3 isn't there), in the 16 scene colours or in 24-bit colour (C toggles, <c>--truecolor</c>
-/// starts in it; stays on 16 colours when the console has no 24-bit output). Two scenes, swapped with Enter: on the
-/// track (<see cref="TrackScene"/>) you drive the kart with Kartster's kart model on the engine's physics and a chase
-/// camera behind it; in the garage (<see cref="GarageScene"/>) the camera orbits the kart on a small floor. Kartster's
-/// axes: 1 unit is 1 metre, +Y up, -Z forward. The game holds what both scenes share: renderer, sky, projection, the karts and the track.
+/// Kartster in the console: Kartster karts on Kartster tracks, drawn by an <see cref="IRenderer3D"/> with one console
+/// cell per pixel: the software <see cref="Rasterizer"/>, or the OpenGL <see cref="GlRenderer"/> (G toggles, falls
+/// back to the CPU when OpenGL 3.3 isn't there), in the 16 scene colours or in 24-bit colour (C toggles,
+/// <c>--truecolor</c> starts in it; stays on 16 colours when the console has no 24-bit output). G and C work in every
+/// scene; every other key belongs to the scene. Flow: <see cref="TitleScene"/> → <see cref="SelectKartScene"/> →
+/// <see cref="SelectTrackScene"/> → <see cref="TrackScene"/> (the race, with its HUD) → <see cref="ResultsScene"/>;
+/// the title also opens the <see cref="GarageScene"/>, where the camera orbits the chosen kart. Kartster's axes: 1 unit
+/// is 1 metre, +Y up, -Z forward. The game holds what the scenes share (<see cref="IKartsterMenus"/>): renderer, sky,
+/// projection, the karts and the track, and draws a scene's UI (<see cref="IUiLayer"/>) over the 3D picture.
 /// </summary>
 public class KartsterGame(string kartsFolder, string tracksFolder, bool startOnGpu = false, bool startInTrueColor = false)
-    : GameBase(ScreenWidth, ScreenHeight, fontWidth: 3, fontHeight: 3)
+    : GameBase(ScreenWidth, ScreenHeight, fontWidth: 3, fontHeight: 3), IKartsterMenus
 {
     //**********************************************************
     //** fields
@@ -36,7 +39,6 @@ public class KartsterGame(string kartsFolder, string tracksFolder, bool startOnG
     private const float FieldOfView = 50f * MathF.PI / 180f;
     private const float NearPlane = 0.2f;
     private const float FarPlane = 400f;
-    private const int DefaultLaps = 3;
 
     public static readonly Vector3 ToSun = Vector3.Normalize(new Vector3(0.5f, 0.8f, 0.3f));
     private static readonly Vector3 PlayerColor = new(0.1f, 0.35f, 0.85f);
@@ -63,7 +65,10 @@ public class KartsterGame(string kartsFolder, string tracksFolder, bool startOnG
     private readonly PaletteTarget _paletteTarget = new(null, ScreenWidth, ScreenHeight, ScenePalette);
     private readonly RgbTarget _rgbTarget = new(null, ScreenWidth, ScreenHeight);
     private string[] _kartFolders;
+    private string[] _kartNames;
     private int _kartIndex;
+    private string[] _trackNames = [];
+    private int _trackIndex = -1;
     private GlRenderer _gpu;
     private bool _gpuUnavailable;
     private long _frameStart;
@@ -86,7 +91,7 @@ public class KartsterGame(string kartsFolder, string tracksFolder, bool startOnG
     /// <summary>The middle of the kart's bounding box, in model space.</summary>
     public Vector3 KartCenter { get; private set; }
 
-    /// <summary>Null when there is no track: then only the garage runs.</summary>
+    /// <summary>The track of the race; null until <see cref="StartRace"/>.</summary>
     public Track Track { get; private set; }
 
     /// <summary>The track's <c>race.txt</c>; null when it has none (then the race uses a stand-in grid and line).</summary>
@@ -95,7 +100,11 @@ public class KartsterGame(string kartsFolder, string tracksFolder, bool startOnG
     /// <summary>The kart folders, sorted: the player picks one, the bots take them in turn.</summary>
     public string[] KartFolders => _kartFolders;
 
-    private int RaceLaps => Markers?.LapCount ?? DefaultLaps;
+    public string[] KartNames => _kartNames;
+    public int KartIndex => _kartIndex;
+
+    /// <summary>Every <c>&lt;id&gt;.ribbon.obj</c> in the tracks folder, sorted; empty without one (no race then).</summary>
+    public string[] TrackNames => _trackNames;
 
     //**********************************************************
     //** game
@@ -112,17 +121,12 @@ public class KartsterGame(string kartsFolder, string tracksFolder, bool startOnG
         if (_kartFolders.Length == 0)
             throw new DirectoryNotFoundException($"No kart folders in {Path.GetFullPath(kartsFolder)}");
         Array.Sort(_kartFolders, StringComparer.Ordinal);
+        _kartNames = Array.ConvertAll(_kartFolders, Path.GetFileName);
         LoadKart(0);
 
-        // shortcut: drives the first track in the folder; cycle through them once there is more than one.
         var ribbons = Directory.Exists(tracksFolder) ? Directory.GetFiles(tracksFolder, "*.ribbon.obj") : [];
         Array.Sort(ribbons, StringComparer.Ordinal);
-        if (ribbons.Length > 0)
-        {
-            var id = Path.GetFileName(ribbons[0])[..^".ribbon.obj".Length];
-            Track = Track.Load(tracksFolder, id);
-            Markers = File.Exists(Path.Combine(tracksFolder, id + ".race.txt")) ? RaceMarkers.Load(tracksFolder, id) : null;
-        }
+        _trackNames = Array.ConvertAll(ribbons, ribbon => Path.GetFileName(ribbon)[..^".ribbon.obj".Length]);
 
         for (var y = 0; y < ScreenHeight; y++)
         for (var x = 0; x < ScreenWidth; x++)
@@ -135,38 +139,26 @@ public class KartsterGame(string kartsFolder, string tracksFolder, bool startOnG
         if (startOnGpu)
             ToggleGpu();
 
-        if (Track != null)
-            Scenes.Set(new TrackScene(RaceLaps));
-        else
-            Scenes.Set(new GarageScene());
+        Scenes.Set(new TitleScene());
 
-        GameTime.SetInterval(250, () => Console.SetTitle(Scene is TrackScene track
-            ? $"Kartster - {KartName} on {Track.Name} - {track.Speed * 3.6f:0} km/h - gear {track.Dynamics.Gear} - " +
-              $"{track.Dynamics.EngineRpm:0} rpm - {RendererLabel} 3D {_renderMilliseconds:0.00} ms - {ColorLabel} - " +
-              $"{GameTime.Fps} fps"
-            : $"Kartster - {KartName} ({Kart.TriangleCount} triangles) - {RendererLabel} 3D " +
-              $"{_renderMilliseconds:0.00} ms - {ColorLabel} - {GameTime.Fps} fps"));
+        GameTime.SetInterval(250, () => Console.SetTitle(Scene switch
+        {
+            TrackScene track =>
+                $"Kartster - {KartName} on {Track.Name} - {track.Speed * 3.6f:0} km/h - gear {track.Dynamics.Gear} - " +
+                $"{track.Dynamics.EngineRpm:0} rpm - {RendererLabel} 3D {_renderMilliseconds:0.00} ms - {ColorLabel} - " +
+                $"{GameTime.Fps} fps",
+            GarageScene =>
+                $"Kartster - {KartName} ({Kart.TriangleCount} triangles) - {RendererLabel} 3D " +
+                $"{_renderMilliseconds:0.00} ms - {ColorLabel} - {GameTime.Fps} fps",
+            _ => $"Kartster - {Scene?.GetType().Name} - {RendererLabel} 3D {_renderMilliseconds:0.00} ms - " +
+                 $"{ColorLabel} - {GameTime.Fps} fps"
+        }));
     }
 
     protected override void OnUpdate()
     {
+        // Only G and C are global: every other key belongs to the scene (menus, race, garage).
         var input = Input.Instance;
-        var onTrack = Scene is TrackScene;
-
-        if (input.GetKey(Key.ESCAPE).Pressed)
-            Stop();
-        if (input.GetKey(Key.TAB).Pressed)
-        {
-            LoadKart((_kartIndex + 1) % _kartFolders.Length);
-            if (onTrack)
-                Scenes.Set(new TrackScene(RaceLaps)); // the new kart's model and tuning, from the start
-        }
-
-        if (input.GetKey(Key.ENTER).Pressed && Track != null)
-            Scenes.Set(onTrack ? new GarageScene() : new TrackScene(RaceLaps));
-        else if (onTrack && input.GetKey(Key.R).Pressed)
-            Scenes.Set(new TrackScene(RaceLaps));
-
         if (input.GetKey(Key.G).Pressed)
             ToggleGpu();
         if (input.GetKey(Key.C).Pressed)
@@ -211,6 +203,22 @@ public class KartsterGame(string kartsFolder, string tracksFolder, bool startOnG
         for (var y = 0; y < ScreenHeight; y++)
         for (var x = 0; x < ScreenWidth; x++)
             Console.Draw(x, y, ' ', ConsoleColor.Black, colors[y * ScreenWidth + x]);
+    }
+
+    public void SelectKart(int index) => LoadKart(index);
+
+    /// <summary>Loads track <paramref name="trackIndex"/> and its <c>race.txt</c> (unless loaded), then races.</summary>
+    public void StartRace(int trackIndex, int laps)
+    {
+        if (trackIndex != _trackIndex)
+        {
+            var id = _trackNames[trackIndex];
+            Track = Track.Load(tracksFolder, id);
+            Markers = File.Exists(Path.Combine(tracksFolder, id + ".race.txt")) ? RaceMarkers.Load(tracksFolder, id) : null;
+            _trackIndex = trackIndex;
+        }
+
+        Scenes.Set(new TrackScene(laps));
     }
 
     /// <summary>The sky in 24-bit colour at screen row <paramref name="y"/>: a smooth gradient, no dither.</summary>

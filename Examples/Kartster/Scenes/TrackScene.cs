@@ -1,8 +1,10 @@
 using System;
 using System.Collections.Generic;
 using System.Numerics;
+using ConsoleEngine.Abstractions.Inputs;
 using ConsoleEngine.Ecs;
 using ConsoleEngine.Ecs.Components;
+using ConsoleEngine.Infrastructure.Inputs;
 using ConsoleEngine.Physics;
 using ConsoleEngine.Rendering3D;
 using Kartster.Bots;
@@ -10,6 +12,7 @@ using Kartster.Components;
 using Kartster.Driving;
 using Kartster.Effects;
 using Kartster.Race;
+using Kartster.Scenes.Menus;
 using Kartster.Systems;
 using Kartster.Ui;
 using PlanarVector2 = System.Numerics.Vector2;
@@ -25,7 +28,9 @@ namespace Kartster.Scenes;
 /// <see cref="RaceSystem"/> counts laps; nobody moves during its countdown. Bots drive by the
 /// <see cref="BotDriverSystem"/> in the game's kart folders' karts, each in its own colour. Karts push each other
 /// through their box colliders. The HUD (<see cref="Hud"/>, filled by a <see cref="RaceReport"/>) is drawn over the
-/// 3D picture.
+/// 3D picture. Keys: R restarts the race from the grid, Esc leaves it for the title. When the race is over for the
+/// player (<see cref="RaceReport.Update"/>: <see cref="RaceReport.ResultsDelaySeconds"/> after their finish) the
+/// <see cref="ResultsScene"/> follows.
 /// </summary>
 /// <param name="lapCount">Laps to race, at least 1.</param>
 /// <param name="botCount">Bots on the grid besides the player.</param>
@@ -250,6 +255,7 @@ public sealed class TrackScene(int lapCount, int botCount = TrackScene.DefaultBo
         _physics = AddDriving(FixedSimulation, track, tunings, Race);
 
         Simulation.Add(new KartInputSystem(race: Race));
+        Simulation.Add(new FlowSystem(this));
 
         var skidMarks = new SkidMarks(Track.Asphalt, count);
         var smoke = new SlideSmoke(kartCount: count);
@@ -291,6 +297,24 @@ public sealed class TrackScene(int lapCount, int botCount = TrackScene.DefaultBo
             names[i] = $"{System.IO.Path.GetFileName(kartFolder).ToUpperInvariant()} {botNumber + 1}";
             botNumber++;
         }
+    }
+
+    /// <summary>R: the same race again; Esc: the title; the results once the race is over for the player.</summary>
+    private void UpdateFlow(float seconds)
+    {
+        var input = Input.Instance;
+        if (input.GetKey(Key.ESCAPE).Pressed)
+            Game.Scenes.Set(new TitleScene());
+        else if (input.GetKey(Key.R).Pressed)
+            Game.Scenes.Set(new TrackScene(lapCount, botCount));
+        else if (_report.Update(seconds))
+            Game.Scenes.Set(new ResultsScene(_report.Results(Game.Track.Name.ToUpperInvariant())));
+    }
+
+    /// <summary>Runs <see cref="UpdateFlow"/> once a frame, after the input.</summary>
+    private sealed class FlowSystem(TrackScene scene) : EntitySystem
+    {
+        protected override void OnUpdate(float deltaSeconds) => scene.UpdateFlow(deltaSeconds);
     }
 
     private static Vector3 Rgb(int rgb) =>

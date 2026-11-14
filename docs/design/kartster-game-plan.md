@@ -1,6 +1,6 @@
 # Plan: Kartster som spillbart spill
 
-Status (2026-11-14): utkast. Bølge 1 er startet.
+Status (2026-11-14): bølge 1 og 2 er ferdige (§ 7), bølge 3 gjenstår.
 
 Navn: `Examples/Kartster` er konsollversjonen i dette repoet. «Kartster» alene betyr originalspillet (MonoGame) i
 `C:\Forse\kartster-server`, som vi henter regler, tall og data fra, men aldri endrer.
@@ -47,7 +47,7 @@ Det gjør prosjektlederen når en bølge flettes inn.
 
 ### Status: UI-sett og menyer (U)
 
-Levert i bølge 1, ikke koblet inn ennå (`KartsterGame` starter fortsatt på `TrackScene`):
+Levert i bølge 1, koblet inn i bølge 2 (`KartsterGame` starter på `TitleScene`, se § 7):
 
 - `Ui/IPixelTarget` (`Width`, `Height`, `Set(x, y, rgb)`, ignorerer piksler utenfor). `PaletteTarget` regner ut
   nærmeste palettfarge selv (kvadratisk RGB-avstand, uten dither), så `ConsoleEngine.Rendering3D` er urørt.
@@ -79,9 +79,9 @@ Levert i bølge 1, ikke koblet inn ennå (`KartsterGame` starter fortsatt på `T
 | Bølge | Innhold | Status |
 |---|---|---|
 | 0 | Kjøring, fysikk, GPU, rendering (tidligere planer) | Ferdig |
-| 1 | 24-bit farge (K), kulisser (S), UI-sett og menyer (U), løpsregler (R), flere karter og bots (B) | Startet (U levert) |
-| 2 | Flette bølge 1, skjermflyt (meny → løp → resultater), HUD inn i løpet, vegger og kollisjoner, flere baner | – |
-| 3 | Power-ups, minikart, finpuss | – |
+| 1 | 24-bit farge (K), kulisser (S), UI-sett og menyer (U), løpsregler (R), flere karter og bots (B) | Ferdig |
+| 2 | Flette bølge 1, skjermflyt (meny → løp → resultater), HUD inn i løpet | Ferdig (§ 7); vegger og flere baner flyttet til 3 |
+| 3 | Power-ups, vegger, flere baner, minikart, finpuss | – |
 
 ## 5. Løpsregler (`Race/`): status
 
@@ -129,3 +129,22 @@ FixedSimulation.Add(new RaceSystem(race)); // kjører etter KartGroundSystem
 
 - Lyd: konsollen har bare `Console.Beep`. Foreløpig ingen lyd.
 - Splitscreen for flere spillere: ikke i denne planen.
+
+## 7. Bølge 2: status
+
+Ferdig. Detaljer og tall står i `docs/agent/03-rules.md` (Kartster-radene), tastene i `08-operator-actions.md`.
+
+- **Flyt:** `TitleScene` → `SelectKartScene` → `SelectTrackScene` → `TrackScene` (løpet) → `ResultsScene`.
+  `KartsterGame` er `IKartsterMenus` og leser bare G og C selv; alle andre taster hører til scenen. Fra tittelen
+  åpner Space garasjen (Esc tilbake, Tab neste kart). I løpet: R starter på nytt, Esc går til tittelen (ingen pause).
+- **Løpet:** rutenettet fra `race.txt`, spilleren først (pole), som originalen stiller tastaturspilleren foran
+  botene. `RaceSession` per løp med antall runder fra menyen; kartene registreres med `Kart.Index`. Ingen kjører
+  under nedtellingen. 4 s etter at spilleren er i mål (originalens `ResultsDelaySeconds`) stoppes løpet og
+  resultatene vises; de som ikke er i mål får DNF (originalen kjører dem ferdig med autopilot og `FinishRemaining`).
+- **HUD:** `RaceReport.FillHud` fyller `HudState` hver frame uten allokering: fart, runde, klokke, plassering,
+  topp 3 med navn og avstand per port (`RaceSession.GapToLeader`), nedtelling, `GO!`, `FINISHED`. Tegnes etter
+  `Renderer.Finish` gjennom `PaletteTarget` eller `RgbTarget`.
+
+**Igjen til bølge 3:** power-ups (`HudState.PowerUp` er null), vegger og kollisjon mot dem, flere baner (menyen tar
+alle `*.ribbon.obj` i mappen allerede), minikart (øvre venstre hjørne er holdt av), autopilot for en spiller i mål og
+bots som kjøres ferdig, forbikjøring og dytting for botene, pause.

@@ -35,8 +35,8 @@ public sealed class SelectTrackScene : Scene<KartsterGame>, IUiLayer
     {
         switch (_menu.Update(MenuKeys.From(Input.Instance)))
         {
-            case MenuAction.Confirm when Menus.TrackNames.Length > 0:
-                Menus.StartRace(TrackIndex(_menu), Laps(_menu));
+            case MenuAction.Confirm:
+                StartRace(_menu, Menus);
                 break;
             case MenuAction.Back:
                 Game.Scenes.Set(new SelectKartScene());
@@ -57,6 +57,17 @@ public sealed class SelectTrackScene : Scene<KartsterGame>, IUiLayer
         new MenuItem("LAPS", LapChoices, DefaultLapIndex),
         new MenuItem("START RACE")
     ], Footer);
+
+    /// <summary>Starts the race the menu shows; nothing without tracks.</summary>
+    /// <returns>Whether a race started.</returns>
+    public static bool StartRace(MenuScreen menu, IKartsterMenus menus)
+    {
+        if (menus.TrackNames.Length == 0)
+            return false;
+
+        menus.StartRace(TrackIndex(menu), Laps(menu));
+        return true;
+    }
 
     public static int TrackIndex(MenuScreen menu) => menu.Items[0].ValueIndex;
 

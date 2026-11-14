@@ -133,5 +133,15 @@ public class RaceWiringTests
         Assert.That(world.Get<RaceProgress>(karts[winner.Id]).FinishPosition, Is.EqualTo(1));
         for (var position = 2; position <= Karts; position++)
             Assert.That(race.GetAtPosition(position).FinishTimeSeconds, Is.GreaterThanOrEqualTo(winner.FinishTimeSeconds));
+
+        var names = new string[Karts];
+        for (var i = 0; i < Karts; i++)
+            names[i] = $"BOT {i}";
+        var results = new RaceReport(race, names, playerId: -1).Results("STAR-CIRCUIT");
+        Assert.That(results.Rows, Has.Length.EqualTo(Karts));
+        Assert.That(results.Rows[0].Name, Is.EqualTo($"BOT {winner.Id}"));
+        Assert.That(results.Rows[0].TotalSeconds, Is.EqualTo(winner.FinishTimeSeconds));
+        Assert.That(results.Rows[0].BestLapSeconds, Is.EqualTo(winner.BestLapSeconds));
+        Assert.That(results.Rows, Has.All.Matches<Kartster.Ui.ResultRow>(row => row.Finished && !row.IsPlayer));
     }
 }

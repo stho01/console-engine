@@ -124,6 +124,7 @@ using [04](04-flows.md).
 | `<file>:<line>: model file <full path> not found` | `Scenery.Parse` (`InvalidDataException`) | A `model` line names an OBJ that is not in the `Scenery` folder beside the tracks folder |
 | `Kartster - <kart> on <track> - <n> km/h - gear <g> - <rpm> rpm - <CPU\|GPU\|CPU (no GPU)> 3D <ms> ms - <colours> - <fps> fps` (window title; 3D = `Clear` to `Finish`, smoothed) | `KartsterGame.OnInitialize` interval, every 250 ms | Running, track mode |
 | `Kartster - <kart> (<n> triangles) - <CPU\|GPU\|CPU (no GPU)> 3D <ms> ms - <colours> - <fps> fps` (window title) | `KartsterGame.OnInitialize` interval, every 250 ms | Running, garage mode |
+| `Kartster - <scene type> - <CPU\|GPU\|CPU (no GPU)> 3D <ms> ms - <colours> - <fps> fps` (window title, e.g. `Kartster - TitleScene - CPU 3D 0.40 ms - 24-bit - 60 fps`) | `KartsterGame.OnInitialize` interval, every 250 ms | Running, a menu (`TitleScene`, `SelectKartScene`, `SelectTrackScene`, `ResultsScene`) |
 | `<colours>` in the titles: `24-bit`, `16 colours`, or `16 colours (no 24-bit)` | `KartsterGame.ColorLabel` | 24-bit on / off / asked for (`--truecolor`, C) but `Console.TrueColorActive` is false ([05 § P2](05-triage.md#p2) step 7) |
 | `<id>.race.txt:<line>: unknown marker '<word>'` | `RaceMarkers.Parse` (`InvalidDataException`) | A line is not `laps`, `start`, `checkpoint` or `grid` |
 | `<id>.race.txt:<line>: '<marker>' needs <n> numbers, got <m>` | `RaceMarkers.Parse` (`InvalidDataException`) | Wrong number of values on a marker line |
@@ -134,17 +135,17 @@ using [04](04-flows.md).
 | `<id>.race.txt:<line>: '<marker>' is given twice` | `RaceMarkers.Parse` (`InvalidDataException`) | A second `laps` or `start` line |
 | `<id>.race.txt: no 'laps' line` / `<id>.race.txt: no 'start' line` | `RaceMarkers.Parse` (`InvalidDataException`) | A required marker is missing |
 | `Kart <id> is already registered with the race` | `RaceSession.Register` (`ArgumentException`) | The same id registered twice |
-| `Kart <id> is not registered with the race` | `RaceSession.Update`/`Get` (`KeyNotFoundException`), so also `RaceSystem` | A kart with `RaceProgress` was not registered by `Entity.Id` |
-| `LAP <n>/<m>` then `<m:ss.t>` | `Hud.Draw` (bottom-left) | Race HUD lap line; only `<m:ss.t>` in a one-lap race. Not wired into the game yet |
-| `<pos>  <name>  <m:ss.t>` (leader) / `+<m:ss.t>` (others) | `Hud.Draw` (standings) | Name cut to 10 chars |
+| `Kart <id> is not registered with the race` | `RaceSession.Update`/`Get` (`KeyNotFoundException`), so also `RaceSystem` | A kart with `RaceProgress` was not registered by its `Kart.Index` |
+| `LAP <n>/<m>` then `<m:ss.t>` | `Hud.Draw` (bottom-left) | Race HUD lap line; only `<m:ss.t>` in a one-lap race |
+| `<pos>  <name>  <m:ss.t>` (leader) / `+<m:ss.t>` (others) | `Hud.Draw` (standings) | Top 3 and the player's row when further back; names: the player's kart folder, bots `<KART FOLDER> <n>`, cut to 10 chars |
 | `POS <p>/<n>` | `Hud.Draw` | No standings given, more than one kart |
 | `<speed>` and `KM/H` | `Hud.Draw` (bottom-right dial) | Speed in km/h, rounded |
-| `<power-up name>` | `Hud.Draw` (top-right) | Whatever `HudState.PowerUp` holds |
+| `<power-up name>` | `Hud.Draw` (top-right) | Whatever `HudState.PowerUp` holds (always empty until power-ups, wave 3) |
 | `3`, `2`, `1`, `GO!`, `FINISHED` | `Hud.Draw` (top-centre) | Countdown, start, player finished |
-| `KARTSTER`, `PRESS ENTER`, `ESC QUIT` | `TitleScene` (`Logo`, `Prompt`, `Footer`) | Title menu (not wired yet) |
-| `SELECT KART`, `UP/DOWN CHOOSE   ENTER OK   ESC BACK` | `SelectKartScene` | Kart menu (not wired yet) |
-| `SELECT TRACK`, `TRACK`, `LAPS`, `START RACE`, `NONE`, `LEFT/RIGHT CHANGE   ENTER START   ESC BACK` | `SelectTrackScene` | Race setup menu; `NONE` when there are no tracks (not wired yet) |
-| `RESULTS`, `POS`, `NAME`, `TIME`, `BEST`, `DNF`, `ENTER RACE AGAIN   ESC TITLE` | `ResultsScene` | Results table (not wired yet) |
+| `KARTSTER`, `PRESS ENTER`, `SPACE GARAGE   ESC QUIT` | `TitleScene` (`Logo`, `Prompt`, `Footer`) | Title menu, the first scene |
+| `SELECT KART`, `UP/DOWN CHOOSE   ENTER OK   ESC BACK` | `SelectKartScene` | Kart menu |
+| `SELECT TRACK`, `TRACK`, `LAPS`, `START RACE`, `NONE`, `LEFT/RIGHT CHANGE   ENTER START   ESC BACK` | `SelectTrackScene` | Race setup menu; `NONE` when there are no tracks (then Enter does nothing) |
+| `RESULTS`, `POS`, `NAME`, `TIME`, `BEST`, `DNF`, `ENTER RACE AGAIN   ESC TITLE` | `ResultsScene` | Results table, 4 s after the player finishes; the track name in upper case |
 
 ### Launcher (`LauncherTexts`, `GameLocator`)
 

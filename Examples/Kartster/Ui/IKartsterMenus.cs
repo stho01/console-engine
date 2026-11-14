@@ -4,9 +4,7 @@ using ConsoleEngine.Rendering3D;
 namespace Kartster.Ui;
 
 /// <summary>
-/// What the menu scenes need from the game. <c>KartsterGame</c> implements it when the menus are wired in; it already
-/// has <see cref="Renderer"/>, <see cref="Projection"/>, <see cref="Kart"/> and <see cref="KartCenter"/> under these
-/// names.
+/// What the menu scenes need from the game; <c>KartsterGame</c> implements it.
 /// </summary>
 public interface IKartsterMenus
 {

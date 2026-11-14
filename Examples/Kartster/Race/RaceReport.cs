@@ -4,7 +4,8 @@ using Kartster.Ui;
 namespace Kartster.Race;
 
 /// <summary>
-/// What a <see cref="RaceSession"/> tells the player: the HUD each frame (<see cref="FillHud"/>, allocation free).
+/// What a <see cref="RaceSession"/> tells the player: the HUD each frame (<see cref="FillHud"/>, allocation free),
+/// when the race is over for them (<see cref="Update"/>) and the results (<see cref="Results"/>).
 /// Racers are named by their id (<c>Kart.Index</c>) in <paramref name="names"/>.
 /// </summary>
 /// <param name="names">Driver names by racer id, built once.</param>
@@ -21,7 +22,11 @@ public sealed class RaceReport(RaceSession session, string[] names, int playerId
     /// <summary>How long "GO!" shows after the countdown.</summary>
     public const float GoSeconds = 1f;
 
+    /// <summary>Kartster's <c>RacingScreen.ResultsDelaySeconds</c>: "FINISHED" stays this long before the results.</summary>
+    public const float ResultsDelaySeconds = 4f;
+
     private readonly HudStanding[] _standings = new HudStanding[TopStandings + 1];
+    private float _finishedSeconds;
 
     //**********************************************************
     //** props
@@ -60,6 +65,50 @@ public sealed class RaceReport(RaceSession session, string[] names, int playerId
 
         hud.Standings = _standings;
         hud.StandingCount = rows;
+    }
+
+    /// <summary>
+    /// Counts the time since the player finished (or the race ended); <see cref="ResultsDelaySeconds"/> later it stops
+    /// the race, whoever is still out unfinished (DNF), and says the results are due.
+    /// </summary>
+    /// <remarks>
+    /// shortcut: Kartster's autopilot takes over a finished player and fast-forwards the bots left
+    /// (<c>FinishRemaining</c>); here they just don't finish. Run the fixed step on for them if DNFs bother players.
+    /// </remarks>
+    /// <returns>True once the results should show.</returns>
+    public bool Update(float seconds)
+    {
+        if (session.Phase != RacePhase.Finished && !session.Get(playerId).HasFinished)
+            return false;
+
+        _finishedSeconds += seconds;
+        if (_finishedSeconds < ResultsDelaySeconds)
+            return false;
+
+        session.Stop();
+        session.UpdatePositions();
+        return true;
+    }
+
+    /// <summary>The finishing order on <paramref name="trackName"/>, one row per kart. Allocates; call once.</summary>
+    public RaceResults Results(string trackName)
+    {
+        var rows = new ResultRow[session.Count];
+        for (var i = 0; i < rows.Length; i++)
+        {
+            ref readonly var racer = ref session.GetAtPosition(i + 1);
+            rows[i] = new ResultRow
+            {
+                Position = i + 1,
+                Name = names[racer.Id],
+                TotalSeconds = racer.FinishTimeSeconds,
+                BestLapSeconds = racer.BestLapSeconds,
+                Finished = racer.HasFinished,
+                IsPlayer = racer.Id == playerId,
+            };
+        }
+
+        return new RaceResults(trackName, rows);
     }
 
     //**********************************************************

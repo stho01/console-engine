@@ -5,12 +5,13 @@ using ConsoleEngine.Infrastructure;
 using ConsoleEngine.Infrastructure.Inputs;
 using ConsoleEngine.Infrastructure.Scenery;
 using ConsoleEngine.Rendering3D;
+using Kartster.Scenes.Menus;
 
 namespace Kartster.Scenes;
 
 /// <summary>
-/// The camera orbits the kart on a small floor: A/D round, W/S up and down, Q/E zoom, Space turns the slow auto-spin
-/// on and off.
+/// The camera orbits the chosen kart on a small floor: A/D round, W/S up and down, Q/E zoom, Space turns the slow
+/// auto-spin on and off, Tab shows the next kart (and chooses it), Esc goes back to the title.
 /// </summary>
 public sealed class GarageScene : Scene<KartsterGame>
 {
@@ -41,6 +42,13 @@ public sealed class GarageScene : Scene<KartsterGame>
         var input = Input.Instance;
         var seconds = (float)GameTime.Delta.TotalSeconds;
 
+        if (input.GetKey(Key.ESCAPE).Pressed)
+        {
+            Game.Scenes.Set(new TitleScene());
+            return;
+        }
+
+        if (input.GetKey(Key.TAB).Pressed) Game.SelectKart((Game.KartIndex + 1) % Game.KartNames.Length);
         if (input.GetKey(Key.SPACE).Pressed) _autoSpin = !_autoSpin;
         if (input.GetKey(Key.A).Held) _yaw -= OrbitSpeed * seconds;
         if (input.GetKey(Key.D).Held) _yaw += OrbitSpeed * seconds;

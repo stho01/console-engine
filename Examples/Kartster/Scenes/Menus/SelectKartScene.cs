@@ -46,7 +46,7 @@ public sealed class SelectKartScene : Scene<KartsterGame>, IUiLayer
         switch (_menu.Update(MenuKeys.From(Input.Instance)))
         {
             case MenuAction.Moved:
-                Menus.SelectKart(_menu.Selected);
+                ChooseHighlighted(_menu, Menus);
                 break;
             case MenuAction.Confirm:
                 Game.Scenes.Set(new SelectTrackScene());
@@ -74,6 +74,9 @@ public sealed class SelectKartScene : Scene<KartsterGame>, IUiLayer
     //**********************************************************
     //** public methods
     //**********************************************************
+
+    /// <summary>Makes the highlighted kart the chosen one.</summary>
+    public static void ChooseHighlighted(MenuScreen menu, IKartsterMenus menus) => menus.SelectKart(menu.Selected);
 
     /// <summary>The menu this scene shows: one item per kart, over the 3D picture, on the left.</summary>
     public static MenuScreen CreateMenu(string[] kartNames, int selected)

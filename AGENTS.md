@@ -229,10 +229,11 @@ Examples/
   TerraForM.Tests/                RoverTests.cs
   Scripted/                       Lua demo on ECS: Scenes/ScriptedScene, Systems/ (reload, error line),
                                   Assets/Scripts/ player.lua, firefly.lua (copied to output)
-  Kartster/                     3D experiment: KartsterGame (shared IRenderer3D, palette, sky, karts, track;
-                                  Enter/Tab/R/Esc), Scenes/ (TrackScene: EcsScene at 120 Hz, player + 5 bots on a
+  Kartster/                     Kartster in the console: KartsterGame (IKartsterMenus: shared IRenderer3D,
+                                  palette, sky, karts, tracks; G/C; draws IUiLayer), Scenes/ (TrackScene: the race,
+                                  EcsScene at 120 Hz, HUD, R/Esc, results after the finish, player + 5 bots on a
                                   the race.txt grid (StartingSlot, StandInGridSlot, CreateSession,
-                                  CreateKarts, AddDriving), GarageScene: orbit camera), Systems/
+                                  CreateKarts, AddDriving), GarageScene: orbit camera, from the title), Systems/
                                   (KartInputSystem, KartPhysicsSystem, KartGroundSystem, KartEffectsSystem,
                                   KartRenderSystem, all karts), Bots/ (BotDriverSystem, BotRoutePlan),
                                   Effects/ (SkidMarks, SlideSmoke, KartWheels), Components/ (Kart with its Index,
@@ -256,7 +257,7 @@ Examples/
                                   KartFrameTests, KartInputSystemTests, Driving/KartDynamicsTests, Driving/KartReferenceTests,
                                   Effects/EffectsTests (skid marks, slide smoke), Race/ (RaceMarkersTests,
                                   RaceSessionTests, RaceSystemTests, RaceReportTests, RaceWiringTests), Ui/ (PixelFont, TextFormat, PixelTarget, Hud,
-                                  Menu tests; UiPreview writes ui-preview/*.ppm to the output), Bots/BotDriverSystemTests,
+                                  Menu, MenuFlow tests; UiPreview writes ui-preview/*.ppm to the output), Bots/BotDriverSystemTests,
                                   Bots/RaceTests (grid, input, headless 3-bot race, kart collisions, allocation)
 .github/workflows/                build-and-test.yml
 ```

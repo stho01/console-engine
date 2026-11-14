@@ -1,3 +1,4 @@
+using ConsoleEngine.Abstractions.Inputs;
 using ConsoleEngine.Infrastructure;
 using ConsoleEngine.Infrastructure.Inputs;
 using ConsoleEngine.Infrastructure.Scenery;
@@ -5,7 +6,9 @@ using Kartster.Ui;
 
 namespace Kartster.Scenes.Menus;
 
-/// <summary>The KARTSTER logo between two chequered stripes, "PRESS ENTER" blinking. Enter: kart menu, Esc: quit.</summary>
+/// <summary>
+/// The KARTSTER logo between two chequered stripes, "PRESS ENTER" blinking. Enter: kart menu, Space: garage, Esc: quit.
+/// </summary>
 public sealed class TitleScene : Scene<KartsterGame>, IUiLayer
 {
     //**********************************************************
@@ -14,7 +17,7 @@ public sealed class TitleScene : Scene<KartsterGame>, IUiLayer
 
     public const string Logo = "KARTSTER";
     public const string Prompt = "PRESS ENTER";
-    public const string Footer = "ESC QUIT";
+    public const string Footer = "SPACE GARAGE   ESC QUIT";
     public const int LogoScale = 6;
     public const int LogoY = 50;
     private const float BlinkSeconds = 1f;
@@ -37,6 +40,8 @@ public sealed class TitleScene : Scene<KartsterGame>, IUiLayer
         var keys = MenuKeys.From(Input.Instance);
         if (keys.Confirm)
             Game.Scenes.Set(new SelectKartScene());
+        else if (Input.Instance.GetKey(Key.SPACE).Pressed)
+            Game.Scenes.Set(new GarageScene());
         else if (keys.Back)
             Game.Stop();
     }

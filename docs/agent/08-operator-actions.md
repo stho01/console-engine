@@ -59,15 +59,18 @@ team's process differs.
 | Scripted | ←→↑↓ | Move the player | `player.lua` |
 | Scripted | `F5` | Reload all Lua scripts from the output folder | `ScriptReloadSystem` → `LuaRuntime.ReloadAll` |
 | Scripted | ESC | Quit (`Stop()`) | `ScriptedGame.OnUpdate` |
-| Kartster (track) | W / S / A D / SPACE (held) | Gas / brake, then reverse / steer left/right (ramped) / handbrake | `KartInputSystem` → `KartControls` → `KartPhysicsSystem` |
-| Kartster (track) | R | Every kart back on the grid, standing still (restarts `TrackScene`) | `KartsterGame.OnUpdate` |
-| Kartster (garage) | A D / W S / Q E (held), SPACE | Orbit left/right / up/down, zoom in/out, auto-spin on/off | `GarageScene.OnUpdate` |
-| Kartster | ENTER / TAB / ESC | Track/garage / next kart (on the track: from the start) / quit | `KartsterGame.OnUpdate` |
-| Kartster | G | Switch between the CPU `Rasterizer` and the OpenGL `GlRenderer`; stays on the CPU (title `CPU (no GPU)`) when OpenGL 3.3 isn't available | `KartsterGame.ToggleGpu` |
+| Kartster (title) | ENTER / SPACE / ESC | Kart menu / garage / quit | `TitleScene.OnUpdate` |
+| Kartster (select kart) | UP DOWN / ENTER / ESC | Highlight and choose a kart (loads at once) / race setup / title | `SelectKartScene.OnUpdate` |
+| Kartster (select track) | UP DOWN / LEFT RIGHT / ENTER / ESC | Choose a row / change track or laps (1–5) / start the race / kart menu | `SelectTrackScene.OnUpdate` |
+| Kartster (race) | W / S / A D / SPACE (held) | Gas / brake, then reverse / steer left/right (ramped) / handbrake | `KartInputSystem` → `KartControls` → `KartPhysicsSystem` |
+| Kartster (race) | R / ESC | Every kart back on the grid, countdown again (restarts `TrackScene`, same laps) / leave the race for the title | `TrackScene.UpdateFlow` |
+| Kartster (results) | ENTER / ESC | Race again (race setup) / title | `ResultsScene.OnUpdate` |
+| Kartster (garage) | A D / W S / Q E (held), SPACE, TAB, ESC | Orbit left/right / up/down, zoom in/out, auto-spin on/off, next kart (also chosen for the race), title | `GarageScene.OnUpdate` |
+| Kartster (any scene) | G | Switch between the CPU `Rasterizer` and the OpenGL `GlRenderer`; stays on the CPU (title `CPU (no GPU)`) when OpenGL 3.3 isn't available | `KartsterGame.ToggleGpu` |
 | Kartster | `--gpu` (command-line flag, any position) | Start on the GPU renderer | `Program.cs` |
-| Kartster | C | Switch between 16 colours and 24-bit colour (`Console.TrueColor`); stays on 16 colours (title `16 colours (no 24-bit)`) when the console can't show 24-bit | `KartsterGame.OnUpdate`, `MatchConsoleColors` |
+| Kartster (any scene) | C | Switch between 16 colours and 24-bit colour (`Console.TrueColor`); stays on 16 colours (title `16 colours (no 24-bit)`) when the console can't show 24-bit | `KartsterGame.OnUpdate`, `MatchConsoleColors` |
 | Kartster | `--truecolor` (command-line flag, any position) | Start in 24-bit colour | `Program.cs` |
-| Kartster | first / second command-line argument | Folder of kart folders (e.g. Kartster's `Content/3D/Rendered/Karts`; the bots still take theirs from `Assets/Karts`) / folder of exported tracks | `Program.cs` |
+| Kartster | first / second command-line argument | Folder of kart folders (e.g. Kartster's `Content/3D/Rendered/Karts`; the bots race in the same folders) / folder of exported tracks | `Program.cs` |
 
 There is **no** way to skip a TerraForM level, choose a map, reset the score, or enable TerraForM debug mode without a
 code change.

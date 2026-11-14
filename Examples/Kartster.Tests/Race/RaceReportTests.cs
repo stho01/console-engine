@@ -109,6 +109,42 @@ public class RaceReportTests
     }
 
     [Test]
+    public void Update_PlayerFinished_ResultsAfterTheDelayWithTheRestDnf()
+    {
+        var session = Session(laps: 1);
+        session.Advance(RaceSession.CountdownSeconds);
+        var report = new RaceReport(session, Names, Player);
+        Drive(session, 1, -5, 40);
+        Assert.That(report.Update(10f), Is.False, "still racing");
+
+        // Line, checkpoint, line: one lap on a straight that is driven back to the start in one jump (too long to count).
+        Drive(session, Player, -5, 105);
+        session.Update(Player, new Vector2(105, 0), new Vector2(-1, 0));
+        Drive(session, Player, -1, 1);
+        Assert.That(session.Get(Player).HasFinished, Is.True);
+
+        Assert.That(report.Update(RaceReport.ResultsDelaySeconds - 0.1f), Is.False, "FINISHED shows first");
+        Assert.That(report.Update(0.2f), Is.True);
+        Assert.That(session.Phase, Is.EqualTo(RacePhase.Finished));
+
+        var results = report.Results("STAR-CIRCUIT");
+        Assert.That(results.TrackName, Is.EqualTo("STAR-CIRCUIT"));
+        Assert.That(results.Rows, Has.Length.EqualTo(Names.Length));
+        Assert.That(results.Rows[0], Is.EqualTo(new ResultRow
+        {
+            Position = 1, Name = "YOU", TotalSeconds = session.Get(Player).FinishTimeSeconds,
+            BestLapSeconds = session.Get(Player).BestLapSeconds, Finished = true, IsPlayer = true
+        }));
+        Assert.That(results.Rows[1].Name, Is.EqualTo("MERLIN"), "then by gates passed");
+        for (var i = 1; i < results.Rows.Length; i++)
+        {
+            Assert.That(results.Rows[i].Position, Is.EqualTo(i + 1));
+            Assert.That(results.Rows[i].Finished, Is.False, "DNF");
+            Assert.That(results.Rows[i].IsPlayer, Is.False);
+        }
+    }
+
+    [Test]
     public void FillHud_EveryFrame_DoesNotAllocate()
     {
         var session = Session();
