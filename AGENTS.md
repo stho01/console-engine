@@ -218,9 +218,12 @@ Examples/
   KartViewer/                     3D experiment: KartViewerGame (track chase camera, garage orbit camera),
                                   KartDriving (arcade driving), KartModel (Kartster part folders), Track (exported
                                   ribbon + spline), Rendering/ (Rasterizer, Mesh, ObjFile, ConsolePalette),
-                                  Assets/Karts/ (olabil, wagon) and Assets/Tracks/ (star-circuit), exported from
+                                  Driving/ (Kartster-like planar kart dynamics, not wired in yet: KartDynamics
+                                  computes force + yaw torque per step, KartIntegrator, KartTuning, KartCatalog,
+                                  KartEngine, KartTraction, KartLoadTransfer, Surface), Assets/Karts/ (olabil, wagon) and Assets/Tracks/ (star-circuit), exported from
                                   Kartster, copied to output
-  KartViewer.Tests/               RasterizerTests, ObjFileTests, TrackTests, KartDrivingTests
+  KartViewer.Tests/               RasterizerTests, ObjFileTests, TrackTests, KartDrivingTests,
+                                  Driving/KartDynamicsTests
 .github/workflows/                build-and-test.yml
 ```
 

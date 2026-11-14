@@ -1,7 +1,8 @@
 # Plan: Kartster-lik kart-fysikk i KartViewer
 
-Status (2026-11-14): utkast til gjennomgang. Ingenting er implementert ennå. Dagens `Examples/KartViewer/KartDriving.cs`
-er en leke-modell (fast akselerasjon, styring som roterer kursen direkte) og skal erstattes.
+Status (2026-11-14): steg 3 (kart-modellen, § 6) finnes som ren planmodell i `Examples/KartViewer/Driving/`, med
+tester, men er ikke koblet inn i spillet ennå. Dagens `Examples/KartViewer/KartDriving.cs` er fortsatt en leke-modell
+(fast akselerasjon, styring som roterer kursen direkte) og skal erstattes.
 
 Kilde for alt om originalen: `C:\Forse\kartster-server` (Kartster, MonoGame). Stier som begynner med `Kartster/` under
 er relative til `src/Kartster/` der. Linjenumre er fra 2026-11-14 og kan ha flyttet seg.
@@ -180,6 +181,21 @@ mål.
 
 ## 6. Steg 3: kart-modellen
 
+**Status (2026-11-14):** modellen er bygget som ren C# uten ECS og uten `ConsoleEngine.Physics`, i
+`Examples/KartViewer/Driving/` (namespace `KartViewer.Driving`). `KartDynamics.ComputeForces(in KartBody, in
+KartControls, Surface, dt)` gir `KartForces` (netto kraft i tyngdepunktet + girmoment), og `KartIntegrator.Step` er
+semi-implisitt Euler. Avvik fra tabellen under står i § 10. Testene er `Examples/KartViewer.Tests/Driving/
+KartDynamicsTests.cs`. Gjenstår: `KartPhysicsSystem`/`KartInputSystem` (skrive `KartForces` til `Force`, steg 1–2)
+og å fjerne `KartDriving`.
+
+Målt med `KartIntegrator` på 1/120 s, full gass på flat asfalt (Joyride):
+
+| Kart | Toppfart asfalt | Toppfart gress | 0–50 km/t | 0–80 km/t | Brems 80 km/t → 0 |
+|---|---|---|---|---|---|
+| Kart | 32,00 m/s | 16,00 m/s | 0,66 s | 1,68 s | 0,82 s, 8,8 m |
+| olabil | 32,00 m/s | 16,00 m/s | 0,66 s | 1,68 s | 0,82 s, 8,8 m |
+| wagon | 32,21 m/s | 16,11 m/s | 0,68 s | 1,87 s | 0,70 s, 8,0 m |
+
 Et `KartPhysicsSystem : EntitySystem` i spillet (ikke i motoren), som skriver til `Force` hvert steg etter § 3. Filer
 (forslag):
 
@@ -250,3 +266,23 @@ Hvert steg bygges, testes og prøvekjøres for seg.
   motoren.
 - **Hvor mye av vektoverføringen** som trengs for å treffe tallene i § 7: start med lengde og side, uten
   karosseri-rulling.
+
+**Avvik i steg 3 slik det er bygget (`Examples/KartViewer/Driving/`):**
+
+- **Filer:** ingen `AxleGrip.cs`. Dekkmodellen er `KartDynamics.ApplyTyre`/`ApplySteering`, lengdekreftene per aksel
+  er `KartTraction` (Kartsters navn), motor, turtall og girvalg er `KartEngine`, og `KartTuning` har også
+  chassisgeometrien (`KartChassisGeometry`: boksmål, akselavstander, sporvidde). `KartBody`, `KartControls` og
+  `KartForces` ligger i `KartBody.cs`.
+- **Alt som endrer fart er kraft eller moment.** Kartsters vinkeldemping `ω *= k` blir momentet
+  `ω·(k − 1)·I/dt`, som gir nøyaktig samme ω etter et semi-implisitt Euler-steg. Alle krefter regnes fra tilstanden
+  ved stegets start, som i Kartster (akkumulatorer), så steget er Kartsters.
+- **Planart:** armene er vannrette. Wagonens tyngdepunkt 0,1 m ned (`CenterOfMassOffset`) senker bare høyden i
+  vektoverføringen. Kartster har også den loddrette armen med i effektiv masse (rulle-treghet, omtrent 1,5 % for
+  wagon) og gir rulle-/stupemoment; det er utelatt.
+- **Girkasse:** bare automatisk. Kartsters standard `SemiAutomatic` uten førerønsker oppfører seg likt.
+- **Underlag:** de fire effektive tuningene (grep, rullemotstand, effektgrense) lages én gang i konstruktøren, og
+  kartens egen toppfart finnes med halvering én gang (`KartEngine.GetTopSpeed`, som `KartEffectTuning.GetTopSpeed`).
+  Ingen allokering per steg.
+- **Utelatt som i § 1:** bremse-lås, downforce, boost, kroppsrulling (olabil skiller seg derfor fra Kart bare i
+  styrelås, sporvidde og `LateralLoadTransferScale`), stuping, fly/glide.
+- **Første steg** har ingen målt akselerasjon (forrige fart mangler), så vektoverføringen starter statisk.
