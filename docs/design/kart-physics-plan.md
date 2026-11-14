@@ -1,9 +1,10 @@
 # Plan: Kartster-lik kart-fysikk i KartViewer
 
-Status (2026-11-14): steg 3 (kart-modellen, § 6) finnes som ren planmodell i `Examples/KartViewer/Driving/`, med
-tester, men er ikke koblet inn i spillet ennå. Steg 4 (§ 7) er gjort: `KartReferenceTests` sammenligner modellen med
-tall målt fra Kartsters egen fysikk, og alle mål er innenfor toleransen uten endringer i modellen. Dagens `Examples/KartViewer/KartDriving.cs` er fortsatt en leke-modell
-(fast akselerasjon, styring som roterer kursen direkte) og skal erstattes.
+Status (2026-11-14): ferdig. Steg 1–4 er implementert: `Force` i `ConsoleEngine.Physics` (§ 4), banemodus kjører
+kart-modellen (`Examples/KartViewer/Driving/`, § 6) over ECS og `PhysicsSystem` på 120 Hz (§ 5), og
+`KartReferenceTests` viser at Kart, olabil og wagon treffer tallene målt fra Kartsters egen fysikk innenfor
+toleransene (§ 7). Eneste kjente avvik er olabil i svinger (ingen karosseri-rulling, § 10). Leke-modellen
+`KartDriving` er fjernet.
 
 Kilde for alt om originalen: `C:\Forse\kartster-server` (Kartster, MonoGame). Stier som begynner med `Kartster/` under
 er relative til `src/Kartster/` der. Linjenumre er fra 2026-11-14 og kan ha flyttet seg.
@@ -37,7 +38,7 @@ er relative til `src/Kartster/` der. Linjenumre er fra 2026-11-14 og kan ha flyt
 |---|---|
 | `ConsoleEngine.Physics` | 2D rigid body-motor i Box2D v3-stil: substeg, Soft Step-kontaktløser, rotasjon, demping, sleeping, boks-collider med riktig treghetsmoment |
 | Krefter på en kropp | **Mangler.** Spillkode kan bare sette `Velocity`/`AngularVelocity` direkte |
-| KartViewer | `GameBase`-spill uten ECS. Banemodus kjører `KartDriving` |
+| KartViewer | `GameBase`-spill uten ECS. Banemodus kjører `KartDriving` (fjernet i steg 2, se § 5) |
 | Kartster | Rigid body på 120 Hz, dekkrefter per aksel, motor med effekt og girkasse, vektoverføring, underlag |
 
 Bil på flat bakke er et 2D-problem sett ovenfra. Det passer motoren: verdens (x, z) blir fysikkens (x, y).
@@ -175,6 +176,18 @@ mål.
 
 ## 5. Steg 2: KartViewer over på ECS
 
+**Status (2026-11-14):** ferdig, og med Kartster-modellen fra steg 3 direkte (ikke dagens enkle modell først).
+`Scenes/TrackScene` (`EcsScene`, `FixedTimestep(1/120, 8)`): `KartPhysicsSystem` → `PhysicsSystem` (`SubstepCount =
+1`, `EnableSleep = false`, ingen tyngdekraft) → `KartGroundSystem` i det faste steget, `KartInputSystem` (tastatur-
+rampe 0,25 s ut, 0,12 s tilbake, maks 0,1 s per frame) per frame, `InterpolationSystem` + `KartRenderSystem` i
+tegningen. `Scenes/GarageScene` er dagens garasje. Karten lages av `KartEntity.Create` og har `Kart`- og
+`KartControls`-komponenter; `KartDynamics` ligger i `KartPhysicsSystem`. Omregningen er `KartFrame`: kurs =
+-`Rotation.Radians`, girfart = -`AngularVelocity`, moment = -kartmoment, krefter uendret. Boksens treghetsmoment
+m(w² + l²)/12 er `KartDynamics.YawInertia` når `YawInertiaScale` = 1 (alle tre kartene); for andre verdier deles
+momentet på skalaen. Ett substeg gjør steget identisk med `KartIntegrator`: etter 4 s (2 s gass, så 2 s fullt
+høyre) skiller de seg med under 0,002 cm og 0,0001° (`KartPhysicsSystemTests`). R og Tab starter `TrackScene` på
+nytt. `KartDriving` er fjernet.
+
 - Banemodus blir en `EcsScene` med egen `World`, `FixedSimulation`-gruppe på 120 Hz og `PhysicsSystem` uten
   tyngdekraft.
 - Karten blir en entitet: `Position`, `Rotation`, `Velocity`, `AngularVelocity`, `RigidBody.Dynamic(Mass)`, `Collider`
@@ -190,8 +203,7 @@ mål.
 `Examples/KartViewer/Driving/` (namespace `KartViewer.Driving`). `KartDynamics.ComputeForces(in KartBody, in
 KartControls, Surface, dt)` gir `KartForces` (netto kraft i tyngdepunktet + girmoment), og `KartIntegrator.Step` er
 semi-implisitt Euler. Avvik fra tabellen under står i § 10. Testene er `Examples/KartViewer.Tests/Driving/
-KartDynamicsTests.cs`. Gjenstår: `KartPhysicsSystem`/`KartInputSystem` (skrive `KartForces` til `Force`, steg 1–2)
-og å fjerne `KartDriving`.
+KartDynamicsTests.cs`. Koblet inn i spillet i steg 2 (§ 5).
 
 Målt med `KartIntegrator` på 1/120 s, full gass på flat asfalt (Joyride):
 

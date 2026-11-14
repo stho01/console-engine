@@ -58,7 +58,7 @@ Every name in `docs/agent/` is grep-able. Search for the identifier you are inte
 | `Microsoft.Xna.Framework` | `Libs/Microsoft.Xna.Framework/` | Library: math types | — |
 | `TerraForM`, `Snake`, `Asteroids`, `Platformer`, `ConsoleGame`, their ports `<Game>.Ecs`, `Swarm` (ECS stress test), `PhysicsSandbox` and `PhysicsShowcase` (physics demos) and `EternalDigger` (ECS game) | `Examples/*` | Exe | ConsoleEngine |
 | `Scripted` | `Examples/Scripted/` | Exe: Lua-scripted ECS demo | ConsoleEngine, Scripting |
-| `KartViewer` | `Examples/KartViewer/` | Exe: 3D experiment, a Kartster kart driving a Kartster track, drawn by a software rasterizer (`System.Numerics`, not Xna) | ConsoleEngine |
+| `KartViewer` | `Examples/KartViewer/` | Exe: 3D experiment, a Kartster kart driving a Kartster track, drawn by a software rasterizer (`System.Numerics`, not Xna), driven by Kartster's kart model on the engine's physics | ConsoleEngine, Physics |
 | `Launcher` | `Examples/Launcher/` | Exe: text menu that starts the ECS games (plain `System.Console`, no engine) | ECS games (build order only) |
 | `TerraForM.Tests` | `Examples/TerraForM.Tests/` | NUnit 5 + NSubstitute | TerraForM |
 | `Launcher.Tests` | `Examples/Launcher.Tests/` | NUnit 5 | Launcher |
@@ -216,15 +216,18 @@ Examples/
   TerraForM.Tests/                RoverTests.cs
   Scripted/                       Lua demo on ECS: Scenes/ScriptedScene, Systems/ (reload, error line),
                                   Assets/Scripts/ player.lua, firefly.lua (copied to output)
-  KartViewer/                     3D experiment: KartViewerGame (track chase camera, garage orbit camera),
-                                  KartDriving (arcade driving), KartModel (Kartster part folders), Track (exported
-                                  ribbon + spline), Rendering/ (Rasterizer, Mesh, ObjFile, ConsolePalette),
-                                  Driving/ (Kartster-like planar kart dynamics, not wired in yet: KartDynamics
-                                  computes force + yaw torque per step, KartIntegrator, KartTuning, KartCatalog,
-                                  KartEngine, KartTraction, KartLoadTransfer, Surface), Assets/Karts/ (olabil, wagon) and Assets/Tracks/ (star-circuit), exported from
-                                  Kartster, copied to output
-  KartViewer.Tests/               RasterizerTests, ObjFileTests, TrackTests, KartDrivingTests,
-                                  Driving/KartDynamicsTests
+  KartViewer/                     3D experiment: KartViewerGame (shared rasterizer, palette, sky, karts, track;
+                                  Enter/Tab/R/Esc), Scenes/ (TrackScene: EcsScene at 120 Hz, GarageScene: orbit
+                                  camera), Systems/ (KartInputSystem, KartPhysicsSystem, KartGroundSystem,
+                                  KartRenderSystem), Components/Kart, KartEntity (the kart's physics body),
+                                  KartFrame (physics <-> kart frame), KartModel (Kartster part folders), Track
+                                  (exported ribbon + spline), Rendering/ (Rasterizer, Mesh, ObjFile, ConsolePalette),
+                                  Driving/ (Kartster-like planar kart model: KartDynamics computes force + yaw
+                                  torque per step, KartIntegrator, KartTuning, KartCatalog, KartEngine,
+                                  KartTraction, KartLoadTransfer, Surface), Assets/Karts/ (olabil, wagon) and
+                                  Assets/Tracks/ (star-circuit), exported from Kartster, copied to output
+  KartViewer.Tests/               RasterizerTests, ObjFileTests, TrackTests, KartPhysicsSystemTests, KartFrameTests,
+                                  KartInputSystemTests, Driving/KartDynamicsTests
 .github/workflows/                build-and-test.yml
 ```
 

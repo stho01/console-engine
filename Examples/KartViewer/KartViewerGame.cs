@@ -5,15 +5,18 @@ using ConsoleEngine;
 using ConsoleEngine.Abstractions.Inputs;
 using ConsoleEngine.Infrastructure;
 using ConsoleEngine.Infrastructure.Inputs;
+using KartViewer.Driving;
 using KartViewer.Rendering;
+using KartViewer.Scenes;
 
 namespace KartViewer;
 
 /// <summary>
 /// 3D experiment: Kartster karts and a Kartster track, drawn by the software <see cref="Rasterizer"/> with one
-/// console cell per pixel. Two modes, swapped with Enter: on the track you drive the kart (<see cref="KartDriving"/>)
-/// with a chase camera behind it; in the garage the camera orbits the kart on a small floor. Kartster's axes: 1 unit is
-/// 1 metre, +Y up, -Z forward.
+/// console cell per pixel. Two scenes, swapped with Enter: on the track (<see cref="TrackScene"/>) you drive the kart
+/// with Kartster's kart model on the engine's physics and a chase camera behind it; in the garage
+/// (<see cref="GarageScene"/>) the camera orbits the kart on a small floor. Kartster's axes: 1 unit is 1 metre, +Y up,
+/// -Z forward. The game holds what both scenes share: rasterizer, sky, projection, the karts and the track.
 /// </summary>
 public class KartViewerGame(string kartsFolder, string tracksFolder)
     : GameBase(ScreenWidth, ScreenHeight, fontWidth: 4, fontHeight: 4)
@@ -28,19 +31,8 @@ public class KartViewerGame(string kartsFolder, string tracksFolder)
     private const float NearPlane = 0.2f;
     private const float FarPlane = 400f;
 
-    // garage
-    private const float OrbitSpeed = 1.5f;  // radians per second
-    private const float ZoomSpeed = 3f;     // metres per second
-    private const float AutoSpinSpeed = 0.5f;
-
-    // track
-    private const float ChaseDistance = 5.5f;
-    private const float ChaseHeight = 2.2f;
-    private const float LookAhead = 4f;
-    private const float CameraStiffness = 6f; // how fast the chase camera catches up, per second
-
+    public static readonly Vector3 ToSun = Vector3.Normalize(new Vector3(0.5f, 0.8f, 0.3f));
     private static readonly Vector3 PlayerColor = new(0.1f, 0.35f, 0.85f);
-    private static readonly Vector3 ToSun = Vector3.Normalize(new Vector3(0.5f, 0.8f, 0.3f));
     private static readonly Vector3 SkyTop = new(0.35f, 0.55f, 0.95f);
     private static readonly Vector3 SkyHorizon = new(0.85f, 0.85f, 0.95f);
 
@@ -54,28 +46,28 @@ public class KartViewerGame(string kartsFolder, string tracksFolder)
         0xB06A30                                // wood, leather, red lamps
     ]);
 
-    private readonly Rasterizer _rasterizer = new(ScreenWidth, ScreenHeight, ScenePalette);
     private readonly ConsoleColor[] _sky = new ConsoleColor[ScreenWidth * ScreenHeight];
-    private readonly Mesh _floor = Mesh.CreateFloor(8, 16, new Vector3(0.2f, 0.45f, 0.15f), new Vector3(0.3f, 0.55f, 0.2f));
-    private readonly Matrix4x4 _projection = Matrix4x4.CreatePerspectiveFieldOfView(
-        FieldOfView, (float)ScreenWidth / ScreenHeight, NearPlane, FarPlane);
     private string[] _kartFolders;
     private int _kartIndex;
-    private Mesh _kart;
-    private string _kartName;
-    private Vector3 _kartCenter;
-    private Track _track;
-    private bool _onTrack;
 
-    // garage
-    private float _yaw = 0.8f;
-    private float _pitch = 0.35f;
-    private float _distance = 5f;
-    private bool _autoSpin = true;
+    //**********************************************************
+    //** props
+    //**********************************************************
 
-    // track
-    private KartDriving _driving;
-    private Vector3 _cameraEye;
+    public Rasterizer Rasterizer { get; } = new(ScreenWidth, ScreenHeight, ScenePalette);
+
+    public Matrix4x4 Projection { get; } = Matrix4x4.CreatePerspectiveFieldOfView(
+        FieldOfView, (float)ScreenWidth / ScreenHeight, NearPlane, FarPlane);
+
+    public Mesh Kart { get; private set; }
+    public string KartName { get; private set; }
+    public KartTuning Tuning { get; private set; }
+
+    /// <summary>The middle of the kart's bounding box, in model space.</summary>
+    public Vector3 KartCenter { get; private set; }
+
+    /// <summary>Null when there is no track: then only the garage runs.</summary>
+    public Track Track { get; private set; }
 
     //**********************************************************
     //** game
@@ -97,11 +89,7 @@ public class KartViewerGame(string kartsFolder, string tracksFolder)
         var ribbons = Directory.Exists(tracksFolder) ? Directory.GetFiles(tracksFolder, "*.ribbon.obj") : [];
         Array.Sort(ribbons, StringComparer.Ordinal);
         if (ribbons.Length > 0)
-        {
-            _track = Track.Load(tracksFolder, Path.GetFileName(ribbons[0])[..^".ribbon.obj".Length]);
-            _onTrack = true;
-            ResetToStart();
-        }
+            Track = Track.Load(tracksFolder, Path.GetFileName(ribbons[0])[..^".ribbon.obj".Length]);
 
         for (var y = 0; y < ScreenHeight; y++)
         for (var x = 0; x < ScreenWidth; x++)
@@ -110,55 +98,43 @@ public class KartViewerGame(string kartsFolder, string tracksFolder)
             _sky[y * ScreenWidth + x] = ScenePalette.ToConsoleColor(sky, x, y);
         }
 
-        GameTime.SetInterval(250, () => Console.SetTitle(_onTrack
-            ? $"KartViewer - {_kartName} on {_track.Name} - {MathF.Abs(_driving.Speed) * 3.6f:0} km/h - {GameTime.Fps} fps"
-            : $"KartViewer - {_kartName} ({_kart.TriangleCount} triangles) - {GameTime.Fps} fps"));
+        if (Track != null)
+            Scenes.Set(new TrackScene());
+        else
+            Scenes.Set(new GarageScene());
+
+        GameTime.SetInterval(250, () => Console.SetTitle(Scene is TrackScene track
+            ? $"KartViewer - {KartName} on {Track.Name} - {track.Speed * 3.6f:0} km/h - gear {track.Dynamics.Gear} - " +
+              $"{track.Dynamics.EngineRpm:0} rpm - {GameTime.Fps} fps"
+            : $"KartViewer - {KartName} ({Kart.TriangleCount} triangles) - {GameTime.Fps} fps"));
     }
 
     protected override void OnUpdate()
     {
         var input = Input.Instance;
-        var seconds = (float)GameTime.Delta.TotalSeconds;
+        var onTrack = Scene is TrackScene;
 
         if (input.GetKey(Key.ESCAPE).Pressed)
             Stop();
         if (input.GetKey(Key.TAB).Pressed)
-            LoadKart((_kartIndex + 1) % _kartFolders.Length);
-        if (input.GetKey(Key.ENTER).Pressed && _track != null)
         {
-            _onTrack = !_onTrack;
-            _cameraEye = ChaseEye();
+            LoadKart((_kartIndex + 1) % _kartFolders.Length);
+            if (onTrack)
+                Scenes.Set(new TrackScene()); // the new kart's model and tuning, from the start
         }
 
-        if (_onTrack)
-            UpdateDriving(input, seconds);
-        else
-            UpdateGarage(input, seconds);
+        if (input.GetKey(Key.ENTER).Pressed && Track != null)
+            Scenes.Set(onTrack ? new GarageScene() : new TrackScene());
+        else if (onTrack && input.GetKey(Key.R).Pressed)
+            Scenes.Set(new TrackScene());
+
+        // The scene's render (next in the frame) draws onto the sky.
+        Rasterizer.Clear(_sky);
     }
 
     protected override void OnRender()
     {
-        _rasterizer.Clear(_sky);
-
-        if (_onTrack)
-        {
-            var (position, forward) = KartPose();
-            var view = Matrix4x4.CreateLookAt(_cameraEye, position + forward * LookAhead + Vector3.UnitY, Vector3.UnitY);
-            var viewProjection = view * _projection;
-            _rasterizer.Draw(_track.Ground, _track.GroundWorld, viewProjection, ToSun);
-            _rasterizer.Draw(_track.Road, Matrix4x4.Identity, viewProjection, ToSun);
-            _rasterizer.Draw(_kart, Matrix4x4.CreateWorld(position, forward, Vector3.UnitY), viewProjection, ToSun);
-        }
-        else
-        {
-            var eye = _kartCenter + _distance * new Vector3(
-                MathF.Sin(_yaw) * MathF.Cos(_pitch), MathF.Sin(_pitch), MathF.Cos(_yaw) * MathF.Cos(_pitch));
-            var viewProjection = Matrix4x4.CreateLookAt(eye, _kartCenter, Vector3.UnitY) * _projection;
-            _rasterizer.Draw(_floor, Matrix4x4.Identity, viewProjection, ToSun);
-            _rasterizer.Draw(_kart, Matrix4x4.Identity, viewProjection, ToSun);
-        }
-
-        var colors = _rasterizer.Colors;
+        var colors = Rasterizer.Colors;
         for (var y = 0; y < ScreenHeight; y++)
         for (var x = 0; x < ScreenWidth; x++)
             Console.Draw(x, y, ' ', ConsoleColor.Black, colors[y * ScreenWidth + x]);
@@ -168,69 +144,21 @@ public class KartViewerGame(string kartsFolder, string tracksFolder)
     //** internals
     //**********************************************************
 
-    private void UpdateGarage(Input input, float seconds)
-    {
-        if (input.GetKey(Key.SPACE).Pressed) _autoSpin = !_autoSpin;
-        if (input.GetKey(Key.A).Held) _yaw -= OrbitSpeed * seconds;
-        if (input.GetKey(Key.D).Held) _yaw += OrbitSpeed * seconds;
-        if (input.GetKey(Key.W).Held) _pitch += OrbitSpeed * seconds;
-        if (input.GetKey(Key.S).Held) _pitch -= OrbitSpeed * seconds;
-        if (input.GetKey(Key.Q).Held) _distance -= ZoomSpeed * seconds;
-        if (input.GetKey(Key.E).Held) _distance += ZoomSpeed * seconds;
-        if (_autoSpin) _yaw += AutoSpinSpeed * seconds;
-
-        _pitch = Math.Clamp(_pitch, 0.05f, 1.5f);
-        _distance = Math.Clamp(_distance, 1.5f, 12f);
-    }
-
-    private void UpdateDriving(Input input, float seconds)
-    {
-        if (input.GetKey(Key.R).Pressed)
-            ResetToStart();
-
-        var onRoad = _track.TryGetRoadHeight(_driving.Position, out _);
-        var steer = (input.GetKey(Key.A).Held ? 1 : 0) - (input.GetKey(Key.D).Held ? 1 : 0);
-        _driving.Update(input.GetKey(Key.W).Held, input.GetKey(Key.S).Held, steer, onRoad, seconds);
-
-        // Stay on the ground square, standing on the road or the grass.
-        var position = _driving.Position;
-        var center = _track.GroundCenter;
-        var edge = _track.GroundHalfSize - 1;
-        position.X = Math.Clamp(position.X, center.X - edge, center.X + edge);
-        position.Z = Math.Clamp(position.Z, center.Z - edge, center.Z + edge);
-        _track.TryGetRoadHeight(position, out position.Y);
-        _driving.Position = position;
-
-        // The camera eases towards its place behind the kart, so turns swing it round instead of snapping.
-        _cameraEye = Vector3.Lerp(_cameraEye, ChaseEye(), 1 - MathF.Exp(-CameraStiffness * seconds));
-    }
-
-    private (Vector3 Position, Vector3 Forward) KartPose() => (_driving.Position, _driving.Forward);
-
-    private Vector3 ChaseEye() => _driving.Position - _driving.Forward * ChaseDistance + Vector3.UnitY * ChaseHeight;
-
-    /// <summary>Puts the kart standing still on the start of the route, facing along it.</summary>
-    private void ResetToStart()
-    {
-        var (position, forward) = _track.Sample(0);
-        _driving = new KartDriving(position, forward);
-        _cameraEye = ChaseEye();
-    }
-
     private void LoadKart(int index)
     {
         _kartIndex = index;
-        _kartName = Path.GetFileName(_kartFolders[index]);
-        _kart = KartModel.Load(_kartFolders[index], PlayerColor);
+        KartName = Path.GetFileName(_kartFolders[index]);
+        Kart = KartModel.Load(_kartFolders[index], PlayerColor);
+        Tuning = KartCatalog.ForKart(KartName);
 
         var min = new Vector3(float.MaxValue);
         var max = new Vector3(float.MinValue);
-        foreach (var position in _kart.Positions)
+        foreach (var position in Kart.Positions)
         {
             min = Vector3.Min(min, position);
             max = Vector3.Max(max, position);
         }
 
-        _kartCenter = (min + max) / 2;
+        KartCenter = (min + max) / 2;
     }
 }

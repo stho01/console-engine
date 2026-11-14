@@ -102,7 +102,7 @@ using [04](04-flows.md).
 | `No kart parts (*.obj) in <folder>` | `KartModel.Load` (`InvalidDataException`) | A kart folder has no drawable OBJ parts |
 | `<path>:<line>: a face needs at least three corners` | `ObjFile.Read` (`InvalidDataException`) | Broken OBJ file |
 | `<id>.spline.obj needs at least two centerline points` | `Track.Load` (`InvalidDataException`) | Broken or empty track spline export |
-| `KartViewer - <kart> on <track> - <n> km/h - <fps> fps` (window title) | `KartViewerGame.OnInitialize` interval, every 250 ms | Running, track mode |
+| `KartViewer - <kart> on <track> - <n> km/h - gear <g> - <rpm> rpm - <fps> fps` (window title) | `KartViewerGame.OnInitialize` interval, every 250 ms | Running, track mode |
 | `KartViewer - <kart> (<n> triangles) - <fps> fps` (window title) | `KartViewerGame.OnInitialize` interval, every 250 ms | Running, garage mode |
 
 ### Launcher (`LauncherTexts`, `GameLocator`)
