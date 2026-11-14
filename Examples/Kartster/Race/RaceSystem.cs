@@ -49,7 +49,7 @@ public sealed class RaceSystem(RaceSession session) : EntitySystem
             {
                 var position = positions[i].Value;
                 var last = progress[i].HasLastPosition ? progress[i].LastPosition : position;
-                session.Update(karts[i].Index, new(last.X, last.Y), new(position.X, position.Y));
+                session.Update(karts[i].Index, new(last.X, last.Y), new(position.X, position.Y), karts[i].Height);
                 progress[i].LastPosition = position;
                 progress[i].HasLastPosition = true;
             }

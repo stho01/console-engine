@@ -20,7 +20,7 @@ public static class ViewEffects
             frame.Slice(row, width).Reverse();
     }
 
-    /// <summary>Lerps every pixel of a 24-bit frame towards <see cref="SmokeTint"/> by <paramref name="cover"/> (0..1).</summary>
+    /// <summary>Lerps each pixel of a 24-bit frame towards <see cref="SmokeTint"/> by <paramref name="cover"/>.</summary>
     public static void Wash(Span<uint> rgb, float cover)
     {
         var keep = (int)(Math.Clamp(1f - cover, 0f, 1f) * 256f);

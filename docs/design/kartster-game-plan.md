@@ -95,7 +95,7 @@ Ferdig i bølge 1, koblet inn i `TrackScene` i bølge 2. Reglene er originalens,
   under nedtellingen (3 s); den som skriver `KartControls` holder kartene stille. `RaceSystem` gjør stegene for alle
   entiteter med `Components.Kart`, `Position` og `RaceProgress`, og speiler `Racer` inn i `RaceProgress`.
 - Avvik fra originalen: plassering etter porter og så rett avstand til neste port (originalen: runder pluss
-  ruteavstand rundt banen); klokken går i faste steg (originalen: per frame); ingen høydegrenser på portene; ingen
+  ruteavstand rundt banen); klokken går i faste steg (originalen: per frame); ingen
   `Retire`/`Rejoin`, tider per port (gap). Autopilot og avslutning kom i bølge 3 (§ 8). Bare lukkede ruter.
 - `race.txt` (format i `Race/RaceMarkers.cs`), meter i planet (x = verdens X, y = verdens Z):
   `laps <n>`, `start x y fremX fremY venstre høyre`, `checkpoint …` (samme felt, i rute-rekkefølge),
@@ -301,6 +301,10 @@ Height og Tracks).
   Circuit; GPU 1,5–2,7 ms.
 - **Valgt bort nå:** byene (`downtown`, `neon-city`: bygninger, lykter og tunneltak er ikke med i kulisse-eksporten,
   så de blir tomme), fjellbanene (opptil 470 m), doserte `speedway` (2 MB skilt) og åpne ruter.
+- **Porter i høyden (bølge 4, etterarbeid):** `dunsfold-neon` har en port ved brua, så portene har nå originalens
+  grenser: `RaceGate.StandOn` (i `TrackScene.CreateSession`) setter `Bottom` 2 m under portens vei og `Top` 60 m over,
+  eller 1,5 m under en vei som går over porten; `RaceSystem` gir `Kart.Height` til `RaceSession.Update`. Test:
+  `RaceMarkersTests.StandOn_ShippedTrack_TakesInItsRoadButNotAnotherLevel`.
 - **Rørt utenfor eget område:** `KartRenderSystem` (to linjer: tegnekallet for bakken og kartens verdensmatrise),
   `Scenery.FromMeshes` (for terrengflisene), `KartFrame.ToWorld`, `Components/Kart`, `ShippedTracksTests` (baner uten
   kollisjon er listet).

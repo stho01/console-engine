@@ -139,13 +139,14 @@ public sealed class RaceSession
 
     /// <summary>
     /// The kart moved from <paramref name="previous"/> to <paramref name="position"/> (x = world X, y = world Z)
-    /// this step: counts the gate it went through, and a lap or the finish.
+    /// this step, at <paramref name="height"/> (world Y, for the gates' <see cref="RaceGate.Bottom"/> and
+    /// <see cref="RaceGate.Top"/>): counts the gate it went through, and a lap or the finish.
     /// </summary>
-    public void Update(int id, Vector2 previous, Vector2 position)
+    public void Update(int id, Vector2 previous, Vector2 position, float height = 0f)
     {
         ref var racer = ref _racers[IndexOf(id)];
         if (Vector2.DistanceSquared(previous, position) <= MaxStepMeters * MaxStepMeters)
-            PassGates(ref racer, previous, position);
+            PassGates(ref racer, previous, position, height);
 
         racer.DistanceToNextGate = Vector2.Distance(position, NextGate(racer).Point);
         CountLap(ref racer);
@@ -198,12 +199,12 @@ public sealed class RaceSession
             : _start;
 
     /// <summary>Kartster's <c>RaceProgressTracker.Advance</c> for a loop.</summary>
-    private void PassGates(ref Racer racer, Vector2 from, Vector2 to)
+    private void PassGates(ref Racer racer, Vector2 from, Vector2 to, float height)
     {
         var count = _checkpoints.Length;
         if (!racer.LapStarted)
         {
-            if (_start.Cross(from, to) > 0)
+            if (_start.Cross(from, to, height) > 0)
             {
                 racer.LapStarted = true;
                 racer.NextCheckpointIndex = 0;
@@ -214,7 +215,7 @@ public sealed class RaceSession
         }
 
         var next = racer.NextCheckpointIndex;
-        if (NextGate(racer).Cross(from, to) > 0)
+        if (NextGate(racer).Cross(from, to, height) > 0)
         {
             if (next < count)
             {
@@ -233,7 +234,7 @@ public sealed class RaceSession
         // Back through the last gate passed takes it back.
         if (next > 0)
         {
-            if (_checkpoints[next - 1].Cross(from, to) < 0)
+            if (_checkpoints[next - 1].Cross(from, to, height) < 0)
             {
                 racer.NextCheckpointIndex--;
                 return;
@@ -241,14 +242,14 @@ public sealed class RaceSession
         }
         else if (racer.CompletedLaps > 0)
         {
-            if (_start.Cross(from, to) < 0)
+            if (_start.Cross(from, to, height) < 0)
             {
                 racer.CompletedLaps--;
                 racer.NextCheckpointIndex = count;
                 return;
             }
         }
-        else if (_start.Cross(from, to) < 0)
+        else if (_start.Cross(from, to, height) < 0)
         {
             racer.LapStarted = false;
             return;
@@ -259,7 +260,7 @@ public sealed class RaceSession
             : next + 1 == count ? _start
             : count > 0 ? _checkpoints[0]
             : (RaceGate?)null;
-        if (afterNext is { } gate && gate.Cross(from, to) > 0)
+        if (afterNext is { } gate && gate.Cross(from, to, height) > 0)
             racer.MissedCheckpoints++;
     }
 

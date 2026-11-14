@@ -165,17 +165,19 @@ public sealed class TrackScene(int lapCount, int botCount = TrackScene.DefaultBo
 
     /// <summary>
     /// The race on <paramref name="track"/> over <paramref name="laps"/> laps: <paramref name="markers"/>' start line
-    /// and checkpoints, or without markers a start line across the centerline at route distance 0 and no checkpoints.
+    /// and checkpoints, or without markers a start line across the centerline at route distance 0 and no checkpoints;
+    /// every gate stood on its road (<see cref="RaceGate.StandOn"/>).
     /// </summary>
     public static RaceSession CreateSession(Track track, RaceMarkers markers, int laps)
     {
         if (markers != null)
-            return new RaceSession(markers.Start, markers.Checkpoints, laps);
+            return new RaceSession(markers.Start.StandOn(track),
+                Array.ConvertAll(markers.Checkpoints, gate => gate.StandOn(track)), laps);
 
         var (point, forward) = track.Sample(0f);
         var line = new RaceGate(new PlanarVector2(point.X, point.Z),
             PlanarVector2.Normalize(new PlanarVector2(forward.X, forward.Z)), StandInLineReach, StandInLineReach);
-        return new RaceSession(line, [], laps);
+        return new RaceSession(line.StandOn(track), [], laps);
     }
 
     /// <summary>
