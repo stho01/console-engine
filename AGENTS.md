@@ -142,7 +142,8 @@ run-game.ps1                      build an example and start it in conhost
 AGENTS.md / CLAUDE.md             agent instructions (CLAUDE.md imports AGENTS.md)
 docs/agent/                       support/triage docs for agents (01–09 + README)
 docs/design/                      design plans (ecs-plan.md, physics-plan.md, eternal-digger.md,
-                                  kart-physics-plan.md, gpu-rendering-plan.md)
+                                  kart-physics-plan.md, gpu-rendering-plan.md,
+                                  kartster-game-plan.md)
 ConsoleEngine/                    the engine
   GameBase.cs                       abstract game: Initialize/Start/Stop, frame loop
   Collections/Deque.cs              double-ended queue (used by Snake)
