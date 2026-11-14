@@ -14,6 +14,12 @@ internal static class GameCatalog
         new("TerraForM (ECS)", "TerraForM.Ecs", "Arrows plan, P plant, Space send, R restart"),
         new("ConsoleGame (ECS)", "ConsoleGame.Ecs", "Esc quit"),
         new("Swarm", "Swarm", "Space / Backspace +/- 10 000 particles, Esc quit"),
-        new("Starguard", "Starguard", "A D / arrows move, Space fire, Enter restart")
+        new("Physics Sandbox", "PhysicsSandbox", "Space ball, B box, Enter 50 balls, R clear, Esc quit"),
+        new("Physics Showcase", "PhysicsShowcase",
+            "1-5 shapes, Enter shower, A D W move, E blast, G gravity, I smooth, R clear"),
+        new("EternalDigger", "EternalDigger", "Arrows walk/dig, Space ladder, E deliver/buy, hold R rescue"),
+        new("SkyStack", "SkyStack", "A D / arrows run, Space / W / Up jump, Esc title"),
+        new("Starguard", "Starguard", "A D / arrows move, Space fire, Enter restart"),
+        new("Scripted (Lua)", "Scripted", "Arrows move, F5 reload scripts, Esc quit")
     ];
 }

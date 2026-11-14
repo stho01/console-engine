@@ -2,8 +2,8 @@
 
     <PropertyGroup>
         <OutputType>Exe</OutputType>
-        <TargetFramework>net10.0</TargetFramework>
-        <LangVersion>14</LangVersion>
+        <TargetFramework>net11.0</TargetFramework>
+        <LangVersion>15</LangVersion>
         <RootNamespace>Launcher</RootNamespace>
         <AssemblyName>Launcher</AssemblyName>
         <TreatWarningsAsErrors>True</TreatWarningsAsErrors>
@@ -29,6 +29,11 @@
       <ProjectReference Include="..\TerraForM.Ecs\TerraForM.Ecs.csproj" />
       <ProjectReference Include="..\ConsoleGame.Ecs\ConsoleGame.Ecs.csproj" />
       <ProjectReference Include="..\Swarm\Swarm.csproj" />
+      <ProjectReference Include="..\PhysicsSandbox\PhysicsSandbox.csproj" />
+      <ProjectReference Include="..\PhysicsShowcase\PhysicsShowcase.csproj" />
+      <ProjectReference Include="..\EternalDigger\EternalDigger.csproj" />
+      <ProjectReference Include="..\SkyStack\SkyStack.csproj" />
+      <ProjectReference Include="..\Scripted\Scripted.csproj" />
       <ProjectReference Include="..\Starguard\Starguard.csproj" />
     </ItemGroup>
 

@@ -1,3 +1,4 @@
+using System.Collections.Generic;
 using ConsoleEngine.Ecs;
 using ConsoleEngine.Infrastructure.Scenery;
 using NUnit.Framework;
@@ -40,6 +41,44 @@ public class EcsSceneTests
     }
 
     [Test]
+    public void RunSimulation_TwoStepsDue_RunsFixedTwiceWithStepThenSimulationWithDelta()
+    {
+        var scene = new TestScene();
+        _scenes.Push(scene);
+        var step = scene.Timestep.StepSeconds;
+
+        scene.RunSimulation(step * 2.5f);
+
+        Assert.That(scene.Log, Is.EqualTo(new[] { ("fixed", step), ("fixed", step), ("simulation", step * 2.5f) }));
+    }
+
+    [Test]
+    public void RunSimulation_NoStepDue_RunsOnlySimulation()
+    {
+        var scene = new TestScene();
+        _scenes.Push(scene);
+        var delta = scene.Timestep.StepSeconds * .5f;
+
+        scene.RunSimulation(delta);
+
+        Assert.That(scene.Log, Is.EqualTo(new[] { ("simulation", delta) }));
+    }
+
+    [Test]
+    public void Load_Always_CreatesDefaultFixedTimestep()
+    {
+        var scene = new TestScene();
+
+        _scenes.Push(scene);
+
+        Assert.Multiple(() =>
+        {
+            Assert.That(scene.Timestep.StepSeconds, Is.EqualTo(FixedTimestep.DefaultStepSeconds));
+            Assert.That(scene.Timestep.MaxStepsPerFrame, Is.EqualTo(FixedTimestep.DefaultMaxStepsPerFrame));
+        });
+    }
+
+    [Test]
     public void Unload_Always_CallsOnDestroyThenDisposesWorld()
     {
         var scene = new TestScene();
@@ -65,22 +104,31 @@ public class EcsSceneTests
         public bool WorldAliveAtDestroy { get; private set; }
         public int SimulationRuns => _simulation.Runs;
         public int PresentationRuns => _presentation.Runs;
+        public FixedTimestep Timestep => FixedTimestep;
+
+        /// <summary>Which group ran, with the delta it got, in order. Presentation isn't logged.</summary>
+        public List<(string Group, float DeltaSeconds)> Log { get; } = new();
 
         protected override void OnCreate()
         {
             WorldAtCreate = World;
             Seed = World.Create(new Health(1));
-            _simulation = Simulation.Add(new CountingSystem());
+            FixedSimulation.Add(new CountingSystem(Log, "fixed"));
+            _simulation = Simulation.Add(new CountingSystem(Log, "simulation"));
             _presentation = Presentation.Add(new CountingSystem());
         }
 
         protected override void OnDestroy() => WorldAliveAtDestroy = World.IsAlive(Seed);
     }
 
-    private sealed class CountingSystem : EntitySystem
+    private sealed class CountingSystem(List<(string, float)> log = null, string name = null) : EntitySystem
     {
         public int Runs { get; private set; }
 
-        protected override void OnUpdate(float deltaSeconds) => Runs++;
+        protected override void OnUpdate(float deltaSeconds)
+        {
+            Runs++;
+            log?.Add((name, deltaSeconds));
+        }
     }
 }

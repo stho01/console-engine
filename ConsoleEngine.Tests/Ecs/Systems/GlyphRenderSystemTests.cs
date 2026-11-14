@@ -41,6 +41,21 @@ public class GlyphRenderSystemTests
     }
 
     [Test]
+    public void Update_WithRenderOffset_DrawsOffsetCell()
+    {
+        _world.Create(new Position(new Vector2(3.7f, 2.2f)), new Glyph('*', ConsoleColor.Yellow),
+            new RenderOffset { Position = new Vector2(-1.5f, 1f) });
+
+        _presentation.Update(0f);
+
+        Assert.Multiple(() =>
+        {
+            Assert.That(_console.GetCharAt(2, 3), Is.EqualTo('*'));
+            Assert.That(_console.GetCharAt(3, 2), Is.Not.EqualTo('*'));
+        });
+    }
+
+    [Test]
     public void Update_CameraMoved_DrawsRelativeToCamera()
     {
         _world.Create(new Position(new Vector2(13, 7)), new Glyph('@', ConsoleColor.White));

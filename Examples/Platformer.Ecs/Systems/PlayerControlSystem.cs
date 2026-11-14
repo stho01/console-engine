@@ -5,7 +5,10 @@ using Platformer.Ecs.Components;
 
 namespace Platformer.Ecs.Systems;
 
-/// <summary>A/D run (weaker in the air), SPACE requests a jump. <see cref="PlayerPhysicsSystem"/> applies both.</summary>
+/// <summary>
+/// A/D run, SPACE requests a jump. Runs every frame, because key presses are one-frame edges, and only latches the
+/// input: <see cref="PlayerPhysicsSystem"/> applies it in the next fixed step.
+/// </summary>
 public sealed class PlayerControlSystem : EntitySystem
 {
     //**********************************************************
@@ -33,8 +36,7 @@ public sealed class PlayerControlSystem : EntitySystem
             for (var i = 0; i < chunk.Count; i++)
             {
                 ref var body = ref bodies[i];
-                var strength = body.IsAirborne ? body.AirAcceleration : body.GroundAcceleration;
-                body.Acceleration.X += direction * strength;
+                body.RunDirection = direction;
                 if (jumping)
                     body.JumpRequested = true;
             }

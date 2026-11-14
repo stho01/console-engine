@@ -5,8 +5,9 @@ for code and commits.
 
 ## What this is
 
-**console-engine** is a small **game engine** that renders into the Windows console, written in C# / .NET 10. It ships as
-the `ConsoleEngine` library (NuGet package, `PackageVersion` 0.2.0) with example games under `Examples/`.
+**console-engine** is a small **game engine** that renders into the Windows console, written in C# / .NET 11. It ships as
+the `ConsoleEngine` library (NuGet package, `PackageVersion` 0.2.0) with example games under `Examples/`. ECS
+entities can optionally be scripted in Lua 5.4 through `ConsoleEngine.Scripting`.
 
 The two priorities for every change:
 
@@ -15,7 +16,8 @@ The two priorities for every change:
 2. **Clean code.** Follow best practices, use precise and consistent names, keep code small and readable
    ([§ Code style](#code-style), [§ Naming](#naming)).
 
-Platform: **Windows only.** Rendering and input go through Win32 P/Invoke (`kernel32.dll`, `user32.dll`).
+Platform: **Windows only.** Rendering and input go through Win32 P/Invoke (`kernel32.dll`, `user32.dll`). Lua
+scripting loads the native `lua54.dll` that the KeraLua package ships for each runtime.
 
 ## Where to look for answers
 
@@ -31,8 +33,11 @@ Platform: **Windows only.** Rendering and input go through Win32 P/Invoke (`kern
 | Win32 signatures and structs | `Libs/ConsoleEngine.Windows/LowLevel/` (`Kernel32.cs`, `User32.cs`) |
 | Vector/matrix math | `Libs/Microsoft.Xna.Framework/` (copied from MonoGame, change only with good reason) |
 | ECS (entities, components, archetypes, chunks) | `ConsoleEngine/Ecs/`, design and phases in [`docs/design/ecs-plan.md`](docs/design/ecs-plan.md) |
+| 2D physics (bodies, circles/boxes/polygons, rotation, broadphase, Soft Step contact solver, contact/sensor events, tile grid, sleeping, interpolation, raycasts and box casts, `CharacterMover.MoveAndSlide`) | `ConsoleEngine.Physics/` (own assembly and NuGet package, optional), rules in [`docs/agent/03-rules.md` § Physics](docs/agent/03-rules.md#physics), design and phases in [`docs/design/physics-plan.md`](docs/design/physics-plan.md). Examples: `Examples/PhysicsShowcase` (every feature), `Examples/PhysicsSandbox` (solver), `Examples/Asteroids.Ecs` (sensors, layers), `Examples/Platformer.Ecs` (tile grid, character controller) |
 | Performance measurements | `ConsoleEngine.Benchmarks/` (BenchmarkDotNet) |
-| How to use the engine | `Examples/Snake` (smallest), `Examples/TerraForM` (scenes, assets, tests), `Examples/<Game>.Ecs` (ECS port of each game: components, systems, queries, `EcsScene`; compare with `Examples/<Game>`. `Snake.Ecs` is the smallest, `TerraForM.Ecs` the fullest), `Examples/Swarm` (ECS at scale, system ordering attributes), `Examples/Starguard` (ECS-only game with every system unit-tested through `Starguard.Tests/Battle`) |
+| Lua scripting: components, `self` fields, hooks, errors, reload | [`docs/agent/03-rules.md § Lua`](docs/agent/03-rules.md#lua), `ConsoleEngine.Scripting/`, `Examples/Scripted` |
+| Why KeraLua, and what Lua costs per entity | `ConsoleEngine.Benchmarks/README.md` |
+| How to use the engine | `Examples/Snake` (smallest), `Examples/TerraForM` (scenes, assets, tests), `Examples/<Game>.Ecs` (ECS port of each game: components, systems, queries, `EcsScene`; compare with `Examples/<Game>`. `Snake.Ecs` is the smallest, `TerraForM.Ecs` the fullest), `Examples/Swarm` (ECS at scale, system ordering attributes), `Examples/PhysicsSandbox` (physics: bodies, colliders, fixed step, kinematic platform), `Examples/PhysicsShowcase` (every physics feature), `Examples/EternalDigger` (a full original ECS game: endless grid world, particle effects, lighting; start at [`Examples/EternalDigger/README.md`](Examples/EternalDigger/README.md), design contract in [`docs/design/eternal-digger.md`](docs/design/eternal-digger.md)), `Examples/Starguard` (ECS-only game with every system unit-tested through `Starguard.Tests/Battle`) |
 | Build/test pipeline | `.github/workflows/build-and-test.yml` |
 | Formatting rules | `.editorconfig` + [§ Code style](#code-style) |
 | Open feature requests | GitHub issues: mouse input (8), macOS (7), more colours (6) |
@@ -45,18 +50,24 @@ Every name in `docs/agent/` is grep-able. Search for the identifier you are inte
 |---|---|---|---|
 | `ConsoleEngine` | `ConsoleEngine/` | Library (NuGet) | Abstractions, Windows, Logger, Xna |
 | `ConsoleEngine.Abstractions` | `ConsoleEngine.Abstractions/` | Library: interfaces + value types | — |
+| `ConsoleEngine.Physics` | `ConsoleEngine.Physics/` | Library (NuGet): 2D physics on the ECS. Optional: games without physics don't reference it | ConsoleEngine, Xna |
+| `ConsoleEngine.Scripting` | `ConsoleEngine.Scripting/` | Library (not packed): Lua 5.4 scripting for ECS entities (KeraLua 1.4.11). Optional | ConsoleEngine |
 | `ConsoleEngine.Windows` | `Libs/ConsoleEngine.Windows/` | Library, namespace `ConsoleEngine.Native` | Abstractions |
 | `ConsoleEngine.Logger` | `Libs/ConsoleEngine.Logger/` | Exe: TCP log viewer (port 11000) | — |
 | `Microsoft.Xna.Framework` | `Libs/Microsoft.Xna.Framework/` | Library: math types | — |
-| `TerraForM`, `Snake`, `Asteroids`, `Platformer`, `ConsoleGame`, their ports `<Game>.Ecs`, `Swarm` (ECS stress test) and `Starguard` (ECS-only game) | `Examples/*` | Exe | ConsoleEngine |
+| `TerraForM`, `Snake`, `Asteroids`, `Platformer`, `ConsoleGame`, their ports `<Game>.Ecs`, `Swarm` (ECS stress test), `PhysicsSandbox` and `PhysicsShowcase` (physics demos) and `EternalDigger`, `SkyStack` and `Starguard` (ECS games) | `Examples/*` | Exe | ConsoleEngine |
+| `Scripted` | `Examples/Scripted/` | Exe: Lua-scripted ECS demo | ConsoleEngine, Scripting |
 | `Launcher` | `Examples/Launcher/` | Exe: text menu that starts the ECS games (plain `System.Console`, no engine) | ECS games (build order only) |
 | `TerraForM.Tests` | `Examples/TerraForM.Tests/` | NUnit 5 + NSubstitute | TerraForM |
 | `Launcher.Tests` | `Examples/Launcher.Tests/` | NUnit 5 | Launcher |
+| `EternalDigger.Tests` | `Examples/EternalDigger.Tests/` | NUnit 5, hand-written `Fakes/FakeConsoleHandler` | EternalDigger |
+| `SkyStack.Tests` | `Examples/SkyStack.Tests/` | NUnit 5, hand-written `Fakes/FakeConsoleHandler` | SkyStack |
 | `Starguard.Tests` | `Examples/Starguard.Tests/` | NUnit 5, no mocks: systems run on a real `World` | Starguard |
-| `ConsoleEngine.Tests` | `ConsoleEngine.Tests/` | NUnit 5, hand-written fakes in `Fakes/` | ConsoleEngine |
-| `ConsoleEngine.Benchmarks` | `ConsoleEngine.Benchmarks/` | Exe: BenchmarkDotNet 0.15.8 | ConsoleEngine |
+| `ConsoleEngine.Tests` | `ConsoleEngine.Tests/` | NUnit 5, hand-written fakes in `Fakes/` | ConsoleEngine, Scripting |
+| `ConsoleEngine.Physics.Tests` | `ConsoleEngine.Physics.Tests/` | NUnit 5 | ConsoleEngine.Physics |
+| `ConsoleEngine.Benchmarks` | `ConsoleEngine.Benchmarks/` | Exe: BenchmarkDotNet 0.15.8 | ConsoleEngine, Physics, Scripting |
 
-All projects: `net10.0`, `LangVersion` 14, `TreatWarningsAsErrors` = `True`. Solution: `ConsoleEngine.sln`.
+All projects: `net11.0`, `LangVersion` 15, `TreatWarningsAsErrors` = `True`. Solution: `ConsoleEngine.sln`.
 
 ```bash
 dotnet build
@@ -80,8 +91,9 @@ dotnet tool restore
 dotnet reportgenerator -reports:"TestResults/**/coverage.cobertura.xml" -targetdir:coverage -reporttypes:Html
 ```
 
-Benchmarks (always `Release`; `--job short` for a quick run; add `--counters CacheMisses+BranchMispredictions` for
-hardware counters, which needs an elevated prompt on Windows):
+Benchmarks (always `Release`; `--job short` for a quick run; `--affinity 1` pins the process to one core, so runs on a
+hybrid CPU are comparable (without it results can vary up to 1.8×); add `--counters CacheMisses+BranchMispredictions`
+for hardware counters, which needs an elevated prompt on Windows):
 
 ```bash
 dotnet run -c Release --project ConsoleEngine.Benchmarks -- --filter "*"
@@ -92,15 +104,25 @@ ReportGenerator is a local tool pinned in `dotnet-tools.json`. There is no cover
 
 Games need a real Windows console, so an agent cannot run them headless. TerraForM loads `Assets/Maps/*.txt` and the
 logger exe by **relative path**, so run a game's exe from its output folder (e.g.
-`Examples/TerraForM/bin/Debug/net10.0/`). CI runs restore → build → test with coverage on `windows-latest` for PRs to
+`Examples/TerraForM/bin/Debug/net11.0/`). CI runs restore → build → test with coverage on `windows-latest` for PRs to
 `main`. The coverage summary is in the job summary, and the HTML report is the `coverage-report` artifact.
 
-To play the ECS games, start the launcher. It builds them first and starts each one in its own classic console window
-(`conhost.exe`, even when Windows Terminal is the default) from its output folder. A new game in `Examples/` is added
+To play the ECS games, start the launcher. It builds them first and starts each one from its output folder: on Windows in its
+own classic console window (`conhost.exe`, even when Windows Terminal is the default), on macOS and Linux in the
+launcher's own terminal. A new game in `Examples/` is added
 to `GameCatalog.Games` **and** as a build-order `ProjectReference` in `Launcher.csproj`; `GameLocatorTests` checks both:
 
 ```bash
 dotnet run --project Examples/Launcher
+```
+
+For a single game on Windows, including the non-ECS originals, `run-game.ps1` builds it and starts it in `conhost.exe`
+from its output folder (`-Configuration Release` is optional). Every example's output folder also gets
+`start-conhost.cmd` (from `Examples/start-conhost.cmd`, copied by `Examples/Directory.Build.targets`), which does the
+same when double-clicked. A new game is added to `run-game.ps1`'s `ValidateSet`:
+
+```bash
+pwsh -File run-game.ps1 Scripted
 ```
 
 ## Folder structure
@@ -110,9 +132,10 @@ ConsoleEngine.sln
 .editorconfig                     formatting rules (see Code style)
 coverage.runsettings              coverlet settings for `dotnet test` coverage
 dotnet-tools.json                 local tools (ReportGenerator)
+run-game.ps1                      build an example and start it in conhost
 AGENTS.md / CLAUDE.md             agent instructions (CLAUDE.md imports AGENTS.md)
 docs/agent/                       support/triage docs for agents (01–09 + README)
-docs/design/                      design plans (ecs-plan.md)
+docs/design/                      design plans (ecs-plan.md, physics-plan.md, eternal-digger.md)
 ConsoleEngine/                    the engine
   GameBase.cs                       abstract game: Initialize/Start/Stop, frame loop
   Collections/Deque.cs              double-ended queue (used by Snake)
@@ -120,8 +143,9 @@ ConsoleEngine/                    the engine
                                     ComponentMask, ComponentType<T>/ComponentRegistry, EcsThrowHelper,
                                     Query, QueryDescription, EntityChunk, IForEach<…>, CommandBuffer
                                     (+ .Create.cs), EntitySystem, SystemGroup, UpdateBefore/UpdateAfter
-                                    attributes (UpdateOrderAttributes.cs), EcsScene<TGame>
-    Components/                     built-in components: Position, Velocity, Rotation, Glyph, Outline, SpriteRef
+                                    attributes (UpdateOrderAttributes.cs), EcsScene<TGame>, FixedTimestep
+    Components/                     built-in components: Position, Velocity, Rotation, Glyph, Outline, SpriteRef,
+                                    RenderOffset
     Rendering/                      Camera, OutlineLibrary, SpriteLibrary (namespace ConsoleEngine.Ecs.Rendering)
     Systems/                        built-in systems: MovementSystem, GlyphRenderSystem, OutlineRenderSystem,
                                     SpriteRenderSystem
@@ -133,8 +157,23 @@ ConsoleEngine/                    the engine
     Rendering/RenderConsole.cs      frame buffer + Draw* API
     Rendering/Sprite.cs             Pixel[,] sprites, FromString/FromStringArray
     Scenery/Scene.cs, SceneManager.cs  scene stack (Push/Pop/Set)
-ConsoleEngine.Tests/              engine unit tests (mirrors ConsoleEngine/ folders), Fakes/ (console handler, scene)
-ConsoleEngine.Benchmarks/         BenchmarkDotNet: Baseline/ (OOP vs. struct arrays), Ecs/ (World, Query)
+ConsoleEngine.Physics/            2D physics (namespace ConsoleEngine.Physics): RigidBody, Collider, AngularVelocity,
+                                  PolygonLibrary, PhysicsSystem (+ .Queries.cs), IPhysicsEvents, IPhysicsQueries/CastHit,
+                                  TileGrid, CharacterMover/SlideCollisions, Interpolation/InterpolationSystem,
+                                  ContactEvent/SensorEvent; internal: BodyProxy, BodyShape/Manifold/Collision
+                                  (narrowphase), ConvexPolygon, SpatialHashGrid (broadphase), PairCache, ContactSolver
+                                  (+ BodyState, BodySim, ContactConstraint, Softness), RayCast, GridWalker, ArrayBuffer
+ConsoleEngine.Physics.Tests/      physics tests (Collision, SpatialHashGrid, PhysicsSystem, PhysicsSolverTests, TileGrid,
+                                  PhysicsQueryTests, CharacterMoverTests, RotationTests, TileContactTests, SleepTests,
+                                  InterpolationTests)
+ConsoleEngine.Tests/              engine unit tests (mirrors ConsoleEngine/ folders), Fakes/ (console handler, scene),
+                                  Scripting/ (LuaScriptSystemTests)
+ConsoleEngine.Scripting/          Script + ScriptFaulted (components), LuaScriptSystem, LuaRenderSystem,
+                                  LuaRuntime (Lua state, engine API, hook trampoline), LuaScript (module, reload),
+                                  LowLevel/LuaNative.cs (direct lua54 P/Invoke)
+ConsoleEngine.Benchmarks/         BenchmarkDotNet: Baseline/ (OOP vs. struct arrays), Ecs/ (World, Query),
+                                  Physics/ (brute-force baseline, whole PhysicsSystem step, queries),
+                                  Scripting/ (Lua vs. C# system, mover.lua)
 ConsoleEngine.Abstractions/
   Inputs/  IInputHandler, Key, KeyState
   Rendering/  IConsoleHandler, Pixel, FontInfo
@@ -143,6 +182,7 @@ Libs/
   ConsoleEngine.Logger/           Program.cs (logger exe)
   Microsoft.Xna.Framework/        Vector2/3/4, Point, Rectangle, Matrix, …
 Examples/
+  start-conhost.cmd               launcher copied next to every game exe (Directory.Build.targets)
   <Game>/Program.cs               creates the game, Initialize(), Start()
   <Game>/<Name>Game.cs            GameBase subclass
   <Game>/GameObjects/             game entities (TerraForM: Tiles/ for map tiles)
@@ -150,16 +190,37 @@ Examples/
                                   Systems/ (EntitySystem subclasses), Scenes/ (an EcsScene that spawns entities and
                                   adds systems in run order). TerraForM.Ecs links Assets/ from Examples/TerraForM
   Swarm/                          ECS stress test (no OOP original): Components/, Systems/, Scenes/SwarmScene
+  PhysicsSandbox/                 physics demo (no OOP original): BodySpawner, Components/, Systems/,
+                                  Scenes/SandboxScene
+  PhysicsShowcase/                every physics feature in one scene: Level, BodyFactory, OutlineShape, Layers,
+                                  ShowcaseState, Components/, Systems/, Scenes/ShowcaseScene
   Starguard/                      ECS-only game (rows of marching aliens): Components/, Systems/, Scenes/BattleScene,
                                   Assets/SpriteSheet.cs, Assets/Texts/HudTexts.cs, shared state Match/Formation/Controls
   Starguard.Tests/                one test class per system, Battle.cs (World + SystemGroup + state, no console)
   Launcher/                       game launcher: GameCatalog (menu entries), GameLocator (exe paths), LauncherMenu
                                   (keys), LauncherScreen (drawing), GameRunner (Process.Start + wait), LauncherTexts
   Launcher.Tests/                 LauncherMenuTests, GameLocatorTests
+  EternalDigger/                  original ECS digging game (no OOP original): Mining/ (Mine grid, Tiles rules, Elevator),
+                                  Components/, Systems/, Effects/ (EffectSpawner, ParticleLooks), Rendering/
+                                  (Canvas, LightMap, TileLooks), Saving/ (SaveData, SaveFile, GameSaver),
+                                  Scenes/ (TitleScene + TitleMenu, MineScene), Layout, Shop, ShopCounter, DeepCamp, Progress, Upgrades,
+                                  LampOil, MinerInput.
+                                  README.md + docs/ (gameplay, architecture, rendering-and-effects,
+                                  working-with-the-code, testing, reference)
+  EternalDigger.Tests/            Mine, Tiles, Shop, LightMap, ParticleLooks, frame-by-frame MinerControlSystem,
+                                  MinerVisibility (render), Elevator, Dynamite, ShopCounter, Upgrades, LampOil,
+                                  BagWeight, SaveFile, SaveSystem, TitleMenu, InventorySystem, DeepCamp, Gas, Darkness and Progress tests, Fakes/ (console handler)
+  SkyStack/                       original ECS tower climber (no OOP original): Climbing/ (Tower, Floor, ClimbPhysics,
+                                  RunStats, Scroller), Components/Climber, Systems/, Rendering/ (PixelCanvas,
+                                  PixelSprite, PixelFont, ClimberLooks, TowerLooks, ConsoleText), Scenes/ (TitleScene,
+                                  TowerScene), Layout, SkyStackTexts
+  SkyStack.Tests/                 Tower, ClimbPhysics (fixed steps), RunStats, Scroller, PixelCanvas tests, Fakes/
   TerraForM/Scenes/               GameScene, MenuScene, InputNameScene
   TerraForM/Commands/             Command, Move, Plant, Wait
   TerraForM/Assets/               Maps/*.txt, Sprites.cs, Texts/HudTexts.cs, Story/ (unused)
   TerraForM.Tests/                RoverTests.cs
+  Scripted/                       Lua demo on ECS: Scenes/ScriptedScene, Systems/ (reload, error line),
+                                  Assets/Scripts/ player.lua, firefly.lua (copied to output)
 .github/workflows/                build-and-test.yml
 ```
 
@@ -179,14 +240,22 @@ Examples/
   `GameBase` and `Input` currently `new` up `ConsoleHandler`/`InputHandler` directly.
 - Win32 return values are currently ignored. When touching `ConsoleHandler`, prefer checking them over adding more
   silent calls.
+- Lua scripts are ECS behaviour: `LuaRuntime(game)` → `Load` → put `LuaScript.Component` (a `Script` component) on
+  an entity → `LuaScriptSystem` (simulation) runs `on_start`/`on_update`, `LuaRenderSystem` (presentation) runs
+  `on_render`. A script sees the entity as `self`, whose fields are its components: `x`/`y` (`Position`),
+  `vx`/`vy` (`Velocity`), `char`/`color`/`background` (`Glyph`), plus `self.data` for the script's own state. C#
+  systems and scripts work on the same components. Never let C# read script data by field name: give scripts a new
+  component field instead (`LuaRuntime.EngineSource`, `RunHook`, `ReadResults`). The engine itself has no Lua
+  dependency.
 
 <a id="performance"></a>
 ## Performance
 
 **Hot path** = anything reachable from the frame loop: game and scene `OnUpdate`/`OnRender`, `RenderConsole.Draw*`,
-`Sprite` drawing, `InputHandler.Update`, `ConsoleHandler.Render`, and all of `ConsoleEngine/Ecs/` (`World.Get` is
-called per entity). In `Ecs/`, keep throws in `EcsThrowHelper` so checked methods stay inlinable, and run
-`ConsoleEngine.Benchmarks` before and after a change.
+`Sprite` drawing, `InputHandler.Update`, `ConsoleHandler.Render`, all of `ConsoleEngine/Ecs/` (`World.Get` is called per
+entity), all of `ConsoleEngine.Physics/`, and `LuaScriptSystem`/`LuaRuntime` in `ConsoleEngine.Scripting`. In `Ecs/`,
+keep throws in `EcsThrowHelper` so checked methods stay inlinable, and run `ConsoleEngine.Benchmarks` before and after
+a change.
 
 | Do | Don't |
 |---|---|
@@ -196,7 +265,14 @@ called per entity). In `Ecs/`, keep throws in `EcsThrowHelper` so checked method
 | Plain `for` loops in hot code | LINQ, `foreach` over interfaces, lambdas/closures capturing state |
 | Keep exactly one console write per frame (`WriteConsoleOutput`) | Add per-cell or per-line Win32 calls |
 | Scale movement/timers by `GameTime.Delta` | Add per-frame amounts. The loop is uncapped, so behaviour changes with FPS |
-| Measure: `ShowFps = true` + `EnableLogger = true` shows FPS in the logger title | Guess about performance |
+| Measure: `ShowFps = true` + `EnableLogger = true` shows FPS in the logger title, `ConsoleEngine.Benchmarks` for micro-benchmarks | Guess about performance |
+
+Lua: a scripted frame allocates nothing (guarded by `LuaScriptSystemTests.Frame_InSteadyState_DoesNotAllocate`).
+Keep it that way: one native call per hook (the `run` trampoline in `LuaRuntime.EngineSource` copies all fields
+inside Lua), read and push Lua strings with `LuaNative.lua_tolstring`/`lua_pushlstring`, never KeraLua's
+`ToString`/`PushString`/`SetField(…, string)` in the hot path, and use registry refs instead of looking things up by
+name. In scripts, build constant strings once (`local HELP = "…"`) rather than concatenating every frame, because
+Lua's own heap is invisible to .NET allocation checks.
 
 String interpolation in debug overlays (`IsDebugMode`) is acceptable. Known debt, which you should not copy and should
 fix when nearby:
@@ -255,6 +331,8 @@ Tag performance work as `perf:` commits.
 | Win32 constants / virtual keys | Win32 spelling (UPPER_CASE) | `SC_MAXIMIZE`, `MF_BYCOMMAND`, `Key.ESCAPE`, `Key.LEFT` |
 | Assets | `Assets/<Kind>/`, maps `map<N>.txt`, sprites as `static readonly` on `Sprites` | `Assets/Maps/map1.txt`, `Sprites.GameOver` |
 | UI text constants | `const string` on a `*Texts` class | `HudTexts.NoPower` |
+| Lua scripts | `Assets/Scripts/<snake_case>.lua`, returning a `local` PascalCase module. Functions, fields and hooks snake_case, constants UPPER_CASE | `player.lua` → `Player.on_update(self, dt)`, `SPEED` |
+| Lua API | Global tables in snake_case: `input`, `console`, `keys`, `colors` | `input.held(keys.LEFT)`, `console.draw` |
 | Test classes | `<ClassUnderTest>Tests` | `RoverTests` |
 | Test names | `Method_State_Expected` | `PowerDepleted_WhenRemainingPowerIsZero_ReturnsTrue` |
 
@@ -287,7 +365,8 @@ Use [Conventional Commits 1.0.0](https://www.conventionalcommits.org/en/v1.0.0/#
 | `chore` | Anything else |
 
 - **Scopes** (optional): `engine`, `abstractions`, `windows`, `logger`, `xna`, `terraform`, `snake`, `asteroids`,
-  `platformer`, `consolegame`, `swarm`, `starguard`, `launcher`, `docs`, `ci`.
+  `physics`, `scripting`, `benchmarks`, `platformer`, `consolegame`, `swarm`, `physicssandbox`, `physicsshowcase`,
+  `scripted`, `starguard`, `launcher`, `skystack`, `docs`, `ci`.
 - **Description:** imperative, lower case, no trailing period. For example `fix(terraform): reset score on restart`.
 - **Breaking changes** to the public `ConsoleEngine` API or target framework: `!` after the type/scope and/or a
   `BREAKING CHANGE:` footer. For example `chore!: net8.0` (#10).
@@ -305,8 +384,12 @@ Use [Conventional Commits 1.0.0](https://www.conventionalcommits.org/en/v1.0.0/#
 | **ECS memory** | `World` keeps component data in native memory (`NativeMemory.AlignedAlloc`, 16 KiB chunks, 64-byte aligned columns). Always `Dispose` a world (tests: `using var world = new World();`): there is no finalizer, so an undisposed world leaks its chunks. Components must be `unmanaged` structs. Never store a `ref` from `World.Get<T>` across a structural change. Create/Add/Remove/Destroy inside a query loop throws: record them in a `CommandBuffer` (`EntitySystem.Commands`). `Destroy`/`Add`/`Remove` of a dead entity are skipped at playback. Test components are named `Location`/`Speed` so they don't shadow the engine's `Position`/`Velocity` (namespace lookup beats `using`). `Archetype`, `Chunk` and `ComponentMask` are `internal`: tests reach them through `World.GetArchetype` / `World.ChunkPool` (`InternalsVisibleTo`) |
 | **Threading** | Everything runs on the game-loop thread, including `GameTime.SetInterval` callbacks. The only other thread is `Log`'s `"Logger"` thread. There is no locking, so never touch engine state from another thread |
 | **NuGet package** | `ConsoleEngine` has `GeneratePackageOnBuild`, so every build produces a `.nupkg` (gitignored). `PackageVersion` (0.2.0) is bumped by hand, and no pipeline publishes it. Any change to its public API is a breaking change for consumers (`!` commit) |
-| **Dependencies** | `CommunityToolkit.HighPerformance` 8.4.2 supplies `Span2D<T>` (namespace `CommunityToolkit.HighPerformance`). It replaced the deprecated `Microsoft.Toolkit.HighPerformance` |
+| **Dependencies** | `CommunityToolkit.HighPerformance` 8.4.2 supplies `Span2D<T>` (namespace `CommunityToolkit.HighPerformance`). It replaced the deprecated `Microsoft.Toolkit.HighPerformance`. `KeraLua` 1.4.11 (MIT, NuGet) supplies Lua 5.4 for `ConsoleEngine.Scripting`. It was chosen over Lua-CSharp, NLua and MoonSharp by a benchmark (numbers in `ConsoleEngine.Benchmarks/README.md`). That decision is made: don't add other Lua libraries |
 | **Third-party code / licence** | `Libs/Microsoft.Xna.Framework` is copied from MonoGame (see its `README.md`). The repo has **no LICENSE file**. Don't copy in more third-party code, and don't add or change licensing, without asking the owner |
+| **Lua host functions** | Static `LuaFunction` delegates that find their `LuaRuntime` through upvalue 1 (a `GCHandle`). They must **never raise a Lua error** (`lua_error`, `luaL_check*`, `luaL_opt*`): it long-jumps across managed frames and crashes the process. Catch every exception, store it in `_hostError`, return 0 |
+| **Lua scripts in tests** | `LuaRuntime`'s internal ctor takes a `RenderConsole` and a `Func<int, KeyState>`, so tests need neither Win32 nor `Input.Instance` (`InternalsVisibleTo` for `ConsoleEngine.Tests` and `ConsoleEngine.Benchmarks`). Tests write scripts to a temp folder, load them by absolute path, run a `World` with two `SystemGroup`s and assert on components. `FakeConsoleHandler.Render` copies the frame, so allocation checks run frames without `Display` |
+| **Lua `self` tables** | Components are unmanaged, so each entity's `self` lives in `LuaScriptSystem._instances`, indexed by `Entity.Id` and checked against `Entity.Version`. A destroyed entity's table is freed when its id is reused (or with the runtime). One `LuaScriptSystem` per `World`. Dispose the `LuaRuntime` with the scene (`EcsScene.OnDestroy`) |
+| **Lua reload** | `Reload` reads the copy in the **output** folder. Editing `Examples/*/Assets/Scripts` changes nothing until the next build |
 | **Running games** | Not possible headless. Verify with `dotnet build` + `dotnet test`, and say plainly that a change was not checked in a real console |
 
 <a id="keep-docs-current"></a>
