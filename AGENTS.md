@@ -36,7 +36,7 @@ scripting loads the native `lua54.dll` that the KeraLua package ships for each r
 | 2D physics (bodies, circles/boxes/polygons, rotation, forces and torque (`Force`), broadphase, Soft Step contact solver, contact/sensor events, tile grid, sleeping, interpolation, raycasts and box casts, `CharacterMover.MoveAndSlide`) | `ConsoleEngine.Physics/` (own assembly and NuGet package, optional), rules in [`docs/agent/03-rules.md` § Physics](docs/agent/03-rules.md#physics), design and phases in [`docs/design/physics-plan.md`](docs/design/physics-plan.md). Examples: `Examples/PhysicsShowcase` (every feature), `Examples/PhysicsSandbox` (solver), `Examples/Asteroids.Ecs` (sensors, layers), `Examples/Platformer.Ecs` (tile grid, character controller) |
 | Performance measurements | `ConsoleEngine.Benchmarks/` (BenchmarkDotNet) |
 | Lua scripting: components, `self` fields, hooks, errors, reload | [`docs/agent/03-rules.md § Lua`](docs/agent/03-rules.md#lua), `ConsoleEngine.Scripting/`, `Examples/Scripted` |
-| 3D rendering (software rasterizer, near-plane clipping, OBJ models, 16-colour dithering) | `Examples/KartViewer/Rendering/` (experiment, not in the engine yet), rules in [`docs/agent/03-rules.md`](docs/agent/03-rules.md) (KartViewer rows) |
+| 3D rendering (`IRenderer3D`, software `Rasterizer`, near-plane clipping, OBJ models, 16-colour dithering) | `ConsoleEngine.Rendering3D/` (own assembly and NuGet package, optional), GPU plan in [`docs/design/gpu-rendering-plan.md`](docs/design/gpu-rendering-plan.md), rules in [`docs/agent/03-rules.md`](docs/agent/03-rules.md) (KartViewer rows) |
 | Why KeraLua, and what Lua costs per entity | `ConsoleEngine.Benchmarks/README.md` |
 | How to use the engine | `Examples/Snake` (smallest), `Examples/TerraForM` (scenes, assets, tests), `Examples/<Game>.Ecs` (ECS port of each game: components, systems, queries, `EcsScene`; compare with `Examples/<Game>`. `Snake.Ecs` is the smallest, `TerraForM.Ecs` the fullest), `Examples/Swarm` (ECS at scale, system ordering attributes), `Examples/PhysicsSandbox` (physics: bodies, colliders, fixed step, kinematic platform), `Examples/PhysicsShowcase` (every physics feature), `Examples/EternalDigger` (a full original ECS game: endless grid world, particle effects, lighting; start at [`Examples/EternalDigger/README.md`](Examples/EternalDigger/README.md), design contract in [`docs/design/eternal-digger.md`](docs/design/eternal-digger.md)) |
 | Build/test pipeline | `.github/workflows/build-and-test.yml` |
@@ -52,13 +52,14 @@ Every name in `docs/agent/` is grep-able. Search for the identifier you are inte
 | `ConsoleEngine` | `ConsoleEngine/` | Library (NuGet) | Abstractions, Windows, Logger, Xna |
 | `ConsoleEngine.Abstractions` | `ConsoleEngine.Abstractions/` | Library: interfaces + value types | — |
 | `ConsoleEngine.Physics` | `ConsoleEngine.Physics/` | Library (NuGet): 2D physics on the ECS. Optional: games without physics don't reference it | ConsoleEngine, Xna |
+| `ConsoleEngine.Rendering3D` | `ConsoleEngine.Rendering3D/` | Library (NuGet): 3D meshes, OBJ reading, console palette, `IRenderer3D` and the CPU `Rasterizer` (`System.Numerics`). Optional | — (only .NET; not ConsoleEngine, not Xna) |
 | `ConsoleEngine.Scripting` | `ConsoleEngine.Scripting/` | Library (not packed): Lua 5.4 scripting for ECS entities (KeraLua 1.4.11). Optional | ConsoleEngine |
 | `ConsoleEngine.Windows` | `Libs/ConsoleEngine.Windows/` | Library, namespace `ConsoleEngine.Native` | Abstractions |
 | `ConsoleEngine.Logger` | `Libs/ConsoleEngine.Logger/` | Exe: TCP log viewer (port 11000) | — |
 | `Microsoft.Xna.Framework` | `Libs/Microsoft.Xna.Framework/` | Library: math types | — |
 | `TerraForM`, `Snake`, `Asteroids`, `Platformer`, `ConsoleGame`, their ports `<Game>.Ecs`, `Swarm` (ECS stress test), `PhysicsSandbox` and `PhysicsShowcase` (physics demos) and `EternalDigger` (ECS game) | `Examples/*` | Exe | ConsoleEngine |
 | `Scripted` | `Examples/Scripted/` | Exe: Lua-scripted ECS demo | ConsoleEngine, Scripting |
-| `KartViewer` | `Examples/KartViewer/` | Exe: 3D experiment, a Kartster kart driving a Kartster track, drawn by a software rasterizer (`System.Numerics`, not Xna), driven by Kartster's kart model on the engine's physics | ConsoleEngine, Physics |
+| `KartViewer` | `Examples/KartViewer/` | Exe: 3D experiment, a Kartster kart driving a Kartster track, drawn by a software rasterizer (`System.Numerics`, not Xna), driven by Kartster's kart model on the engine's physics | ConsoleEngine, Physics, Rendering3D |
 | `Launcher` | `Examples/Launcher/` | Exe: text menu that starts the ECS games (plain `System.Console`, no engine) | ECS games (build order only) |
 | `TerraForM.Tests` | `Examples/TerraForM.Tests/` | NUnit 5 + NSubstitute | TerraForM |
 | `Launcher.Tests` | `Examples/Launcher.Tests/` | NUnit 5 | Launcher |
@@ -66,6 +67,7 @@ Every name in `docs/agent/` is grep-able. Search for the identifier you are inte
 | `KartViewer.Tests` | `Examples/KartViewer.Tests/` | NUnit 5 | KartViewer |
 | `ConsoleEngine.Tests` | `ConsoleEngine.Tests/` | NUnit 5, hand-written fakes in `Fakes/` | ConsoleEngine, Scripting |
 | `ConsoleEngine.Physics.Tests` | `ConsoleEngine.Physics.Tests/` | NUnit 5 | ConsoleEngine.Physics |
+| `ConsoleEngine.Rendering3D.Tests` | `ConsoleEngine.Rendering3D.Tests/` | NUnit 5 | ConsoleEngine.Rendering3D |
 | `ConsoleEngine.Benchmarks` | `ConsoleEngine.Benchmarks/` | Exe: BenchmarkDotNet 0.15.8 | ConsoleEngine, Physics, Scripting |
 
 All projects: `net11.0`, `LangVersion` 15, `TreatWarningsAsErrors` = `True`. Solution: `ConsoleEngine.sln`.
@@ -171,6 +173,9 @@ ConsoleEngine.Physics.Tests/      physics tests (Collision, SpatialHashGrid, Phy
                                   InterpolationTests, ForceTests)
 ConsoleEngine.Tests/              engine unit tests (mirrors ConsoleEngine/ folders), Fakes/ (console handler, scene),
                                   Scripting/ (LuaScriptSystemTests)
+ConsoleEngine.Rendering3D/        3D (namespace ConsoleEngine.Rendering3D): IRenderer3D, Rasterizer (CPU), Mesh
+                                  (Version/MarkChanged), ObjFile, ConsolePalette
+ConsoleEngine.Rendering3D.Tests/  RasterizerTests, ScreenDoorTests, ObjFileTests, MeshTests
 ConsoleEngine.Scripting/          Script + ScriptFaulted (components), LuaScriptSystem, LuaRenderSystem,
                                   LuaRuntime (Lua state, engine API, hook trampoline), LuaScript (module, reload),
                                   LowLevel/LuaNative.cs (direct lua54 P/Invoke)
@@ -216,20 +221,19 @@ Examples/
   TerraForM.Tests/                RoverTests.cs
   Scripted/                       Lua demo on ECS: Scenes/ScriptedScene, Systems/ (reload, error line),
                                   Assets/Scripts/ player.lua, firefly.lua (copied to output)
-  KartViewer/                     3D experiment: KartViewerGame (shared rasterizer, palette, sky, karts, track;
+  KartViewer/                     3D experiment: KartViewerGame (shared IRenderer3D, palette, sky, karts, track;
                                   Enter/Tab/R/Esc), Scenes/ (TrackScene: EcsScene at 120 Hz, GarageScene: orbit
                                   camera), Systems/ (KartInputSystem, KartPhysicsSystem, KartGroundSystem,
                                   KartEffectsSystem, KartRenderSystem), Effects/ (SkidMarks, SlideSmoke, KartWheels),
                                   Components/Kart, KartEntity (the kart's physics body),
                                   KartFrame (physics <-> kart frame), KartModel (Kartster part folders), Track
-                                  (exported ribbon + spline), Rendering/ (Rasterizer, Mesh, ObjFile, ConsolePalette),
-                                  Driving/ (Kartster-like planar kart model: KartDynamics computes force + yaw
+                                  (exported ribbon + spline), Driving/ (Kartster-like planar kart model: KartDynamics computes force + yaw
                                   torque per step, KartIntegrator, KartTuning, KartCatalog, KartEngine,
                                   KartTraction, KartLoadTransfer, Surface), Assets/Karts/ (olabil, wagon) and
                                   Assets/Tracks/ (star-circuit), exported from Kartster, copied to output
-  KartViewer.Tests/               RasterizerTests, ObjFileTests, TrackTests, KartPhysicsSystemTests, KartFrameTests,
+  KartViewer.Tests/               KartModelTests, TrackTests, KartPhysicsSystemTests, KartFrameTests,
                                   KartInputSystemTests, Driving/KartDynamicsTests, Driving/KartReferenceTests,
-                                  Effects/EffectsTests (skid marks, slide smoke, screen-door transparency)
+                                  Effects/EffectsTests (skid marks, slide smoke)
 .github/workflows/                build-and-test.yml
 ```
 

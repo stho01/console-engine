@@ -5,18 +5,18 @@ using ConsoleEngine;
 using ConsoleEngine.Abstractions.Inputs;
 using ConsoleEngine.Infrastructure;
 using ConsoleEngine.Infrastructure.Inputs;
+using ConsoleEngine.Rendering3D;
 using KartViewer.Driving;
-using KartViewer.Rendering;
 using KartViewer.Scenes;
 
 namespace KartViewer;
 
 /// <summary>
-/// 3D experiment: Kartster karts and a Kartster track, drawn by the software <see cref="Rasterizer"/> with one
-/// console cell per pixel. Two scenes, swapped with Enter: on the track (<see cref="TrackScene"/>) you drive the kart
+/// 3D experiment: Kartster karts and a Kartster track, drawn by an <see cref="IRenderer3D"/> (the software
+/// <see cref="Rasterizer"/>) with one console cell per pixel. Two scenes, swapped with Enter: on the track (<see cref="TrackScene"/>) you drive the kart
 /// with Kartster's kart model on the engine's physics and a chase camera behind it; in the garage
 /// (<see cref="GarageScene"/>) the camera orbits the kart on a small floor. Kartster's axes: 1 unit is 1 metre, +Y up,
-/// -Z forward. The game holds what both scenes share: rasterizer, sky, projection, the karts and the track.
+/// -Z forward. The game holds what both scenes share: renderer, sky, projection, the karts and the track.
 /// </summary>
 public class KartViewerGame(string kartsFolder, string tracksFolder)
     : GameBase(ScreenWidth, ScreenHeight, fontWidth: 3, fontHeight: 3)
@@ -54,7 +54,7 @@ public class KartViewerGame(string kartsFolder, string tracksFolder)
     //** props
     //**********************************************************
 
-    public Rasterizer Rasterizer { get; } = new(ScreenWidth, ScreenHeight, ScenePalette);
+    public IRenderer3D Renderer { get; } = new Rasterizer(ScreenWidth, ScreenHeight, ScenePalette);
 
     public Matrix4x4 Projection { get; } = Matrix4x4.CreatePerspectiveFieldOfView(
         FieldOfView, (float)ScreenWidth / ScreenHeight, NearPlane, FarPlane);
@@ -129,12 +129,13 @@ public class KartViewerGame(string kartsFolder, string tracksFolder)
             Scenes.Set(new TrackScene());
 
         // The scene's render (next in the frame) draws onto the sky.
-        Rasterizer.Clear(_sky);
+        Renderer.Clear(_sky);
     }
 
     protected override void OnRender()
     {
-        var colors = Rasterizer.Colors;
+        Renderer.Finish();
+        var colors = Renderer.Colors;
         for (var y = 0; y < ScreenHeight; y++)
         for (var x = 0; x < ScreenWidth; x++)
             Console.Draw(x, y, ' ', ConsoleColor.Black, colors[y * ScreenWidth + x]);

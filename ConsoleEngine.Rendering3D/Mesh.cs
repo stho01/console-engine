@@ -1,6 +1,6 @@
 using System.Numerics;
 
-namespace KartViewer.Rendering;
+namespace ConsoleEngine.Rendering3D;
 
 /// <summary>
 /// Triangles with one flat colour each. Counter-clockwise triangles (seen from outside) face outwards, the OBJ
@@ -48,9 +48,18 @@ public sealed class Mesh
     /// <summary>Drawn in <see cref="TriangleColors"/> as they are, without the light (smoke, glowing things).</summary>
     public bool IsUnlit { get; init; }
 
+    /// <summary>
+    /// Bumped by <see cref="MarkChanged"/>. A renderer that keeps its own copy of the mesh (a GPU buffer) copies it
+    /// again when this has changed.
+    /// </summary>
+    public int Version { get; private set; }
+
     //**********************************************************
     //** public methods
     //**********************************************************
+
+    /// <summary>Call after changing the arrays (positions, colours, opacity) in place.</summary>
+    public void MarkChanged() => Version++;
 
     /// <summary>A flat chequered square on y = 0, centred on the origin, facing up.</summary>
     public static Mesh CreateFloor(float size, int tiles, Vector3 color, Vector3 otherColor)

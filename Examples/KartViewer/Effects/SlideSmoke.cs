@@ -1,6 +1,6 @@
 using System;
 using System.Numerics;
-using KartViewer.Rendering;
+using ConsoleEngine.Rendering3D;
 
 namespace KartViewer.Effects;
 
@@ -153,6 +153,8 @@ public sealed class SlideSmoke
             positions[v + 3] = puff.Position - right + up;
             opacity[i * 2] = opacity[i * 2 + 1] = StartOpacity * (1f - age);
         }
+
+        Mesh.MarkChanged();
     }
 
     /// <summary>Removes every puff.</summary>

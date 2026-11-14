@@ -1,13 +1,13 @@
 using System;
 using System.Numerics;
 
-namespace KartViewer.Rendering;
+namespace ConsoleEngine.Rendering3D;
 
 /// <summary>
 /// The 16 RGB colours the console shows, and how to turn any RGB colour (0..1) into one of them. A 4×4 ordered
 /// dither nudges each pixel before picking the nearest colour, so smooth shading shows up as a fine pattern of the
 /// two nearest colours instead of hard bands. The closer the palette's colours, the finer the pattern: give the
-/// console a palette made for the scene (<see cref="ConsoleEngine.Infrastructure.Rendering.RenderConsole.Palette"/>).
+/// console a palette made for the scene (<c>RenderConsole.Palette</c> in ConsoleEngine).
 /// </summary>
 public sealed class ConsolePalette
 {

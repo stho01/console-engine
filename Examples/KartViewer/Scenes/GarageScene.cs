@@ -4,7 +4,7 @@ using ConsoleEngine.Abstractions.Inputs;
 using ConsoleEngine.Infrastructure;
 using ConsoleEngine.Infrastructure.Inputs;
 using ConsoleEngine.Infrastructure.Scenery;
-using KartViewer.Rendering;
+using ConsoleEngine.Rendering3D;
 
 namespace KartViewer.Scenes;
 
@@ -60,7 +60,7 @@ public sealed class GarageScene : Scene<KartViewerGame>
         var eye = center + _distance * new Vector3(
             MathF.Sin(_yaw) * MathF.Cos(_pitch), MathF.Sin(_pitch), MathF.Cos(_yaw) * MathF.Cos(_pitch));
         var viewProjection = Matrix4x4.CreateLookAt(eye, center, Vector3.UnitY) * Game.Projection;
-        Game.Rasterizer.Draw(_floor, Matrix4x4.Identity, viewProjection, KartViewerGame.ToSun);
-        Game.Rasterizer.Draw(Game.Kart, Matrix4x4.Identity, viewProjection, KartViewerGame.ToSun);
+        Game.Renderer.Draw(_floor, Matrix4x4.Identity, viewProjection, KartViewerGame.ToSun);
+        Game.Renderer.Draw(Game.Kart, Matrix4x4.Identity, viewProjection, KartViewerGame.ToSun);
     }
 }

@@ -1,7 +1,7 @@
 using System;
 using System.Numerics;
 
-namespace KartViewer.Rendering;
+namespace ConsoleEngine.Rendering3D;
 
 /// <summary>
 /// Software triangle rasterizer: transforms a <see cref="Mesh"/>, clips it at the near plane, culls back faces,
@@ -9,7 +9,7 @@ namespace KartViewer.Rendering;
 /// (ambient + one directional light) and fills it into <see cref="Colors"/> with a depth test. Allocates nothing per
 /// frame once its vertex buffer has grown to the largest mesh.
 /// </summary>
-public sealed class Rasterizer
+public sealed class Rasterizer : IRenderer3D
 {
     //**********************************************************
     //** fields
@@ -100,6 +100,15 @@ public sealed class Rasterizer
             else if (behind < 3)
                 ClipAndFill(_clip[ia], _clip[ib], _clip[ic], color);
         }
+    }
+
+    /// <summary>Nothing to do: <see cref="Draw"/> writes straight into <see cref="Colors"/>.</summary>
+    public void Finish()
+    {
+    }
+
+    public void Dispose()
+    {
     }
 
     //**********************************************************

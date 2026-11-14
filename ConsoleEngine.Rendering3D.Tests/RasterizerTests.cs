@@ -1,9 +1,9 @@
 using System;
 using System.Numerics;
-using KartViewer.Rendering;
+using ConsoleEngine.Rendering3D;
 using NUnit.Framework;
 
-namespace KartViewer.Tests;
+namespace ConsoleEngine.Rendering3D.Tests;
 
 public class RasterizerTests
 {

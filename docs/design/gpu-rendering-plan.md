@@ -1,6 +1,7 @@
 # Plan: GPU-rendering av 3D i ConsoleEngine
 
-Status (2026-11-14): utkast til gjennomgang. Ingenting er implementert.
+Status (2026-11-14): fase 1 er ferdig (`ConsoleEngine.Rendering3D` og testprosjektet, KartViewer tegner gjennom
+`IRenderer3D`). Fase 2 og 3 er ikke startet.
 
 ## 1. Mål og ikke-mål
 
@@ -53,6 +54,12 @@ public interface IRenderer3D : IDisposable
 
 `Mesh` får en `Version` som spillkoden øker når den har endret arrayene (`MarkChanged()`). GPU-en laster opp en mesh
 én gang og på nytt bare når versjonen har endret seg (bremsespor, røyk). CPU-en bryr seg ikke.
+
+**Slik ble fase 1:** grensesnittet er som over. `ConsoleEngine.Rendering3D` pakkes som NuGet (`GeneratePackageOnBuild`,
+0.2.0) akkurat som `ConsoleEngine.Physics`, og ligger i solution-mappa `Engine`. Testprosjektet ligger i roten av
+solution, som `ConsoleEngine.Physics.Tests`. Det fantes ingen egne palett-tester; `ScreenDoorTests` ble flyttet
+sammen med `RasterizerTests` og OBJ-testene, mens `Load_ShippedKart_SkipsMarkerParts` ble i KartViewer.Tests
+(`KartModelTests`), fordi den trenger kart-filene. `SkidMarks` og `SlideSmoke.BuildQuads` kaller `MarkChanged()`.
 
 ## 4. Slik tegner GPU-en
 

@@ -12,6 +12,7 @@
     <ItemGroup>
       <ProjectReference Include="..\..\ConsoleEngine\ConsoleEngine.csproj" />
       <ProjectReference Include="..\..\ConsoleEngine.Physics\ConsoleEngine.Physics.csproj" />
+      <ProjectReference Include="..\..\ConsoleEngine.Rendering3D\ConsoleEngine.Rendering3D.csproj" />
     </ItemGroup>
 
     <ItemGroup>

@@ -4,7 +4,7 @@ using System.Globalization;
 using System.IO;
 using System.Numerics;
 
-namespace KartViewer.Rendering;
+namespace ConsoleEngine.Rendering3D;
 
 /// <summary>
 /// Reads the geometry of a Wavefront OBJ file: <c>v</c> positions and <c>f</c> faces. Everything else (normals,

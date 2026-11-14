@@ -1,6 +1,6 @@
 using System;
 using System.Numerics;
-using KartViewer.Rendering;
+using ConsoleEngine.Rendering3D;
 
 namespace KartViewer.Effects;
 
@@ -103,6 +103,7 @@ public sealed class SkidMarks
     public void Clear()
     {
         Array.Clear(Mesh.Positions);
+        Mesh.MarkChanged();
         Array.Fill(_marking, false);
         _next = 0;
     }
@@ -125,6 +126,7 @@ public sealed class SkidMarks
         positions[v + 3] = to + side;
         Mesh.TriangleColors[_next * 2] = color;
         Mesh.TriangleColors[_next * 2 + 1] = color;
+        Mesh.MarkChanged();
         _next = (_next + 1) % MaximumSegments;
     }
 }

@@ -1,10 +1,10 @@
 using System.Collections.Generic;
 using System.IO;
 using System.Numerics;
-using KartViewer.Rendering;
+using ConsoleEngine.Rendering3D;
 using NUnit.Framework;
 
-namespace KartViewer.Tests;
+namespace ConsoleEngine.Rendering3D.Tests;
 
 public class ObjFileTests
 {
@@ -53,14 +53,5 @@ public class ObjFileTests
         ObjFile.Read(_path, positions, indices);
 
         Assert.That(indices, Is.EqualTo(new[] { 0, 1, 2 }));
-    }
-
-    [Test]
-    public void Load_ShippedKart_SkipsMarkerParts()
-    {
-        var mesh = KartModel.Load(Path.Combine("Assets", "Karts", "olabil"), Vector3.One);
-
-        Assert.That(mesh.TriangleCount, Is.GreaterThan(1000));
-        Assert.That(mesh.TriangleColors, Has.Length.EqualTo(mesh.TriangleCount));
     }
 }
