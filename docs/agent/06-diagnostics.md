@@ -68,7 +68,7 @@ Grep these to locate the code path. None of them has a log level.
 | `Component type <Type> is listed more than once.` | `World.Create` (`ArgumentException`) | Same type twice in one `Create` |
 | `Cannot register <Type>: the ECS supports at most 256 component types.` | `ComponentRegistry.Register` (`InvalidOperationException`, wrapped in `TypeInitializationException`) | 257th component type used in the process |
 | `An archetype row needs <n> bytes and does not fit in one 16384-byte chunk.` | `Archetype` ctor (`InvalidOperationException`) | A component set too large for a chunk |
-| Window title = `GameBase.Name` | `GameBase.Initialize` → `SetTitle` | Default `"Game"`. Platformer `"Platformer game"`, Asteroids.Ecs `"Asteroids (ECS)"`, Snake.Ecs `"Snake (ECS)"`, TerraForM.Ecs `"TerraForM (ECS)"`, Platformer.Ecs `"Platformer (ECS)"`, Swarm `"Swarm (ECS)"`, PhysicsSandbox `"Physics Sandbox"`, PhysicsShowcase `"Physics Showcase"`, EternalDigger `"EternalDigger"` |
+| Window title = `GameBase.Name` | `GameBase.Initialize` → `SetTitle` | Default `"Game"`. Platformer `"Platformer game"`, Asteroids.Ecs `"Asteroids (ECS)"`, Snake.Ecs `"Snake (ECS)"`, TerraForM.Ecs `"TerraForM (ECS)"`, Platformer.Ecs `"Platformer (ECS)"`, Swarm `"Swarm (ECS)"`, PhysicsSandbox `"Physics Sandbox"`, PhysicsShowcase `"Physics Showcase"`, EternalDigger `"EternalDigger"`, Starguard `"Starguard"` |
 
 ### Lua scripting (`ConsoleEngine.Scripting`)
 
@@ -99,7 +99,7 @@ using [04](04-flows.md).
 
 | Text | Emitted by | Meaning |
 |---|---|---|
-| `OpenGL 3.3 is not available: <reason>` | `GlRenderer` ctor (`InvalidOperationException`, the original exception as `InnerException`). `GlRenderer.TryCreate` returns false instead | No GPU renderer: the caller should fall back to `Rasterizer` ([P20](05-triage.md#p20)). `<reason>` is one of the rows below or a GLFW/Silk.NET message |
+| `OpenGL 3.3 is not available: <reason>` | `GlRenderer` ctor (`InvalidOperationException`, the original exception as `InnerException`). `GlRenderer.TryCreate` returns false instead | No GPU renderer: the caller should fall back to `Rasterizer` ([P21](05-triage.md#p21)). `<reason>` is one of the rows below or a GLFW/Silk.NET message |
 | `the <R8UI\|RGBA8> framebuffer is not complete (<status>)` | `GlRenderer.CreateFramebuffer` (inside the message above; RGBA8 in true-colour mode) | The driver can't render to the palette-index (or colour) target, or the size is 0 (`FramebufferIncompleteAttachment`) |
 | `the background framebuffer is not complete (<status>)` | `GlRenderer.CreateBackground` (inside the message above, true-colour mode only) | The driver can't attach the RGBA8 background texture, or the size is 0 |
 | `the <VertexShader\|FragmentShader> did not compile: <log>` | `GlRenderer.CompileShader` (inside the message above) | Driver rejected a shader |
@@ -210,6 +210,17 @@ using [04](04-flows.md).
 | `HOUSE UPGRADE!` / `TOOL SHOP OPEN` (yellow, floating) | `FloatingTextRenderSystem.HouseUpgradeText`, `ToolShopOpenText` | A sale reached a gold milestone / first time below the wall |
 | ` EternalDigger `, `SHOP`, `MINE` | `HouseRenderSystem` (house sign, shop, shaft frame) | Scenery |
 
+### SkyStack screen text (`SkyStackTexts`)
+
+| Text | Where | Meaning |
+|---|---|---|
+| `Run. Jump. Bounce. Don't look down.`, `PRESS SPACE TO CLIMB` (blinking), `← → / A D  run      SPACE / ↑ / W  jump      ESC  quit`, `Run fast to jump higher. Skip floors to chain combos.` | `TitleScene` | Title screen |
+| `BEST SCORE <n>`, `BEST FLOOR <n>` | `TitleScene.DrawBest` | Shown once a run in this session scored more than 0 |
+| `SKYSTACK`, `FLOOR`, `SCORE`, `BEST`, `COMBO`, `x<jumps>  <floors> floors` + timer bar, `SPEED` + 6 level blocks or `reach floor 5`, `ZONE` + zone name, `← → A D   run`, `SPACE ↑ W jump`, `ESC       title` | `HudRenderSystem` | HUD right of the tower |
+| `THE TOWER RISES!` / `FASTER!` (red, blinking, 2 s) | `MessageRenderSystem` | The view started rising / got faster |
+| `COMBO <floors> FLOORS  +<points>` (yellow, 2 s) | `MessageRenderSystem.DrawComboResult` | A combo of 2+ jumps paid out |
+| `YOU FELL!`, `FLOOR`, `SCORE`, `BEST COMBO`, `NEW BEST!`, `SPACE  climb again`, `ESC    title` | `MessageRenderSystem.DrawGameOver` | Game-over box; the two key lines appear after 0.75 s |
+
 ### TerraForM screen text (`HudTexts`, `Sprites`)
 
 | Text | Where | Meaning |
@@ -225,6 +236,17 @@ using [04](04-flows.md).
 | `QUEUED COMMANDS ` + `→←↑↓P` | `HudTexts.QueuedCommands`, `Move`/`Plant.GetVisualRepresentation` | Typed, not yet sent with SPACE |
 | `SCORE:` | `HudTexts.Score` | Top-right. **Hidden during game over** |
 | `PRESS R TO RESTART` (inside the GAME OVER art) | `Sprites.GameOver` | `GameScene.GameOver` is true |
+
+### Starguard screen text (`HudTexts`)
+
+| Text | Where | Meaning |
+|---|---|---|
+| `SCORE ` + 6 digits | `HudTexts.Score`, row 0 left | Score of this match, zero-padded (`D6`) |
+| `HI ` + 6 digits | `HudTexts.HighScore`, row 0 centre | Best of `StarguardGame.HighScore` and the current score |
+| `WAVE n` | `HudTexts.Wave`, row 0 right | Current wave, from 1 |
+| `LIVES n` + one `▲` per life in reserve | `HudTexts.Lives`, row below the ground line | Lives left, including the cannon on screen |
+| `G A M E   O V E R` | `HudTexts.GameOver`, screen centre | `Match.IsOver` |
+| `PRESS ENTER TO PLAY AGAIN` | `HudTexts.PlayAgain`, below it | `Match.IsOver` |
 
 ## Reading the screen as state (TerraForM)
 

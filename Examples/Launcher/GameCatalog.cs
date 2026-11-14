@@ -18,6 +18,9 @@ internal static class GameCatalog
         new("Physics Showcase", "PhysicsShowcase",
             "1-5 shapes, Enter shower, A D W move, E blast, G gravity, I smooth, R clear"),
         new("EternalDigger", "EternalDigger", "Arrows walk/dig, Space ladder, E deliver/buy, hold R rescue"),
+        new("SkyStack", "SkyStack", "A D / arrows run, Space / W / Up jump, Esc title")
+,
+        new("Starguard", "Starguard", "A D / arrows move, Space fire, Enter restart"),
         new("Scripted (Lua)", "Scripted", "Arrows move, F5 reload scripts, Esc quit"),
         new("Kartster (3D)", "Kartster",
             "Menus arrows Enter Esc; race W gas, S brake, A D steer, Space handbrake, R restart, Esc title; G GPU, C 24-bit")

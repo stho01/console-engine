@@ -4,7 +4,7 @@ Support/user words are **[inferred]**. The team may also use Norwegian terms. Ad
 
 | User / support word | Meaning | Code identifier |
 |---|---|---|
-| the game / the app | One example exe built on the engine | `GameBase` subclass: `TerraformGame`, `SnakeGame`, `AsteroidsGame`, `PlatformerGame`, `ConsoleGame.Game`, and the ECS ports `TerraformEcsGame`, `SnakeEcsGame`, `AsteroidsEcsGame`, `PlatformerEcsGame`, `ConsoleEcsGame`, the ECS stress test `SwarmGame`, the physics demos `PhysicsSandboxGame` and `PhysicsShowcaseGame`, the ECS game `EternalDiggerGame`, and the Lua demo `ScriptedGame`, the 3D experiment `KartsterGame` |
+| the game / the app | One example exe built on the engine | `GameBase` subclass: `TerraformGame`, `SnakeGame`, `AsteroidsGame`, `PlatformerGame`, `ConsoleGame.Game`, and the ECS ports `TerraformEcsGame`, `SnakeEcsGame`, `AsteroidsEcsGame`, `PlatformerEcsGame`, `ConsoleEcsGame`, the ECS stress test `SwarmGame`, the physics demos `PhysicsSandboxGame` and `PhysicsShowcaseGame`, the ECS game `EternalDiggerGame`, the ECS-only game `StarguardGame`, and the Lua demo `ScriptedGame`, the 3D racer `KartsterGame` |
 | the engine | The shared library | `ConsoleEngine` project, namespace `ConsoleEngine` |
 | window / screen | The console window and its cell buffer | `RenderConsole`, `ConsoleHandler`, `IConsoleHandler` |
 | pixel / cell / character | One console cell | `Pixel` (`Char`, `ForegroundColor`, `BackgroundColor`) |
@@ -108,3 +108,9 @@ Support/user words are **[inferred]**. The team may also use Norwegian terms. Ad
 | glint / sparkle | Twinkle that reveals ore in the dark | `GlintSystem`, `ParticleStyle.Glint` |
 | seed | Number that decides the mine's layout | `Mine(int seed)`, first command-line argument |
 
+| climber / player (SkyStack) | The SkyStack player, 2 × 2 cells | `Climber` component, `ClimbPhysics` |
+| tower / floor / platform / ledge (SkyStack) | The endless tower and its one-way platforms, numbered from the ground (0) up | `Tower`, `Floor`, `Tower.GetFloor` |
+| combo (SkyStack) | Landings 2+ floors higher in a row, each within 3 s of the last; pays `floors × jumps × 5` | `RunStats.ComboJumps`, `ComboFloors` |
+| scroll / rising view / speed level / "hurry" (SkyStack) | The view rising by itself after floor 5, faster every 30 s | `Scroller`, `Scroller.Level` |
+| zone (SkyStack) | The colour theme of 50 floors | `TowerLooks.Zones` |
+| pixel / half-block (SkyStack) | One of the two square pixels a console cell shows in SkyStack (`▀`: upper = foreground, lower = background) | `PixelCanvas`, `PixelSprite`, `PixelFont` |

@@ -139,7 +139,7 @@ From the output folder of the program that uses `GlRenderer`:
 ```powershell
 Get-ChildItem -Recurse -Name -Filter glfw3.dll; Get-CimInstance Win32_VideoController | Select-Object Name, DriverVersion
 ```
-No `runtimes\win-x64\native\glfw3.dll` (or the folder for this machine's architecture) → [P20](05-triage.md#p20)
+No `runtimes\win-x64\native\glfw3.dll` (or the folder for this machine's architecture) → [P21](05-triage.md#p21)
 step 1 (partial copy). A video controller named `Microsoft Basic Display Adapter`, or a remote desktop / VM session,
 usually means no OpenGL 3.3 core profile **[external]**. In a developer checkout, `dotnet test
 ConsoleEngine.Rendering3D.OpenGL.Tests` answers it: tests ignored with `OpenGL 3.3 not available` mean no context.
