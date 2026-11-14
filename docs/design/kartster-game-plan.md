@@ -82,7 +82,8 @@ Levert i bølge 1, koblet inn i bølge 2 (`KartsterGame` starter på `TitleScene
 | 0 | Kjøring, fysikk, GPU, rendering (tidligere planer) | Ferdig |
 | 1 | 24-bit farge (K), kulisser (S), UI-sett og menyer (U), løpsregler (R), flere karter og bots (B) | Ferdig |
 | 2 | Flette bølge 1, skjermflyt (meny → løp → resultater), HUD inn i løpet | Ferdig (§ 7); vegger og flere baner flyttet til 3 |
-| 3 | Power-ups (P), vegger og kollisjoner (V), flere baner og eksportverktøy (T), minikart, pause og avslutning (M), bots som kjører forbi (O) | Startet (§ 8) |
+| 3 | Power-ups (P), vegger og kollisjoner (V), flere baner og eksportverktøy (T), minikart, pause og avslutning (M), bots som kjører forbi (O) | Ferdig (§ 8) |
+| 4 | Bakker og bruer (H), alle karter (K2), resten av power-ups (P2), spillmoduser (G), motor-opprydding (E), lys og stemning (L) | Startet (§ 9) |
 
 ## 5. Løpsregler (`Race/`): status
 
@@ -263,3 +264,16 @@ Levert på grenen til P. Regler og tall står i `docs/agent/03-rules.md` (Kartst
   tuning i `KartDynamics`, `Track.PowerUpPads`, `star-circuit.scenery.txt` (9 `model Box`-linjer ut) og
   `star-circuit.powerups.txt`. `PowerUpExporter` i `tools/KartsterExport` skriver nå `powerups.txt` for alle fire baner (Star Circuit 9, Prism Loop 12,
   Eight Ball 9, Star Rally 9 puter), og `SceneryExporter` skriver ikke lenger putene som `Box`.
+
+## 9. Bølge 4: eierskap
+
+| Agent | Oppgave | Eier | Rører ellers (minst mulig, si det i rapporten) |
+|---|---|---|---|
+| H | Høyde i kartfysikken: helning, veien på flere nivåer, terreng under veien. Deretter flere av originalens baner | `Driving/` (høyde), `Track.cs`, `Systems/KartGroundSystem.cs`, `Systems/KartPhysicsSystem.cs`, terreng-eksport i `tools/` | Ett tegnekall for terreng i `KartRenderSystem` |
+| K2 | Alle originalens karter med tuning | `Driving/KartCatalog.cs`, `Assets/Karts/`, `KartModel.cs` | Ingenting |
+| P2 | De resterende power-up-typene og usårbarhet | `PowerUps/` | Ingenting |
+| G | Tidskjøring med spøkelseskart, delt skjerm for to spillere hvis det lar seg gjøre | `Modes/`, `Scenes/Menus/` (modusvalg) | `TrackScene` (registrering), `KartsterGame` (flyt) |
+| E | Motor: pause i `EcsScene`, statiske kropper i broadphase, kontakthendelser til bots, 24-bit i cross-platform | `ConsoleEngine*`, `Libs/` | `TrackScene` (pause-bruk), `Bots/` (dytt tilbake) |
+| L | Lys og stemning: frontlys, natt, enkle skygger | `ConsoleEngine.Rendering3D*` (lys), `Lighting/` | `KartRenderSystem` |
+
+Prosjektlederen fletter `TrackScene`, `KartRenderSystem` og `KartsterGame`.
