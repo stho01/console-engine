@@ -59,6 +59,19 @@ internal sealed class SceneryExporter : ITrackExporter
         return _text.ToString();
     }
 
+    /// <summary>The track's paint, which places the start gate and lines (as the renderer does).</summary>
+    internal static TrackSurface Surface(string id, TrackGraph track)
+    {
+        var surface = new TrackSurface(SurfacePalette.Find(track.SurfacePaletteId));
+        if (BuiltInTracks.IsBuiltIn(id))
+        {
+            foreach (var map in BuiltInTracks.GetSurface(id).Values)
+                surface.Set(map);
+        }
+
+        return surface;
+    }
+
     //**********************************************************
     //** internals
     //**********************************************************
@@ -69,13 +82,7 @@ internal sealed class SceneryExporter : ITrackExporter
         _text.Append("# model <name> x y z yawDegrees scaleX scaleY scaleZ r g b\n");
         _text.Append("# tri x1 y1 z1 x2 y2 z2 x3 y3 z3 r g b   (counter-clockwise seen from the front)\n");
 
-        var surface = new TrackSurface(SurfacePalette.Find(track.SurfacePaletteId));
-        if (BuiltInTracks.IsBuiltIn(id))
-        {
-            foreach (var map in BuiltInTracks.GetSurface(id).Values)
-                surface.Set(map);
-        }
-
+        var surface = Surface(id, track);
         if (track.Ground is TrackGround ground)
         {
             // The sides in their coloured tiles; the half-metre top in the tiles' average, which saves a third.

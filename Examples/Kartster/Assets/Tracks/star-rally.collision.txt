@@ -1,0 +1,60 @@
+# star-rally collision, exported from Kartster by CollisionExport. Format: Examples/Kartster/Collision/TrackCollision.cs
+# segment x1 y1 x2 y2 halfThickness   (a wall box standing on the line, metres)
+# circle x y radius                    (a post)
+# outer wall
+segment -133.12 -122.2 133.12 -122.2 0.25
+segment 133.12 -122.2 133.12 143 0.25
+segment 133.12 143 -133.12 143 0.25
+segment -133.12 143 -133.12 -122.2 0.25
+# fences
+segment -81.12 -2.6 -81.12 -78 0.25
+segment -81.12 -78 -55.12 -89.7 0.25
+segment -55.12 -89.7 69.68 -87.88 0.25
+segment 69.68 -87.88 91.78 -65 0.25
+segment 91.78 -65 91.78 2.6 0.25
+segment 91.78 2.6 82.68 2.6 0.25
+segment 82.68 2.6 82.68 91 0.25
+segment 82.68 91 64.48 100.1 0.25
+segment 64.48 100.1 -81.12 100.1 0.25
+segment -81.12 100.1 -91.52 98.8 0.25
+segment -133.12 36.4 -36.92 36.4 0.25
+segment -36.92 36.4 -23.92 13 0.25
+segment -23.92 13 -29.12 -46.8 0.25
+segment -29.12 -46.8 12.48 -36.4 0.25
+segment 12.48 -36.4 54.08 -28.6 0.25
+segment -36.92 36.4 7.28 44.2 0.25
+segment 7.28 44.2 43.68 52 0.25
+segment 15.08 10.4 48.88 13 0.25
+segment 48.88 13 82.68 13 0.25
+# edge walls (Kartster: a plane on the road edge; here a box outside it, 0.5 m thick)
+segment 105.327 53.729 105.391 47.808 0.25
+segment 124.824 54.05 124.891 47.959 0.25
+segment 105.391 47.808 105.418 41.847 0.25
+segment 124.891 47.959 124.918 41.906 0.25
+segment 105.418 41.847 105.427 35.861 0.25
+segment 124.918 41.906 124.927 35.879 0.25
+segment 105.427 35.861 105.43 29.862 0.25
+segment 124.927 35.879 124.93 29.866 0.25
+segment 105.43 29.862 105.43 23.857 0.25
+segment 124.93 29.866 124.93 23.857 0.25
+segment 105.43 23.857 105.429 17.854 0.25
+segment 124.93 23.857 124.929 17.848 0.25
+segment 105.429 17.854 105.426 11.856 0.25
+segment 124.929 17.848 124.926 11.832 0.25
+segment 105.426 11.856 105.415 5.873 0.25
+segment 124.926 11.832 124.915 5.802 0.25
+segment 105.415 5.873 105.383 -0.085 0.25
+segment 124.915 5.802 124.883 -0.252 0.25
+segment 105.383 -0.085 105.313 -6.014 0.25
+segment 124.883 -0.252 124.811 -6.336 0.25
+segment 105.313 -6.014 105.188 -11.917 0.25
+segment 124.811 -6.336 124.681 -12.444 0.25
+# pipes (Kartster: an eight-sided post with corners on this radius)
+circle 12.553 125.358 1.2
+circle 107.091 -30.533 1.2
+circle 43.75 -110.831 1.2
+circle -23.702 -96.795 1.2
+circle -114.336 -41.373 1.2
+circle 21.163 -62.254 1.2
+circle -13.706 64.089 1.2
+circle -40.361 48.043 1.2

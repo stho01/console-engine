@@ -173,18 +173,25 @@ Levert. Regler og tall i `docs/agent/03-rules.md` (Kartster-raden om vegger).
   andre baner porter, trær, bygninger osv. `RaceSimulation.ResolveKartVsCollisionMesh` løser dem med kartens egen
   restitusjon 0,1 og friksjon 0,3. `WallFriction` 0,6 gjelder bare kantveggene (`KartWallConstraint`), som Star
   Circuit ikke har (`WallHeight` 0). Ingen egen fartsregel: farten tapes bare gjennom restitusjon og friksjon.
-- **Data:** `<id>.collision.txt` (`segment x1 y1 x2 y2 halfThickness`, `circle x y radius`), eksportert av
-  `CollisionExport` i scratchpad med originalens `TrackGround`, `TrackFenceMesh.ThicknessMeters` og `TrackPipes.Place`.
-  Verktøyet nekter baner med kantvegger, porter, ruteender eller trær/bygninger til de er støttet. Star Circuit:
-  4 yttervegger, 15 gjerder, 10 rør.
+- **Data:** `<id>.collision.txt` (`segment x1 y1 x2 y2 halfThickness`, `circle x y radius`; formatet trengte ingen
+  nye linjetyper), eksportert av `CollisionExporter` i `tools/KartsterExport` med originalens `TrackGround`,
+  `TrackFenceMesh.ThicknessMeters`, `TrackBoundaryMesh` (grenser), `TrackExportFrameBuilder` (kantvegger på seksjoner
+  med `WallHeight` > 0), `RaceMarkings.PlaceGates` + `StartGateMesh` (portstolper) og `TrackPipes.Place`. Alle fire
+  baner har fil: Star Circuit 4 yttervegger, 15 gjerder, 10 rør; Prism Loop 2 portstolper (ingen bakke, gjerder eller
+  rør); Eight Ball 4 yttervegger og 140 grensesegmenter (3 grenser); Star Rally 4 yttervegger, 19 gjerder,
+  22 kantvegg-segmenter (brua) og 8 rør. Verktøyet nekter (`skipped:`) baner med ruteender, trær, bygninger, lykter,
+  veisperringer, midtdelere, autovern, søyler, bru-søyler, tunneltak, gatefall eller retningsskilt til de er støttet;
+  ingen av de fire har det.
 - **Kode:** `Collision/TrackCollision` (`Load`, `Parse`, `AddTo(World)`): statiske kropper, en dreid boks per segment og
   en sirkel per rør, friksjon 0,3 og restitusjon 0,1 (parets friksjon `sqrt(0,3 × 0,3)` = 0,3). Én linje i
   `TrackScene.OnCreate`. De 29 statiske kroppene koster omtrent 6–10 µs per fysikksteg med 6 karter, ingen allokering.
 - **Avvik og hull:** rør er sirkler (originalen: åttekant med hjørnene på radien); høyden er ikke med (ingen hopper
-  over gjerdene på Star Circuit); motorens kontaktløser er Box2D-myk (60 Hz mot statiske, ett delsteg) i stedet for
+  over gjerdene); motorens kontaktløser er Box2D-myk (60 Hz mot statiske, ett delsteg) i stedet for
   originalens impulser med 4 iterasjoner, og den bygger broadphase for statiske kropper på nytt hvert steg (et forslag
-  til motoren: hold statiske kropper i broadphase mellom stegene). Kantvegger (`KartWallConstraint`) og ghost-kart som
-  kjører gjennom vegger er ikke laget. Gnister ved treff (`KartWallContact`) mangler.
+  til motoren: hold statiske kropper i broadphase mellom stegene). Kantveggene (originalen: et plan på veikanten,
+  `KartWallConstraint`, friksjon 0,6) er her 0,5 m tykke bokser rett utenfor kanten med vanlig veggfriksjon 0,3;
+  grensene (originalen: null tykke) er 0,5 m bokser sentrert på linjen. Ghost-kart som kjører gjennom vegger er ikke
+  laget. Gnister ved treff (`KartWallContact`) mangler.
 
 ### Status M: minikart, pause og avslutning
 

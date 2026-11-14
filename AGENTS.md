@@ -35,7 +35,7 @@ scripting loads the native `lua54.dll` that the KeraLua package ships for each r
 | ECS (entities, components, archetypes, chunks) | `ConsoleEngine/Ecs/`, design and phases in [`docs/design/ecs-plan.md`](docs/design/ecs-plan.md) |
 | 2D physics (bodies, circles/boxes/polygons, rotation, forces and torque (`Force`), broadphase, Soft Step contact solver, contact/sensor events, tile grid, sleeping, interpolation, raycasts and box casts, `CharacterMover.MoveAndSlide`) | `ConsoleEngine.Physics/` (own assembly and NuGet package, optional), rules in [`docs/agent/03-rules.md` § Physics](docs/agent/03-rules.md#physics), design and phases in [`docs/design/physics-plan.md`](docs/design/physics-plan.md). Examples: `Examples/PhysicsShowcase` (every feature), `Examples/PhysicsSandbox` (solver), `Examples/Asteroids.Ecs` (sensors, layers), `Examples/Platformer.Ecs` (tile grid, character controller) |
 | Performance measurements | `ConsoleEngine.Benchmarks/` (BenchmarkDotNet) |
-| Exporting Kartster tracks (ribbon, spline, scenery, race markers) from the original game | `tools/KartsterExport/` and its [`README.md`](tools/KartsterExport/README.md): `list`, `export <outDir> <trackId...>`, one `ITrackExporter` class per file. Not in the solution: needs the original's source (`KartsterRoot`, default `C:\Forse\kartster-server`) |
+| Exporting Kartster tracks (ribbon, spline, scenery, race markers, collision) from the original game | `tools/KartsterExport/` and its [`README.md`](tools/KartsterExport/README.md): `list`, `export <outDir> <trackId...>`, one `ITrackExporter` class per file. Not in the solution: needs the original's source (`KartsterRoot`, default `C:\Forse\kartster-server`) |
 | Lua scripting: components, `self` fields, hooks, errors, reload | [`docs/agent/03-rules.md § Lua`](docs/agent/03-rules.md#lua), `ConsoleEngine.Scripting/`, `Examples/Scripted` |
 | 3D rendering (`IRenderer3D`, software `Rasterizer`, OpenGL `GlRenderer`, near-plane clipping, OBJ models, 16-colour dithering or 24-bit true colour with alpha blending) | `ConsoleEngine.Rendering3D/` (own assembly and NuGet package, optional), GPU renderer in `ConsoleEngine.Rendering3D.OpenGL/` (same picture; callers fall back to `Rasterizer` when `GlRenderer.TryCreate` fails), GPU plan in [`docs/design/gpu-rendering-plan.md`](docs/design/gpu-rendering-plan.md), rules in [`docs/agent/03-rules.md`](docs/agent/03-rules.md) (Kartster rows) |
 | Why KeraLua, and what Lua costs per entity | `ConsoleEngine.Benchmarks/README.md` |
@@ -266,8 +266,8 @@ Examples/
                                   PowerUpSystem (fixed step; Add wires it all), PowerUpInputSystem (E/T/B), PowerUpView,
                                   PowerUpPads (powerups.txt)),
                                   Assets/Karts/ (olabil, wagon), Assets/Tracks/
-                                  (star-circuit, star-rally, prism-loop, eight-ball: ribbon, spline, scenery.txt, race.txt, powerups.txt each,
-                                  star-circuit also collision.txt; written by tools/KartsterExport) and Assets/Scenery/
+                                  (star-circuit, star-rally, prism-loop, eight-ball: ribbon, spline, scenery.txt, race.txt, powerups.txt,
+                                  collision.txt each; written by tools/KartsterExport) and Assets/Scenery/
                                   (Pipe.obj from Kartster, Box.obj), copied to output, Bots/ (see above),
                                   Components/ (Kart with Index, PlayerKart, Bot),
                                   Ui/ (pixel UI kit: IPixelTarget, PaletteTarget, RgbTarget, PixelFont 3×5,
@@ -282,11 +282,13 @@ Examples/
                                   Menu, MenuFlow tests; UiPreview writes ui-preview/*.ppm to the output), Bots/BotDriverSystemTests,
                                   Bots/RaceTests (grid, input, headless 3-bot race, kart collisions, allocation),
                                   Bots/BotTrafficTests (road widths, passing, following, leaning, 6-bot race),
-                                  Collision/TrackCollisionTests (file, walls, pipe, race with walls, allocation),
+                                  Collision/TrackCollisionTests (file, walls, pipe, bots lap every track with walls,
+                                  allocation),
                                   PowerUps/ (PowerUpFieldTests, PowerUpSystemTests)
 tools/
   KartsterExport/                 track exporter (not in the solution): Program (list, export), ITrackExporter,
-                                  RibbonExporter, SplineExporter, SceneryExporter, RaceExporter, README.md
+                                  RibbonExporter, SplineExporter, SceneryExporter, RaceExporter,
+                                  CollisionExporter, README.md
 .github/workflows/                build-and-test.yml
 ```
 

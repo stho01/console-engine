@@ -3,7 +3,7 @@ using Kartster.Models.Tracks;
 namespace KartsterExport;
 
 /// <summary>
-/// Writes one file per track with the original Kartster's own code. To export something new (power-ups, collision),
+/// Writes one file per track with the original Kartster's own code. To export something new (power-ups),
 /// write one class that implements this and add it to <see cref="Program.Exporters"/>.
 /// </summary>
 internal interface ITrackExporter

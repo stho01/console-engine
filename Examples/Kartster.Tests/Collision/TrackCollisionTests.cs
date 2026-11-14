@@ -159,28 +159,58 @@ public class TrackCollisionTests
 
     //** races
 
-    [Test]
-    public void Race_ThreeBotsWithWallsFor60Seconds_EveryBotCompletesALap()
+    [TestCase("star-circuit")]
+    [TestCase("prism-loop")]
+    [TestCase("eight-ball")]
+    [TestCase("star-rally")]
+    public void Race_ThreeBotsWithWalls_EveryBotCompletesALapWithoutGettingStuck(string id)
     {
-        var track = StarCircuit.Value;
+        const int capSeconds = 150;
+        var track = id == "star-circuit" ? StarCircuit.Value : Track.Load(TracksFolder, id);
         using var world = new World();
         var tunings = Tunings(3);
-        var markers = RaceMarkers.Load(TracksFolder, "star-circuit");
+        var markers = RaceMarkers.Load(TracksFolder, id);
         var race = TrackScene.CreateSession(track, markers, laps: 5);
         var karts = TrackScene.CreateKarts(world, track, markers, tunings, playerIndex: -1, race);
-        TrackCollision.Load(TracksFolder, "star-circuit").AddTo(world);
+        Assert.That(TrackCollision.Load(TracksFolder, id).AddTo(world), Is.GreaterThan(0), "the track has walls");
         var group = new SystemGroup(world);
         TrackScene.AddDriving(group, track, tunings, race);
+        var reversals = new int[karts.Length];
+        var reversing = new bool[karts.Length];
 
-        for (var step = 0; step < (60 + RaceSession.CountdownSeconds) * 120; step++)
+        var steps = 0;
+        for (; steps < (capSeconds + RaceSession.CountdownSeconds) * 120 && !EveryKartLapped(); steps++)
+        {
             group.Update(Step);
+            for (var i = 0; i < karts.Length; i++)
+            {
+                var now = world.Get<Bot>(karts[i]).ReverseSeconds > 0f;
+                if (now && !reversing[i])
+                    reversals[i]++;
+                reversing[i] = now;
+            }
+        }
 
+        TestContext.Out.WriteLine($"{id}: every bot lapped after {steps / 120f - RaceSession.CountdownSeconds:0.0} s");
         for (var i = 0; i < karts.Length; i++)
         {
             var progress = world.Get<RaceProgress>(karts[i]);
-            TestContext.Out.WriteLine($"bot {i}: {progress.CompletedLaps} laps, best {progress.BestLapSeconds:0.0} s");
+            TestContext.Out.WriteLine($"bot {i}: {progress.CompletedLaps} laps, best {progress.BestLapSeconds:0.0} s, " +
+                                      $"{reversals[i]} reversals");
             Assert.That(progress.CompletedLaps, Is.GreaterThanOrEqualTo(1), $"bot {i} drives on");
             Assert.That(progress.MissedCheckpoints, Is.Zero, $"bot {i} follows the route");
+            Assert.That(reversals[i], Is.LessThanOrEqualTo(2), $"bot {i} got stuck");
+        }
+
+        bool EveryKartLapped()
+        {
+            for (var i = 0; i < karts.Length; i++)
+            {
+                if (world.Get<RaceProgress>(karts[i]).CompletedLaps < 1)
+                    return false;
+            }
+
+            return true;
         }
     }
 

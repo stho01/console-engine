@@ -2,6 +2,7 @@ using System;
 using System.Collections.Generic;
 using System.IO;
 using System.Numerics;
+using Kartster.Collision;
 using Kartster.Race;
 using NUnit.Framework;
 
@@ -32,6 +33,15 @@ public class ShippedTracksTests
         Assert.That(track.Road.TriangleCount, Is.GreaterThan(500));
         Assert.That(track.Scenery.Count, Is.GreaterThan(0), "scenery and its models load");
         Assert.That(track.IsClosed, Is.True, "the exporter writes race markers for closed routes only");
+    }
+
+    [TestCaseSource(nameof(TrackIds))]
+    public void Load_ShippedTrack_HasWalls(string id)
+    {
+        var collision = TrackCollision.Load(Folder, id);
+
+        Assert.That(collision, Is.Not.SameAs(TrackCollision.Empty), "the exporter writes collision for every track");
+        Assert.That(collision.Segments.Length + collision.Posts.Length, Is.GreaterThan(0));
     }
 
     [TestCaseSource(nameof(TrackIds))]
