@@ -234,12 +234,12 @@ public sealed class TrackScene(int lapCount, int botCount = TrackScene.DefaultBo
         RaceSession race = null)
     {
         var physics = new KartPhysicsSystem(tunings);
-        fixedStep.Add(new BotDriverSystem(track, physics, race));
+        var bots = fixedStep.Add(new BotDriverSystem(track, physics, race));
         fixedStep.Add(physics);
         // One substep, so a step integrates the kart model's forces exactly once, as Kartster's single 1/120 s step
         // does (the force is held through all substeps, and the tyres cancel a whole step's sideways speed). Kart
         // contacts are soft (30 Hz at one substep) and over-damped, which is enough for karts pushing each other.
-        fixedStep.Add(new PhysicsSystem { SubstepCount = 1, EnableSleep = false });
+        bots.Contacts = fixedStep.Add(new PhysicsSystem { SubstepCount = 1, EnableSleep = false });
         fixedStep.Add(new KartGroundSystem(track));
         if (race != null)
             fixedStep.Add(new RaceSystem(race));

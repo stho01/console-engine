@@ -15,6 +15,12 @@ public struct BotTrafficState
     /// <summary>Kart slot it is leaning on, or -1.</summary>
     public int LeanTarget;
 
+    /// <summary>The lean is a bump back (<see cref="BotTraffic.BumpedBy"/>): it aims through the kart, not beside it.</summary>
+    public bool IsBumpingBack;
+
+    /// <summary>Kart slot of the last lean or bump back, or -1: left alone while the cooldown runs.</summary>
+    public int LastLeanTarget;
+
     /// <summary>Seconds left of the lean.</summary>
     public float LeanSeconds;
 
@@ -36,6 +42,7 @@ public struct BotTrafficState
             IsStarted = true,
             Offset = laneOffset,
             LeanTarget = -1,
+            LastLeanTarget = -1,
             Random = (uint)(index + 1) * 0x9E3779B9u | 1u,
         };
         state.WanderPhase = state.NextUnit();

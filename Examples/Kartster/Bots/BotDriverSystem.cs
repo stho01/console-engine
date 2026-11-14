@@ -28,6 +28,8 @@ namespace Kartster.Bots;
 /// (<see cref="Aggression"/>), kept <see cref="BotTraffic.EdgeMargin"/> inside the asphalt, and eased there at
 /// <see cref="BotTraffic.LaneChangeSpeed"/>; a kart ahead in its path caps its speed. With
 /// <see cref="RubberBanding"/> its pace follows the leading human.</item>
+/// <item>Bumping back (<see cref="BumpsBack"/>, given <see cref="Contacts"/>): a kart that drove into the bot at
+/// <see cref="BotTraffic.MinBumpSpeed"/> or more is gone for (<see cref="BotTraffic.BumpedBy"/>).</item>
 /// </list>
 /// <see cref="Bot.Skill"/> (0..1) moves every number from Earl's towards Merlin's. Runs in the fixed step, before the
 /// <see cref="KartPhysicsSystem"/>: it reads only what the physics changes, so a bot drives the same at any frame rate
@@ -67,6 +69,11 @@ public sealed class BotDriverSystem(Track track, KartPhysicsSystem physics, Race
     private Query _bots;
     private Query _karts;
 
+    /// <summary>Per kart slot, where it was and how fast, before the last step: what a bump is judged by.</summary>
+    private Vector2[] _positions;
+
+    private Vector2[] _velocities;
+
     //**********************************************************
     //** props
     //**********************************************************
@@ -76,6 +83,12 @@ public sealed class BotDriverSystem(Track track, KartPhysicsSystem physics, Race
 
     /// <summary>The slow wobble off the line of Kartster's Earl and Merlin (<see cref="WanderMeters"/>). On.</summary>
     public bool Wanders { get; set; } = true;
+
+    /// <summary>
+    /// The physics' contact events, for bumping back: read at the start of the next step (this system runs before the
+    /// physics). Null: no bot bumps back.
+    /// </summary>
+    public IPhysicsEvents Contacts { get; set; }
 
     /// <summary>The road every bot plans on: samples, directions, widths. Made in <c>OnCreate</c>.</summary>
     public BotRoad Road => _road;
@@ -105,6 +118,15 @@ public sealed class BotDriverSystem(Track track, KartPhysicsSystem physics, Race
     /// <summary>Most the line wanders either way, metres (Earl 1, Merlin 0.4).</summary>
     public static float WanderMeters(float skill) => float.Lerp(1f, 0.4f, skill);
 
+    /// <summary>Lowest <see cref="Bot.Skill"/> that bumps back: nearer Merlin (who does, as Stag and The Dagg) than Earl.</summary>
+    public const float BumpBackSkill = 0.5f;
+
+    /// <summary>
+    /// Whether a bot of <paramref name="skill"/> goes for a kart that bumped it. The autopilot doesn't (Kartster's
+    /// <c>BotProfile.Autopilot</c>).
+    /// </summary>
+    public static bool BumpsBack(float skill) => skill >= BumpBackSkill;
+
     /// <summary>Chance it leans on a kart beside it, per <see cref="BotTraffic.LeanCooldownSeconds"/> (0 to 0.4).</summary>
     public static float Aggression(float skill) => float.Lerp(0f, 0.4f, skill);
 
@@ -116,6 +138,9 @@ public sealed class BotDriverSystem(Track track, KartPhysicsSystem physics, Race
 
     /// <summary>The lane the bot in slot <paramref name="index"/> aimed for at the last step, metres right.</summary>
     public float GetLaneOffset(int index) => _states[index].Offset;
+
+    /// <summary>Whether the bot in slot <paramref name="index"/> is going for a kart that bumped it.</summary>
+    public bool IsBumpingBack(int index) => _states[index].IsBumpingBack;
 
     /// <summary>
     /// What a bot does this step: <paramref name="controls"/> from its kart's <paramref name="body"/>, the
@@ -217,6 +242,8 @@ public sealed class BotDriverSystem(Track track, KartPhysicsSystem physics, Race
         for (var i = 0; i < _traffic.Length; i++)
             _traffic[i].Sample = -1;
         _states = new BotTrafficState[physics.KartCount];
+        _positions = new Vector2[physics.KartCount];
+        _velocities = new Vector2[physics.KartCount];
         _bots = World.Query(Query.With<Bot, Kart, KartControls>().With<Position, Rotation, Velocity>()
             .With<AngularVelocity>());
         _karts = World.Query(Query.With<Kart, Position, Velocity>());
@@ -231,6 +258,7 @@ public sealed class BotDriverSystem(Track track, KartPhysicsSystem physics, Race
             return;
         }
 
+        ReadBumps();
         LocateKarts();
         foreach (var chunk in _bots.GetChunks())
         {
@@ -289,9 +317,48 @@ public sealed class BotDriverSystem(Track track, KartPhysicsSystem physics, Race
                 var velocity = new Vector2(velocities[i].Value.X, velocities[i].Value.Y);
                 traffic.Speed = Vector2.Dot(velocity, _road.ForwardAt(traffic.Sample));
                 traffic.IsHuman = isHuman;
+                _positions[karts[i].Index] = position;
+                _velocities[karts[i].Index] = velocity;
             }
         }
     }
+
+    /// <summary>
+    /// Kart-on-kart contacts that began in the last step, judged by where the karts were and how fast before it: the
+    /// bumped bot goes for the bumper (if it <see cref="BumpsBack"/>), the bumping one is done with it.
+    /// </summary>
+    private void ReadBumps()
+    {
+        if (Contacts == null)
+            return;
+
+        var contacts = Contacts.ContactBeginEvents;
+        for (var i = 0; i < contacts.Length; i++)
+        {
+            var a = contacts[i].A;
+            var b = contacts[i].B;
+            if (!IsKart(a) || !IsKart(b))
+                continue;
+
+            var slotA = World.Get<Kart>(a).Index;
+            var slotB = World.Get<Kart>(b).Index;
+            var aWasBumper = BotTraffic.AWasBumper(_positions[slotA], _velocities[slotA], _positions[slotB],
+                _velocities[slotB], out var isBump);
+            if (!isBump)
+                continue;
+
+            var (bumper, bumperSlot, bumped, bumpedSlot) = aWasBumper ? (a, slotA, b, slotB) : (b, slotB, a, slotA);
+            if (_states[bumpedSlot].IsStarted && IsBumpingBot(bumped))
+                BotTraffic.BumpedBy(ref _states[bumpedSlot], bumperSlot);
+            if (_states[bumperSlot].IsStarted)
+                BotTraffic.Bumped(ref _states[bumperSlot], bumpedSlot);
+        }
+    }
+
+    private bool IsKart(Entity entity) => World.IsAlive(entity) && World.Has<Kart>(entity);
+
+    private bool IsBumpingBot(Entity entity) =>
+        World.Has<Bot>(entity) && !World.Has<PlayerKart>(entity) && BumpsBack(World.Get<Bot>(entity).Skill);
 
     /// <summary>
     /// The lane the bot in slot <paramref name="index"/> aims for this step (<see cref="BotTraffic"/>), and the speed

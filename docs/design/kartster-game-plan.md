@@ -239,12 +239,14 @@ Levert, bare i `Bots/`. Tall og regler står i `docs/agent/03-rules.md` (raden �
   (fartsgrense) i stedet for å kjøre inn i en kart foran når det ikke er plass. Filen glir dit med 3 m/s.
 - **Dytting:** `BotTraffic.Lean`, en mild utgave av originalens `BotBumping`: av og til (sjanse 0–0,4 etter ferdighet,
   hvert 3. sekund) lener boten seg på en kart ved siden av i 1 s. Aldri når den bremser til en sving, aldri utenfor
-  kantmarginen.
+  kantmarginen. Dytte tilbake (originalens `BumpsBack`, Merlin og over): en bot med ferdighet ≥ 0,5 som blir dyttet
+  (kontaktstart mellom to karter, lukkefart ≥ 2 m/s, den andre brakte mest av den) går etter dytteren i 1,2 s og sikter
+  0,6 m forbi linjen dens (`BotTraffic.BumpedBy`, kontakthendelsene fra `PhysicsSystem` via `BotDriverSystem.Contacts`).
 - **Originalens øvrige:** slingring (`Wanders`, på, Earl/Merlin) og rubber-banding (`RubberBanding`, av som i
   originalen).
 - **`BotDriverSystem`:** samme konstruktør og samme `Drive`; nytt er en `Drive`-overlast med fil, fartsgrense og
-  tempo, og egenskapene `RubberBanding`, `Wanders`, `Road`, `GetTraffic`, `GetLaneOffset`. Ikke gjort: dytte tilbake
-  (trenger kontakthendelser), power-ups.
+  tempo, og egenskapene `RubberBanding`, `Wanders`, `Road`, `GetTraffic`, `GetLaneOffset`, senere `Contacts`,
+  `BumpsBack` og `IsBumpingBack` (dytte tilbake). Ikke gjort: power-ups.
 
 ### Status: power-ups (P)
 
@@ -363,3 +365,6 @@ Levert på grenen til P2. Regler og tall i `docs/agent/03-rules.md` (Kartster-ra
 - **Statiske kropper i broadphase:** `PhysicsSystem` holder de statiske kroppene i et eget `SpatialHashGrid` som bare
   bygges på nytt når en statisk kropp legges til, fjernes, flyttes, dreies eller får ny `Collider`.
   `StaticBodiesStepBenchmarks`: 30 statiske 12,1 → 10,8 µs, 150: 21,5 → 14,6 µs, 1000: 95 → 40 µs per steg.
+- **Bots dytter tilbake:** `BotDriverSystem.Contacts` (settes i `TrackScene.AddDriving`) leser `ContactBeginEvents`;
+  `BotTraffic.BumpedBy`/`Bumped`/`AWasBumper`, `BotDriverSystem.BumpsBack`/`IsBumpingBack`. Regler i
+  `docs/agent/03-rules.md` (Kartster-raden om bot-trafikk).

@@ -1,4 +1,5 @@
 using System;
+using System.Numerics;
 
 namespace Kartster.Bots;
 
@@ -63,6 +64,15 @@ public static class BotTraffic
 
     /// <summary>A leaned-on kart further ahead than this, metres, is out of reach.</summary>
     private const float LeanAheadMeters = 6f;
+
+    /// <summary>How long a bot goes for a kart that bumped it, seconds (Kartster's <c>BumpBackSeconds</c>).</summary>
+    public const float BumpBackSeconds = 1.2f;
+
+    /// <summary>How far past the bumper's line a bump back aims, so it lands, metres (Kartster's push-through).</summary>
+    public const float BumpThroughMeters = 0.6f;
+
+    /// <summary>Slower than this, m/s, karts meeting is no bump (Kartster's <c>KartBumpTuning.MinClosingSpeed</c>).</summary>
+    public const float MinBumpSpeed = 2f;
 
     /// <summary>Planned this much under its speed, m/s, the bot is braking for a corner: no leaning then.</summary>
     public const float BrakingMargin = 1f;
@@ -158,13 +168,15 @@ public static class BotTraffic
             var gap = road.Gap(me.Along, target.Along);
             if (isBraking || state.LeanSeconds <= 0f || gap < -LeanBehindMeters || gap > LeanAheadMeters)
             {
-                state.LeanTarget = -1;
-                state.LeanCooldownSeconds = LeanCooldownSeconds;
+                StopLean(ref state);
                 return offset;
             }
 
             var side = target.Lateral >= me.Lateral ? 1f : -1f;
-            return Math.Clamp(target.Lateral - side * LeanMeters, least, most);
+            var aim = state.IsBumpingBack
+                ? target.Lateral + side * BumpThroughMeters
+                : target.Lateral - side * LeanMeters;
+            return Math.Clamp(aim, least, most);
         }
 
         if (isBraking || state.LeanCooldownSeconds > 0f || aggression <= 0f)
@@ -194,6 +206,44 @@ public static class BotTraffic
     }
 
     /// <summary>
+    /// Kartster's <c>BotBumping</c> bump back (Merlin, Stag and The Dagg; <see cref="BotDriverSystem.BumpsBack"/>):
+    /// the bot was driven into by kart slot <paramref name="bumper"/>, so unless it is already going for a kart, or
+    /// <paramref name="bumper"/> is the one it last went for and the cooldown runs, it goes for it for
+    /// <see cref="BumpBackSeconds"/>: <see cref="Lean"/> aims <see cref="BumpThroughMeters"/> past the bumper's line,
+    /// with the lean's limits (not while braking for a corner, inside the edge margin, 3 m behind to 6 m ahead).
+    /// </summary>
+    public static void BumpedBy(ref BotTrafficState state, int bumper)
+    {
+        if (state.LeanTarget >= 0 || (state.LeanCooldownSeconds > 0f && state.LastLeanTarget == bumper))
+            return;
+
+        state.LeanTarget = bumper;
+        state.LeanSeconds = BumpBackSeconds;
+        state.IsBumpingBack = true;
+    }
+
+    /// <summary>The bot drove into kart slot <paramref name="other"/>: a bump back at that kart has landed and ends.</summary>
+    public static void Bumped(ref BotTrafficState state, int other)
+    {
+        if (state.IsBumpingBack && state.LeanTarget == other)
+            StopLean(ref state);
+    }
+
+    /// <summary>
+    /// Whether kart A drove into kart B, given both karts' positions and velocities before they met, or B into A; false
+    /// in <paramref name="isBump"/> when they met slower than <see cref="MinBumpSpeed"/>. As Kartster: along the line
+    /// between them, whoever brought more of the closing speed is the bumper.
+    /// </summary>
+    public static bool AWasBumper(Vector2 positionA, Vector2 velocityA, Vector2 positionB, Vector2 velocityB,
+        out bool isBump)
+    {
+        var normal = Vector2.Normalize(positionB - positionA);
+        var closing = -Vector2.Dot(velocityB - velocityA, normal);
+        isBump = closing >= MinBumpSpeed;
+        return Vector2.Dot(velocityA, normal) >= -Vector2.Dot(velocityB, normal);
+    }
+
+    /// <summary>
     /// Kartster's optional catch-up: what to multiply the pace of the bot in slot <paramref name="self"/> by. Below 1
     /// ahead of the leading human, above 1 behind, <see cref="RubberBandShare"/> at most from
     /// <see cref="RubberBandFullMeters"/> away; 1 without a human.
@@ -214,6 +264,14 @@ public static class BotTraffic
     //**********************************************************
     //** internals
     //**********************************************************
+
+    private static void StopLean(ref BotTrafficState state)
+    {
+        state.LastLeanTarget = state.LeanTarget;
+        state.LeanTarget = -1;
+        state.IsBumpingBack = false;
+        state.LeanCooldownSeconds = LeanCooldownSeconds;
+    }
 
     /// <summary>
     /// <paramref name="lane"/> is on the road and no kart but <paramref name="passing"/> is alongside or ahead in the

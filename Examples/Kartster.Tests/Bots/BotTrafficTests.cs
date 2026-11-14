@@ -146,6 +146,93 @@ public class BotTrafficTests
     }
 
     [Test]
+    public void BumpedBy_FreeBot_GoesThroughTheBumpersLineThenLetsGo()
+    {
+        var road = StarRoad.Value;
+        TrafficKart[] karts = [Kart(100f, 0f, 20f), Kart(99f, 1.5f, 22f)];
+        var state = BotTrafficState.Start(0, 0f);
+
+        BotTraffic.BumpedBy(ref state, 1);
+        var aim = BotTraffic.Lean(road, karts, 0, ref state, 0f, false, 0f, -9f, 9f, Step);
+        var steps = 1;
+        while (state.LeanTarget >= 0 && steps < 10 * 120)
+        {
+            BotTraffic.Lean(road, karts, 0, ref state, 0f, false, 0f, -9f, 9f, Step);
+            steps++;
+        }
+
+        Assert.That(aim, Is.EqualTo(1.5f + BotTraffic.BumpThroughMeters).Within(1e-4f));
+        Assert.That(steps * Step, Is.EqualTo(BotTraffic.BumpBackSeconds).Within(Step * 1.5f));
+        Assert.That(state.IsBumpingBack, Is.False);
+        Assert.That(state.LastLeanTarget, Is.EqualTo(1));
+    }
+
+    [Test]
+    public void BumpedBy_SameKartDuringTheCooldownOrBusy_IgnoresIt()
+    {
+        var state = BotTrafficState.Start(0, 0f);
+        BotTraffic.BumpedBy(ref state, 1);
+        BotTraffic.Bumped(ref state, 1);
+        Assert.That(state.LeanTarget, Is.EqualTo(-1), "its bump back landed: done");
+
+        BotTraffic.BumpedBy(ref state, 1);
+        Assert.That(state.LeanTarget, Is.EqualTo(-1), "that kart is left alone for the cooldown");
+
+        BotTraffic.BumpedBy(ref state, 2);
+        BotTraffic.BumpedBy(ref state, 3);
+        Assert.That(state.LeanTarget, Is.EqualTo(2), "another kart: goes for it, one at a time");
+    }
+
+    [Test]
+    public void AWasBumper_ByClosingSpeedAlongTheLine_FasterOneBumpsAndSlowMeetingsDont()
+    {
+        var a = Vector2.Zero;
+        var b = new Vector2(2f, 0f);
+
+        Assert.That(BotTraffic.AWasBumper(a, new Vector2(10f, 0f), b, new Vector2(4f, 0f), out var bump), Is.True);
+        Assert.That(bump, Is.True);
+        Assert.That(BotTraffic.AWasBumper(a, new Vector2(4f, 0f), b, new Vector2(-6f, 0f), out bump), Is.False);
+        Assert.That(bump, Is.True);
+        BotTraffic.AWasBumper(a, new Vector2(5f, 0f), b, new Vector2(4f, 0f), out bump);
+        Assert.That(bump, Is.False, "1 m/s closing is a touch, not a bump");
+    }
+
+    [TestCase(1f, true)]
+    [TestCase(0.3f, false)]
+    public void Bump_KartDrivesIntoABotsRearCorner_BotBumpsBackOnlyIfSkilled(float skill, bool bumpsBack)
+    {
+        Assert.That(BotDriverSystem.BumpsBack(skill), Is.EqualTo(bumpsBack));
+        var track = StarCircuit.Value;
+        var road = StarRoad.Value;
+        using var world = new World();
+        KartTuning[] tunings = [KartCatalog.Kart, KartCatalog.Kart];
+        var start = LongestStraight(road, new BotRoutePlan(road, tunings[0], 0.8f, 0.7f), out _);
+        var forward = road.ForwardAt(start);
+        var right = Right(forward);
+        var bot = BotAt(world, road, tunings[0], start, 0);
+        world.Get<Bot>(bot).Skill = skill;
+        world.Get<Velocity>(bot).Value = new XnaVector2(forward.X, forward.Y) * 10f;
+
+        // 1.5 m behind (too far back to be leaned on) and 1.6 m to the right, 20 degrees into the bot, a bit faster.
+        var from = road.PointAt(start) - forward * 1.5f + right * 1.6f;
+        var into = float.DegreesToRadians(20f);
+        var heading = forward * MathF.Cos(into) - right * MathF.Sin(into);
+        var bumper = KartEntity.Create(world, tunings[1], new XnaVector2(from.X, from.Y),
+            KartFrame.HeadingOf(new System.Numerics.Vector3(heading.X, 0f, heading.Y)), 1);
+        world.Get<Velocity>(bumper).Value = new XnaVector2(heading.X, heading.Y) * 10.5f;
+        var (group, bots) = Driving(world, track, tunings);
+
+        var wentForIt = false;
+        for (var step = 0; step < 60; step++)
+        {
+            group.Update(Step);
+            wentForIt |= bots.IsBumpingBack(0);
+        }
+
+        Assert.That(wentForIt, Is.EqualTo(bumpsBack));
+    }
+
+    [Test]
     public void RubberBand_BotFarAheadOfTheHuman_EasesOffByATenth()
     {
         TrafficKart[] karts = [Kart(0f, 0f, 0f) with { Driven = 500f }, Kart(0f, 0f, 0f) with { IsHuman = true }];
@@ -311,7 +398,7 @@ public class BotTrafficTests
         var bots = new BotDriverSystem(track, physics, race) { Wanders = race != null };
         group.Add(bots);
         group.Add(physics);
-        group.Add(new ConsoleEngine.Physics.PhysicsSystem { SubstepCount = 1, EnableSleep = false });
+        bots.Contacts = group.Add(new ConsoleEngine.Physics.PhysicsSystem { SubstepCount = 1, EnableSleep = false });
         group.Add(new KartGroundSystem(track));
         if (race != null)
             group.Add(new RaceSystem(race));
