@@ -281,7 +281,8 @@ Examples/
                                   Assets/Karts/ (20 of Kartster's karts, 10 MB OBJ), Assets/Tracks/
                                   (star-circuit, star-rally, prism-loop, eight-ball: ribbon, spline, scenery.txt,
                                   race.txt, powerups.txt, collision.txt each; norbergring, dunsfold-neon,
-                                  kinnekulle, brands-hatch-indy: the same plus terrain.txt, no collision.txt;
+                                  kinnekulle, brands-hatch-indy: the same plus terrain.txt, collision.txt with
+                                  trees, buildings and lamps;
                                   written by tools/KartsterExport) and Assets/Scenery/ (Pipe.obj, TreeCrown,
                                   TreeTrunk, BroadleafCrown, BroadleafTrunk from Kartster, Box.obj), copied to output,
                                   Bots/ (see above),

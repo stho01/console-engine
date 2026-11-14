@@ -163,6 +163,10 @@ public class TrackCollisionTests
     [TestCase("prism-loop")]
     [TestCase("eight-ball")]
     [TestCase("star-rally")]
+    [TestCase("norbergring")]
+    [TestCase("dunsfold-neon")]
+    [TestCase("kinnekulle")]
+    [TestCase("brands-hatch-indy")]
     public void Race_ThreeBotsWithWalls_EveryBotCompletesALapWithoutGettingStuck(string id)
     {
         const int capSeconds = 150;
@@ -214,29 +218,32 @@ public class TrackCollisionTests
         }
     }
 
-    [Test]
-    public void FixedStep_SixKartsWithWalls_DoesNotAllocate()
+    [TestCase("star-circuit")]
+    [TestCase("dunsfold-neon")] // the most segments
+    [TestCase("brands-hatch-indy")] // the most posts
+    public void FixedStep_SixKartsWithWalls_DoesNotAllocate(string id)
     {
-        MeasureSixKarts(walls: true, out _); // warms the JIT up, so the two runs compare
-        var withoutWalls = MeasureSixKarts(walls: false, out _);
-        var withWalls = MeasureSixKarts(walls: true, out var allocated);
+        var track = id == "star-circuit" ? StarCircuit.Value : Track.Load(TracksFolder, id);
+        MeasureSixKarts(id, track, walls: true, out _); // warms the JIT up, so the two runs compare
+        var withoutWalls = MeasureSixKarts(id, track, walls: false, out _);
+        var withWalls = MeasureSixKarts(id, track, walls: true, out var allocated);
 
-        TestContext.Out.WriteLine($"6 karts: {withoutWalls:0} µs per fixed step without walls, {withWalls:0} µs with");
+        TestContext.Out.WriteLine($"{id}, 6 karts: {withoutWalls:0} µs per fixed step without walls, " +
+                                  $"{withWalls:0} µs with");
         Assert.That(allocated, Is.Zero);
     }
 
     //** helpers
 
-    private static double MeasureSixKarts(bool walls, out long allocated)
+    private static double MeasureSixKarts(string id, Track track, bool walls, out long allocated)
     {
-        var track = StarCircuit.Value;
         using var world = new World();
         var tunings = Tunings(6);
-        var markers = RaceMarkers.Load(TracksFolder, "star-circuit");
+        var markers = RaceMarkers.Load(TracksFolder, id);
         var race = TrackScene.CreateSession(track, markers, laps: 5);
         var karts = TrackScene.CreateKarts(world, track, markers, tunings, playerIndex: 5, race);
         if (walls)
-            TrackCollision.Load(TracksFolder, "star-circuit").AddTo(world);
+            TrackCollision.Load(TracksFolder, id).AddTo(world);
         var group = new SystemGroup(world);
         TrackScene.AddDriving(group, track, tunings, race);
         world.Get<KartControls>(karts[5]) = new KartControls { Throttle = 1f, Steer = 0.2f };

@@ -13,10 +13,6 @@ public class ShippedTracksTests
 {
     private static readonly string Folder = Path.Combine(AppContext.BaseDirectory, "Assets", "Tracks");
 
-    // tools/KartsterExport's CollisionExporter skips these: trees, buildings, lamps, bridge pillars, tunnel ceilings.
-    private static readonly HashSet<string> TracksWithoutCollision =
-        ["brands-hatch-indy", "dunsfold-neon", "kinnekulle", "norbergring"];
-
     private static IEnumerable<string> TrackIds()
     {
         foreach (var ribbon in Directory.GetFiles(Folder, "*.ribbon.obj"))
@@ -40,15 +36,9 @@ public class ShippedTracksTests
     }
 
     [TestCaseSource(nameof(TrackIds))]
-    public void Load_ShippedTrack_HasWallsUnlessTheExporterRefusesIt(string id)
+    public void Load_ShippedTrack_HasWalls(string id)
     {
         var collision = TrackCollision.Load(Folder, id);
-
-        if (TracksWithoutCollision.Contains(id))
-        {
-            Assert.That(collision, Is.SameAs(TrackCollision.Empty), "update TracksWithoutCollision");
-            return;
-        }
 
         Assert.That(collision, Is.Not.SameAs(TrackCollision.Empty), "the exporter writes collision for this track");
         Assert.That(collision.Segments.Length + collision.Posts.Length, Is.GreaterThan(0));

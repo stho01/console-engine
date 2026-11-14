@@ -449,6 +449,6 @@ boter: 25–55 µs per steg, ingen allokering. `KartReferenceTests` og `KartPhys
 - **Toleransen** brukes bare på `Airborne` (hjulene), ikke på støtten: fysikken slipper karten etter originalens regel
   (fart bort fra flaten), mens en kart som er under 5 cm over flaten fortsatt har grep. Det hindrer at de 1 m lange
   fasettene i ribbon-meshen slår av grepet et steg av gangen over en jevn bakketopp.
-- **Kollisjon:** de fire nye banene har ingen `collision.txt` (eksportøren nekter trær, bygninger, lykter og
-  brusøyler), så veggene mangler der. Portene i løpet er fortsatt plane (`RaceGate`); ingen av portene på Norbergring
+- **Kollisjon:** de fire nye banene har `collision.txt` med trær, bygninger og lykter; brusøyler og det som ligger
+  under eller over en annen vei er utelatt (se `docs/design/kartster-game-plan.md`, status V). Portene i løpet er fortsatt plane (`RaceGate`); ingen av portene på Norbergring
   eller Dunsfold Neon ligger under en bru, så botene teller riktig.

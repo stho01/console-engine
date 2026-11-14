@@ -180,9 +180,24 @@ Levert. Regler og tall i `docs/agent/03-rules.md` (Kartster-raden om vegger).
   med `WallHeight` > 0), `RaceMarkings.PlaceGates` + `StartGateMesh` (portstolper) og `TrackPipes.Place`. Alle fire
   baner har fil: Star Circuit 4 yttervegger, 15 gjerder, 10 rør; Prism Loop 2 portstolper (ingen bakke, gjerder eller
   rør); Eight Ball 4 yttervegger og 140 grensesegmenter (3 grenser); Star Rally 4 yttervegger, 19 gjerder,
-  22 kantvegg-segmenter (brua) og 8 rør. Verktøyet nekter (`skipped:`) baner med ruteender, trær, bygninger, lykter,
-  veisperringer, midtdelere, autovern, søyler, bru-søyler, tunneltak, gatefall eller retningsskilt til de er støttet;
-  ingen av de fire har det.
+  22 kantvegg-segmenter (brua) og 8 rør. Verktøyet nekter (`skipped:`) baner med ruteender, veisperringer,
+  midtdelere, autovern, tunneltak, gatefall eller retningsskilt til de er støttet; ingen av de åtte har det.
+- **Trær, bygninger, lykter og søyler** (de fire bakkebanene): det `LoadCollisionMesh` tar med (i korridoren; ingen
+  bane har en): trestammer og lyktestolper (`TrackTreeMesh`/`TrackLampMesh.AddColliders`) som sirkler, husvegger
+  (hver kant av `TrackBuilding.Footprint`) som 0,5 m tykke segmenter, gate- og brusøyler som kvadrater. Formatet
+  trengte heller ikke nå nye linjetyper. Norbergring: 929 kantvegger, 8 husvegger, 320 trær; Dunsfold Neon: 132
+  kantvegger, 976 husvegger (111 hus), 38 lykter; Kinnekulle: 80 husvegger, 1607 trær; Brands Hatch Indy: 32
+  husvegger, 1693 trær.
+- **Høyde:** fysikken er plan, så det en kart kjører over eller under er utelatt (`RoadDecks`, `DeckClearance` 1 m):
+  alt med vei mer enn 1 m over foten (alle brusøyler: 4 og 16; karter under brua kjører gjennom der søylene står),
+  alt med foten mer enn 1 m over laveste vei eller terreng (gangbrua på Kinnekulle, bygd som hus), og kant- og
+  husvegger der de går over en lavere vei eller under et dekk (testet per ramme / per meter).
+- **Kostnad:** et fast steg med 6 karter (Release): Star Circuit 37 µs, Brands Hatch Indy 60 µs (1725 kropper),
+  Dunsfold Neon 308 µs (1146). Tiden går i `PhysicsSystem.Gather`, som leser alle statiske kropper hvert steg; en
+  dreid boks koster omtrent ti ganger en sirkel der. Ingen trær er fjernet for avstand. Forslag til motoren: hopp
+  over statiske kropper i `Gather` når ingen er endret.
+- **Boter:** tre boter fullfører en runde på alle åtte med veggene, uten å rygge (69 s Norbergring, 105 s Dunsfold
+  Neon, 88 s Kinnekulle, 88 s Brands Hatch Indy).
 - **Kode:** `Collision/TrackCollision` (`Load`, `Parse`, `AddTo(World)`): statiske kropper, en dreid boks per segment og
   en sirkel per rør, friksjon 0,3 og restitusjon 0,1 (parets friksjon `sqrt(0,3 × 0,3)` = 0,3). Én linje i
   `TrackScene.OnCreate`. De 29 statiske kroppene koster omtrent 6–10 µs per fysikksteg med 6 karter, ingen allokering.
@@ -282,8 +297,7 @@ Height og Tracks).
   på det (fliser, kulling som kulissene). Sjakkbrettet er igjen for baner uten terreng.
 - **Nye baner:** `norbergring` (0–9,8 m, bro 7 m over egen vei), `dunsfold-neon` (0–9,2 m, to broer på 8 m),
   `kinnekulle` (0,1–15,8 m) og `brands-hatch-indy` (0,8–25,9 m), 3,8 MB til sammen, pluss fire tremodeller. Tre boter
-  fullfører en runde på hver (beste rundetider 65, 101, 85 og 86 s). Ingen `collision.txt` på dem (eksportøren nekter
-  trær, bygninger, lykter, brusøyler). CPU-tegning med 40 jagekameravinkler: 3,4–7,2 ms per bilde mot 3,6 på Star
+  fullfører en runde på hver (beste rundetider 65, 101, 85 og 86 s). Vegger, trær, bygninger og lykter kom senere (status V). CPU-tegning med 40 jagekameravinkler: 3,4–7,2 ms per bilde mot 3,6 på Star
   Circuit; GPU 1,5–2,7 ms.
 - **Valgt bort nå:** byene (`downtown`, `neon-city`: bygninger, lykter og tunneltak er ikke med i kulisse-eksporten,
   så de blir tomme), fjellbanene (opptil 470 m), doserte `speedway` (2 MB skilt) og åpne ruter.

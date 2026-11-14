@@ -11,10 +11,11 @@ using XnaVector2 = Microsoft.Xna.Framework.Vector2;
 namespace Kartster.Collision;
 
 /// <summary>A wall box standing on the line from <see cref="Start"/> to <see cref="End"/>, as thick as twice
-/// <see cref="HalfThickness"/> (Kartster's fence boxes and outer wall, boundaries, road-edge walls, gate poles).</summary>
+/// <see cref="HalfThickness"/> (Kartster's fence boxes and outer wall, boundaries, road-edge walls, gate poles,
+/// building walls, pillars).</summary>
 public readonly record struct WallSegment(Vector2 Start, Vector2 End, float HalfThickness);
 
-/// <summary>A round post (Kartster's pipes).</summary>
+/// <summary>A round post (Kartster's pipes, tree trunks, lamp posts).</summary>
 public readonly record struct WallPost(Vector2 Center, float Radius);
 
 /// <summary>
