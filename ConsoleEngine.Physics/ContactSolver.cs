@@ -22,9 +22,8 @@ internal static class ContactSolver
     //** public methods
     //**********************************************************
 
-    /// <summary>Gravity and damping for awake dynamic bodies.</summary>
-    public static void IntegrateVelocities(Span<BodyState> states, ReadOnlySpan<BodySim> sims, Vector2 gravity,
-        float h)
+    /// <summary>Gravity, forces and damping for awake dynamic bodies. Damping doesn't reduce this substep's push.</summary>
+    public static void IntegrateVelocities(Span<BodyState> states, ReadOnlySpan<BodySim> sims, float h)
     {
         for (var i = 0; i < sims.Length; i++)
         {
@@ -33,9 +32,10 @@ internal static class ContactSolver
                 continue;
 
             ref var state = ref states[i];
-            state.Velocity = state.Velocity * (1f / (1f + h * sim.LinearDamping)) + gravity * (sim.GravityScale * h);
+            state.Velocity = state.Velocity * (1f / (1f + h * sim.LinearDamping)) + sim.Acceleration * h;
             if (sim.AngularDamping != 0f)
                 state.AngularVelocity *= 1f / (1f + h * sim.AngularDamping);
+            state.AngularVelocity += sim.AngularAcceleration * h;
         }
     }
 
@@ -337,7 +337,12 @@ internal struct BodySim
     /// <summary>0 for bodies that don't turn.</summary>
     public float InverseInertia;
 
-    public float GravityScale;
+    /// <summary>Gravity × gravity scale + force / mass this step (<see cref="Force"/>). Dynamic bodies only.</summary>
+    public Vector2 Acceleration;
+
+    /// <summary>Torque / inertia this step.</summary>
+    public float AngularAcceleration;
+
     public float LinearDamping;
     public float AngularDamping;
 

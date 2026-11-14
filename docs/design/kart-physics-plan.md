@@ -143,6 +143,10 @@ Toppfartsandelen begrenser motoreffekten til det som trengs for `toppfart · and
 
 ## 4. Steg 1: krefter i `ConsoleEngine.Physics`
 
+Status (2026-11-14): ferdig. `Force` (`Value`, `Torque`, `Add`, `AddTorque`, `AddAtPoint`) i
+`ConsoleEngine.Physics/Force.cs`, tester i `ConsoleEngine.Physics.Tests/ForceTests.cs`. Avvik fra forslaget under:
+kropper uten collider har ikke treghetsmoment, så de får bare kraften, ikke momentet.
+
 Industristandard: Box2D v3 (`b2Body_ApplyForce`, `b2Body_ApplyForceToCenter`, `b2Body_ApplyTorque`), Unity
 (`Rigidbody2D.AddForce`, `AddForceAtPosition`, `AddTorque`) og Godot (`apply_force`, `apply_torque`). Alle har samme
 modell: krefter samles mellom to steg, holdes konstante gjennom steget og nullstilles etterpå.

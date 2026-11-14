@@ -432,6 +432,10 @@ denne økten): sirkler uten tyngdekraft med demping 1/s, satt i ro i 600 steg, d
 
 ### 12c. Det som gjenstår
 
+Gjort etter fase 5 (2026-11-14): krefter og moment (`Force`-komponenten, Box2D v3 sin modell: samles mellom stegene,
+konstant gjennom substegene, nullstilles etterpå), steg 1 i [`kart-physics-plan.md`](kart-physics-plan.md). Regelen står
+i `docs/agent/03-rules.md` § Physics.
+
 - Sovende kropper koster fortsatt gather og broadphase hvert steg. Box2D unngår det med «solver sets» og et
   vedvarende tre; her ville det kreve et grid som overlever mellom stegene.
 - Ledd (joints), kapsler, avrundede polygoner, kontinuerlig kollisjon (TOI) mellom dynamiske kropper, multithreading.

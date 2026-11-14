@@ -187,8 +187,18 @@ as wide on screen unless the font is square, as in PhysicsSandbox and PhysicsSho
   `ContactDampingRatio` 10; `ContactPushMaxSpeed` 3 cells/s; `RestitutionThreshold` 1 cell/s; `EnableSleep` on;
   `TimeToSleep` 0.5 s — all Box2D's defaults with 1 cell = 1 Box2D length unit). Each step is split into `SubstepCount`
   substeps of `h = step / SubstepCount`; per substep, dynamic bodies get
-  `v = v / (1 + h * LinearDamping) + Gravity * GravityScale * h` (and `w = w / (1 + h * AngularDamping)`), contacts
-  push, and non-static bodies move and turn. Rigid bodies without a `Collider` get the same substeps without contacts.
+  `v = v / (1 + h * LinearDamping) + (Gravity * GravityScale + Force.Value * InverseMass) * h` (and
+  `w = w / (1 + h * AngularDamping) + Force.Torque * InverseInertia * h`), contacts push, and non-static bodies move
+  and turn. Rigid bodies without a `Collider` get the same substeps without contacts.
+- **Forces** (`Force` component, as Box2D v3 `b2Body_ApplyForce`/`ApplyTorque`, Unity `AddForce`/`AddTorque`): `Value`
+  in world axes (mass × cells/s²) acts at `Position`; `Torque` is clockwise on screen like `Rotation`. Add to them with
+  `Add`, `AddTorque` or `AddAtPoint(force, point, center)` (torque `+= cross(point - center, force)`: pushing down on
+  the right side turns clockwise). `PhysicsSystem` holds them constant through every substep of the next step, then
+  zeroes every `Force` (`ClearForces`), whatever the body. Only awake or woken dynamic bodies are pushed: a non-zero
+  force or torque wakes a sleeping body (`ReadBody`); static and kinematic bodies ignore it. Torque is ignored by bodies
+  without `Rotation` + `AngularVelocity` and by bodies without a `Collider` (no inertia). Systems that add forces run
+  before `PhysicsSystem` in the same group (`[UpdateBefore(typeof(PhysicsSystem))]`); a force added after it in a
+  step is applied in the next step.
 - A pair is tested only if `(a.Category & b.Mask) != 0` and `(b.Category & a.Mask) != 0`, not both static, not both
   sensors, and, if neither is a sensor, at least one is dynamic (kinematic–kinematic and kinematic–static never touch).
 - Contact response: dynamic bodies don't pass through each other, through static/kinematic ones or through solid

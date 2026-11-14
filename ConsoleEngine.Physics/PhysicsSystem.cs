@@ -82,6 +82,7 @@ public sealed partial class PhysicsSystem : EntitySystem, IPhysicsEvents, IPhysi
 
     private Query _bodiesWithoutCollider;
     private Query _colliders;
+    private Query _forces;
     private int _substepCount = 4;
 
     /// <summary>Some body was asleep at the start of the step, so islands must be checked for waking.</summary>
@@ -182,6 +183,7 @@ public sealed partial class PhysicsSystem : EntitySystem, IPhysicsEvents, IPhysi
     {
         _bodiesWithoutCollider = World.Query(Query.With<Position, Velocity, RigidBody>().Without<Collider>());
         _colliders = World.Query(Query.With<Position, Collider>());
+        _forces = World.Query(Query.With<Force>());
     }
 
     protected override void OnUpdate(float deltaSeconds)
@@ -225,6 +227,7 @@ public sealed partial class PhysicsSystem : EntitySystem, IPhysicsEvents, IPhysi
             SleepingBodyCount = 0;
 
         Scatter();
+        ClearForces();
         _queryStateIsCurrent = false;
     }
 
@@ -263,6 +266,7 @@ public sealed partial class PhysicsSystem : EntitySystem, IPhysicsEvents, IPhysi
             var canMove = !rigidBodies.IsEmpty && !velocities.IsEmpty;
             var canTurn = canMove && !rotations.IsEmpty && !spins.IsEmpty;
             var interpolations = chunk.Has<Interpolation>() ? chunk.GetSpan<Interpolation>() : default;
+            var forces = chunk.Has<Force>() ? chunk.GetSpan<Force>() : default;
 
             for (var i = 0; i < chunk.Count; i++, index++)
             {
@@ -291,12 +295,12 @@ public sealed partial class PhysicsSystem : EntitySystem, IPhysicsEvents, IPhysi
                 if (canMove && rigidBodies[i].Type != BodyType.Static)
                 {
                     ReadBody(rigidBodies[i], velocities[i].Value, canTurn ? spins[i].Value : 0f, canTurn, shape,
-                        ref state, ref sim);
+                        forces.IsEmpty ? default : forces[i], ref state, ref sim);
                 }
 
                 var reach = (state.Velocity.Length() + MathF.Abs(state.AngularVelocity) * reachRadius) * deltaSeconds;
                 if (sim.Type == BodyType.Dynamic)
-                    reach += (Gravity * sim.GravityScale).Length() * deltaSeconds * deltaSeconds;
+                    reach += sim.Acceleration.Length() * deltaSeconds * deltaSeconds;
                 _anySleeping |= sim.IsSleeping;
 
                 proxy.Category = collider.Category;
@@ -321,7 +325,7 @@ public sealed partial class PhysicsSystem : EntitySystem, IPhysicsEvents, IPhysi
     }
 
     private void ReadBody(in RigidBody rigidBody, Vector2 velocity, float spin, bool canTurn, in BodyShape shape,
-        ref BodyState state, ref BodySim sim)
+        in Force force, ref BodyState state, ref BodySim sim)
     {
         sim.Type = rigidBody.Type;
         state.Velocity = velocity;
@@ -330,7 +334,6 @@ public sealed partial class PhysicsSystem : EntitySystem, IPhysicsEvents, IPhysi
             return;
 
         sim.InverseMass = rigidBody.InverseMass;
-        sim.GravityScale = rigidBody.GravityScale;
         sim.LinearDamping = rigidBody.LinearDamping;
         sim.AngularDamping = rigidBody.AngularDamping;
         if (canTurn)
@@ -339,8 +342,12 @@ public sealed partial class PhysicsSystem : EntitySystem, IPhysicsEvents, IPhysi
             sim.InverseInertia = inertiaPerMass > 0f ? rigidBody.InverseMass / inertiaPerMass : 0f;
         }
 
-        // Game code giving a sleeping body a velocity wakes it, and so does turning sleep off.
-        var woken = rigidBody.IsSleeping && (!EnableSleep || velocity != Vector2.Zero || spin != 0f);
+        sim.Acceleration = Gravity * rigidBody.GravityScale + force.Value * rigidBody.InverseMass;
+        sim.AngularAcceleration = force.Torque * sim.InverseInertia;
+
+        // Game code giving a sleeping body a velocity or a force wakes it, and so does turning sleep off.
+        var woken = rigidBody.IsSleeping && (!EnableSleep || velocity != Vector2.Zero || spin != 0f ||
+                                             force.Value != Vector2.Zero || force.Torque != 0f);
         sim.IsSleeping = rigidBody.IsSleeping && !woken;
         sim.SleepTime = woken ? 0f : rigidBody.SleepTime;
     }
@@ -1000,7 +1007,7 @@ public sealed partial class PhysicsSystem : EntitySystem, IPhysicsEvents, IPhysi
 
         for (var substep = 0; substep < _substepCount; substep++)
         {
-            ContactSolver.IntegrateVelocities(states, sims, Gravity, h);
+            ContactSolver.IntegrateVelocities(states, sims, h);
             ContactSolver.WarmStart(states, contacts);
             ContactSolver.Solve(states, contacts, inverseH, ContactPushMaxSpeed, LinearSlop, useBias: true);
             ContactSolver.IntegratePositions(states, h);
@@ -1060,7 +1067,8 @@ public sealed partial class PhysicsSystem : EntitySystem, IPhysicsEvents, IPhysi
 
     /// <summary>
     /// Rigid bodies without a collider: the same substeps as the solver (velocity first, then position), without
-    /// contacts. They turn if they have a <c>Rotation</c> and an <see cref="AngularVelocity"/>.
+    /// contacts. They turn if they have a <c>Rotation</c> and an <see cref="AngularVelocity"/>. With no shape they have no
+    /// inertia, so a <see cref="Force"/> only pushes them: its torque is ignored.
     /// </summary>
     private void IntegrateBodiesWithoutCollider(float h)
     {
@@ -1074,9 +1082,13 @@ public sealed partial class PhysicsSystem : EntitySystem, IPhysicsEvents, IPhysi
             var rotations = canTurn ? chunk.GetSpan<Rotation>() : default;
             var spins = canTurn ? chunk.GetSpan<AngularVelocity>() : default;
             var interpolations = chunk.Has<Interpolation>() ? chunk.GetSpan<Interpolation>() : default;
+            var forces = chunk.Has<Force>() ? chunk.GetSpan<Force>() : default;
             for (var i = 0; i < chunk.Count; i++)
             {
                 ref readonly var body = ref rigidBodies[i];
+                var push = gravity * body.GravityScale;
+                if (!forces.IsEmpty)
+                    push += forces[i].Value * body.InverseMass;
                 if (!interpolations.IsEmpty)
                     RememberTransform(ref interpolations[i], positions[i].Value, canTurn ? rotations[i].Radians : 0f);
                 if (body.Type == BodyType.Static)
@@ -1086,8 +1098,7 @@ public sealed partial class PhysicsSystem : EntitySystem, IPhysicsEvents, IPhysi
                 {
                     if (body.Type == BodyType.Dynamic)
                     {
-                        velocities[i].Value = velocities[i].Value * (1f / (1f + h * body.LinearDamping)) +
-                                              gravity * (body.GravityScale * h);
+                        velocities[i].Value = velocities[i].Value * (1f / (1f + h * body.LinearDamping)) + push * h;
                         if (canTurn && body.AngularDamping != 0f)
                             spins[i].Value *= 1f / (1f + h * body.AngularDamping);
                     }
@@ -1098,6 +1109,13 @@ public sealed partial class PhysicsSystem : EntitySystem, IPhysicsEvents, IPhysi
                 }
             }
         }
+    }
+
+    /// <summary>Forces last one step (<see cref="Force"/>), on every entity, whatever kind of body it is.</summary>
+    private void ClearForces()
+    {
+        foreach (var chunk in _forces.GetChunks())
+            chunk.GetSpan<Force>().Clear();
     }
 
     private readonly struct RestingPair(BodyPair pair, int previousSlot)

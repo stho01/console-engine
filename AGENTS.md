@@ -33,7 +33,7 @@ scripting loads the native `lua54.dll` that the KeraLua package ships for each r
 | Win32 signatures and structs | `Libs/ConsoleEngine.Windows/LowLevel/` (`Kernel32.cs`, `User32.cs`) |
 | Vector/matrix math | `Libs/Microsoft.Xna.Framework/` (copied from MonoGame, change only with good reason) |
 | ECS (entities, components, archetypes, chunks) | `ConsoleEngine/Ecs/`, design and phases in [`docs/design/ecs-plan.md`](docs/design/ecs-plan.md) |
-| 2D physics (bodies, circles/boxes/polygons, rotation, broadphase, Soft Step contact solver, contact/sensor events, tile grid, sleeping, interpolation, raycasts and box casts, `CharacterMover.MoveAndSlide`) | `ConsoleEngine.Physics/` (own assembly and NuGet package, optional), rules in [`docs/agent/03-rules.md` § Physics](docs/agent/03-rules.md#physics), design and phases in [`docs/design/physics-plan.md`](docs/design/physics-plan.md). Examples: `Examples/PhysicsShowcase` (every feature), `Examples/PhysicsSandbox` (solver), `Examples/Asteroids.Ecs` (sensors, layers), `Examples/Platformer.Ecs` (tile grid, character controller) |
+| 2D physics (bodies, circles/boxes/polygons, rotation, forces and torque (`Force`), broadphase, Soft Step contact solver, contact/sensor events, tile grid, sleeping, interpolation, raycasts and box casts, `CharacterMover.MoveAndSlide`) | `ConsoleEngine.Physics/` (own assembly and NuGet package, optional), rules in [`docs/agent/03-rules.md` § Physics](docs/agent/03-rules.md#physics), design and phases in [`docs/design/physics-plan.md`](docs/design/physics-plan.md). Examples: `Examples/PhysicsShowcase` (every feature), `Examples/PhysicsSandbox` (solver), `Examples/Asteroids.Ecs` (sensors, layers), `Examples/Platformer.Ecs` (tile grid, character controller) |
 | Performance measurements | `ConsoleEngine.Benchmarks/` (BenchmarkDotNet) |
 | Lua scripting: components, `self` fields, hooks, errors, reload | [`docs/agent/03-rules.md § Lua`](docs/agent/03-rules.md#lua), `ConsoleEngine.Scripting/`, `Examples/Scripted` |
 | 3D rendering (software rasterizer, near-plane clipping, OBJ models, 16-colour dithering) | `Examples/KartViewer/Rendering/` (experiment, not in the engine yet), rules in [`docs/agent/03-rules.md`](docs/agent/03-rules.md) (KartViewer rows) |
@@ -160,14 +160,15 @@ ConsoleEngine/                    the engine
     Rendering/Sprite.cs             Pixel[,] sprites, FromString/FromStringArray
     Scenery/Scene.cs, SceneManager.cs  scene stack (Push/Pop/Set)
 ConsoleEngine.Physics/            2D physics (namespace ConsoleEngine.Physics): RigidBody, Collider, AngularVelocity,
-                                  PolygonLibrary, PhysicsSystem (+ .Queries.cs), IPhysicsEvents, IPhysicsQueries/CastHit,
-                                  TileGrid, CharacterMover/SlideCollisions, Interpolation/InterpolationSystem,
-                                  ContactEvent/SensorEvent; internal: BodyProxy, BodyShape/Manifold/Collision
+                                  Force, PolygonLibrary, PhysicsSystem (+ .Queries.cs), IPhysicsEvents,
+                                  IPhysicsQueries/CastHit, TileGrid, CharacterMover/SlideCollisions,
+                                  Interpolation/InterpolationSystem, ContactEvent/SensorEvent; internal: BodyProxy,
+                                  BodyShape/Manifold/Collision
                                   (narrowphase), ConvexPolygon, SpatialHashGrid (broadphase), PairCache, ContactSolver
                                   (+ BodyState, BodySim, ContactConstraint, Softness), RayCast, GridWalker, ArrayBuffer
 ConsoleEngine.Physics.Tests/      physics tests (Collision, SpatialHashGrid, PhysicsSystem, PhysicsSolverTests, TileGrid,
                                   PhysicsQueryTests, CharacterMoverTests, RotationTests, TileContactTests, SleepTests,
-                                  InterpolationTests)
+                                  InterpolationTests, ForceTests)
 ConsoleEngine.Tests/              engine unit tests (mirrors ConsoleEngine/ folders), Fakes/ (console handler, scene),
                                   Scripting/ (LuaScriptSystemTests)
 ConsoleEngine.Scripting/          Script + ScriptFaulted (components), LuaScriptSystem, LuaRenderSystem,
