@@ -1,0 +1,14 @@
+<Project Sdk="Microsoft.NET.Sdk">
+    <PropertyGroup>
+        <TargetFramework>net11.0</TargetFramework>
+        <LangVersion>15</LangVersion>
+        <Configurations>Release;Debug</Configurations>
+        <Platforms>AnyCPU</Platforms>
+        <GeneratePackageOnBuild>true</GeneratePackageOnBuild>
+        <PackageVersion>0.2.0</PackageVersion>
+        <TreatWarningsAsErrors>True</TreatWarningsAsErrors>
+    </PropertyGroup>
+    <ItemGroup>
+      <InternalsVisibleTo Include="ConsoleEngine.Rendering3D.OpenGL" />
+    </ItemGroup>
+</Project>

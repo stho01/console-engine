@@ -17,7 +17,7 @@ param(
     [Parameter(Mandatory)]
     [ValidateSet('TerraForM', 'Snake', 'Asteroids', 'Platformer', 'ConsoleGame',
         'TerraForM.Ecs', 'Snake.Ecs', 'Asteroids.Ecs', 'Platformer.Ecs', 'ConsoleGame.Ecs',
-        'Swarm', 'PhysicsSandbox', 'PhysicsShowcase', 'EternalDigger', 'Starguard', 'Scripted')]
+        'Swarm', 'PhysicsSandbox', 'PhysicsShowcase', 'EternalDigger', 'Starguard', 'Scripted', 'Kartster')]
     [string] $Game,
 
     [ValidateSet('Debug', 'Release')]

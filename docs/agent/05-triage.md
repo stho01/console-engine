@@ -5,7 +5,7 @@
 
 | Fact | Why | How to get it |
 |---|---|---|
-| **Which game** (TerraForM, Snake, Asteroids, Platformer, ConsoleGame, their `.Ecs` ports, Swarm, PhysicsSandbox, PhysicsShowcase, EternalDigger, SkyStack, Starguard, Scripted, or their own game on `ConsoleEngine`) | Rules differ per game ([03](03-rules.md)) | Ask, or the exe name |
+| **Which game** (TerraForM, Snake, Asteroids, Platformer, ConsoleGame, their `.Ecs` ports, Swarm, PhysicsSandbox, PhysicsShowcase, EternalDigger, SkyStack, Starguard, Scripted, Kartster, or their own game on `ConsoleEngine`) | Rules differ per game ([03](03-rules.md)) | Ask, or the exe name |
 | **OS and console host** | Windows only. Windows Terminal ignores the sizing/font calls **[external]** | [07 § Q1, Q2](07-checks.md#q1) |
 | **How it was launched and from which folder** (double-click the exe, `dotnet run`, IDE, a shortcut, a terminal in another folder) | Map files and the logger exe are found by **relative path** | [07 § Q3](07-checks.md#q3) |
 | **The exact error text**, if any | There are no log files. The exception printed to the console is the only record | Ask them to start it from an already-open terminal so the text stays ([06 § Capturing a crash](06-diagnostics.md#capture)) |
@@ -60,6 +60,18 @@
 3. Font face: the face is `"Consolas"` for every example. If the user's own game passes another `FontInfo.FontFace`, is that font installed and ≤ 31 characters (`ConsoleFontInfoEx.FaceName` `SizeConst = 32`)? If not → **Cause:** `SetCurrentConsoleFontEx` fails silently. **Fix:** use an installed console font. Stop.
 4. The user resized/maximised the window → `Resizeable` is false by default, so the Maximize/Size menu items are removed. Dragging the border may still work **[external]**. **Cause:** the buffer is fixed at construction. **Fix:** restart the game without resizing. Stop.
 5. Their own game reads `Console.FontInfo` and gets 14×14 → **Cause:** getter returns the ctor default, not the applied font ([02](02-state-model.md)). **Fix:** escalate as a bug. Stop.
+6. Colours are wrong (Kartster: purple/red sky, garish road), or another console's colours changed after a game → **Cause:** `RenderConsole.Palette` remaps the 16 colours ([04 § F1](04-flows.md#f1) step 7b). Windows Terminal and terminals without true colour ignore it **[external]**, so the game's colour indices show as default colours. **Fix:** run in `conhost` (`start-conhost.cmd`, `run-game.ps1`). The original colours come back on exit (`Close()`, `ProcessExit`); a process that was killed leaves them changed until that console window closes.
+7. A game in 24-bit colour (`RenderConsole.TrueColor`, Kartster `--truecolor`/C) shows 16 colours, banded or
+   dithered → is `RenderConsole.TrueColorActive` false (Kartster: title says `16 colours (no 24-bit)`)? → **Cause:**
+   `SetConsoleMode` with `ENABLE_VIRTUAL_TERMINAL_PROCESSING` failed ([04 § F1](04-flows.md#f1) step 9b): Windows
+   older than 10 1607, or output not a console **[external]**; on macOS/Linux the terminal doesn't say it is
+   true-colour (`COLORTERM`); `DrawRgb` then draws the nearest palette colour. Check [07 § Q14](07-checks.md#q14).
+   **Fix:** a newer Windows; on macOS/Linux `CONSOLE_ENGINE_COLORS=truecolor` if the terminal can; otherwise accept
+   16 colours. Stop.
+8. 24-bit colour is on and the game is much slower than in 16 colours, in conhost → **Cause:** conhost parses every
+   colour change of the VT text; frames with many per-cell colour changes cost 5–7× the palette write (numbers in
+   `AGENTS.md` § Performance). **Fix:** turn 24-bit off (Kartster: C), or the developer makes the picture smoother.
+   Stop.
 
 <a id="p3"></a>
 ## P3 — Keys don't work / react in other windows / presses missed
@@ -149,6 +161,8 @@
 
 1. Level vanished when the menu opened (TerraForM `ESC`) → **Cause:** `Push` pauses the level and paused scenes don't render ([03 § Scenes](03-rules.md#scenes)). **Fix:** press `H` to return. Stop.
 2. Old characters stay on screen → is `ClearScreenOnEachFrame = false` (Snake, or their own game)? → **Cause:** buffer not cleared (`GameBase.Start`). Their game must blank cells itself. Stop.
+3. Text printed with `System.Console.Write` (or by another program) stays on screen, or cells stay wrong after it, on Windows → **Cause:** `ConsoleHandler.Render` writes only the rows that changed in the game's frame ([03 § Console output](03-rules.md#console-output)), so it never overwrites what something else wrote until the game draws something different there. **Fix:** draw through `RenderConsole` instead of `System.Console`. Stop. In 24-bit colour the same holds per cell
+   (`VtFrame` writes only changed cells).
 
 <a id="p13"></a>
 ## P13 — Snake goes off screen / can't lose
@@ -318,3 +332,35 @@ gone". Rules: [03 § SkyStack](03-rules.md#skystack).
    (`Scroller.HasLost`); after floor 5 the view rises by itself and gets faster every 30 s. Stop.
 4. High score gone → best score and floor are only kept while the game runs (`SkyStackGame.BestScore`); there is no
    save file. A run left with ESC is not recorded. Escalate as a feature request if a saved high score is wanted.
+
+<a id="p21"></a>
+## P21 — 3D: GPU mode not available / falls back to CPU / GPU picture differs
+
+**Symptom [inferred]:** "GPU mode doesn't work", "it always uses the CPU", "`GlRenderer` throws", "glfw3.dll is
+missing", "the GPU picture looks different".
+
+No game uses `GlRenderer` yet (`ConsoleEngine.Rendering3D.OpenGL`, [01](01-system-map.md)); this is for code that
+does.
+
+1. `InvalidOperationException` starting `OpenGL 3.3 is not available: ` (or `GlRenderer.TryCreate` returned false and
+   the caller fell back to `Rasterizer`) → read the rest of the message ([06 § 3D](06-diagnostics.md#rendering3d)):
+   - A GLFW or windowing message (no suitable platform, `DllNotFoundException` for `glfw3`) → **Cause:** `glfw3.dll`
+     is missing from `runtimes/<rid>/native/` (partial copy of the output folder), or no desktop session (service,
+     SSH, CI) ([07 § Q13](07-checks.md#q13)). **Fix:** copy the whole output folder; run in a desktop session. Stop.
+   - A context/version message from GLFW (WGL, "version", "pixel format") → **Cause:** the driver has no OpenGL 3.3
+     core profile: no GPU driver installed (Microsoft Basic Display Adapter), a remote desktop session or a VM
+     **[external]**. **Fix:** install the GPU vendor's driver, or use `Rasterizer` (the same picture on the CPU). Stop.
+   - `the R8UI framebuffer is not complete (<status>)` → **Cause:** the driver cannot render to an `R8UI` target, or
+     width/height is 0. **Fix:** use `Rasterizer`; report the GPU and driver (the `RGBA8` reserve in
+     `docs/design/gpu-rendering-plan.md` § 7 is not built). Stop.
+   - `the <shader type> did not compile: …` / `the shaders did not link: …` / `setting up failed with <error>` →
+     **Cause:** driver bug or a shader change. **Fix:** escalate with the message and GPU/driver. Stop.
+2. Crash or black frame later, from another thread → **Cause:** the GL context belongs to the thread that created the
+   renderer ([03](03-rules.md) `GlRenderer` row). **Fix:** create and use it on the game-loop
+   thread. Stop.
+3. A mesh changed in place but the GPU still shows the old one → **Cause:** `Mesh.MarkChanged()` was not called; the
+   GPU copy is only refreshed when `Mesh.Version` moves. **Fix:** call `MarkChanged()` after editing the arrays. Stop.
+4. GPU and CPU pictures differ → only edge pixels may differ (fill rules); `GlRendererTests` require ≥ 97 % equal
+   pixels and measure 100 % on the test scenes. True colour: `GlRendererTrueColorTests` require ≥ 99 % of
+   pixels within 2 per channel and measure 100 % (blends differ by at most 1). More than edges → escalate with
+   both frames. Stop.

@@ -1,0 +1,35 @@
+# star-circuit collision, exported from Kartster by CollisionExport. Format: Examples/Kartster/Collision/TrackCollision.cs
+# segment x1 y1 x2 y2 halfThickness   (a wall box standing on the line, metres)
+# circle x y radius                    (a post)
+# outer wall
+segment -133.12 -122.2 133.12 -122.2 0.25
+segment 133.12 -122.2 133.12 143 0.25
+segment 133.12 143 -133.12 143 0.25
+segment -133.12 143 -133.12 -122.2 0.25
+# fences
+segment 4.16 -122.2 4.16 -20.8 0.25
+segment -133.12 39.52 33.28 39.52 0.25
+segment 0.78 143 0.78 118.3 0.25
+segment 0.78 108.68 0.78 97.5 0.25
+segment -75.4 -81.9 -35.62 -81.9 0.25
+segment -75.4 -81.9 -75.4 12.22 0.25
+segment -75.4 12.22 86.58 12.22 0.25
+segment 60.58 -59.8 86.58 -59.8 0.25
+segment 60.58 -59.8 60.58 12.22 0.25
+segment 86.58 -59.8 86.58 12.22 0.25
+segment 86.58 12.22 86.58 76.18 0.25
+segment 33.28 76.18 86.58 76.18 0.25
+segment 22.88 71.5 33.28 76.18 0.25
+segment -36.92 71.5 22.88 71.5 0.25
+segment -85.02 94.9 -36.92 71.5 0.25
+# pipes (Kartster: an eight-sided post with corners on this radius)
+circle 115.484 59.805 1.2
+circle 103.503 -13 1.2
+circle -103.685 -54.343 1.2
+circle -118.097 -18.132 1.2
+circle -68.09 17.307 1.2
+circle -16.12 32.075 1.2
+circle 12.5 17.333 1.2
+circle 6.116 50.815 1.2
+circle -24.035 62.066 1.2
+circle -30.529 109.886 1.2

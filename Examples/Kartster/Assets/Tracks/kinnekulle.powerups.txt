@@ -1,0 +1,11 @@
+# kinnekulle power-up pads, exported from Kartster by PowerUpExport (TrackPowerUpPadResolver).
+# pad x y z setId   (world metres, Kartster axes; the pads a normal race has, extra ones left out)
+pad 148.665 13.289 -92.248 normal
+pad 147.999 13.289 -89.323 normal
+pad 147.334 13.289 -86.398 normal
+pad 262.975 12.4 -49.666 normal
+pad 263.085 12.4 -52.664 normal
+pad 263.195 12.4 -55.662 normal
+pad -400.379 1.425 72.386 normal
+pad -398.56 1.425 70 normal
+pad -396.74 1.425 67.615 normal

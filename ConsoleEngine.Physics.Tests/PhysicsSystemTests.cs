@@ -329,6 +329,109 @@ public class PhysicsSystemTests
     }
 
     //**********************************************************
+    //** static broadphase
+    //**********************************************************
+
+    [Test]
+    public void Update_StaticBodyMovedByGameCode_TouchesAtItsNewPlace()
+    {
+        _world.Create(new Position(Vector2.Zero), new Velocity(Vector2.Zero), RigidBody.Dynamic(gravityScale: 0f),
+            Collider.Circle(1f));
+        var wall = _world.Create(new Position(new Vector2(20, 0)), Collider.Box(new Vector2(1, 1)));
+        _group.Update(Step);
+        Assert.That(_physics.TouchingPairCount, Is.Zero);
+
+        _world.Get<Position>(wall).Value = new Vector2(1.5f, 0);
+        _group.Update(Step);
+
+        Assert.That(_physics.TouchingPairCount, Is.EqualTo(1));
+    }
+
+    [Test]
+    public void Update_StaticBodyTurnedOrReshaped_UsesItsNewBounds()
+    {
+        _world.Create(new Position(Vector2.Zero), new Velocity(Vector2.Zero), RigidBody.Dynamic(gravityScale: 0f),
+            Collider.Circle(1f));
+        var wall = _world.Create(new Position(new Vector2(0, 6)), new Rotation(0f), Collider.Box(new Vector2(1, 1)));
+        _group.Update(Step);
+        Assert.That(_physics.TouchingPairCount, Is.Zero);
+
+        _world.Get<Collider>(wall) = Collider.Box(new Vector2(1, 5.5f));
+        _group.Update(Step);
+        Assert.That(_physics.TouchingPairCount, Is.EqualTo(1), "grown towards the ball");
+
+        _world.Get<Rotation>(wall).Radians = MathF.PI / 2f;
+        _group.Update(Step);
+        Assert.That(_physics.TouchingPairCount, Is.Zero, "turned away from it");
+    }
+
+    [Test]
+    public void Update_StaticBodyAddedThenDestroyed_TouchesOnlyWhileItExists()
+    {
+        _world.Create(new Position(Vector2.Zero), new Velocity(Vector2.Zero), RigidBody.Dynamic(gravityScale: 0f),
+            Collider.Circle(1f));
+        _group.Update(Step);
+
+        var wall = _world.Create(new Position(new Vector2(1.5f, 0)), Collider.Box(new Vector2(1, 1)));
+        _group.Update(Step);
+        Assert.That(_physics.TouchingPairCount, Is.EqualTo(1));
+
+        _world.Destroy(wall);
+        _group.Update(Step);
+        Assert.That(_physics.TouchingPairCount, Is.Zero);
+    }
+
+    [Test]
+    public void Update_BodyBeforeStaticDestroyed_StaticKeepsCollidingAndBeingHit()
+    {
+        // The first body's archetype comes first, so destroying it moves the wall to a lower body index.
+        var far = _world.Create(new Position(new Vector2(-50, 0)), new Velocity(Vector2.Zero),
+            RigidBody.Dynamic(gravityScale: 0f), Collider.Circle(1f));
+        var wall = _world.Create(new Position(new Vector2(1.5f, 0)), Collider.Box(new Vector2(1, 1)));
+        _world.Create(new Position(Vector2.Zero), new Velocity(Vector2.Zero), RigidBody.Dynamic(gravityScale: 0f),
+            Collider.Circle(1f));
+        _group.Update(Step);
+
+        _world.Destroy(far);
+        _group.Update(Step);
+
+        Assert.Multiple(() =>
+        {
+            Assert.That(_physics.TouchingPairCount, Is.EqualTo(1));
+            Assert.That(_physics.Raycast(new Vector2(10, 0), new Vector2(-20, 0), Collider.AllCategories, out var hit),
+                Is.True);
+            Assert.That(hit.Entity, Is.EqualTo(wall));
+        });
+    }
+
+    [Test]
+    public void Update_ManyUnchangedStatics_KeepCollidingAndBeingHitStepAfterStep()
+    {
+        // Turned boxes and circles that no step changes: after the first step they are reused, not read again.
+        for (var i = 0; i < 300; i++)
+        {
+            _world.Create(new Position(new Vector2(i * 4f, 10)), new Rotation(i * .3f), Collider.Box(new Vector2(1, .5f)));
+            _world.Create(new Position(new Vector2(i * 4f, -10)), Collider.Circle(1f));
+        }
+
+        var target = _world.Create(new Position(new Vector2(600, 0)), new Rotation(.5f), Collider.Box(new Vector2(1, 1)));
+        var ball = _world.Create(new Position(new Vector2(590, 0)), new Velocity(new Vector2(10, 0)),
+            RigidBody.Dynamic(gravityScale: 0f), Collider.Circle(1f));
+        for (var i = 0; i < 20; i++)
+            _group.Update(Step);
+
+        Assert.Multiple(() =>
+        {
+            Assert.That(_world.Get<Position>(ball).Value.X, Is.LessThan(600f), "stopped by the target");
+            Assert.That(_physics.Raycast(new Vector2(700, 0), new Vector2(-150, 0), Collider.AllCategories, out var hit),
+                Is.True);
+            Assert.That(hit.Entity, Is.EqualTo(target));
+            Assert.That(_physics.Raycast(new Vector2(1196, 0), new Vector2(0, 20), Collider.AllCategories, out hit),
+                Is.True, "the last turned box");
+        });
+    }
+
+    //**********************************************************
     //** components
     //**********************************************************
 

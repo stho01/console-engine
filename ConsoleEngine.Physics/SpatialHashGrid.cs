@@ -4,8 +4,9 @@ using Microsoft.Xna.Framework;
 namespace ConsoleEngine.Physics;
 
 /// <summary>
-/// Broadphase: a uniform grid over an unbounded world, rebuilt every step. Each body is put in every cell its bounding
-/// box touches. The cells are hashed into a table (Teschner et al. 2003) and sorted into it with a counting sort, so a
+/// Broadphase: a uniform grid over an unbounded world. Each body is put in every cell its bounding box touches.
+/// <see cref="PhysicsSystem"/> keeps two: one for the moving bodies, rebuilt every step, and one for the static bodies,
+/// rebuilt only when they change (as Box2D keeps a separate static tree). The cells are hashed into a table (Teschner et al. 2003) and sorted into it with a counting sort, so a
 /// rebuild is O(bodies + cells) with no allocation once the arrays are big enough.
 /// <para>
 /// A uniform grid instead of Box2D's dynamic AABB tree: console games have bodies of similar size in a bounded area,
@@ -62,15 +63,16 @@ internal sealed class SpatialHashGrid
     //** public methods
     //**********************************************************
 
-    public void Build(ReadOnlySpan<BodyProxy> bodies)
+    /// <summary>Puts the bodies <paramref name="indices"/> picks from <paramref name="bodies"/> in the grid.</summary>
+    public void Build(ReadOnlySpan<BodyProxy> bodies, ReadOnlySpan<int> indices)
     {
         // Each body's bounds and cell range, worked out once.
-        _bounds.Resize(bodies.Length);
+        _bounds.Resize(indices.Length);
         var bounds = _bounds.AsSpan();
         var entryCount = 0;
-        for (var i = 0; i < bodies.Length; i++)
+        for (var i = 0; i < indices.Length; i++)
         {
-            ref readonly var body = ref bodies[i];
+            ref readonly var body = ref bodies[indices[i]];
             var extents = body.BoundsExtents;
             ref var box = ref bounds[i];
             box.Min = body.Center - extents;
@@ -94,16 +96,17 @@ internal sealed class SpatialHashGrid
         var unsorted = _unsorted;
         var buckets = _entryBuckets;
         var k = 0;
-        for (var i = 0; i < bodies.Length; i++)
+        for (var i = 0; i < indices.Length; i++)
         {
             ref readonly var box = ref bounds[i];
+            var body = indices[i];
             for (var y = box.MinY; y <= box.MaxY; y++)
             for (var x = box.MinX; x <= box.MaxX; x++)
             {
                 var bucket = Hash(x, y);
                 starts[bucket]++;
                 buckets[k] = bucket;
-                unsorted[k++] = new Entry(i, x, y, box.Min, box.Max);
+                unsorted[k++] = new Entry(body, x, y, box.Min, box.Max);
             }
         }
 
@@ -133,26 +136,29 @@ internal sealed class SpatialHashGrid
                 {
                     ref readonly var second = ref entries[j];
 
-                    // Different cells that hash to the same bucket. The pair, if any, is found in its own cell.
-                    if (first.CellX != second.CellX || first.CellY != second.CellY || first.Body == second.Body)
-                        continue;
-
-                    var minX = MathF.Max(first.Min.X, second.Min.X);
-                    var minY = MathF.Max(first.Min.Y, second.Min.Y);
-                    var maxX = MathF.Min(first.Max.X, second.Max.X);
-                    var maxY = MathF.Min(first.Max.Y, second.Max.Y);
-                    if (minX > maxX || minY > maxY)
-                        continue;
-
-                    // Two bodies can share several cells. Report the pair only in the cell that holds the corner of
-                    // their overlap, which lies in exactly one cell of both.
-                    if (CellOf(minX) != first.CellX || CellOf(minY) != first.CellY)
-                        continue;
-
-                    pairs.Add(first.Body < second.Body
-                        ? new BodyPair(first.Body, second.Body)
-                        : new BodyPair(second.Body, first.Body));
+                    if (first.Body != second.Body && IsReportedHere(first, second))
+                        pairs.Add(Pair(first.Body, second.Body));
                 }
+            }
+        }
+    }
+
+    /// <summary>
+    /// Adds every pair of a body in this grid and a body in <paramref name="other"/> whose bounding boxes overlap,
+    /// exactly once, with <c>A &lt; B</c>. Both grids must have the same cell size.
+    /// </summary>
+    public void FindPairs(SpatialHashGrid other, ArrayBuffer<BodyPair> pairs)
+    {
+        var entries = _entries;
+        for (var i = 0; i < EntryCount; i++)
+        {
+            ref readonly var first = ref entries[i];
+            var bucket = other.GetBucket(first.CellX, first.CellY);
+            for (var j = 0; j < bucket.Length; j++)
+            {
+                ref readonly var second = ref bucket[j];
+                if (IsReportedHere(first, second))
+                    pairs.Add(Pair(first.Body, second.Body));
             }
         }
     }
@@ -163,6 +169,25 @@ internal sealed class SpatialHashGrid
 
     /// <summary>Same rounding as <see cref="GridWalker"/>: multiplication by the same inverse cell size.</summary>
     internal int CellOf(float coordinate) => (int)MathF.Floor(coordinate * _inverseCellSize);
+
+    /// <summary>
+    /// Whether two entries are in the same cell, their boxes overlap, and this cell reports the pair. Different cells
+    /// can hash to the same bucket, and two bodies can share several cells: the pair is reported only in the cell that
+    /// holds the corner of their overlap, which lies in exactly one cell of both.
+    /// </summary>
+    private bool IsReportedHere(in Entry first, in Entry second)
+    {
+        if (first.CellX != second.CellX || first.CellY != second.CellY)
+            return false;
+
+        var minX = MathF.Max(first.Min.X, second.Min.X);
+        var minY = MathF.Max(first.Min.Y, second.Min.Y);
+        var maxX = MathF.Min(first.Max.X, second.Max.X);
+        var maxY = MathF.Min(first.Max.Y, second.Max.Y);
+        return minX <= maxX && minY <= maxY && CellOf(minX) == first.CellX && CellOf(minY) == first.CellY;
+    }
+
+    private static BodyPair Pair(int a, int b) => a < b ? new BodyPair(a, b) : new BodyPair(b, a);
 
     private int Hash(int x, int y) => (int)(((uint)x * 73856093u) ^ ((uint)y * 19349663u)) & _tableMask;
 

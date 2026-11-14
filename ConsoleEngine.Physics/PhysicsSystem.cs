@@ -1,4 +1,5 @@
 using System;
+using System.Runtime.InteropServices;
 using ConsoleEngine.Ecs;
 using ConsoleEngine.Ecs.Components;
 using Microsoft.Xna.Framework;
@@ -51,7 +52,28 @@ public sealed partial class PhysicsSystem : EntitySystem, IPhysicsEvents, IPhysi
     /// <summary>A body turning slower than this, radians/s (2°/s), counts as still for sleeping (Box2D's default).</summary>
     public const float AngularSleepTolerance = 2f * MathF.PI / 180f;
 
+    /// <summary>The moving (dynamic and kinematic) bodies, rebuilt every step.</summary>
     private readonly SpatialHashGrid _grid;
+
+    /// <summary>The static bodies, rebuilt only when one is added, removed, moved, turned or reshaped.</summary>
+    private readonly SpatialHashGrid _staticGrid;
+
+    /// <summary>This step's body indices of the moving bodies, in body order.</summary>
+    private readonly ArrayBuffer<int> _movingBodies = new();
+
+    /// <summary>Body indices and bounding boxes of the static bodies <see cref="_staticGrid"/> was built from.</summary>
+    private readonly ArrayBuffer<int> _staticBodies = new();
+
+    private readonly ArrayBuffer<StaticBounds> _staticBounds = new();
+
+    /// <summary>
+    /// By body index: what a static body's slots were filled from, so an unchanged static skips <see cref="Gather"/>'s
+    /// work (Box2D keeps static bodies out of the step entirely). Valid where its stamp is the previous step's.
+    /// </summary>
+    private readonly ArrayBuffer<StaticInput> _staticInputs = new();
+
+    private int _staticCount;
+    private bool _staticsChanged;
     private readonly PairCache _pairCache = new();
     private readonly ArrayBuffer<BodyProxy> _proxies = new();
     private readonly ArrayBuffer<BodyShape> _shapes = new();
@@ -82,6 +104,7 @@ public sealed partial class PhysicsSystem : EntitySystem, IPhysicsEvents, IPhysi
 
     private Query _bodiesWithoutCollider;
     private Query _colliders;
+    private Query _forces;
     private int _substepCount = 4;
 
     /// <summary>Some body was asleep at the start of the step, so islands must be checked for waking.</summary>
@@ -95,7 +118,11 @@ public sealed partial class PhysicsSystem : EntitySystem, IPhysicsEvents, IPhysi
     /// Broadphase cell size in cells. About the size of a typical body: much smaller puts big bodies in many cells,
     /// much bigger tests many far-apart pairs.
     /// </param>
-    public PhysicsSystem(float cellSize = DefaultCellSize) => _grid = new SpatialHashGrid(cellSize);
+    public PhysicsSystem(float cellSize = DefaultCellSize)
+    {
+        _grid = new SpatialHashGrid(cellSize);
+        _staticGrid = new SpatialHashGrid(cellSize);
+    }
 
     //**********************************************************
     //** props
@@ -182,6 +209,7 @@ public sealed partial class PhysicsSystem : EntitySystem, IPhysicsEvents, IPhysi
     {
         _bodiesWithoutCollider = World.Query(Query.With<Position, Velocity, RigidBody>().Without<Collider>());
         _colliders = World.Query(Query.With<Position, Collider>());
+        _forces = World.Query(Query.With<Force>());
     }
 
     protected override void OnUpdate(float deltaSeconds)
@@ -191,8 +219,12 @@ public sealed partial class PhysicsSystem : EntitySystem, IPhysicsEvents, IPhysi
         Gather(deltaSeconds);
 
         _candidates.Clear();
-        _grid.Build(_proxies.AsSpan());
+        _grid.Build(_proxies.AsSpan(), _movingBodies.AsSpan());
+        if (_staticsChanged)
+            _staticGrid.Build(_proxies.AsSpan(), _staticBodies.AsSpan());
         _grid.FindPairs(_candidates);
+        if (_staticGrid.EntryCount > 0)
+            _grid.FindPairs(_staticGrid, _candidates);
 
         _contacts.Clear();
         _contactBegins.Clear();
@@ -225,6 +257,7 @@ public sealed partial class PhysicsSystem : EntitySystem, IPhysicsEvents, IPhysi
             SleepingBodyCount = 0;
 
         Scatter();
+        ClearForces();
         _queryStateIsCurrent = false;
     }
 
@@ -247,8 +280,12 @@ public sealed partial class PhysicsSystem : EntitySystem, IPhysicsEvents, IPhysi
         var states = _states.Resize(bodyCount);
         var sims = _sims.Resize(bodyCount);
         var bodyEntities = _entities.Resize(count);
+        var staticInputs = _staticInputs.Resize(count);
         _indexStamp++;
         _anySleeping = false;
+        _movingBodies.Clear();
+        _staticCount = 0;
+        _staticsChanged = false;
         var index = 0;
 
         foreach (var chunk in _colliders.GetChunks())
@@ -263,6 +300,7 @@ public sealed partial class PhysicsSystem : EntitySystem, IPhysicsEvents, IPhysi
             var canMove = !rigidBodies.IsEmpty && !velocities.IsEmpty;
             var canTurn = canMove && !rotations.IsEmpty && !spins.IsEmpty;
             var interpolations = chunk.Has<Interpolation>() ? chunk.GetSpan<Interpolation>() : default;
+            var forces = chunk.Has<Force>() ? chunk.GetSpan<Force>() : default;
 
             for (var i = 0; i < chunk.Count; i++, index++)
             {
@@ -270,6 +308,17 @@ public sealed partial class PhysicsSystem : EntitySystem, IPhysicsEvents, IPhysi
                 var angle = rotations.IsEmpty ? 0f : rotations[i].Radians;
                 if (!interpolations.IsEmpty)
                     RememberTransform(ref interpolations[i], positions[i].Value, angle);
+
+                // Unchanged since the previous step, in the same slot: every body array still holds this static.
+                var isStatic = !canMove || rigidBodies[i].Type == BodyType.Static;
+                ref var input = ref staticInputs[index];
+                if (isStatic && input.IsSame(_indexStamp - 1, entities[i], positions[i].Value, angle, collider))
+                {
+                    input.Stamp = _indexStamp;
+                    NoteStatic(index, proxies[index]);
+                    continue;
+                }
+
                 var (sin, cos) = angle == 0f ? (0f, 1f) : MathF.SinCos(angle);
                 ref var shape = ref shapes[index];
                 shape.Position = positions[i].Value;
@@ -291,12 +340,12 @@ public sealed partial class PhysicsSystem : EntitySystem, IPhysicsEvents, IPhysi
                 if (canMove && rigidBodies[i].Type != BodyType.Static)
                 {
                     ReadBody(rigidBodies[i], velocities[i].Value, canTurn ? spins[i].Value : 0f, canTurn, shape,
-                        ref state, ref sim);
+                        forces.IsEmpty ? default : forces[i], ref state, ref sim);
                 }
 
                 var reach = (state.Velocity.Length() + MathF.Abs(state.AngularVelocity) * reachRadius) * deltaSeconds;
                 if (sim.Type == BodyType.Dynamic)
-                    reach += (Gravity * sim.GravityScale).Length() * deltaSeconds * deltaSeconds;
+                    reach += sim.Acceleration.Length() * deltaSeconds * deltaSeconds;
                 _anySleeping |= sim.IsSleeping;
 
                 proxy.Category = collider.Category;
@@ -308,7 +357,23 @@ public sealed partial class PhysicsSystem : EntitySystem, IPhysicsEvents, IPhysi
                 sim.Friction = collider.Friction;
                 sim.Restitution = collider.Restitution;
                 bodyEntities[index] = entities[i];
+                if (sim.Type == BodyType.Static)
+                {
+                    input = new StaticInput(_indexStamp, entities[i], positions[i].Value, angle, collider);
+                    NoteStatic(index, proxy);
+                }
+                else
+                {
+                    _movingBodies.Add(index);
+                }
             }
+        }
+
+        if (_staticCount != _staticBodies.Count)
+        {
+            _staticBodies.Truncate(_staticCount);
+            _staticBounds.Truncate(_staticCount);
+            _staticsChanged = true;
         }
 
         _tileBody = -1;
@@ -320,8 +385,33 @@ public sealed partial class PhysicsSystem : EntitySystem, IPhysicsEvents, IPhysi
         }
     }
 
+    /// <summary>
+    /// Counts a static body and compares it with the same static of the last step: a different body index or bounding
+    /// box means <see cref="_staticGrid"/> must be rebuilt. Bounds cover a changed position, rotation or collider.
+    /// </summary>
+    private void NoteStatic(int body, in BodyProxy proxy)
+    {
+        var k = _staticCount++;
+        var bounds = new StaticBounds(proxy.Center, proxy.Extents);
+        if (k < _staticBodies.Count)
+        {
+            if (_staticBodies[k] == body && _staticBounds[k].Equals(bounds))
+                return;
+
+            _staticBodies[k] = body;
+            _staticBounds[k] = bounds;
+        }
+        else
+        {
+            _staticBodies.Add(body);
+            _staticBounds.Add(bounds);
+        }
+
+        _staticsChanged = true;
+    }
+
     private void ReadBody(in RigidBody rigidBody, Vector2 velocity, float spin, bool canTurn, in BodyShape shape,
-        ref BodyState state, ref BodySim sim)
+        in Force force, ref BodyState state, ref BodySim sim)
     {
         sim.Type = rigidBody.Type;
         state.Velocity = velocity;
@@ -330,7 +420,6 @@ public sealed partial class PhysicsSystem : EntitySystem, IPhysicsEvents, IPhysi
             return;
 
         sim.InverseMass = rigidBody.InverseMass;
-        sim.GravityScale = rigidBody.GravityScale;
         sim.LinearDamping = rigidBody.LinearDamping;
         sim.AngularDamping = rigidBody.AngularDamping;
         if (canTurn)
@@ -339,8 +428,12 @@ public sealed partial class PhysicsSystem : EntitySystem, IPhysicsEvents, IPhysi
             sim.InverseInertia = inertiaPerMass > 0f ? rigidBody.InverseMass / inertiaPerMass : 0f;
         }
 
-        // Game code giving a sleeping body a velocity wakes it, and so does turning sleep off.
-        var woken = rigidBody.IsSleeping && (!EnableSleep || velocity != Vector2.Zero || spin != 0f);
+        sim.Acceleration = Gravity * rigidBody.GravityScale + force.Value * rigidBody.InverseMass;
+        sim.AngularAcceleration = force.Torque * sim.InverseInertia;
+
+        // Game code giving a sleeping body a velocity or a force wakes it, and so does turning sleep off.
+        var woken = rigidBody.IsSleeping && (!EnableSleep || velocity != Vector2.Zero || spin != 0f ||
+                                             force.Value != Vector2.Zero || force.Torque != 0f);
         sim.IsSleeping = rigidBody.IsSleeping && !woken;
         sim.SleepTime = woken ? 0f : rigidBody.SleepTime;
     }
@@ -1000,7 +1093,7 @@ public sealed partial class PhysicsSystem : EntitySystem, IPhysicsEvents, IPhysi
 
         for (var substep = 0; substep < _substepCount; substep++)
         {
-            ContactSolver.IntegrateVelocities(states, sims, Gravity, h);
+            ContactSolver.IntegrateVelocities(states, sims, h);
             ContactSolver.WarmStart(states, contacts);
             ContactSolver.Solve(states, contacts, inverseH, ContactPushMaxSpeed, LinearSlop, useBias: true);
             ContactSolver.IntegratePositions(states, h);
@@ -1060,7 +1153,8 @@ public sealed partial class PhysicsSystem : EntitySystem, IPhysicsEvents, IPhysi
 
     /// <summary>
     /// Rigid bodies without a collider: the same substeps as the solver (velocity first, then position), without
-    /// contacts. They turn if they have a <c>Rotation</c> and an <see cref="AngularVelocity"/>.
+    /// contacts. They turn if they have a <c>Rotation</c> and an <see cref="AngularVelocity"/>. With no shape they have no
+    /// inertia, so a <see cref="Force"/> only pushes them: its torque is ignored.
     /// </summary>
     private void IntegrateBodiesWithoutCollider(float h)
     {
@@ -1074,9 +1168,13 @@ public sealed partial class PhysicsSystem : EntitySystem, IPhysicsEvents, IPhysi
             var rotations = canTurn ? chunk.GetSpan<Rotation>() : default;
             var spins = canTurn ? chunk.GetSpan<AngularVelocity>() : default;
             var interpolations = chunk.Has<Interpolation>() ? chunk.GetSpan<Interpolation>() : default;
+            var forces = chunk.Has<Force>() ? chunk.GetSpan<Force>() : default;
             for (var i = 0; i < chunk.Count; i++)
             {
                 ref readonly var body = ref rigidBodies[i];
+                var push = gravity * body.GravityScale;
+                if (!forces.IsEmpty)
+                    push += forces[i].Value * body.InverseMass;
                 if (!interpolations.IsEmpty)
                     RememberTransform(ref interpolations[i], positions[i].Value, canTurn ? rotations[i].Radians : 0f);
                 if (body.Type == BodyType.Static)
@@ -1086,8 +1184,7 @@ public sealed partial class PhysicsSystem : EntitySystem, IPhysicsEvents, IPhysi
                 {
                     if (body.Type == BodyType.Dynamic)
                     {
-                        velocities[i].Value = velocities[i].Value * (1f / (1f + h * body.LinearDamping)) +
-                                              gravity * (body.GravityScale * h);
+                        velocities[i].Value = velocities[i].Value * (1f / (1f + h * body.LinearDamping)) + push * h;
                         if (canTurn && body.AngularDamping != 0f)
                             spins[i].Value *= 1f / (1f + h * body.AngularDamping);
                     }
@@ -1098,6 +1195,13 @@ public sealed partial class PhysicsSystem : EntitySystem, IPhysicsEvents, IPhysi
                 }
             }
         }
+    }
+
+    /// <summary>Forces last one step (<see cref="Force"/>), on every entity, whatever kind of body it is.</summary>
+    private void ClearForces()
+    {
+        foreach (var chunk in _forces.GetChunks())
+            chunk.GetSpan<Force>().Clear();
     }
 
     private readonly struct RestingPair(BodyPair pair, int previousSlot)
@@ -1112,5 +1216,27 @@ public sealed partial class PhysicsSystem : EntitySystem, IPhysicsEvents, IPhysi
         interpolation.PreviousPosition = position;
         interpolation.PreviousRadians = radians;
         interpolation.HasPrevious = true;
+    }
+
+    /// <summary>A static body's bounding box as the static grid holds it.</summary>
+    private readonly record struct StaticBounds(Vector2 Center, Vector2 Extents);
+
+    /// <summary>The components a static body's slots were filled from, and the step they were filled in.</summary>
+    private struct StaticInput(int stamp, Entity entity, Vector2 position, float radians, in Collider collider)
+    {
+        public int Stamp = stamp;
+        private readonly Entity _entity = entity;
+        private readonly Vector2 _position = position;
+        private readonly float _radians = radians;
+        private readonly Collider _collider = collider;
+
+        /// <summary>
+        /// The collider is compared byte by byte: a difference only in padding or in the sign of a zero recomputes the
+        /// body, which is still correct.
+        /// </summary>
+        public readonly bool IsSame(int stamp, Entity entity, Vector2 position, float radians, in Collider collider) =>
+            Stamp == stamp && _entity == entity && _position == position && _radians == radians &&
+            MemoryMarshal.AsBytes(new ReadOnlySpan<Collider>(in _collider))
+                .SequenceEqual(MemoryMarshal.AsBytes(new ReadOnlySpan<Collider>(in collider)));
     }
 }

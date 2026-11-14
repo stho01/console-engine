@@ -6,7 +6,8 @@ namespace ConsoleEngine.Physics;
 
 // IPhysicsQueries. The step's shapes and proxies are at the start-of-step transforms and the grid includes each body's
 // margin. The first query after a step moves the shapes to the end-of-step transforms, recomputes their bounds and
-// rebuilds the grid without margins, so a game that never queries pays nothing.
+// rebuilds the moving bodies' grid without margins, so a game that never queries pays nothing. Static bodies don't
+// move and have no margin, so their grid is used as the step left it. Queries look in both grids.
 public sealed partial class PhysicsSystem
 {
     //**********************************************************
@@ -93,12 +94,15 @@ public sealed partial class PhysicsSystem
             proxies[i].Margin = 0f;
         }
 
-        _grid.Build(proxies);
+        _grid.Build(proxies, _movingBodies.AsSpan());
         if (_queryStamps.Length < proxies.Length)
             _queryStamps = new int[Math.Max(proxies.Length, _queryStamps.Length * 2)];
 
         _queryStateIsCurrent = true;
     }
+
+    /// <summary>0: the moving bodies' grid, 1: the static bodies' grid.</summary>
+    private SpatialHashGrid Grid(int index) => index == 0 ? _grid : _staticGrid;
 
     private int NextQueryStamp()
     {
@@ -136,19 +140,23 @@ public sealed partial class PhysicsSystem
             if (walker.Enter > best)
                 return;
 
-            var bucket = _grid.GetBucket(walker.X, walker.Y);
-            for (var i = 0; i < bucket.Length; i++)
+            for (var grid = 0; grid < 2; grid++)
             {
-                var entry = bucket[i];
-                if (entry.CellX != walker.X || entry.CellY != walker.Y ||
-                    !IsCandidate(entry.Body, stamp, mask, Entity.Null))
-                    continue;
-
-                if (RaycastShape(_shapes[entry.Body], origin, translation, out var fraction, out var normal) &&
-                    fraction < best)
+                var bucket = Grid(grid).GetBucket(walker.X, walker.Y);
+                for (var i = 0; i < bucket.Length; i++)
                 {
-                    best = fraction;
-                    hit = new CastHit(_entities[entry.Body], default, origin + translation * fraction, normal, fraction);
+                    var entry = bucket[i];
+                    if (entry.CellX != walker.X || entry.CellY != walker.Y ||
+                        !IsCandidate(entry.Body, stamp, mask, Entity.Null))
+                        continue;
+
+                    if (RaycastShape(_shapes[entry.Body], origin, translation, out var fraction, out var normal) &&
+                        fraction < best)
+                    {
+                        best = fraction;
+                        hit = new CastHit(_entities[entry.Body], default, origin + translation * fraction, normal,
+                            fraction);
+                    }
                 }
             }
         } while (walker.Next());
@@ -217,8 +225,9 @@ public sealed partial class PhysicsSystem
         var lastY = _grid.CellOf(max.Y);
         for (var y = firstY; y <= lastY; y++)
         for (var x = firstX; x <= lastX; x++)
+        for (var grid = 0; grid < 2; grid++)
         {
-            var bucket = _grid.GetBucket(x, y);
+            var bucket = Grid(grid).GetBucket(x, y);
             for (var i = 0; i < bucket.Length; i++)
             {
                 var entry = bucket[i];
@@ -317,8 +326,9 @@ public sealed partial class PhysicsSystem
         var lastY = _grid.CellOf(center.Y + extents.Y);
         for (var y = firstY; y <= lastY; y++)
         for (var x = firstX; x <= lastX; x++)
+        for (var grid = 0; grid < 2; grid++)
         {
-            var bucket = _grid.GetBucket(x, y);
+            var bucket = Grid(grid).GetBucket(x, y);
             for (var i = 0; i < bucket.Length; i++)
             {
                 var entry = bucket[i];

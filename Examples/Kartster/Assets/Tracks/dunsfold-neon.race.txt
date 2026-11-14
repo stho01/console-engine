@@ -1,0 +1,31 @@
+# dunsfold-neon race markers, exported from Kartster by KartsterExport (route lap). Format: Examples/Kartster/Race/RaceMarkers.cs
+# metres, planar: x = world X, y = world Z. forward is the gate's normal (along the road), left/right its reach
+# either side of the point, right = (-forward.y, forward.x). heading: 0 faces -Z, positive is turned left
+laps 3
+start 262.647 -211.744 -0.93846 0.34538 49.5 49.5
+checkpoint 129.214 -170.565 -0.98988 0.14191 49.5 49.5
+checkpoint -20.287 -164.841 -1 -0.00067 49.5 49.5
+checkpoint -146.518 -96.485 -0.22878 0.97348 49.5 49.5
+checkpoint -49.943 -1.229 0.91313 0.40766 23.5 49.5
+checkpoint 84.565 34.587 0.1253 0.99212 10.5 49.5
+checkpoint -38.952 81.828 -0.93971 0.34198 49.5 49.5
+checkpoint -177.408 139.337 -0.92308 0.38462 49.5 49.5
+checkpoint -315.836 196.916 -0.92328 0.38414 49.5 49.5
+checkpoint -436.798 266.08 -0.91564 -0.40201 49.5 49.5
+checkpoint -424.53 149.223 0.71748 -0.69658 49.5 49.5
+checkpoint -313.164 48.873 0.74951 -0.66199 49.5 49.5
+checkpoint -201.777 -51.329 0.85857 -0.5127 49.5 49.5
+checkpoint -58.164 -45.091 0.90796 0.41907 10.5 10.5
+checkpoint 78.135 17.391 0.91966 0.39271 10.5 10.5
+checkpoint 222.345 3.754 0.91838 -0.39571 49.5 49.5
+checkpoint 359.775 -56.203 0.91568 -0.40192 49.5 49.5
+checkpoint 472.123 -144.878 0.15713 -0.98758 49.5 49.5
+checkpoint 407.157 -264.767 -0.95969 0.28105 49.5 49.5
+grid 265.042 -211.027 1.92344
+grid 265.413 -214.361 1.92345
+grid 267.857 -212.063 1.92342
+grid 268.229 -215.397 1.92342
+grid 270.673 -213.099 1.92348
+grid 271.044 -216.433 1.92358
+grid 273.488 -214.136 1.92365
+grid 273.859 -217.47 1.92372
