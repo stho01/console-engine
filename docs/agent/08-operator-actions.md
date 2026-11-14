@@ -65,6 +65,8 @@ team's process differs.
 | Kartster | ENTER / TAB / ESC | Track/garage / next kart (on the track: from the start) / quit | `KartsterGame.OnUpdate` |
 | Kartster | G | Switch between the CPU `Rasterizer` and the OpenGL `GlRenderer`; stays on the CPU (title `CPU (no GPU)`) when OpenGL 3.3 isn't available | `KartsterGame.ToggleGpu` |
 | Kartster | `--gpu` (command-line flag, any position) | Start on the GPU renderer | `Program.cs` |
+| Kartster | C | Switch between 16 colours and 24-bit colour (`Console.TrueColor`); stays on 16 colours (title `16 colours (no 24-bit)`) when the console can't show 24-bit | `KartsterGame.OnUpdate`, `MatchConsoleColors` |
+| Kartster | `--truecolor` (command-line flag, any position) | Start in 24-bit colour | `Program.cs` |
 | Kartster | first / second command-line argument | Folder of kart folders (e.g. Kartster's `Content/3D/Rendered/Karts`) / folder of exported tracks | `Program.cs` |
 
 There is **no** way to skip a TerraForM level, choose a map, reset the score, or enable TerraForM debug mode without a

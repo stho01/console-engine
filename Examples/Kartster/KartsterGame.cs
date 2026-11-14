@@ -16,12 +16,13 @@ namespace Kartster;
 /// <summary>
 /// 3D experiment: Kartster karts and a Kartster track, drawn by an <see cref="IRenderer3D"/> with one console cell
 /// per pixel: the software <see cref="Rasterizer"/>, or the OpenGL <see cref="GlRenderer"/> (G toggles, falls back to
-/// the CPU when OpenGL 3.3 isn't there). Two scenes, swapped with Enter: on the track (<see cref="TrackScene"/>) you drive the kart
-/// with Kartster's kart model on the engine's physics and a chase camera behind it; in the garage
-/// (<see cref="GarageScene"/>) the camera orbits the kart on a small floor. Kartster's axes: 1 unit is 1 metre, +Y up,
-/// -Z forward. The game holds what both scenes share: renderer, sky, projection, the karts and the track.
+/// the CPU when OpenGL 3.3 isn't there), in the 16 scene colours or in 24-bit colour (C toggles, <c>--truecolor</c>
+/// starts in it; stays on 16 colours when the console has no 24-bit output). Two scenes, swapped with Enter: on the
+/// track (<see cref="TrackScene"/>) you drive the kart with Kartster's kart model on the engine's physics and a chase
+/// camera behind it; in the garage (<see cref="GarageScene"/>) the camera orbits the kart on a small floor. Kartster's
+/// axes: 1 unit is 1 metre, +Y up, -Z forward. The game holds what both scenes share: renderer, sky, projection, the karts and the track.
 /// </summary>
-public class KartsterGame(string kartsFolder, string tracksFolder, bool startOnGpu = false)
+public class KartsterGame(string kartsFolder, string tracksFolder, bool startOnGpu = false, bool startInTrueColor = false)
     : GameBase(ScreenWidth, ScreenHeight, fontWidth: 3, fontHeight: 3)
 {
     //**********************************************************
@@ -50,9 +51,10 @@ public class KartsterGame(string kartsFolder, string tracksFolder, bool startOnG
     ]);
 
     private readonly ConsoleColor[] _sky = new ConsoleColor[ScreenWidth * ScreenHeight];
+    private readonly uint[] _skyRgb = new uint[ScreenWidth * ScreenHeight];
     private const float RenderTimeSmoothing = 0.05f;
 
-    private readonly Rasterizer _cpu = new(ScreenWidth, ScreenHeight, ScenePalette);
+    private Rasterizer _cpu = new(ScreenWidth, ScreenHeight, ScenePalette);
     private string[] _kartFolders;
     private int _kartIndex;
     private GlRenderer _gpu;
@@ -88,6 +90,7 @@ public class KartsterGame(string kartsFolder, string tracksFolder, bool startOnG
     {
         Console.PixelMode = true;
         Console.Palette = ScenePalette.Colors;
+        Console.TrueColor = startInTrueColor; // the renderers follow Console.TrueColorActive once it is known
         ClearScreenOnEachFrame = false; // every cell is drawn each frame
 
         _kartFolders = Directory.GetDirectories(kartsFolder);
@@ -107,6 +110,7 @@ public class KartsterGame(string kartsFolder, string tracksFolder, bool startOnG
         {
             var sky = Vector3.Lerp(SkyTop, SkyHorizon, (float)y / ScreenHeight);
             _sky[y * ScreenWidth + x] = ScenePalette.ToConsoleColor(sky, x, y);
+            _skyRgb[y * ScreenWidth + x] = SkyRgb(y, ScreenHeight);
         }
 
         if (startOnGpu)
@@ -119,9 +123,10 @@ public class KartsterGame(string kartsFolder, string tracksFolder, bool startOnG
 
         GameTime.SetInterval(250, () => Console.SetTitle(Scene is TrackScene track
             ? $"Kartster - {KartName} on {Track.Name} - {track.Speed * 3.6f:0} km/h - gear {track.Dynamics.Gear} - " +
-              $"{track.Dynamics.EngineRpm:0} rpm - {RendererLabel} 3D {_renderMilliseconds:0.00} ms - {GameTime.Fps} fps"
+              $"{track.Dynamics.EngineRpm:0} rpm - {RendererLabel} 3D {_renderMilliseconds:0.00} ms - {ColorLabel} - " +
+              $"{GameTime.Fps} fps"
             : $"Kartster - {KartName} ({Kart.TriangleCount} triangles) - {RendererLabel} 3D " +
-              $"{_renderMilliseconds:0.00} ms - {GameTime.Fps} fps"));
+              $"{_renderMilliseconds:0.00} ms - {ColorLabel} - {GameTime.Fps} fps"));
     }
 
     protected override void OnUpdate()
@@ -145,10 +150,16 @@ public class KartsterGame(string kartsFolder, string tracksFolder, bool startOnG
 
         if (input.GetKey(Key.G).Pressed)
             ToggleGpu();
+        if (input.GetKey(Key.C).Pressed)
+            Console.TrueColor = !Console.TrueColor;
+        MatchConsoleColors();
 
         // The scene's render (next in the frame) draws onto the sky.
         _frameStart = Stopwatch.GetTimestamp();
-        Renderer.Clear(_sky);
+        if (Renderer.TrueColor)
+            Renderer.Clear(_skyRgb);
+        else
+            Renderer.Clear(_sky);
     }
 
     protected override void OnRender()
@@ -156,10 +167,26 @@ public class KartsterGame(string kartsFolder, string tracksFolder, bool startOnG
         Renderer.Finish();
         var milliseconds = (float)Stopwatch.GetElapsedTime(_frameStart).TotalMilliseconds;
         _renderMilliseconds += (milliseconds - _renderMilliseconds) * RenderTimeSmoothing;
+        if (Renderer.TrueColor)
+        {
+            var rgb = Renderer.Rgb;
+            for (var y = 0; y < ScreenHeight; y++)
+            for (var x = 0; x < ScreenWidth; x++)
+                Console.DrawRgb(x, y, ' ', 0, rgb[y * ScreenWidth + x]);
+            return;
+        }
+
         var colors = Renderer.Colors;
         for (var y = 0; y < ScreenHeight; y++)
         for (var x = 0; x < ScreenWidth; x++)
             Console.Draw(x, y, ' ', ConsoleColor.Black, colors[y * ScreenWidth + x]);
+    }
+
+    /// <summary>The sky in 24-bit colour at screen row <paramref name="y"/>: a smooth gradient, no dither.</summary>
+    public static uint SkyRgb(int y, int height)
+    {
+        var sky = Vector3.Lerp(SkyTop, SkyHorizon, (float)y / height) * 255f + new Vector3(0.5f);
+        return ((uint)sky.X << 16) | ((uint)sky.Y << 8) | (uint)sky.Z;
     }
 
     //**********************************************************
@@ -167,6 +194,31 @@ public class KartsterGame(string kartsFolder, string tracksFolder, bool startOnG
     //**********************************************************
 
     private string RendererLabel => _gpu != null ? "GPU" : _gpuUnavailable ? "CPU (no GPU)" : "CPU";
+
+    private string ColorLabel => _cpu.TrueColor ? "24-bit" : Console.TrueColor ? "16 colours (no 24-bit)" : "16 colours";
+
+    /// <summary>
+    /// Makes the renderers draw 24-bit colour exactly while the console shows it: at start-up (known only after the
+    /// console is initialized), after C, and when the console can't do it.
+    /// </summary>
+    private void MatchConsoleColors()
+    {
+        var trueColor = Console.TrueColorActive;
+        if (_cpu.TrueColor == trueColor)
+            return;
+
+        _cpu.Dispose();
+        _cpu = new Rasterizer(ScreenWidth, ScreenHeight, ScenePalette, trueColor);
+        if (_gpu == null)
+            return;
+
+        _gpu.Dispose();
+        if (!GlRenderer.TryCreate(ScreenWidth, ScreenHeight, ScenePalette, trueColor, out _gpu))
+        {
+            _gpu = null;
+            _gpuUnavailable = true;
+        }
+    }
 
     /// <summary>
     /// Switches between the CPU and the GPU renderer. The GPU one is made the first time (on the game-loop thread, as
@@ -181,7 +233,7 @@ public class KartsterGame(string kartsFolder, string tracksFolder, bool startOnG
             return;
         }
 
-        if (!GlRenderer.TryCreate(ScreenWidth, ScreenHeight, ScenePalette, out _gpu))
+        if (!GlRenderer.TryCreate(ScreenWidth, ScreenHeight, ScenePalette, _cpu.TrueColor, out _gpu))
         {
             _gpu = null;
             _gpuUnavailable = true;

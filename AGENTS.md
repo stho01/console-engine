@@ -344,6 +344,7 @@ with scrolling bands, a moving kart, a few colour changes per row; the palette c
 | (b) dithered | 13 | 96 | 4.4 | 57 | 5.1 / 7.8 |
 | (c) noise | 48 | 258 | 18 | 120 | 11 / 18 |
 | (d) unchanged | 0.03 | 0.14 | 0.02 | 0.06 | 0.03 / 0.11 |
+| (e) Kartster: track and kart from the `Rasterizer`, camera 0.25 m further each frame (palette: dithered) | 0.76 | 0.32 | 0.31 | 0.28 | 0.39 / 0.17 |
 
 - conhost parses VT synchronously, so its cost is the text: about 0.24 µs per character at 320×180 (a noise frame is
   1.08 M characters, a smooth frame written whole 70 k). Every colour change costs a ~20-character SGR, which is why
@@ -351,6 +352,8 @@ with scrolling bands, a moving kart, a few colour changes per row; the palette c
   is under 2 ms even for noise (0.17 ms for (a)).
 - The palette write returns sooner because conhost paints it later (its median is a fraction of its mean, with
   spikes); the means above are what the game loop sees.
+- Kartster's flat-shaded frames change few cells (about 900 characters of VT text per frame at 320×180), so 24-bit is
+  the cheaper output there.
 - So 24-bit pays off for smooth, shaded pictures (no dither needed) and hurts with per-cell colour noise: keep RGB
   frames smooth, and leave dithering to palette mode. `WriteFile` of the same text as UTF-8 measured the same as
   `WriteConsoleW`, which needs no code-page change.

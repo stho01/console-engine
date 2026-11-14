@@ -117,8 +117,9 @@ using [04](04-flows.md).
 | `No kart parts (*.obj) in <folder>` | `KartModel.Load` (`InvalidDataException`) | A kart folder has no drawable OBJ parts |
 | `<path>:<line>: a face needs at least three corners` | `ObjFile.Read` (`InvalidDataException`) | Broken OBJ file |
 | `<id>.spline.obj needs at least two centerline points` | `Track.Load` (`InvalidDataException`) | Broken or empty track spline export |
-| `Kartster - <kart> on <track> - <n> km/h - gear <g> - <rpm> rpm - <CPU\|GPU\|CPU (no GPU)> 3D <ms> ms - <fps> fps` (window title; 3D = `Clear` to `Finish`, smoothed) | `KartsterGame.OnInitialize` interval, every 250 ms | Running, track mode |
-| `Kartster - <kart> (<n> triangles) - <CPU\|GPU\|CPU (no GPU)> 3D <ms> ms - <fps> fps` (window title) | `KartsterGame.OnInitialize` interval, every 250 ms | Running, garage mode |
+| `Kartster - <kart> on <track> - <n> km/h - gear <g> - <rpm> rpm - <CPU\|GPU\|CPU (no GPU)> 3D <ms> ms - <colours> - <fps> fps` (window title; 3D = `Clear` to `Finish`, smoothed) | `KartsterGame.OnInitialize` interval, every 250 ms | Running, track mode |
+| `Kartster - <kart> (<n> triangles) - <CPU\|GPU\|CPU (no GPU)> 3D <ms> ms - <colours> - <fps> fps` (window title) | `KartsterGame.OnInitialize` interval, every 250 ms | Running, garage mode |
+| `<colours>` in the titles: `24-bit`, `16 colours`, or `16 colours (no 24-bit)` | `KartsterGame.ColorLabel` | 24-bit on / off / asked for (`--truecolor`, C) but `Console.TrueColorActive` is false ([05 § P2](05-triage.md#p2) step 7) |
 
 ### Launcher (`LauncherTexts`, `GameLocator`)
 

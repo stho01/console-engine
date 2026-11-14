@@ -19,6 +19,7 @@ internal static class GameCatalog
             "1-5 shapes, Enter shower, A D W move, E blast, G gravity, I smooth, R clear"),
         new("EternalDigger", "EternalDigger", "Arrows walk/dig, Space ladder, E deliver/buy, hold R rescue"),
         new("Scripted (Lua)", "Scripted", "Arrows move, F5 reload scripts, Esc quit"),
-        new("Kartster (3D)", "Kartster", "W gas, S brake, A D steer, Space handbrake, R restart, Enter garage, Tab kart, G GPU")
+        new("Kartster (3D)", "Kartster",
+            "W gas, S brake, A D steer, Space handbrake, R restart, Enter garage, Tab kart, G GPU, C 24-bit")
     ];
 }

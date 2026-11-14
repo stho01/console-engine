@@ -5,7 +5,9 @@ betyr originalspillet (MonoGame) i `C:\Forse\kartster-server`.
 
 Status (2026-11-14): fase 1–3 er ferdige (`ConsoleEngine.Rendering3D` med testprosjekt, Kartster tegner gjennom
 `IRenderer3D`; `ConsoleEngine.Rendering3D.OpenGL` med `GlRenderer` og GPU-testene). Fase 3: Kartster bytter med G eller `--gpu` og faller tilbake til CPU. Første måling i conhost (Debug): 3D-delen 6,2 ms på CPU mot 1,5 ms på GPU.
-Sant fargemodus (24-bit, § 4b) er ferdig i begge rendererne; Kartster bruker det ikke ennå (prosjektleder kobler det til en konsollutgang med 24-bit farge).
+Sant fargemodus (24-bit, § 4b) er ferdig i begge rendererne og i konsollen (`RenderConsole.TrueColor`/`DrawRgb`, på
+Windows VT-sekvenser): Kartster bruker det med `--truecolor` eller C. I conhost er en jevn 24-bit-frame like rask som
+palettet, men mange fargeskift per rad (dithering, støy) koster 5–7 ganger så mye (tall i `AGENTS.md` § Performance).
 
 ## 1. Mål og ikke-mål
 
