@@ -28,6 +28,10 @@ dotnet run --project tools/KartsterExport -- list
 dotnet run --project tools/KartsterExport -- export Examples/Kartster/Assets/Tracks star-circuit prism-loop
 ```
 
+The shipped tracks with height were exported with
+`export Examples/Kartster/Assets/Tracks norbergring dunsfold-neon kinnekulle brands-hatch-indy`; their
+`collision.txt` is skipped (trees, buildings, lamps, bridge pillars), so delete nothing by hand.
+
 The original is looked for in `C:\Forse\kartster-server`. Somewhere else: add `-p:KartsterRoot=<folder>` to
 `dotnet build`/`dotnet run`.
 
@@ -45,6 +49,7 @@ endings, and prints each file's size. A track without some file (an open route h
 | `<id>.scenery.txt` | `SceneryExporter` | fences, pipes, trees, signs, start/finish line and gate, grid marks, textures baked into flat colours. Format in `Examples/Kartster/Scenery.cs` | `Scenery.Load` |
 | `<id>.race.txt` | `RaceExporter` | laps, start/finish, checkpoints and the 8-slot grid of the route `RaceSimulation.SelectRoute` races. Closed routes only. Format in `Examples/Kartster/Race/RaceMarkers.cs` | `RaceMarkers.Load` |
 | `<id>.collision.txt` | `CollisionExporter` | what karts hit, as 2D segments and circles: outer wall and fences (`TrackGround`), boundaries (`TrackBoundaryMesh`), road-edge walls of sections with `WallHeight` > 0, start gate poles (`StartGateMesh`), pipes (`TrackPipes`). Height is dropped. Skipped for a track with anything else `LevelLoader.LoadCollisionMesh` collides with (route ends, trees, buildings, lamps, …). Format in `Examples/Kartster/Collision/TrackCollision.cs` | `TrackCollision.Load` |
+| `<id>.terrain.txt` | `TerrainExporter` | the original's hilly ground (`TrackTerrain`) as it is: origin, cell size, columns, rows, a colour for its `TrackGroundStyle`, then a line of heights (cm) per row, `NaN` where there is no ground. Skipped for a track with flat `TrackGround` or none (the port draws its chequer). Format in `Examples/Kartster/Terrain.cs` | `Track.Load` (`Track.Terrain`) |
 | `<id>.powerups.txt` | `PowerUpExporter` | the power-up pads a normal race puts out, `pad x y z setId` (`TrackPowerUpPadResolver`, `IsExtra` pads left out as `RaceSimulation.ResolvePowerUpPads` does). Format in `Examples/Kartster/PowerUps/PowerUpPads.cs` | `Track.Load` (`Track.PowerUpPads`) |
 
 `model` lines in a scenery file name an OBJ in `Examples/Kartster/Assets/Scenery/`. Copy any model a new track

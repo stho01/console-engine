@@ -35,7 +35,7 @@ scripting loads the native `lua54.dll` that the KeraLua package ships for each r
 | ECS (entities, components, archetypes, chunks) | `ConsoleEngine/Ecs/`, design and phases in [`docs/design/ecs-plan.md`](docs/design/ecs-plan.md) |
 | 2D physics (bodies, circles/boxes/polygons, rotation, forces and torque (`Force`), broadphase, Soft Step contact solver, contact/sensor events, tile grid, sleeping, interpolation, raycasts and box casts, `CharacterMover.MoveAndSlide`) | `ConsoleEngine.Physics/` (own assembly and NuGet package, optional), rules in [`docs/agent/03-rules.md` § Physics](docs/agent/03-rules.md#physics), design and phases in [`docs/design/physics-plan.md`](docs/design/physics-plan.md). Examples: `Examples/PhysicsShowcase` (every feature), `Examples/PhysicsSandbox` (solver), `Examples/Asteroids.Ecs` (sensors, layers), `Examples/Platformer.Ecs` (tile grid, character controller) |
 | Performance measurements | `ConsoleEngine.Benchmarks/` (BenchmarkDotNet) |
-| Exporting Kartster tracks (ribbon, spline, scenery, race markers, collision, power-up pads) from the original game | `tools/KartsterExport/` and its [`README.md`](tools/KartsterExport/README.md): `list`, `export <outDir> <trackId...>`, one `ITrackExporter` class per file. Not in the solution: needs the original's source (`KartsterRoot`, default `C:\Forse\kartster-server`) |
+| Exporting Kartster tracks (ribbon, spline, scenery, race markers, collision, power-up pads, terrain) from the original game | `tools/KartsterExport/` and its [`README.md`](tools/KartsterExport/README.md): `list`, `export <outDir> <trackId...>`, one `ITrackExporter` class per file. Not in the solution: needs the original's source (`KartsterRoot`, default `C:\Forse\kartster-server`) |
 | Lua scripting: components, `self` fields, hooks, errors, reload | [`docs/agent/03-rules.md § Lua`](docs/agent/03-rules.md#lua), `ConsoleEngine.Scripting/`, `Examples/Scripted` |
 | 3D rendering (`IRenderer3D`, software `Rasterizer`, OpenGL `GlRenderer`, near-plane clipping, OBJ models, 16-colour dithering or 24-bit true colour with alpha blending, lighting: `SceneLighting` ambient + sun + up to 16 per-pixel point/spot `PointLight`s) | `ConsoleEngine.Rendering3D/` (own assembly and NuGet package, optional), GPU renderer in `ConsoleEngine.Rendering3D.OpenGL/` (same picture; callers fall back to `Rasterizer` when `GlRenderer.TryCreate` fails), GPU plan in [`docs/design/gpu-rendering-plan.md`](docs/design/gpu-rendering-plan.md), rules in [`docs/agent/03-rules.md`](docs/agent/03-rules.md) (Kartster rows, "3D (any game)" lighting row); Kartster's headlights, night and blob shadows in `Examples/Kartster/Lighting/` |
 | Why KeraLua, and what Lua costs per entity | `ConsoleEngine.Benchmarks/README.md` |
@@ -257,10 +257,13 @@ Examples/
                                   Effects/ (SkidMarks, SlideSmoke, KartWheels), Lighting/ (KartLights: blob shadows, night
                                   on N, kart lights; KartLamps: light_ markers, glowing lenses), Components/ (Kart with its Index,
                                   PlayerKart tag, Bot), KartEntity (a kart's physics body),
-                                  KartFrame (physics <-> kart frame), KartModel (Kartster part folders), Track
-                                  (exported ribbon + spline + scenery + power-up pads), Scenery (scenery file: model instances +
+                                  KartFrame (physics <-> kart frame, kart world matrix), KartModel (Kartster part
+                                  folders), Track (exported ribbon + spline + terrain + scenery + power-up pads; road
+                                  triangle grid, TryGetGround: highest road under a probe, else terrain), Terrain
+                                  (terrain.txt heightmap, tiles), Scenery (scenery file: model instances +
                                   triangle cells, culled per bounding sphere), Driving/ (Kartster-like planar kart
-                                  model: KartDynamics computes force + yaw torque per step, KartIntegrator, KartTuning,
+                                  model: KartDynamics computes force + yaw torque per step (support: slope, air),
+                                  KartIntegrator, KartTuning,
                                   KartCatalog, KartEngine, KartTraction, KartLoadTransfer, Surface), Collision/ (TrackCollision: loads
                                   <id>.collision.txt, walls and posts as static bodies), Race/ (race
                                   rules: RaceMarkers loads <id>.race.txt, RaceGate, GridSlot, RaceSession (pure:
@@ -276,9 +279,12 @@ Examples/
                                   as a see-through ghost (GhostRenderSystem) and in GhostFile under
                                   %LOCALAPPDATA%/Kartster/ghosts),
                                   Assets/Karts/ (20 of Kartster's karts, 10 MB OBJ), Assets/Tracks/
-                                  (star-circuit, star-rally, prism-loop, eight-ball: ribbon, spline, scenery.txt, race.txt, powerups.txt,
-                                  collision.txt each; written by tools/KartsterExport) and Assets/Scenery/
-                                  (Pipe.obj from Kartster, Box.obj), copied to output, Bots/ (see above),
+                                  (star-circuit, star-rally, prism-loop, eight-ball: ribbon, spline, scenery.txt,
+                                  race.txt, powerups.txt, collision.txt each; norbergring, dunsfold-neon,
+                                  kinnekulle, brands-hatch-indy: the same plus terrain.txt, no collision.txt;
+                                  written by tools/KartsterExport) and Assets/Scenery/ (Pipe.obj, TreeCrown,
+                                  TreeTrunk, BroadleafCrown, BroadleafTrunk from Kartster, Box.obj), copied to output,
+                                  Bots/ (see above),
                                   Components/ (Kart with Index, PlayerKart, Bot),
                                   Ui/ (pixel UI kit: IPixelTarget, PaletteTarget, RgbTarget, PixelFont 3×5,
                                   TextFormat, Shapes, UiColors, Hud + HudState, Minimap, RaceResults, IKartsterMenus,
@@ -296,11 +302,13 @@ Examples/
                                   Bots/BotTrafficTests (road widths, passing, following, leaning, 6-bot race),
                                   Collision/TrackCollisionTests (file, walls, pipe, bots lap every track with walls,
                                   allocation),
-                                  PowerUps/ (PowerUpFieldTests, PowerUpSystemTests, PowerUpKindsTests)
+                                  PowerUps/ (PowerUpFieldTests, PowerUpSystemTests, PowerUpKindsTests),
+                                  HeightTests (slopes, crests, bridges, road grid vs. brute force, terrain, bots lap the
+                                  tracks with height, allocation, CPU/GPU frame time per track)
 tools/
   KartsterExport/                 track exporter (not in the solution): Program (list, export), ITrackExporter,
                                   RibbonExporter, SplineExporter, SceneryExporter, RaceExporter,
-                                  CollisionExporter, PowerUpExporter, README.md
+                                  CollisionExporter, PowerUpExporter, TerrainExporter, README.md
 .github/workflows/                build-and-test.yml
 ```
 

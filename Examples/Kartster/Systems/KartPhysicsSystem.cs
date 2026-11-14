@@ -10,7 +10,8 @@ namespace Kartster.Systems;
 /// <summary>
 /// Kartster's kart model on the physics bodies: each fixed step turns every kart's state, its
 /// <see cref="KartControls"/> and the surface under it into the step's <see cref="Force"/>
-/// (<see cref="KartDynamics.ComputeForces"/>), which the <see cref="PhysicsSystem"/> after it integrates. One
+/// (<see cref="KartDynamics.ComputeForces"/>, with the ground's share of the weight as its support: none in the air),
+/// plus gravity along the slope under it, which the <see cref="PhysicsSystem"/> after it integrates. One
 /// <see cref="KartDynamics"/> per kart, by <see cref="Kart.Index"/>. Runs in the fixed step, before the
 /// <see cref="PhysicsSystem"/>.
 /// </summary>
@@ -88,10 +89,15 @@ public sealed class KartPhysicsSystem : EntitySystem
                 var body = KartFrame.ToBody(positions[i].Value, rotations[i].Radians, velocities[i].Value,
                     angularVelocities[i].Value);
                 var effectTuning = Effects?.Get(index, _dynamics[index], karts[i].Surface);
+                var normal = karts[i].Normal;
+                var support = karts[i].Airborne ? 0f : normal.Y;
                 var kartForces = effectTuning == null
-                    ? _dynamics[index].ComputeForces(body, controls[i], karts[i].Surface, deltaSeconds)
-                    : _dynamics[index].ComputeForces(body, controls[i], effectTuning, deltaSeconds);
-                forces[i].Add(KartFrame.ToPhysicsForce(kartForces.Force));
+                    ? _dynamics[index].ComputeForces(body, controls[i], karts[i].Surface, deltaSeconds, support)
+                    : _dynamics[index].ComputeForces(body, controls[i], effectTuning, deltaSeconds, support);
+                // Gravity along the ground, its horizontal part: m·g·sin θ·cos θ downhill (zero in the air).
+                var downhill = _dynamics[index].Mass * KartLoadTransfer.Gravity * support;
+                forces[i].Add(KartFrame.ToPhysicsForce(kartForces.Force
+                    + new System.Numerics.Vector2(normal.X, normal.Z) * downhill));
                 forces[i].AddTorque(KartFrame.ToPhysicsTorque(kartForces.Torque) * _torqueScales[index]);
             }
         }

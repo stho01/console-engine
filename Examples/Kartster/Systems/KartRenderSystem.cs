@@ -69,7 +69,7 @@ public sealed class KartRenderSystem(Entity player, KartsterGame game, Mesh[] ka
         var track = game.Track;
         PlaceKarts();
         _lights.Begin(renderer, _kartWorlds, _eye);
-        renderer.Draw(track.Ground, track.GroundWorld, viewProjection, KartsterGame.ToSun);
+        track.DrawGround(renderer, viewProjection, _eye, KartsterGame.ToSun);
         renderer.Draw(track.Road, Matrix4x4.Identity, viewProjection, KartsterGame.ToSun);
         track.Scenery.Draw(renderer, viewProjection, _eye, KartsterGame.ToSun);
         renderer.Draw(skidMarks.Mesh, Matrix4x4.Identity, viewProjection, KartsterGame.ToSun);
@@ -101,7 +101,7 @@ public sealed class KartRenderSystem(Entity player, KartsterGame game, Mesh[] ka
             for (var i = 0; i < chunk.Count; i++)
             {
                 var (position, forward) = Pose(positions[i], rotations[i], offsets[i], karts[i]);
-                _kartWorlds[karts[i].Index] = Matrix4x4.CreateWorld(position, forward, Vector3.UnitY);
+                _kartWorlds[karts[i].Index] = KartFrame.ToWorld(position, forward, karts[i].Normal);
             }
         }
     }

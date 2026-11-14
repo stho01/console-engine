@@ -119,6 +119,11 @@ using [04](04-flows.md).
 | `No kart parts (*.obj) in <folder>` | `KartModel.Load` (`InvalidDataException`) | A kart folder has no drawable OBJ parts |
 | `<path>:<line>: a face needs at least three corners` | `ObjFile.Read` (`InvalidDataException`) | Broken OBJ file |
 | `<id>.spline.obj needs at least two centerline points` | `Track.Load` (`InvalidDataException`) | Broken or empty track spline export |
+| `<file>:<line>: expected 'terrain originX originZ cellSize columns rows r g b'` | `Terrain.Parse` (`InvalidDataException`) | The first line of `<id>.terrain.txt` is not the header |
+| `<file>:<line>: needs a cell size above 0 and at least 2 columns and rows` | `Terrain.Parse` (`InvalidDataException`) | The header's grid is empty |
+| `<file>:<line>: expected <columns> heights, found <n>` / `more than <rows> rows` | `Terrain.Parse` (`InvalidDataException`) | A height row is the wrong length, or there are too many rows |
+| `<file>:<line>: '<text>' is not a number` | `Terrain.Parse` (`InvalidDataException`) | A value does not parse (invariant culture; `NaN` is no ground) |
+| `<file>: expected a terrain header and <rows> rows, found <n>` | `Terrain.Parse` (`InvalidDataException`) | The file ends early (an empty file: `<rows>` is 0) |
 | `<file>:<line>: expected 'model <name> x y z yawDegrees scaleX scaleY scaleZ r g b'` | `Scenery.Parse` (`InvalidDataException`) | A `model` line without exactly 11 values |
 | `<file>:<line>: expected 'tri x1 y1 z1 x2 y2 z2 x3 y3 z3 r g b'` | `Scenery.Parse` (`InvalidDataException`) | A `tri` line without exactly 12 values |
 | `<file>:<line>: '<text>' is not a number` | `Scenery.Parse` (`InvalidDataException`) | A value in a scenery line does not parse (invariant culture) |

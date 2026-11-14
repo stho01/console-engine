@@ -4,7 +4,8 @@ using System.Numerics;
 namespace Kartster.Driving;
 
 /// <summary>
-/// Kartster's arcade kart model (<c>ArcadeKartPhysics.Update</c>) on flat ground, always grounded, as forces: each
+/// Kartster's arcade kart model (<c>ArcadeKartPhysics.Update</c>), planar, as forces (the slope and the air come in as
+/// the <c>support</c> of <see cref="ComputeForces(in KartBody, in KartControls, KartTuning, float, float)"/>): each
 /// step <see cref="ComputeForces"/> turns the body's state and the controls into one net force and yaw torque,
 /// which an integrator holds constant over the step (<see cref="KartIntegrator"/>, or a rigid-body engine).
 /// </summary>
@@ -114,17 +115,26 @@ public sealed class KartDynamics
     /// <summary>The tuning a surface turns this kart's into: grip, rolling drag and the governed engine.</summary>
     public KartTuning GetTuning(Surface surface) => _surfaceTunings[(int)surface];
 
-    public KartForces ComputeForces(in KartBody body, in KartControls controls, Surface surface, float dt) =>
-        ComputeForces(body, controls, _surfaceTunings[(int)surface], dt);
+    /// <param name="support">
+    /// How much of the kart's weight the ground carries, cos of the slope under it (1 on flat ground); 0 in the air,
+    /// where the wheels do nothing and only the angular damping acts, as in Kartster. The wheel loads and the rolling
+    /// resistance scale with it.
+    /// </param>
+    public KartForces ComputeForces(in KartBody body, in KartControls controls, Surface surface, float dt,
+        float support = 1f) =>
+        ComputeForces(body, controls, _surfaceTunings[(int)surface], dt, support);
 
     /// <summary>
     /// As the surface overload, on <paramref name="tuning"/>: this kart's tuning with its surface (and power-up
     /// effects, <c>PowerUps.KartEffectTuning</c>) already laid over it.
     /// </summary>
-    public KartForces ComputeForces(in KartBody body, in KartControls controls, KartTuning tuning, float dt)
+    public KartForces ComputeForces(in KartBody body, in KartControls controls, KartTuning tuning, float dt,
+        float support = 1f)
     {
         if (dt <= 0f)
             return default;
+        if (support <= 0f)
+            return ComputeAirborne(body, tuning, dt);
 
         var throttle = Math.Clamp(controls.Throttle, 0f, 1f) - Math.Clamp(controls.Brake, 0f, 1f);
         var steering = Math.Clamp(controls.Steer, -1f, 1f);
@@ -141,7 +151,7 @@ public sealed class KartDynamics
         _previousVelocity = velocity;
         _hasPreviousVelocity = true;
         var loads = KartLoadTransfer.Calculate(tuning, Vector2.Dot(acceleration, forward),
-            Vector2.Dot(acceleration, right));
+            Vector2.Dot(acceleration, right)).Scaled(MathF.Min(support, 1f));
         WheelLoads = loads;
 
         var forwardSpeed = Vector2.Dot(velocity, forward);
@@ -167,7 +177,7 @@ public sealed class KartDynamics
         var traction = ApplyWheels(tuning, isBraking ? 0f : MathF.Max(throttle, 0f), isBraking ? MathF.Abs(throttle) : 0f,
             steering, handbrake, velocity, yawRate, forward, frontForward, frontArm, rearArm, drivenWheelSpeed,
             loads, dt);
-        ApplyResistance(tuning, forward, forwardSpeed, dt);
+        ApplyResistance(tuning, forward, forwardSpeed, MathF.Min(support, 1f), dt);
         var (frontSlip, rearSlip) = ApplySteering(tuning, traction, velocity, yawRate, forward, right, frontRight,
             frontArm, rearArm, loads, dt);
 
@@ -181,9 +191,7 @@ public sealed class KartDynamics
             _torque -= yawRate * rate * YawInertia;
         }
 
-        // Kartster multiplies the yaw rate by this before integrating; as a torque it removes the same.
-        var keep = MathF.Max(0f, 1f - Math.Clamp(tuning.AngularDamping, 0f, 1f) * dt);
-        _torque += yawRate * (keep - 1f) * YawInertia / dt;
+        _torque += AngularDampingTorque(tuning, yawRate, dt);
 
         return new KartForces(_force, _torque);
     }
@@ -191,6 +199,24 @@ public sealed class KartDynamics
     //**********************************************************
     //** internals
     //**********************************************************
+
+    // Kartster in the air: the wheels do nothing (no drive, grip, brakes or rolling drag), only the angular damping.
+    private KartForces ComputeAirborne(in KartBody body, KartTuning tuning, float dt)
+    {
+        _previousVelocity = body.Velocity;
+        _hasPreviousVelocity = true;
+        WheelLoads = default;
+        FrontSlip = RearSlip = 0f;
+        IsSliding = false;
+        return new KartForces(Vector2.Zero, AngularDampingTorque(tuning, body.AngularVelocity, dt));
+    }
+
+    // Kartster multiplies the yaw rate by this before integrating; as a torque it removes the same.
+    private float AngularDampingTorque(KartTuning tuning, float yawRate, float dt)
+    {
+        var keep = MathF.Max(0f, 1f - Math.Clamp(tuning.AngularDamping, 0f, 1f) * dt);
+        return yawRate * (keep - 1f) * YawInertia / dt;
+    }
 
     private readonly record struct AxleTraction(float FrontGripShare, float RearGripShare, float FrontSpin,
         float RearSpin);
@@ -337,9 +363,10 @@ public sealed class KartDynamics
     }
 
     // Rolling resistance and drag along the kart; the tyres own the sideways speed.
-    private void ApplyResistance(KartTuning tuning, Vector2 forward, float forwardSpeed, float dt)
+    private void ApplyResistance(KartTuning tuning, Vector2 forward, float forwardSpeed, float support, float dt)
     {
-        var resistance = MathF.Min(MathF.Max(tuning.RollingResistance, 0f), 1f / dt);
+        // Rolling drag goes with the load on the wheels.
+        var resistance = MathF.Min(MathF.Max(tuning.RollingResistance, 0f), 1f / dt) * support;
         var rolling = -forwardSpeed * resistance * Mass;
         var drag = -MathF.Sign(forwardSpeed) * MathF.Max(tuning.AerodynamicDrag, 0f) * forwardSpeed * forwardSpeed;
         var stopping = MathF.Abs(forwardSpeed) * Mass / dt; // never reverses the kart within a step

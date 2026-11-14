@@ -27,8 +27,9 @@ er relative til `src/Kartster/` der. Linjenumre er fra 2026-11-14 og kan ha flyt
 
 **Ikke-mål (nå)**
 
-- 3D-fysikk: hopp, bakketopper, doserte svinger, fly, glide, stuping, velting, enhjulinger (`KartFlight`, `KartGlide`,
-  `KartUnicycle`, `KartPitch`). Banen er flat.
+- 3D-fysikk: fly, glide, stuping, velting, enhjulinger (`KartFlight`, `KartGlide`, `KartUnicycle`, `KartPitch`).
+  Bakker, bakketopper, hopp og veien på flere nivåer kom senere som en loddrett modell ved siden av den plane
+  kroppen (§ 11).
 - Vegger og kollisjoner mellom karter. Planen gjør dem enkle å legge til senere (§ 9), men de er ikke med nå.
 - Power-ups, boost, turbo, downforce (bare McLuring bruker det), bremse-lås (`CanLockWheels`).
 - Bit-for-bit likhet med Kartster. Vi sikter på samme oppførsel målt i tall, ikke samme flyttall.
@@ -348,3 +349,106 @@ Hvert steg bygges, testes og prøvekjøres for seg.
   olabil svinger derfor omtrent 3 % trangere (20 og 50 km/t) og roterer 2,5 % mer i håndbrekk-svingen enn i Kartster.
   Innenfor toleransene i § 7, som ikke er endret.
 - **Første steg** har ingen målt akselerasjon (forrige fart mangler), så vektoverføringen starter statisk.
+
+## 11. Høyde: bakker, veien på flere nivåer og terreng
+
+Status (2026-11-14): ferdig. Skrevet før koden; slik det ble bygget står i § 11d, avvik i § 11e.
+
+### 11a. Slik gjør Kartster det (lest, ikke kopiert)
+
+- **Kroppen er 3D** (`RigidBody`, `Transform` med kvaternion), og tyngdekraften virker hele tiden. Bakken er ikke en
+  kontakt, men `KartGroundConstraint.Apply(state, punkt, normal, dt)` etter hvert steg: løfter karten ut av flaten
+  (aldri ned på den), tar bort farten *inn i* flaten (aldri ut av den), beholder bare gir om normalen og retter karten
+  opp mot normalen over `UprightingSeconds` (0,06 s). Slipper karten så snart den beveger seg bort fra flaten
+  (`speedAwayFromSurface > 0`): en bakketopp som faller raskere unna enn tyngdekraften følger, er et hopp. I lufta får
+  karten bare tyngdekraft og vinkeldemping (`IsGrounded` styrer alle hjuleffekter, ett steg gammel).
+- **Hvilken flate:** `RaceSimulation.ApplyTrackGrounding` spør først veien (`IsSupportedByTrack`: kartens
+  `TrackContact` fra `TrackRouteNavigator`, innenfor veibredden, 0 < høyde over veien ≤ ride height +
+  `TrackGripHeightMeters` (1 m); under veien er aldri støtte), så bakken (`IsSupportedByGround`: `TrackTerrain` eller
+  flat `TrackGround` på y = 0, samme vindu). Ellers faller karten.
+- **Bruer:** navigatoren leter bare `ProjectionSearchDistance` (8 m) langs ruta fra der karten var (kontinuitetsvinduet),
+  så den tar aldri det andre nivået av en overgang. Sammen med «under veien er aldri støtte» holder det Norbergrings
+  åttetall.
+- **Terreng** (`TrackTerrain`): høyder på et kvadratisk rutenett (5 eller 10 m), NaN der det ikke er bakke (et belte
+  langs veien). `TryGetHeight` blander de fire hjørnene bilineært og gir høyde og normal. Tegnes som to trekanter per
+  rute delt fra øvre høyre til nedre venstre hjørne (`TrackTerrainMesh`), i fliser på 16 × 16 ruter. Bygd av
+  `RouteTrackFactory.CreateTerrain`: 5 cm under veien ut til 15 m fra den, så tilbake til ekte terreng over 40 m.
+- **Dosering** er bare veiens normal: samme constraint, karten lener seg med flaten.
+
+### 11b. Valgt modell: plan kropp + en loddrett modell per kart
+
+Industristandard for bil-/karakterkontrollere over et høydefelt (Unity `CharacterController` med step offset, Godot
+`move_and_slide` med floor snap, Box2D/plan fysikk med egen høyde): beholde den plane kroppen i `ConsoleEngine.Physics`
+(x, z) og legge høyden ved siden av.
+
+- **Tilstand i `Kart`:** `Height` (y for kartens bakkepunkt, som før), `VerticalSpeed` (m/s), `Slope` (normalens x og
+  z; y = √(1 − |Slope|²), null = flatt, så en ny `Kart` står på flat bakke) og `Airborne` (false = på bakken, så
+  standardverdien er som før).
+- **`KartGroundSystem`** (etter `PhysicsSystem`): `VerticalSpeed -= g·dt`, `Height += VerticalSpeed·dt`. Så finner det
+  flaten under: høyeste vei-trekant under (x, z) med høyde ≤ `Height + StepHeight` (0,5 m), ellers terrenget, ellers den
+  flate bakken. Er karten på eller under flaten: sett den på flaten og gi den den loddrette farten som følger flaten
+  (`VerticalSpeed = −(n.x·vx + n.z·vz)/n.y`, den vannrette farten er fysikkens). Er den over: den er i lufta (ensidig
+  støtte, som originalen). En kart på bakken som går av veien ned på gress/terreng inntil `StepHeight` lavere settes ned
+  på den (kanten er en fortauskant, ikke et stup), så den flate bakken 0,3 m under veien ikke gir et hopp.
+  `Airborne` = mer enn 5 cm (`GroundedTolerance`, som originalens) over flaten. `Slope` glir mot den nye normalen med
+  tidskonstant 0,06 s (originalens `UprightingSeconds`) og holdes i lufta.
+- **Nivåvalg ved kontinuitet i høyde:** «høyeste flate ikke mer enn et steg over karten» er en stråle ned fra
+  `Height + StepHeight`. Under en bru er dekket 6–8 m over og telles ikke; på brua er dekket høyest. Det er originalens
+  to regler (kontinuitetsvindu + under veien er aldri støtte) uttrykt i høyde i stedet for rutedistanse, og trenger
+  ingen rutekobling.
+- **Krefter (`KartPhysicsSystem`):** på bakken legges tyngdekraftens del langs flaten til som plan kraft:
+  `F = m·g·n.y·(n.x, n.z)` = m·g·sin θ·cos θ nedover bakken, den vannrette delen av m·g·sin θ (oppover går tregere,
+  nedover fortere, og en kart triller fra ro). `KartDynamics.ComputeForces` får `support` = n.y (cos θ) på bakken og 0 i
+  lufta (valgfri parameter, standard 1, så flat bakke er uendret): hjullastene og rullemotstanden ganges med den
+  (N = m·g·cos θ); med 0 gir modellen bare vinkeldempingen, som originalen i lufta.
+- **Romlig indeks:** `Track` legger vei-trekantene (normal.y > 0,5) i et rutenett på 4 m én gang ved lasting (CSR-
+  matriser: start per rute + trekantnumre). Et oppslag tester bare trekantene i én rute. Ingen allokering.
+- **Terreng:** `<id>.terrain.txt` fra ny `TerrainExporter` (originalens `TrackTerrain` rett ut: origo, rutestørrelse,
+  kolonner, rader, farge, høyder med `nan`). `Terrain` i spillet gjør originalens `TryGetHeight` og bygger fliser på
+  16 × 16 ruter som tegnes med samme kulling som kulissene. Med terreng tegnes ikke sjakkbrettet, og kulissepunkter på
+  y = 0 flyttes ikke. Utenfor terrengbeltet stopper karten ved kanten (som ved sjakkbrettets kant) i stedet for å falle.
+- **Tegning:** kartens verdensmatrise får opp = normalen og forover lagt i flaten (stamp og rull). Kameraet følger
+  `Height` som før.
+
+### 11c. Forenklet med vilje
+
+- Kreftene fra motor, dekk og brems virker vannrett; på 15° er det cos θ = 0,97 av dem langs veien.
+- Landing: farten inn i flaten forsvinner, den vannrette farten beholdes (originalen tar bort normalkomponenten i 3D).
+- Ingen rulle-/stuperotasjon i lufta: karten beholder den siste normalen og glir til den nye ved landing.
+- Lastoverføringen ser fortsatt på målt akselerasjon, også den fra bakken (originalen gjør det samme).
+
+### 11d. Slik det ble bygget
+
+| Fil | Hva |
+|---|---|
+| `Components/Kart.cs` | `VerticalSpeed`, `Slope`, `Airborne`, `Normal`; standardverdiene er flat bakke |
+| `Systems/KartGroundSystem.cs` | Tyngdekraft, ensidig støtte, kantsteinsregelen, terrengkanten, `Slope`; `StepHeight` 0,5 m, `GroundedTolerance` 0,05 m, `UprightingSeconds` 0,06 s |
+| `Systems/KartPhysicsSystem.cs` | `support` inn i modellen og bakkekraften m·g·n.y·(n.x, n.z) |
+| `Driving/KartDynamics.cs` | Valgfri `support` på begge `ComputeForces`; 0 = bare vinkeldemping (`ComputeAirborne`); laster og rullemotstand × `support` |
+| `Driving/KartLoadTransfer.cs` | `KartWheelLoads.Scaled` |
+| `Track.cs` | Veirutenett på 4 m (CSR, tellesortering ved lasting), `TryGetGround`, `TryGetRoadHeight` = høyeste vei, `Terrain`, `DrawGround` |
+| `Terrain.cs` | `terrain.txt`, originalens bilineære `TryGetHeight`, fliser på 16 × 16 ruter (`Scenery.FromMeshes`) |
+| `KartFrame.cs` | `ToWorld`: opp = normalen, forover lagt i flaten |
+| `Systems/KartRenderSystem.cs` | To linjer: `track.DrawGround(…)` i stedet for sjakkbrettet, `KartFrame.ToWorld(…, karts[i].Normal)` som kartens verdensmatrise |
+| `tools/KartsterExport/TerrainExporter.cs` | `<id>.terrain.txt` fra `TrackGraph.Terrain`, farge etter `TrackGroundStyle` |
+
+Målt (`Examples/Kartster.Tests/HeightTests.cs`): 3 s full gass på 15 % stigning gir 25,3 m/s opp, 27,2 flatt og 29,2 ned;
+en kart triller nedover fra ro; en avrundet topp med radius 60 m kaster en kart i 30 m/s, ikke i 15 (v²/R mot g);
+en skarp topp (20 % opp, 30 % ned) kaster den og den lander bak; under og over en bru holder karten sitt nivå (laget
+kryss og Norbergring); rutenettet finner samme høyde som alle trekantene (4 000 punkter på tre baner); 6 karter med
+boter: 25–55 µs per steg, ingen allokering. `KartReferenceTests` og `KartPhysicsSystemTests` er uendret: med `support`
+1 og flat normal er hvert tall bit for bit det samme.
+
+### 11e. Avvik fra planen og fra originalen
+
+- **Kantsteinsregelen** (ikke i originalen, som har bakken 5 cm under veien): uten den ga sjakkbrettet 0,3 m under
+  veien et hopp på 0,25 s hver gang en kart gikk av veien. Følgen er at en kart på gress eller terreng aldri hopper
+  over en bakketopp der.
+- **Terrengkanten:** originalen lar karten falle og setter den tilbake på veien (`KartRespawn`); her stopper den ved
+  kanten, som ved sjakkbrettets kant.
+- **Toleransen** brukes bare på `Airborne` (hjulene), ikke på støtten: fysikken slipper karten etter originalens regel
+  (fart bort fra flaten), mens en kart som er under 5 cm over flaten fortsatt har grep. Det hindrer at de 1 m lange
+  fasettene i ribbon-meshen slår av grepet et steg av gangen over en jevn bakketopp.
+- **Kollisjon:** de fire nye banene har ingen `collision.txt` (eksportøren nekter trær, bygninger, lykter og
+  brusøyler), så veggene mangler der. Portene i løpet er fortsatt plane (`RaceGate`); ingen av portene på Norbergring
+  eller Dunsfold Neon ligger under en bru, så botene teller riktig.

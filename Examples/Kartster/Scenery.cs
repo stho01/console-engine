@@ -72,6 +72,20 @@ public sealed class Scenery
     public static Scenery Load(string path, string modelsFolder, float groundHeight) =>
         Parse(File.ReadLines(path), Path.GetFileName(path), modelsFolder, groundHeight);
 
+    /// <summary>Meshes in world space, each drawn and culled on its own (the terrain's tiles).</summary>
+    public static Scenery FromMeshes(Mesh[] meshes)
+    {
+        var scenery = new Scenery(meshes, new Matrix4x4[meshes.Length], new Vector3[meshes.Length],
+            new float[meshes.Length]);
+        for (var i = 0; i < meshes.Length; i++)
+        {
+            scenery._worlds[i] = Matrix4x4.Identity;
+            (scenery._centers[i], scenery._radii[i]) = Bounds(meshes[i].Positions);
+        }
+
+        return scenery;
+    }
+
     /// <param name="source">The file name, for error messages.</param>
     /// <exception cref="InvalidDataException">A line is not a model or tri line, or its model is missing.</exception>
     public static Scenery Parse(IEnumerable<string> lines, string source, string modelsFolder, float groundHeight)
@@ -226,7 +240,7 @@ public sealed class Scenery
     private static Vector3 Grounded(Vector3 point, float groundHeight) =>
         MathF.Abs(point.Y) < OnGround ? point with { Y = groundHeight } : point;
 
-    private static (Vector3 Center, float Radius) Bounds(List<Vector3> positions)
+    private static (Vector3 Center, float Radius) Bounds(IEnumerable<Vector3> positions)
     {
         var min = new Vector3(float.MaxValue);
         var max = new Vector3(float.MinValue);

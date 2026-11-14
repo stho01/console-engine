@@ -22,7 +22,7 @@ internal static class Program
     /// <summary>Every file written per track. A new export is one class here.</summary>
     internal static readonly ITrackExporter[] Exporters =
         [new RibbonExporter(), new SplineExporter(), new SceneryExporter(), new RaceExporter(),
-         new CollisionExporter(), new PowerUpExporter()];
+         new CollisionExporter(), new PowerUpExporter(), new TerrainExporter()];
 
     private const string Usage = "usage: KartsterExport list | export <outDir> <trackId...>";
 

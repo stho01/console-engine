@@ -41,4 +41,17 @@ public static class KartFrame
 
     /// <summary>Kart torque (positive = left) as physics torque (positive = clockwise).</summary>
     public static float ToPhysicsTorque(float torque) => -torque;
+
+    /// <summary>
+    /// The world matrix of a kart drawn at <paramref name="position"/> facing <paramref name="forward"/> (level) and
+    /// tilted onto the ground under it (<paramref name="up"/>): pitched and rolled, the heading kept.
+    /// </summary>
+    public static System.Numerics.Matrix4x4 ToWorld(System.Numerics.Vector3 position, System.Numerics.Vector3 forward,
+        System.Numerics.Vector3 up)
+    {
+        var alongGround = forward - up * System.Numerics.Vector3.Dot(forward, up);
+        return alongGround.LengthSquared() < 1e-6f
+            ? System.Numerics.Matrix4x4.CreateWorld(position, forward, System.Numerics.Vector3.UnitY)
+            : System.Numerics.Matrix4x4.CreateWorld(position, System.Numerics.Vector3.Normalize(alongGround), up);
+    }
 }

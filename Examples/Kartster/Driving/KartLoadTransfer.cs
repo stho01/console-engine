@@ -2,11 +2,15 @@ using System;
 
 namespace Kartster.Driving;
 
-/// <summary>Newtons on each wheel. Always adds up to the kart's weight.</summary>
+/// <summary>Newtons on each wheel: the kart's weight, or the share the ground carries (<see cref="Scaled"/>).</summary>
 public readonly record struct KartWheelLoads(float FrontLeft, float FrontRight, float RearLeft, float RearRight)
 {
     public float Front => FrontLeft + FrontRight;
     public float Rear => RearLeft + RearRight;
+
+    /// <summary>Every wheel times <paramref name="share"/>: the share of the weight the ground carries on a slope.</summary>
+    public KartWheelLoads Scaled(float share) =>
+        new(FrontLeft * share, FrontRight * share, RearLeft * share, RearRight * share);
 }
 
 /// <summary>
