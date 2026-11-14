@@ -11,6 +11,7 @@ using Kartster.Driving;
 using Kartster.Effects;
 using Kartster.Race;
 using Kartster.Systems;
+using Kartster.Ui;
 using PlanarVector2 = System.Numerics.Vector2;
 using XnaVector2 = Microsoft.Xna.Framework.Vector2;
 
@@ -23,11 +24,13 @@ namespace Kartster.Scenes;
 /// Kartster's 120 steps per second, with a chase camera behind the player. A <see cref="RaceSession"/> run by the
 /// <see cref="RaceSystem"/> counts laps; nobody moves during its countdown. Bots drive by the
 /// <see cref="BotDriverSystem"/> in the game's kart folders' karts, each in its own colour. Karts push each other
-/// through their box colliders.
+/// through their box colliders. The HUD (<see cref="Hud"/>, filled by a <see cref="RaceReport"/>) is drawn over the
+/// 3D picture.
 /// </summary>
 /// <param name="lapCount">Laps to race, at least 1.</param>
 /// <param name="botCount">Bots on the grid besides the player.</param>
-public sealed class TrackScene(int lapCount, int botCount = TrackScene.DefaultBotCount) : EcsScene<KartsterGame>
+public sealed class TrackScene(int lapCount, int botCount = TrackScene.DefaultBotCount)
+    : EcsScene<KartsterGame>, IUiLayer
 {
     //**********************************************************
     //** fields
@@ -74,8 +77,13 @@ public sealed class TrackScene(int lapCount, int botCount = TrackScene.DefaultBo
     /// <summary>Loads kart parts in this colour, never drawn: <see cref="KartModel.Recolor"/> replaces it.</summary>
     private static readonly Vector3 BodyKey = new(-1f);
 
+    private const float MetresPerSecondToKmh = 3.6f;
+
+    private readonly Hud _hud = new();
     private Entity _player;
     private KartPhysicsSystem _physics;
+    private RaceReport _report;
+    private HudState _hudState;
 
     //**********************************************************
     //** props
@@ -227,13 +235,16 @@ public sealed class TrackScene(int lapCount, int botCount = TrackScene.DefaultBo
         var count = botCount + 1;
         var tunings = new KartTuning[count];
         var meshes = new Mesh[count];
-        LoadBotKarts(tunings, meshes, PlayerSlot);
+        var names = new string[count];
+        LoadBotKarts(tunings, meshes, names, PlayerSlot);
         tunings[PlayerSlot] = Game.Tuning;
         meshes[PlayerSlot] = Game.Kart;
+        names[PlayerSlot] = Game.KartName.ToUpperInvariant();
 
         Race = CreateSession(track, Game.Markers, lapCount);
         var karts = CreateKarts(World, track, Game.Markers, tunings, PlayerSlot, Race);
         _player = karts[PlayerSlot];
+        _report = new RaceReport(Race, names, PlayerSlot);
 
         FixedTimestep = new FixedTimestep(StepSeconds, MaxStepsPerFrame);
         _physics = AddDriving(FixedSimulation, track, tunings, Race);
@@ -247,14 +258,22 @@ public sealed class TrackScene(int lapCount, int botCount = TrackScene.DefaultBo
         Presentation.Add(new KartRenderSystem(_player, Game, meshes, skidMarks, smoke));
     }
 
+    /// <summary>The HUD, after the 3D frame is finished.</summary>
+    public void DrawUi(IPixelTarget target)
+    {
+        _report.FillHud(ref _hudState, Speed * MetresPerSecondToKmh);
+        _hud.Draw(target, _hudState);
+    }
+
     //**********************************************************
     //** internals
     //**********************************************************
 
     /// <summary>
-    /// Bots take the game's kart folders in turn, each kart's parts loaded once and recoloured per bot.
+    /// Bots take the game's kart folders in turn, each kart's parts loaded once and recoloured per bot, named after
+    /// the kart and their number ("WAGON 2").
     /// </summary>
-    private void LoadBotKarts(KartTuning[] tunings, Mesh[] meshes, int playerIndex)
+    private void LoadBotKarts(KartTuning[] tunings, Mesh[] meshes, string[] names, int playerIndex)
     {
         var folders = Game.KartFolders;
         var loaded = new Dictionary<string, Mesh>();
@@ -269,6 +288,7 @@ public sealed class TrackScene(int lapCount, int botCount = TrackScene.DefaultBo
                 loaded[kartFolder] = mesh = KartModel.Load(kartFolder, BodyKey);
             tunings[i] = KartCatalog.ForKart(System.IO.Path.GetFileName(kartFolder));
             meshes[i] = KartModel.Recolor(mesh, BodyKey, BotColors[botNumber % BotColors.Length]);
+            names[i] = $"{System.IO.Path.GetFileName(kartFolder).ToUpperInvariant()} {botNumber + 1}";
             botNumber++;
         }
     }

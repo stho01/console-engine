@@ -243,7 +243,7 @@ Examples/
                                   model: KartDynamics computes force + yaw torque per step, KartIntegrator, KartTuning,
                                   KartCatalog, KartEngine, KartTraction, KartLoadTransfer, Surface), Race/ (race
                                   rules: RaceMarkers loads <id>.race.txt, RaceGate, GridSlot, RaceSession (pure:
-                                  countdown, gates, laps, positions), Racer, RacePhase, RaceProgress (component),
+                                  countdown, gates, laps, positions, gaps), RaceReport (HUD state), Racer, RacePhase, RaceProgress (component),
                                   RaceSystem), Assets/Karts/ (olabil, wagon), Assets/Tracks/ (star-circuit: ribbon,
                                   spline, scenery.txt, race.txt) and Assets/Scenery/ (Pipe.obj from Kartster,
                                   Box.obj), exported from Kartster, copied to output, Bots/ (BotDriverSystem,
@@ -255,7 +255,7 @@ Examples/
   Kartster.Tests/               KartModelTests, TrackTests, SceneryTests, KartPhysicsSystemTests,
                                   KartFrameTests, KartInputSystemTests, Driving/KartDynamicsTests, Driving/KartReferenceTests,
                                   Effects/EffectsTests (skid marks, slide smoke), Race/ (RaceMarkersTests,
-                                  RaceSessionTests, RaceSystemTests, RaceWiringTests), Ui/ (PixelFont, TextFormat, PixelTarget, Hud,
+                                  RaceSessionTests, RaceSystemTests, RaceReportTests, RaceWiringTests), Ui/ (PixelFont, TextFormat, PixelTarget, Hud,
                                   Menu tests; UiPreview writes ui-preview/*.ppm to the output), Bots/BotDriverSystemTests,
                                   Bots/RaceTests (grid, input, headless 3-bot race, kart collisions, allocation)
 .github/workflows/                build-and-test.yml

@@ -11,6 +11,7 @@ using ConsoleEngine.Rendering3D.OpenGL;
 using Kartster.Driving;
 using Kartster.Race;
 using Kartster.Scenes;
+using Kartster.Ui;
 
 namespace Kartster;
 
@@ -57,6 +58,10 @@ public class KartsterGame(string kartsFolder, string tracksFolder, bool startOnG
     private const float RenderTimeSmoothing = 0.05f;
 
     private Rasterizer _cpu = new(ScreenWidth, ScreenHeight, ScenePalette);
+
+    /// <summary>The UI's frames over the finished 3D picture; <c>Frame</c> follows the renderer each frame.</summary>
+    private readonly PaletteTarget _paletteTarget = new(null, ScreenWidth, ScreenHeight, ScenePalette);
+    private readonly RgbTarget _rgbTarget = new(null, ScreenWidth, ScreenHeight);
     private string[] _kartFolders;
     private int _kartIndex;
     private GlRenderer _gpu;
@@ -184,6 +189,12 @@ public class KartsterGame(string kartsFolder, string tracksFolder, bool startOnG
         if (Renderer.TrueColor)
         {
             var rgb = Renderer.Rgb;
+            if (Scene is IUiLayer rgbUi)
+            {
+                _rgbTarget.Frame = rgb;
+                rgbUi.DrawUi(_rgbTarget);
+            }
+
             for (var y = 0; y < ScreenHeight; y++)
             for (var x = 0; x < ScreenWidth; x++)
                 Console.DrawRgb(x, y, ' ', 0, rgb[y * ScreenWidth + x]);
@@ -191,6 +202,12 @@ public class KartsterGame(string kartsFolder, string tracksFolder, bool startOnG
         }
 
         var colors = Renderer.Colors;
+        if (Scene is IUiLayer ui)
+        {
+            _paletteTarget.Frame = colors;
+            ui.DrawUi(_paletteTarget);
+        }
+
         for (var y = 0; y < ScreenHeight; y++)
         for (var x = 0; x < ScreenWidth; x++)
             Console.Draw(x, y, ' ', ConsoleColor.Black, colors[y * ScreenWidth + x]);
