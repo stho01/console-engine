@@ -5,6 +5,7 @@ using ConsoleEngine.Ecs.Components;
 using ConsoleEngine.Physics;
 using Kartster.Components;
 using Kartster.Driving;
+using Kartster.PowerUps;
 using Kartster.Race;
 using Kartster.Systems;
 
@@ -89,6 +90,12 @@ public sealed class BotDriverSystem(Track track, KartPhysicsSystem physics, Race
     /// physics). Null: no bot bumps back.
     /// </summary>
     public IPhysicsEvents Contacts { get; set; }
+
+    /// <summary>
+    /// The race's power-ups, for which karts are not to be leaned on (<see cref="TrafficKart.IsUnbumpable"/>); null:
+    /// none.
+    /// </summary>
+    public PowerUpField PowerUps { get; set; }
 
     /// <summary>The road every bot plans on: samples, directions, widths. Made in <c>OnCreate</c>.</summary>
     public BotRoad Road => _road;
@@ -317,6 +324,8 @@ public sealed class BotDriverSystem(Track track, KartPhysicsSystem physics, Race
                 var velocity = new Vector2(velocities[i].Value.X, velocities[i].Value.Y);
                 traffic.Speed = Vector2.Dot(velocity, _road.ForwardAt(traffic.Sample));
                 traffic.IsHuman = isHuman;
+                var effects = PowerUps?.Effects(karts[i].Index);
+                traffic.IsUnbumpable = effects != null && (effects.IsInvulnerable || effects.Mass > 1f);
                 _positions[karts[i].Index] = position;
                 _velocities[karts[i].Index] = velocity;
             }

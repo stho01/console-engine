@@ -135,6 +135,22 @@ public class BotTrafficTests
     }
 
     [Test]
+    public void Lean_KartInvulnerableOrHeavy_NeverLeansOnItAndLetsGo()
+    {
+        var road = StarRoad.Value;
+        TrafficKart[] karts = [Kart(100f, 0f, 20f), Kart(101f, 2f, 20f) with { IsUnbumpable = true }];
+        var state = BotTrafficState.Start(0, 0f);
+
+        for (var i = 0; i < 10 * 120; i++)
+            Assert.That(BotTraffic.Lean(road, karts, 0, ref state, 1f, false, 0f, -9f, 9f, Step), Is.Zero);
+
+        BotTraffic.BumpedBy(ref state, 1);
+        Assert.That(BotTraffic.Lean(road, karts, 0, ref state, 0f, false, 0f, -9f, 9f, Step), Is.Zero,
+            "no bump back either");
+        Assert.That(state.LeanTarget, Is.EqualTo(-1));
+    }
+
+    [Test]
     public void Lean_NoAggression_NeverLeans()
     {
         var road = StarRoad.Value;

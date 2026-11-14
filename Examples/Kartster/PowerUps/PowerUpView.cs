@@ -80,6 +80,13 @@ public sealed class PowerUpView(PowerUpField field)
     private float _seconds;
 
     //**********************************************************
+    //** props
+    //**********************************************************
+
+    /// <summary>The field drawn; the kart renderer reads its effects (shrink, flip, shake, smoke) from it.</summary>
+    public PowerUpField Field => @field;
+
+    //**********************************************************
     //** public methods
     //**********************************************************
 

@@ -154,7 +154,8 @@ public static class BotTraffic
     /// <see cref="LeanMeters"/> from its centre for <see cref="LeanSeconds"/>, so the karts' contact pushes. Never while
     /// <paramref name="isBraking"/> for a corner, never past <paramref name="least"/>..<paramref name="most"/> (the
     /// edge margin), and it lets go once that kart is 3 m behind or 6 m ahead. Returns <paramref name="offset"/> when it
-    /// is leaning on nobody.
+    /// is leaning on nobody. A kart that <see cref="TrafficKart.IsUnbumpable"/> is never picked, and a lean or bump
+    /// back on one ends.
     /// </summary>
     public static float Lean(BotRoad road, ReadOnlySpan<TrafficKart> karts, int self, ref BotTrafficState state,
         float aggression, bool isBraking, float offset, float least, float most, float seconds)
@@ -166,7 +167,8 @@ public static class BotTraffic
             state.LeanSeconds -= seconds;
             var target = karts[state.LeanTarget];
             var gap = road.Gap(me.Along, target.Along);
-            if (isBraking || state.LeanSeconds <= 0f || gap < -LeanBehindMeters || gap > LeanAheadMeters)
+            if (isBraking || state.LeanSeconds <= 0f || gap < -LeanBehindMeters || gap > LeanAheadMeters ||
+                target.IsUnbumpable)
             {
                 StopLean(ref state);
                 return offset;
@@ -185,7 +187,7 @@ public static class BotTraffic
         for (var i = 0; i < karts.Length; i++)
         {
             var other = karts[i];
-            if (i == self || other.Sample < 0)
+            if (i == self || other.Sample < 0 || other.IsUnbumpable)
                 continue;
 
             var gap = road.Gap(me.Along, other.Along);
@@ -197,7 +199,8 @@ public static class BotTraffic
             if (state.NextUnit() < aggression)
             {
                 state.LeanTarget = i;
-                state.LeanSeconds = LeanSeconds;            }
+                state.LeanSeconds = LeanSeconds;
+            }
 
             return offset;
         }

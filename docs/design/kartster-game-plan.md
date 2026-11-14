@@ -389,10 +389,11 @@ Levert på grenen til P2. Regler og tall i `docs/agent/03-rules.md` (Kartster-ra
   forholdet seg imellom.
 - **Tilnærmet:** ingen hopp (planet), toget går på midtlinjen og er ingen fast kropp, ≥ 0,7 sprett mot ambolt-kart er
   ute, glitchede bots styrer ikke tilbake.
-- **Kroker som trengs utenfor `PowerUps/`** (ikke gjort): `KartRenderSystem` tegner kartet i
-  `PowerUpField.Effects(k).DrawScale` (lyn); HUD/`TrackScene` legger `PowerUpField.SmokeCover(øye)` som mørk vask over
-  bildet, snur bildet når `Effects(spiller).SteeringScale < 0` og rister kameraet når `SteeringNoise > 0`;
-  `BotTraffic` lener seg ikke på karter med `IsInvulnerable` eller `Mass > 1` (originalens `BotBumping`).
+- **Krokene utenfor `PowerUps/` (bølge 4, gjort):** `KartRenderSystem` tegner kartet i `DrawScale` (lyn), rister
+  kamerabildet ved `SteeringNoise` (0,35 m ved 0,3, to sinuser av tegnet tid) og setter `KartsterGame.MirrorView`
+  (glitch) og `ViewDarkness` (`SmokeCover` ved øyet); `KartsterGame.OnRender` speiler og vasker 3D-bildet før HUD-en
+  (`Ui/ViewEffects`, 16 farger og 24-bit). `BotTraffic.Lean` lener seg ikke på karter som er usårbare eller har
+  `Mass > 1` (`TrafficKart.IsUnbumpable`, fra `BotDriverSystem.PowerUps`).
 - **Rørt utenfor `PowerUps/`:** bare dokumentasjon. `PowerUpSystem.Add` legger nå også til `PowerUpSteeringSystem` og
   `PowerUpContactSystem` (plassert med `UpdateBefore`/`UpdateAfter` rundt `KartPhysicsSystem`).
 ### Status: motor (E)

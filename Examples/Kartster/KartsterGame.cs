@@ -79,6 +79,7 @@ public class KartsterGame(string kartsFolder, string tracksFolder, bool startOnG
     private bool _gpuUnavailable;
     private long _frameStart;
     private float _renderMilliseconds;
+    private readonly ConsoleColor[] _washLookup = new ConsoleColor[16];
 
     //**********************************************************
     //** props
@@ -108,6 +109,12 @@ public class KartsterGame(string kartsFolder, string tracksFolder, bool startOnG
 
     public string[] KartNames => _kartNames;
     public int KartIndex => _kartIndex;
+
+    /// <summary>This frame's 3D picture is mirrored left to right before the UI (the glitch); cleared each frame.</summary>
+    public bool MirrorView { get; set; }
+
+    /// <summary>How far this frame's 3D picture is washed dark before the UI, 0..1 (smoke); cleared each frame.</summary>
+    public float ViewDarkness { get; set; }
 
     /// <summary>Every <c>&lt;id&gt;.ribbon.obj</c> in the tracks folder, sorted; empty without one (no race then).</summary>
     public string[] TrackNames => _trackNames;
@@ -184,9 +191,17 @@ public class KartsterGame(string kartsFolder, string tracksFolder, bool startOnG
         Renderer.Finish();
         var milliseconds = (float)Stopwatch.GetElapsedTime(_frameStart).TotalMilliseconds;
         _renderMilliseconds += (milliseconds - _renderMilliseconds) * RenderTimeSmoothing;
+        var mirror = MirrorView;
+        var darkness = ViewDarkness;
+        MirrorView = false;
+        ViewDarkness = 0f;
         if (Renderer.TrueColor)
         {
             var rgb = Renderer.Rgb;
+            if (mirror)
+                ViewEffects.Mirror<uint>(rgb, ScreenWidth);
+            if (darkness > 0f)
+                ViewEffects.Wash(rgb, darkness);
             if (Scene is IUiLayer rgbUi)
             {
                 _rgbTarget.Frame = rgb;
@@ -200,6 +215,10 @@ public class KartsterGame(string kartsFolder, string tracksFolder, bool startOnG
         }
 
         var colors = Renderer.Colors;
+        if (mirror)
+            ViewEffects.Mirror<ConsoleColor>(colors, ScreenWidth);
+        if (darkness > 0f)
+            ViewEffects.Wash(colors, ScenePalette, darkness, _washLookup);
         if (Scene is IUiLayer ui)
         {
             _paletteTarget.Frame = colors;

@@ -273,6 +273,9 @@ public sealed class TrackScene(int lapCount, int botCount = TrackScene.DefaultBo
         FixedTimestep = new FixedTimestep(StepSeconds, MaxStepsPerFrame);
         _physics = AddDriving(FixedSimulation, track, tunings, Race);
         _powerUps = PowerUpSystem.Add(FixedSimulation, Simulation, track, _physics, Race);
+        foreach (var system in FixedSimulation.RunOrder)
+            if (system is BotDriverSystem bots)
+                bots.PowerUps = _powerUps.Field;
         FixedSimulation.Add(new AutopilotSystem());
         _finish = new RaceFinish(Race, FixedSimulation, StepSeconds);
 

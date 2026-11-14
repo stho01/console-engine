@@ -23,4 +23,10 @@ public struct TrafficKart
 
     /// <summary>The kart a person drives.</summary>
     public bool IsHuman;
+
+    /// <summary>
+    /// Invulnerable or heavier than built (<c>KartEffects.IsInvulnerable</c>, <c>Mass</c> &gt; 1, the anvil): never
+    /// leaned on, as Kartster's <c>BotBumping.CanBump</c> and <c>IsWorthIt</c>.
+    /// </summary>
+    public bool IsUnbumpable;
 }

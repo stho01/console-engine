@@ -289,15 +289,15 @@ Examples/
                                   Components/ (Kart with Index, PlayerKart, Bot),
                                   Ui/ (pixel UI kit: IPixelTarget, PaletteTarget, RgbTarget, PixelFont 3×5,
                                   TextFormat, Shapes, UiColors, Hud + HudState, Minimap, RaceResults, IKartsterMenus,
-                                  IUiLayer), Scenes/Menus/ (MenuScreen, MenuItem, MenuKeys, TitleScene,
-                                  SelectKartScene, SelectTrackScene, ResultsScene)
+                                  IUiLayer, ViewEffects: glitch flip and smoke wash), Scenes/Menus/ (MenuScreen,
+                                  MenuItem, MenuKeys, TitleScene, SelectKartScene, SelectTrackScene, ResultsScene)
   Kartster.Tests/               KartModelTests, TrackTests, ShippedTracksTests, SceneryTests, KartPhysicsSystemTests,
                                   KartFrameTests, KartInputSystemTests, Driving/KartDynamicsTests, Driving/KartReferenceTests,
                                   Driving/KartCatalogTests,
                                   Effects/EffectsTests (skid marks, slide smoke), Lighting/KartLightsTests, Race/ (RaceMarkersTests,
                                   RaceSessionTests, RaceSystemTests, RaceReportTests, RaceWiringTests, RaceEndingTests),
                                   Modes/TimeTrialTests (ghost recording/playback, ghost file, a lap alone), Ui/ (PixelFont, TextFormat,
-                                  PixelTarget, Hud, Minimap,
+                                  PixelTarget, Hud, Minimap, ViewEffects,
                                   Menu, MenuFlow tests; UiPreview writes ui-preview/*.ppm to the output), Bots/BotDriverSystemTests,
                                   Bots/RaceTests (grid, input, headless 3-bot race, kart collisions, allocation),
                                   Bots/BotTrafficTests (road widths, passing, following, leaning, 6-bot race),

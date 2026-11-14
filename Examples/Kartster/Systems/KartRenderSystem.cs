@@ -15,7 +15,10 @@ namespace Kartster.Systems;
 /// the slide smoke through the game's renderer, seen by a chase camera that eases towards its place behind the
 /// <paramref name="player"/>'s kart, so turns swing it round instead of snapping. Draws the karts where their
 /// interpolation puts them (<c>RenderOffset</c>), so add it after the <c>InterpolationSystem</c>. Shadows, night and the
-/// karts' lights come from <see cref="KartLights"/>.
+/// karts' lights come from <see cref="KartLights"/>. With <see cref="PowerUps"/>, the power-ups' effects on the
+/// picture: a kart is drawn at its <see cref="KartEffects.DrawScale"/>, the camera shakes while the player's
+/// <see cref="KartEffects.SteeringNoise"/> runs, and it sets the game's <see cref="KartsterGame.MirrorView"/> (glitch)
+/// and <see cref="KartsterGame.ViewDarkness"/> (<see cref="PowerUpField.SmokeCover"/> at the eye).
 /// </summary>
 /// <param name="kartMeshes">One per kart, by <see cref="Kart.Index"/>.</param>
 public sealed class KartRenderSystem(Entity player, KartsterGame game, Mesh[] kartMeshes, SkidMarks skidMarks,
@@ -30,12 +33,19 @@ public sealed class KartRenderSystem(Entity player, KartsterGame game, Mesh[] ka
     private const float LookAhead = 4f;
     private const float CameraStiffness = 6f; // how fast the chase camera catches up, per second
 
+    /// <summary>
+    /// Metres the camera shakes per unit of <see cref="KartEffects.SteeringNoise"/>: Kartster's earthquake pairs
+    /// 0.3 steering noise with 0.35 m of <c>CameraShake</c>.
+    /// </summary>
+    public const float ShakePerSteeringNoise = 0.35f / PowerUpCatalog.EarthquakeSteeringNoise;
+
     private Query _karts;
     private readonly Matrix4x4[] _kartWorlds = new Matrix4x4[kartMeshes.Length]; // by Kart.Index, this frame
     private readonly KartLights _lights = new(kartMeshes, game.KartFolders, game.Track.Name, game.Renderer.Width,
         game.Renderer.Height);
     private Vector3 _eye;
     private bool _hasEye;
+    private float _seconds; // drawn time, for the shake
 
     //**********************************************************
     //** props
@@ -64,6 +74,18 @@ public sealed class KartRenderSystem(Entity player, KartsterGame game, Mesh[] ka
 
         var target = position + forward * LookAhead + Vector3.UnitY;
         var view = Matrix4x4.CreateLookAt(_eye, target, Vector3.UnitY);
+        _seconds += deltaSeconds;
+        var field = PowerUps?.Field;
+        if (field != null)
+        {
+            var effects = field.Effects(World.Get<Kart>(player).Index);
+            var shake = effects.SteeringNoise * ShakePerSteeringNoise;
+            if (shake > 0f) // Kartster's ApplyCameraShake: the view jitters, the camera itself stays
+                view *= Matrix4x4.CreateTranslation(shake * Shake(_seconds, 0f), shake * Shake(_seconds, 1.7f), 0f);
+            game.MirrorView = effects.SteeringScale < 0f;
+            game.ViewDarkness = field.SmokeCover(new System.Numerics.Vector2(_eye.X, _eye.Z));
+        }
+
         var viewProjection = ViewProjection = view * game.Projection;
         var renderer = game.Renderer;
         var track = game.Track;
@@ -85,6 +107,13 @@ public sealed class KartRenderSystem(Entity player, KartsterGame game, Mesh[] ka
         renderer.Draw(smoke.Mesh, Matrix4x4.Identity, viewProjection, KartsterGame.ToSun);
     }
 
+    /// <summary>
+    /// The shake at <paramref name="seconds"/> of drawn time, -1..1: two sines at 7.3 and 11.9 Hz, so it is the same
+    /// at any frame rate and never repeats soon. <paramref name="phase"/> makes the other axis' shake.
+    /// </summary>
+    public static float Shake(float seconds, float phase) =>
+        0.6f * MathF.Sin(MathF.Tau * 7.3f * seconds + phase) + 0.4f * MathF.Sin(MathF.Tau * 11.9f * seconds + 2f * phase);
+
     //**********************************************************
     //** internals
     //**********************************************************
@@ -101,7 +130,9 @@ public sealed class KartRenderSystem(Entity player, KartsterGame game, Mesh[] ka
             for (var i = 0; i < chunk.Count; i++)
             {
                 var (position, forward) = Pose(positions[i], rotations[i], offsets[i], karts[i]);
-                _kartWorlds[karts[i].Index] = KartFrame.ToWorld(position, forward, karts[i].Normal);
+                var world = KartFrame.ToWorld(position, forward, karts[i].Normal);
+                var scale = PowerUps?.Field.Effects(karts[i].Index).DrawScale ?? 1f; // lightning shrinks
+                _kartWorlds[karts[i].Index] = scale == 1f ? world : Matrix4x4.CreateScale(scale) * world;
             }
         }
     }
