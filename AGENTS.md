@@ -36,7 +36,7 @@ scripting loads the native `lua54.dll` that the KeraLua package ships for each r
 | 2D physics (bodies, circles/boxes/polygons, rotation, forces and torque (`Force`), broadphase, Soft Step contact solver, contact/sensor events, tile grid, sleeping, interpolation, raycasts and box casts, `CharacterMover.MoveAndSlide`) | `ConsoleEngine.Physics/` (own assembly and NuGet package, optional), rules in [`docs/agent/03-rules.md` § Physics](docs/agent/03-rules.md#physics), design and phases in [`docs/design/physics-plan.md`](docs/design/physics-plan.md). Examples: `Examples/PhysicsShowcase` (every feature), `Examples/PhysicsSandbox` (solver), `Examples/Asteroids.Ecs` (sensors, layers), `Examples/Platformer.Ecs` (tile grid, character controller) |
 | Performance measurements | `ConsoleEngine.Benchmarks/` (BenchmarkDotNet) |
 | Lua scripting: components, `self` fields, hooks, errors, reload | [`docs/agent/03-rules.md § Lua`](docs/agent/03-rules.md#lua), `ConsoleEngine.Scripting/`, `Examples/Scripted` |
-| 3D rendering (`IRenderer3D`, software `Rasterizer`, OpenGL `GlRenderer`, near-plane clipping, OBJ models, 16-colour dithering) | `ConsoleEngine.Rendering3D/` (own assembly and NuGet package, optional), GPU renderer in `ConsoleEngine.Rendering3D.OpenGL/` (same picture; callers fall back to `Rasterizer` when `GlRenderer.TryCreate` fails), GPU plan in [`docs/design/gpu-rendering-plan.md`](docs/design/gpu-rendering-plan.md), rules in [`docs/agent/03-rules.md`](docs/agent/03-rules.md) (Kartster rows) |
+| 3D rendering (`IRenderer3D`, software `Rasterizer`, OpenGL `GlRenderer`, near-plane clipping, OBJ models, 16-colour dithering or 24-bit true colour with alpha blending) | `ConsoleEngine.Rendering3D/` (own assembly and NuGet package, optional), GPU renderer in `ConsoleEngine.Rendering3D.OpenGL/` (same picture; callers fall back to `Rasterizer` when `GlRenderer.TryCreate` fails), GPU plan in [`docs/design/gpu-rendering-plan.md`](docs/design/gpu-rendering-plan.md), rules in [`docs/agent/03-rules.md`](docs/agent/03-rules.md) (Kartster rows) |
 | Why KeraLua, and what Lua costs per entity | `ConsoleEngine.Benchmarks/README.md` |
 | How to use the engine | `Examples/Snake` (smallest), `Examples/TerraForM` (scenes, assets, tests), `Examples/<Game>.Ecs` (ECS port of each game: components, systems, queries, `EcsScene`; compare with `Examples/<Game>`. `Snake.Ecs` is the smallest, `TerraForM.Ecs` the fullest), `Examples/Swarm` (ECS at scale, system ordering attributes), `Examples/PhysicsSandbox` (physics: bodies, colliders, fixed step, kinematic platform), `Examples/PhysicsShowcase` (every physics feature), `Examples/EternalDigger` (a full original ECS game: endless grid world, particle effects, lighting; start at [`Examples/EternalDigger/README.md`](Examples/EternalDigger/README.md), design contract in [`docs/design/eternal-digger.md`](docs/design/eternal-digger.md)) |
 | Build/test pipeline | `.github/workflows/build-and-test.yml` |
@@ -178,9 +178,10 @@ ConsoleEngine.Tests/              engine unit tests (mirrors ConsoleEngine/ fold
                                   Scripting/ (LuaScriptSystemTests), Native/ (ConsoleHandler row diff)
 ConsoleEngine.Rendering3D/        3D (namespace ConsoleEngine.Rendering3D): IRenderer3D, Rasterizer (CPU), Mesh
                                   (Version/MarkChanged), ObjFile, ConsolePalette
-ConsoleEngine.Rendering3D.Tests/  RasterizerTests, ScreenDoorTests, ObjFileTests, MeshTests
-ConsoleEngine.Rendering3D.OpenGL/ GlRenderer (OpenGL 3.3: R8UI framebuffer, shaders, per-mesh GPU cache)
-ConsoleEngine.Rendering3D.OpenGL.Tests/  GlRendererTests (GPU vs. CPU pixels, allocation, fallback)
+ConsoleEngine.Rendering3D.Tests/  RasterizerTests, ScreenDoorTests, TrueColorTests, ObjFileTests, MeshTests
+ConsoleEngine.Rendering3D.OpenGL/ GlRenderer (OpenGL 3.3: R8UI or RGBA8 framebuffer, shaders, per-mesh GPU cache)
+ConsoleEngine.Rendering3D.OpenGL.Tests/  GlRendererTests, GlRendererTrueColorTests (GPU vs. CPU pixels,
+                                  allocation, fallback)
 ConsoleEngine.Scripting/          Script + ScriptFaulted (components), LuaScriptSystem, LuaRenderSystem,
                                   LuaRuntime (Lua state, engine API, hook trampoline), LuaScript (module, reload),
                                   LowLevel/LuaNative.cs (direct lua54 P/Invoke)

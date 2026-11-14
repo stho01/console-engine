@@ -40,8 +40,9 @@ public sealed class Mesh
     public int TriangleCount => TriangleNormals.Length;
 
     /// <summary>
-    /// 0..1 per triangle, drawn as screen-door transparency (see <see cref="Rasterizer"/>). Null: every triangle is
-    /// opaque.
+    /// 0..1 per triangle, drawn as screen-door transparency in palette mode and alpha-blended in true colour (see
+    /// <see cref="Rasterizer"/>). Blended triangles write no depth, so draw see-through meshes after the opaque ones.
+    /// Null: every triangle is opaque.
     /// </summary>
     public float[] TriangleOpacity { get; init; }
 

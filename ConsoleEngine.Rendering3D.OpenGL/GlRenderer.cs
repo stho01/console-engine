@@ -11,6 +11,9 @@ namespace ConsoleEngine.Rendering3D.OpenGL;
 /// Draws meshes on the GPU (OpenGL 3.3 core, hidden GLFW window) into an off-screen palette-index image and reads it
 /// back in <see cref="Finish"/>. The picture is the one <see cref="Rasterizer"/> draws: same flat light, dither,
 /// palette lookup, screen-door transparency, culling and near-plane clipping; only edge pixels can differ.
+/// In <see cref="TrueColor"/> mode the image is RGBA8 instead, with its own fragment shader (its output type differs
+/// from the palette index's), the background copied in by <c>Clear</c> and see-through triangles alpha-blended in a
+/// second pass per mesh with depth writes off, like the CPU.
 /// The GL context belongs to the thread that created the renderer: use it only from that thread (the game loop).
 /// </summary>
 public sealed class GlRenderer : IRenderer3D
@@ -64,22 +67,39 @@ public sealed class GlRenderer : IRenderer3D
         }
         """;
 
+    private const string TrueColorFragmentShader = """
+        #version 330 core
+        flat in vec3 vColor;
+        flat in float vOpacity;
+        uniform bool uBlendedPass;
+        out vec4 color;
+        void main() {
+            if ((vOpacity < 1.0) != uBlendedPass)
+                discard; // opaque triangles in the first pass, see-through ones in the second
+            color = vec4(clamp(vColor, 0.0, 1.0), vOpacity);
+        }
+        """;
+
     private readonly IWindow _window;
     private readonly GL _gl;
     private readonly uint _framebuffer;
     private readonly uint _colorBuffer;
     private readonly uint _depthBuffer;
+    private readonly uint _backgroundFramebuffer; // true colour: Clear uploads the background here and blits it over
+    private readonly uint _backgroundTexture;
     private readonly uint _nearestTexture;
     private readonly uint _program;
     private readonly int _worldViewProjectionLocation;
     private readonly int _worldLocation;
     private readonly int _toLightLocation;
     private readonly int _unlitLocation;
+    private readonly int _blendedPassLocation;
 
     // shortcut: a mesh stays on the GPU until Dispose; add eviction if games create meshes per level or per frame.
     private readonly Dictionary<Mesh, GpuMesh> _meshes = new();
     private readonly ConsoleColor[] _background;
     private readonly byte[] _pixels;
+    private readonly uint[] _bgra; // true colour: the read-back, 0xAARRGGBB, rows bottom-up
     private readonly uint[] _clearColor = [NoGeometry, 0, 0, 0];
     private readonly float[] _clearDepth = [1f];
     private bool _disposed;
@@ -90,13 +110,18 @@ public sealed class GlRenderer : IRenderer3D
 
     /// <exception cref="InvalidOperationException">No OpenGL 3.3 context or framebuffer: fall back to
     /// <see cref="Rasterizer"/>.</exception>
-    public GlRenderer(int width, int height, ConsolePalette palette)
+    /// <param name="palette">The console colours of palette mode; not used when <paramref name="trueColor"/>.</param>
+    /// <param name="trueColor">Draw 24-bit colour into <see cref="Rgb"/> instead of palette indices.</param>
+    public GlRenderer(int width, int height, ConsolePalette palette, bool trueColor = false)
     {
         Width = width;
         Height = height;
-        Colors = new ConsoleColor[width * height];
-        _background = new ConsoleColor[width * height];
-        _pixels = new byte[width * height];
+        TrueColor = trueColor;
+        Colors = trueColor ? [] : new ConsoleColor[width * height];
+        Rgb = trueColor ? new uint[width * height] : [];
+        _background = trueColor ? [] : new ConsoleColor[width * height];
+        _pixels = trueColor ? [] : new byte[width * height];
+        _bgra = trueColor ? new uint[width * height] : [];
 
         try
         {
@@ -111,16 +136,26 @@ public sealed class GlRenderer : IRenderer3D
             _window.Initialize();
             _gl = GL.GetApi(_window);
 
+            if (trueColor)
+                (_backgroundFramebuffer, _backgroundTexture) = CreateBackground();
             (_framebuffer, _colorBuffer, _depthBuffer) = CreateFramebuffer();
-            _nearestTexture = CreateNearestTexture(palette);
-            _program = CreateProgram();
+            _program = CreateProgram(trueColor ? TrueColorFragmentShader : FragmentShader);
             _worldViewProjectionLocation = _gl.GetUniformLocation(_program, "uWorldViewProjection");
             _worldLocation = _gl.GetUniformLocation(_program, "uWorld");
             _toLightLocation = _gl.GetUniformLocation(_program, "uToLight");
             _unlitLocation = _gl.GetUniformLocation(_program, "uUnlit");
-            _gl.Uniform1(_gl.GetUniformLocation(_program, "uNearest"), 0);
-            _gl.Uniform1(_gl.GetUniformLocation(_program, "uHeight"), height);
-            _gl.Uniform1(_gl.GetUniformLocation(_program, "uDither"), ConsolePalette.Dither);
+            if (trueColor)
+            {
+                _blendedPassLocation = _gl.GetUniformLocation(_program, "uBlendedPass");
+                _gl.BlendFunc(BlendingFactor.SrcAlpha, BlendingFactor.OneMinusSrcAlpha);
+            }
+            else
+            {
+                _nearestTexture = CreateNearestTexture(palette);
+                _gl.Uniform1(_gl.GetUniformLocation(_program, "uNearest"), 0);
+                _gl.Uniform1(_gl.GetUniformLocation(_program, "uHeight"), height);
+                _gl.Uniform1(_gl.GetUniformLocation(_program, "uDither"), ConsolePalette.Dither);
+            }
 
             _gl.Viewport(0, 0, (uint)width, (uint)height);
             _gl.Enable(EnableCap.DepthTest);
@@ -147,20 +182,29 @@ public sealed class GlRenderer : IRenderer3D
 
     public int Width { get; }
     public int Height { get; }
+    public bool TrueColor { get; }
 
-    /// <summary>The frame, one colour per pixel, <c>index = y * Width + x</c>, after <see cref="Finish"/>.</summary>
+    /// <summary>The palette-mode frame, <c>y * Width + x</c>, after <see cref="Finish"/>. Empty in true colour.</summary>
     public ConsoleColor[] Colors { get; }
+
+    /// <summary>The true-colour frame, <c>0xRRGGBB</c>, after <see cref="Finish"/>. Empty in palette mode.</summary>
+    public uint[] Rgb { get; }
 
     //**********************************************************
     //** public methods
     //**********************************************************
 
     /// <summary>Like the constructor, but returns false instead of throwing when OpenGL 3.3 is not available.</summary>
-    public static bool TryCreate(int width, int height, ConsolePalette palette, out GlRenderer renderer)
+    public static bool TryCreate(int width, int height, ConsolePalette palette, out GlRenderer renderer) =>
+        TryCreate(width, height, palette, false, out renderer);
+
+    /// <summary>Like the constructor, but returns false instead of throwing when OpenGL 3.3 is not available.</summary>
+    public static bool TryCreate(int width, int height, ConsolePalette palette, bool trueColor,
+        out GlRenderer renderer)
     {
         try
         {
-            renderer = new GlRenderer(width, height, palette);
+            renderer = new GlRenderer(width, height, palette, trueColor);
             return true;
         }
         catch (Exception)
@@ -174,11 +218,32 @@ public sealed class GlRenderer : IRenderer3D
     /// <summary>Starts a frame: remembers the background (shown where nothing is drawn) and clears the GPU image.</summary>
     public void Clear(ReadOnlySpan<ConsoleColor> background)
     {
-        if (!_window.GLContext!.IsCurrent)
-            _window.GLContext.MakeCurrent(); // another renderer on this thread made its context current
+        if (TrueColor)
+            throw new InvalidOperationException(Rasterizer.PaletteClearInTrueColor);
 
+        MakeCurrent();
         background.CopyTo(_background);
         _gl.ClearBuffer(BufferKind.Color, 0, _clearColor.AsSpan()); // glClear is undefined on an integer target
+        _gl.ClearBuffer(BufferKind.Depth, 0, _clearDepth.AsSpan());
+    }
+
+    /// <summary>
+    /// Starts a true-colour frame: uploads the background and copies it into the GPU image (flipped to OpenGL's
+    /// bottom-up rows), so blending sees the real background.
+    /// </summary>
+    public void Clear(ReadOnlySpan<uint> backgroundRgb)
+    {
+        if (!TrueColor)
+            throw new InvalidOperationException(Rasterizer.TrueColorClearInPaletteMode);
+
+        MakeCurrent();
+        _gl.BindTexture(TextureTarget.Texture2D, _backgroundTexture);
+        _gl.TexSubImage2D(TextureTarget.Texture2D, 0, 0, 0, (uint)Width, (uint)Height, PixelFormat.Bgra,
+            PixelType.UnsignedInt8888Rev, backgroundRgb[..(Width * Height)]);
+        _gl.BindFramebuffer(FramebufferTarget.ReadFramebuffer, _backgroundFramebuffer);
+        _gl.BlitFramebuffer(0, 0, Width, Height, 0, Height, Width, 0, ClearBufferMask.ColorBufferBit,
+            BlitFramebufferFilter.Nearest);
+        _gl.BindFramebuffer(FramebufferTarget.Framebuffer, _framebuffer);
         _gl.ClearBuffer(BufferKind.Depth, 0, _clearDepth.AsSpan());
     }
 
@@ -194,12 +259,36 @@ public sealed class GlRenderer : IRenderer3D
         _gl.Uniform3(_toLightLocation, toLight.X, toLight.Y, toLight.Z);
         _gl.Uniform1(_unlitLocation, mesh.IsUnlit ? 1 : 0);
         _gl.BindVertexArray(gpuMesh.VertexArray);
-        _gl.DrawArrays(PrimitiveType.Triangles, 0, (uint)(mesh.TriangleCount * 3));
+        var vertexCount = (uint)(mesh.TriangleCount * 3);
+        if (!TrueColor)
+        {
+            _gl.DrawArrays(PrimitiveType.Triangles, 0, vertexCount);
+            return;
+        }
+
+        _gl.Uniform1(_blendedPassLocation, 0);
+        _gl.DrawArrays(PrimitiveType.Triangles, 0, vertexCount);
+        if (mesh.TriangleOpacity == null)
+            return;
+
+        // See-through triangles: blended over what is drawn, depth-tested but not written.
+        _gl.Uniform1(_blendedPassLocation, 1);
+        _gl.DepthMask(false);
+        _gl.Enable(EnableCap.Blend);
+        _gl.DrawArrays(PrimitiveType.Triangles, 0, vertexCount);
+        _gl.Disable(EnableCap.Blend);
+        _gl.DepthMask(true); // ClearBuffer(Depth) needs it
     }
 
     /// <summary>Reads the frame back into <see cref="Colors"/> (waits for the GPU).</summary>
     public void Finish()
     {
+        if (TrueColor)
+        {
+            FinishTrueColor();
+            return;
+        }
+
         _gl.ReadPixels(0, 0, (uint)Width, (uint)Height, PixelFormat.RedInteger, PixelType.UnsignedByte,
             _pixels.AsSpan());
 
@@ -233,6 +322,8 @@ public sealed class GlRenderer : IRenderer3D
             _meshes.Clear();
             _gl.DeleteProgram(_program);
             _gl.DeleteTexture(_nearestTexture);
+            _gl.DeleteFramebuffer(_backgroundFramebuffer);
+            _gl.DeleteTexture(_backgroundTexture);
             _gl.DeleteFramebuffer(_framebuffer);
             _gl.DeleteRenderbuffer(_colorBuffer);
             _gl.DeleteRenderbuffer(_depthBuffer);
@@ -246,17 +337,59 @@ public sealed class GlRenderer : IRenderer3D
     //** internals
     //**********************************************************
 
+    private void MakeCurrent()
+    {
+        if (!_window.GLContext!.IsCurrent)
+            _window.GLContext.MakeCurrent(); // another renderer on this thread made its context current
+    }
+
+    private void FinishTrueColor()
+    {
+        _gl.ReadPixels(0, 0, (uint)Width, (uint)Height, PixelFormat.Bgra, PixelType.UnsignedInt8888Rev,
+            _bgra.AsSpan());
+
+        for (var y = 0; y < Height; y++)
+        {
+            var row = (Height - 1 - y) * Width; // OpenGL rows go bottom-up
+            var index = y * Width;
+            for (var x = 0; x < Width; x++, index++)
+                Rgb[index] = _bgra[row + x] & 0xFFFFFF;
+        }
+    }
+
     private (uint Framebuffer, uint Color, uint Depth) CreateFramebuffer()
     {
+        var format = TrueColor ? InternalFormat.Rgba8 : InternalFormat.R8ui;
         var framebuffer = _gl.GenFramebuffer();
         _gl.BindFramebuffer(FramebufferTarget.Framebuffer, framebuffer);
-        var color = CreateRenderbuffer(InternalFormat.R8ui, FramebufferAttachment.ColorAttachment0);
+        var color = CreateRenderbuffer(format, FramebufferAttachment.ColorAttachment0);
         var depth = CreateRenderbuffer(InternalFormat.DepthComponent24, FramebufferAttachment.DepthAttachment);
 
         var status = _gl.CheckFramebufferStatus(FramebufferTarget.Framebuffer);
         if (status != GLEnum.FramebufferComplete)
-            throw new InvalidOperationException($"the R8UI framebuffer is not complete ({status})");
+            throw new InvalidOperationException(
+                $"the {(TrueColor ? "RGBA8" : "R8UI")} framebuffer is not complete ({status})");
         return (framebuffer, color, depth);
+    }
+
+    /// <summary>An RGBA8 texture in its own framebuffer, the source <c>Clear</c> blits the background from.</summary>
+    private unsafe (uint Framebuffer, uint Texture) CreateBackground()
+    {
+        var texture = _gl.GenTexture();
+        _gl.BindTexture(TextureTarget.Texture2D, texture);
+        _gl.TexParameter(TextureTarget.Texture2D, TextureParameterName.TextureMinFilter, (int)GLEnum.Nearest);
+        _gl.TexParameter(TextureTarget.Texture2D, TextureParameterName.TextureMagFilter, (int)GLEnum.Nearest);
+        _gl.TexImage2D(TextureTarget.Texture2D, 0, InternalFormat.Rgba8, (uint)Width, (uint)Height, 0,
+            PixelFormat.Bgra, PixelType.UnsignedInt8888Rev, null);
+
+        var framebuffer = _gl.GenFramebuffer();
+        _gl.BindFramebuffer(FramebufferTarget.Framebuffer, framebuffer);
+        _gl.FramebufferTexture2D(FramebufferTarget.Framebuffer, FramebufferAttachment.ColorAttachment0,
+            TextureTarget.Texture2D, texture, 0);
+        var status = _gl.CheckFramebufferStatus(FramebufferTarget.Framebuffer);
+        if (status != GLEnum.FramebufferComplete)
+            throw new InvalidOperationException($"the background framebuffer is not complete ({status})");
+        return (framebuffer, texture);
     }
 
     private uint CreateRenderbuffer(InternalFormat format, FramebufferAttachment attachment)
@@ -289,11 +422,11 @@ public sealed class GlRenderer : IRenderer3D
         return texture;
     }
 
-    private uint CreateProgram()
+    private uint CreateProgram(string fragmentShader)
     {
         var program = _gl.CreateProgram();
         var vertex = CompileShader(ShaderType.VertexShader, VertexShader);
-        var fragment = CompileShader(ShaderType.FragmentShader, FragmentShader);
+        var fragment = CompileShader(ShaderType.FragmentShader, fragmentShader);
         _gl.AttachShader(program, vertex);
         _gl.AttachShader(program, fragment);
         _gl.LinkProgram(program);

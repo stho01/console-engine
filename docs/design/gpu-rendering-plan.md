@@ -5,6 +5,7 @@ betyr originalspillet (MonoGame) i `C:\Forse\kartster-server`.
 
 Status (2026-11-14): fase 1–3 er ferdige (`ConsoleEngine.Rendering3D` med testprosjekt, Kartster tegner gjennom
 `IRenderer3D`; `ConsoleEngine.Rendering3D.OpenGL` med `GlRenderer` og GPU-testene). Fase 3: Kartster bytter med G eller `--gpu` og faller tilbake til CPU. Første måling i conhost (Debug): 3D-delen 6,2 ms på CPU mot 1,5 ms på GPU.
+Sant fargemodus (24-bit, § 4b) er ferdig i begge rendererne; Kartster bruker det ikke ennå (prosjektleder kobler det til en konsollutgang med 24-bit farge).
 
 ## 1. Mål og ikke-mål
 
@@ -102,6 +103,16 @@ available: …")`, og `GlRenderer.TryCreate` gir `false` i stedet. Avvik fra pla
   renderer på samme tråd har tatt den.
 - **Målt (Intel Arc, Release, 320×180):** 3 201 trekanter, `Clear` + 2 `Draw` + `Finish` 0,43 ms per frame, 0 byte
   allokert. Testscenene (64×64) er 100 % like CPU-en.
+
+## 4b. Sant fargemodus (24-bit)
+
+`IRenderer3D.TrueColor` velges i konstruktøren (`trueColor: true` på `Rasterizer`, `GlRenderer` og `GlRenderer.TryCreate`). Da er bildet `Rgb` (`0xRRGGBB` per piksel), `Colors` er tom, og en frame starter med `Clear(ReadOnlySpan<uint>)`. Feil `Clear` for modusen kaster `InvalidOperationException`. Palettmodus er uendret.
+
+- **Farge:** samme lys som før, ingen dither, ingen palett: `clamp(farge, 0, 1)` × 255, avrundet.
+- **Gjennomsiktighet:** ekte alfablanding, `dst = src · o + dst · (1 − o)`. Blandede trekanter dybdetestes, men skriver ikke dybde. Per mesh tegnes de ugjennomsiktige trekantene først og de gjennomsiktige etterpå, på begge rendererne, så rekkefølgen inne i en mesh ikke spiller noen rolle. Mellom mesher gjelder tegnerekkefølgen: en fjernere ugjennomsiktig mesh som tegnes senere, dekker blandingen. Tegn gjennomsiktige mesher sist.
+- **CPU:** en `Vector3`-buffer (0..1) som pakkes til `Rgb` i `Finish`.
+- **GPU:** egen fragmentshader (utdata `vec4` i stedet for `uint`, så det må være et eget program; bare ett kompileres per renderer) og et `RGBA8`-framebuffer. Bakgrunnen lastes opp til en tekstur i `Clear` og blittes inn (radene snus), så blandingen ser den ekte bakgrunnen. Et «ingen geometri»-merke i alfa hadde ikke virket: en blandet piksel over tom bakgrunn ville fått feil farge. Gjennomsiktige trekanter tegnes i et andre `DrawArrays` med `SRC_ALPHA, ONE_MINUS_SRC_ALPHA` og `DepthMask(false)` (bare mesher med `TriangleOpacity`). `Finish` leser `BGRA`/`UnsignedInt8888Rev` til en `uint[]`, snur radene og fjerner alfa.
+- **Målt (Intel Arc, Release, 320×180, 3 202 trekanter, én gjennomsiktig quad):** GPU 0,74 ms per frame (palettmodus 0,36 ms: fire ganger så mye å lese tilbake og en blit), CPU 1,2 ms. 0 byte allokert på begge. Testscenene (64×64) er innenfor 1 per kanal på 100 % av pikslene.
 
 ## 5. Testing
 

@@ -334,4 +334,6 @@ does.
 3. A mesh changed in place but the GPU still shows the old one → **Cause:** `Mesh.MarkChanged()` was not called; the
    GPU copy is only refreshed when `Mesh.Version` moves. **Fix:** call `MarkChanged()` after editing the arrays. Stop.
 4. GPU and CPU pictures differ → only edge pixels may differ (fill rules); `GlRendererTests` require ≥ 97 % equal
-   pixels and measure 100 % on the test scenes. More than edges → escalate with both frames. Stop.
+   pixels and measure 100 % on the test scenes. True colour: `GlRendererTrueColorTests` require ≥ 99 % of
+   pixels within 2 per channel and measure 100 % (blends differ by at most 1). More than edges → escalate with
+   both frames. Stop.

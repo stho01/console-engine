@@ -100,11 +100,14 @@ using [04](04-flows.md).
 | Text | Emitted by | Meaning |
 |---|---|---|
 | `OpenGL 3.3 is not available: <reason>` | `GlRenderer` ctor (`InvalidOperationException`, the original exception as `InnerException`). `GlRenderer.TryCreate` returns false instead | No GPU renderer: the caller should fall back to `Rasterizer` ([P20](05-triage.md#p20)). `<reason>` is one of the rows below or a GLFW/Silk.NET message |
-| `the R8UI framebuffer is not complete (<status>)` | `GlRenderer.CreateFramebuffer` (inside the message above) | The driver can't render to the palette-index target, or the size is 0 (`FramebufferIncompleteAttachment`) |
+| `the <R8UI\|RGBA8> framebuffer is not complete (<status>)` | `GlRenderer.CreateFramebuffer` (inside the message above; RGBA8 in true-colour mode) | The driver can't render to the palette-index (or colour) target, or the size is 0 (`FramebufferIncompleteAttachment`) |
+| `the background framebuffer is not complete (<status>)` | `GlRenderer.CreateBackground` (inside the message above, true-colour mode only) | The driver can't attach the RGBA8 background texture, or the size is 0 |
 | `the <VertexShader\|FragmentShader> did not compile: <log>` | `GlRenderer.CompileShader` (inside the message above) | Driver rejected a shader |
 | `the shaders did not link: <log>` | `GlRenderer.CreateProgram` (inside the message above) | Driver rejected the program |
 | `setting up failed with <GL error>` | `GlRenderer` ctor (inside the message above) | A GL call during setup failed |
-| `OpenGL 3.3 not available` | `GlRendererTests` (`Assert.Ignore`) | GPU tests skipped: no context, or not Windows (CI) |
+| `This renderer is in true-colour mode: call Clear(ReadOnlySpan<uint>) with a 0xRRGGBB background.` (`InvalidOperationException`) | `Rasterizer.Clear` / `GlRenderer.Clear` with `ConsoleColor`s | The renderer was made with `trueColor: true` |
+| `This renderer is in palette mode: call Clear(ReadOnlySpan<ConsoleColor>), or create it with trueColor: true.` (`InvalidOperationException`) | `Rasterizer.Clear` / `GlRenderer.Clear` with `uint`s | The renderer was made in palette mode |
+| `OpenGL 3.3 not available` | `GlRendererTests`, `GlRendererTrueColorTests` (`Assert.Ignore`) | GPU tests skipped: no context, or not Windows (CI) |
 
 ### Kartster
 

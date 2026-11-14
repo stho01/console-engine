@@ -8,6 +8,9 @@ namespace ConsoleEngine.Rendering3D;
 /// lights each triangle flat
 /// (ambient + one directional light) and fills it into <see cref="Colors"/> with a depth test. Allocates nothing per
 /// frame once its vertex buffer has grown to the largest mesh.
+/// In <see cref="TrueColor"/> mode it fills a float RGB buffer instead (no dither), packed into <see cref="Rgb"/> by
+/// <see cref="Finish"/>. A mesh's opaque triangles are drawn first, then its see-through ones, blended
+/// <c>dst = lerp(dst, src, opacity)</c>, depth-tested but not writing depth.
 /// </summary>
 public sealed class Rasterizer : IRenderer3D
 {
@@ -15,11 +18,17 @@ public sealed class Rasterizer : IRenderer3D
     //** fields
     //**********************************************************
 
+    internal const string PaletteClearInTrueColor =
+        "This renderer is in true-colour mode: call Clear(ReadOnlySpan<uint>) with a 0xRRGGBB background.";
+    internal const string TrueColorClearInPaletteMode =
+        "This renderer is in palette mode: call Clear(ReadOnlySpan<ConsoleColor>), or create it with trueColor: true.";
+
     private const float Ambient = 0.35f;
     private const float Diffuse = 0.65f;
 
     private readonly ConsolePalette _palette;
     private readonly float[] _depth;
+    private readonly Vector3[] _shaded; // true colour: the frame as 0..1 RGB until Finish packs it
     private float _opacity = 1f; // of the triangle being filled
 
     /// <summary>
@@ -34,12 +43,17 @@ public sealed class Rasterizer : IRenderer3D
     //** ctor
     //**********************************************************
 
-    public Rasterizer(int width, int height, ConsolePalette palette)
+    /// <param name="palette">The console colours of palette mode; not used when <paramref name="trueColor"/>.</param>
+    /// <param name="trueColor">Draw 24-bit colour into <see cref="Rgb"/> instead of palette indices.</param>
+    public Rasterizer(int width, int height, ConsolePalette palette, bool trueColor = false)
     {
         _palette = palette;
         Width = width;
         Height = height;
-        Colors = new ConsoleColor[width * height];
+        TrueColor = trueColor;
+        Colors = trueColor ? [] : new ConsoleColor[width * height];
+        Rgb = trueColor ? new uint[width * height] : [];
+        _shaded = trueColor ? new Vector3[width * height] : [];
         _depth = new float[width * height];
     }
 
@@ -49,9 +63,13 @@ public sealed class Rasterizer : IRenderer3D
 
     public int Width { get; }
     public int Height { get; }
+    public bool TrueColor { get; }
 
-    /// <summary>The frame, one colour per pixel, <c>index = y * Width + x</c>.</summary>
+    /// <summary>The palette-mode frame, one colour per pixel, <c>index = y * Width + x</c>. Empty in true colour.</summary>
     public ConsoleColor[] Colors { get; }
+
+    /// <summary>The true-colour frame, <c>0xRRGGBB</c>, after <see cref="Finish"/>. Empty in palette mode.</summary>
+    public uint[] Rgb { get; }
 
     //**********************************************************
     //** public methods
@@ -60,7 +78,25 @@ public sealed class Rasterizer : IRenderer3D
     /// <summary>Starts a frame: copies the background into <see cref="Colors"/> and resets the depth buffer.</summary>
     public void Clear(ReadOnlySpan<ConsoleColor> background)
     {
+        if (TrueColor)
+            throw new InvalidOperationException(PaletteClearInTrueColor);
+
         background.CopyTo(Colors);
+        Array.Fill(_depth, 1f);
+    }
+
+    /// <summary>Starts a true-colour frame on <paramref name="backgroundRgb"/> (<c>0xRRGGBB</c> per pixel).</summary>
+    public void Clear(ReadOnlySpan<uint> backgroundRgb)
+    {
+        if (!TrueColor)
+            throw new InvalidOperationException(TrueColorClearInPaletteMode);
+
+        for (var i = 0; i < _shaded.Length; i++)
+        {
+            var rgb = backgroundRgb[i];
+            _shaded[i] = new Vector3((rgb >> 16) & 0xFF, (rgb >> 8) & 0xFF, rgb & 0xFF) / 255f;
+        }
+
         Array.Fill(_depth, 1f);
     }
 
@@ -81,30 +117,20 @@ public sealed class Rasterizer : IRenderer3D
             _screen[i] = ToScreen(_clip[i]); // garbage behind the near plane, those corners are clipped first
         }
 
-        var indices = mesh.Indices;
-        for (var t = 0; t < mesh.TriangleCount; t++)
-        {
-            var ia = indices[t * 3];
-            var ib = indices[t * 3 + 1];
-            var ic = indices[t * 3 + 2];
-            _opacity = mesh.TriangleOpacity == null ? 1f : mesh.TriangleOpacity[t];
-            if (_opacity <= 0f)
-                continue;
-
-            var color = Shade(mesh, t, world, toLight);
-
-            // z < 0 is in front of the near plane (System.Numerics projections map near..far to 0..1).
-            var behind = (_clip[ia].Z < 0 ? 1 : 0) + (_clip[ib].Z < 0 ? 1 : 0) + (_clip[ic].Z < 0 ? 1 : 0);
-            if (behind == 0)
-                FillIfFrontFacing(_screen[ia], _screen[ib], _screen[ic], color);
-            else if (behind < 3)
-                ClipAndFill(_clip[ia], _clip[ib], _clip[ic], color);
-        }
+        // True colour: opaque triangles first, then the blended ones over them (palette mode: one pass, in order).
+        var passes = TrueColor && mesh.TriangleOpacity != null ? 2 : 1;
+        for (var pass = 0; pass < passes; pass++)
+            DrawTriangles(mesh, world, toLight, blendedPass: pass == 1);
     }
 
-    /// <summary>Nothing to do: <see cref="Draw"/> writes straight into <see cref="Colors"/>.</summary>
+    /// <summary>Packs the true-colour frame into <see cref="Rgb"/>; nothing to do in palette mode.</summary>
     public void Finish()
     {
+        for (var i = 0; i < _shaded.Length; i++)
+        {
+            var rgb = _shaded[i] * 255f + new Vector3(0.5f);
+            Rgb[i] = ((uint)rgb.X << 16) | ((uint)rgb.Y << 8) | (uint)rgb.Z;
+        }
     }
 
     public void Dispose()
@@ -114,6 +140,31 @@ public sealed class Rasterizer : IRenderer3D
     //**********************************************************
     //** internals
     //**********************************************************
+
+    private void DrawTriangles(Mesh mesh, Matrix4x4 world, Vector3 toLight, bool blendedPass)
+    {
+        var indices = mesh.Indices;
+        for (var t = 0; t < mesh.TriangleCount; t++)
+        {
+            var ia = indices[t * 3];
+            var ib = indices[t * 3 + 1];
+            var ic = indices[t * 3 + 2];
+            _opacity = mesh.TriangleOpacity == null ? 1f : mesh.TriangleOpacity[t];
+            if (_opacity <= 0f || (TrueColor && (_opacity < 1f) != blendedPass))
+                continue;
+
+            var color = Shade(mesh, t, world, toLight);
+            if (TrueColor)
+                color = Vector3.Clamp(color, Vector3.Zero, Vector3.One);
+
+            // z < 0 is in front of the near plane (System.Numerics projections map near..far to 0..1).
+            var behind = (_clip[ia].Z < 0 ? 1 : 0) + (_clip[ib].Z < 0 ? 1 : 0) + (_clip[ic].Z < 0 ? 1 : 0);
+            if (behind == 0)
+                FillIfFrontFacing(_screen[ia], _screen[ib], _screen[ic], color);
+            else if (behind < 3)
+                ClipAndFill(_clip[ia], _clip[ib], _clip[ic], color);
+        }
+    }
 
     private static Vector3 Shade(Mesh mesh, int triangle, Matrix4x4 world, Vector3 toLight)
     {
@@ -215,10 +266,27 @@ public sealed class Rasterizer : IRenderer3D
                 if (weightA >= 0 && weightB >= 0 && weightC >= 0)
                 {
                     var depth = weightA * a.Z + weightB * b.Z + weightC * c.Z;
-                    if (depth < _depth[index] && (_opacity >= 1f || ScreenDoor[((y & 3) << 2) | (x & 3)] < _opacity))
+                    if (depth < _depth[index])
                     {
-                        _depth[index] = depth;
-                        Colors[index] = _palette.ToConsoleColor(color, x, y);
+                        if (TrueColor)
+                        {
+                            if (_opacity >= 1f)
+                            {
+                                _depth[index] = depth;
+                                _shaded[index] = color;
+                            }
+                            else
+                            {
+                                // The GPU's SRC_ALPHA, ONE_MINUS_SRC_ALPHA blend; depth stays, so farther opaque
+                                // triangles drawn later still cover it.
+                                _shaded[index] = color * _opacity + _shaded[index] * (1f - _opacity);
+                            }
+                        }
+                        else if (_opacity >= 1f || ScreenDoor[((y & 3) << 2) | (x & 3)] < _opacity)
+                        {
+                            _depth[index] = depth;
+                            Colors[index] = _palette.ToConsoleColor(color, x, y);
+                        }
                     }
                 }
 
