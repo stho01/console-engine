@@ -1,0 +1,11 @@
+# star-rally power-up pads, exported from Kartster by PowerUpExport (TrackPowerUpPadResolver).
+# pad x y z setId   (world metres, Kartster axes; the pads a normal race has, extra ones left out)
+pad 113.929 2.959 17.825 normal
+pad 116.429 2.959 17.824 normal
+pad -104.272 1 -59.609 normal
+pad -106.747 1 -59.961 normal
+pad -109.222 1 -60.314 normal
+pad 62.032 1 -13.714 normal
+pad -95.181 1 80.583 normal
+pad -96.973 1 78.84 normal
+pad -98.765 1 77.096 normal

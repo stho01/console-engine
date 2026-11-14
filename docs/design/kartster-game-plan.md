@@ -250,7 +250,7 @@ Levert, bare i `Bots/`. Tall og regler står i `docs/agent/03-rules.md` (raden �
 Levert på grenen til P. Regler og tall står i `docs/agent/03-rules.md` (Kartster-raden om power-ups), tastene i
 `08-operator-actions.md`.
 
-- **Med:** puter fra `<id>.powerups.txt` (eksportert med originalens `TrackPowerUpPadResolver`, de 9 på Star Circuit;
+- **Med:** puter fra `<id>.powerups.txt` (eksportert med originalens `TrackPowerUpPadResolver`, alle fire baner;
   boksene er tatt ut av `scenery.txt`), plukk ved å kjøre gjennom (1,2 m), 5 s til de er tilbake, én power-up om gangen,
   hjulet (48 trekk, 2,5 s, stopp med et trykk), trekning fra `normal`-settet vektet etter plassering med en seedet
   `Random`; Speed Boost, Engine Tune, Grip Tune, Bananas (slipp og kast), Lapskaus og Homing Joika (enkel og trippel,
@@ -261,4 +261,5 @@ Levert på grenen til P. Regler og tall står i `docs/agent/03-rules.md` (Kartst
 - **Rørt utenfor `PowerUps/`:** `TrackScene` (`PowerUpSystem.Add`, `PowerUpView` på `KartRenderSystem`,
   `HudState.PowerUp`), `KartPhysicsSystem.Effects`, `KartRenderSystem.PowerUps`, en `ComputeForces`-overlast med ferdig
   tuning i `KartDynamics`, `Track.PowerUpPads`, `star-circuit.scenery.txt` (9 `model Box`-linjer ut) og
-  `star-circuit.powerups.txt`. Eksportverktøy T må skrive putene til `powerups.txt` og ikke som `Box` i `scenery.txt`.
+  `star-circuit.powerups.txt`. `PowerUpExporter` i `tools/KartsterExport` skriver nå `powerups.txt` for alle fire baner (Star Circuit 9, Prism Loop 12,
+  Eight Ball 9, Star Rally 9 puter), og `SceneryExporter` skriver ikke lenger putene som `Box`.

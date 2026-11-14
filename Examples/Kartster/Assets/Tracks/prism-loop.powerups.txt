@@ -1,0 +1,14 @@
+# prism-loop power-up pads, exported from Kartster by PowerUpExport (TrackPowerUpPadResolver).
+# pad x y z setId   (world metres, Kartster axes; the pads a normal race has, extra ones left out)
+pad 669.892 1 384 normal
+pad 669.892 1 380 normal
+pad 669.892 1 376 normal
+pad 813.752 1 448.884 normal
+pad 811.075 1 445.911 normal
+pad 808.398 1 442.939 normal
+pad 627.489 1 614 normal
+pad 627.489 1 610 normal
+pad 627.489 1 606 normal
+pad 501.801 1 296.003 normal
+pad 501.776 1 300.003 normal
+pad 501.752 1 304.003 normal

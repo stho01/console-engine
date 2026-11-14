@@ -15,8 +15,8 @@ namespace KartsterExport;
 
 /// <summary>
 /// A track's static scenery, placed and meshed by the original's own code: fences, pipes, trees, signs, the
-/// start/finish line and gate, grid marks and power-up pads. Textures are baked into flat-coloured triangles.
-/// Format: <c>Examples/Kartster/Scenery.cs</c>.
+/// start/finish line and gate and grid marks (power-up pads are <see cref="PowerUpExporter"/>'s). Textures are baked
+/// into flat-coloured triangles. Format: <c>Examples/Kartster/Scenery.cs</c>.
 /// </summary>
 internal sealed class SceneryExporter : ITrackExporter
 {
@@ -31,9 +31,6 @@ internal sealed class SceneryExporter : ITrackExporter
     // CreateCheckerTexture(new Color(20, 20, 20), new Color(235, 235, 235)): uv (0..0.5, 0..0.5) is white.
     private static readonly Vector3 CheckerDark = new Color(20, 20, 20).ToVector3();
     private static readonly Vector3 CheckerLight = new Color(235, 235, 235).ToVector3();
-    // Content/Textures/PowerUpPad.png's blue; the pad is drawn unlit and textured in the game.
-    private static readonly Vector3 PadColor = new(0.2f, 0.45f, 0.72f);
-    private const float PadSize = 1.2f; // PowerUpPadRenderer.HalfSizeMeters * 2
 
     private readonly StringBuilder _text = new();
     private readonly SortedDictionary<string, int> _counts = new();
@@ -128,13 +125,6 @@ internal sealed class SceneryExporter : ITrackExporter
                 else
                     Flat(parts.Banner, Vector3.One, "gate");
             }
-        }
-
-        // Every pad a normal race puts out (RaceSimulation.ResolvePowerUpPads skips the extra ones).
-        foreach (var placement in TrackPowerUpPadResolver.Resolve(track))
-        {
-            if (!placement.Pad.IsExtra)
-                Model("Box", placement.WorldPosition, 0, new Vector3(PadSize), PadColor);
         }
     }
 

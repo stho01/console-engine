@@ -45,6 +45,20 @@ public class ShippedTracksTests
     }
 
     [TestCaseSource(nameof(TrackIds))]
+    public void Load_ShippedTrack_PowerUpPadsAreOnTheRoad(string id)
+    {
+        var track = Track.Load(Folder, id);
+
+        Assert.That(File.Exists(Path.Combine(Folder, id + ".powerups.txt")), Is.True);
+        Assert.That(track.PowerUpPads, Is.Not.Empty);
+        for (var i = 0; i < track.PowerUpPads.Length; i++)
+        {
+            var pad = track.PowerUpPads[i];
+            Assert.That(OnRoad(track, new Vector2(pad.X, pad.Z)), Is.True, $"pad {i} at {pad}");
+        }
+    }
+
+    [TestCaseSource(nameof(TrackIds))]
     public void Load_ShippedTrack_StartCheckpointsAndGridAreOnTheRoad(string id)
     {
         var track = Track.Load(Folder, id);
