@@ -36,7 +36,7 @@ scripting loads the native `lua54.dll` that the KeraLua package ships for each r
 | 2D physics (bodies, circles/boxes/polygons, rotation, forces and torque (`Force`), broadphase, Soft Step contact solver, contact/sensor events, tile grid, sleeping, interpolation, raycasts and box casts, `CharacterMover.MoveAndSlide`) | `ConsoleEngine.Physics/` (own assembly and NuGet package, optional), rules in [`docs/agent/03-rules.md` § Physics](docs/agent/03-rules.md#physics), design and phases in [`docs/design/physics-plan.md`](docs/design/physics-plan.md). Examples: `Examples/PhysicsShowcase` (every feature), `Examples/PhysicsSandbox` (solver), `Examples/Asteroids.Ecs` (sensors, layers), `Examples/Platformer.Ecs` (tile grid, character controller) |
 | Performance measurements | `ConsoleEngine.Benchmarks/` (BenchmarkDotNet) |
 | Lua scripting: components, `self` fields, hooks, errors, reload | [`docs/agent/03-rules.md § Lua`](docs/agent/03-rules.md#lua), `ConsoleEngine.Scripting/`, `Examples/Scripted` |
-| 3D rendering (`IRenderer3D`, software `Rasterizer`, near-plane clipping, OBJ models, 16-colour dithering) | `ConsoleEngine.Rendering3D/` (own assembly and NuGet package, optional), GPU plan in [`docs/design/gpu-rendering-plan.md`](docs/design/gpu-rendering-plan.md), rules in [`docs/agent/03-rules.md`](docs/agent/03-rules.md) (Kartster rows) |
+| 3D rendering (`IRenderer3D`, software `Rasterizer`, OpenGL `GlRenderer`, near-plane clipping, OBJ models, 16-colour dithering) | `ConsoleEngine.Rendering3D/` (own assembly and NuGet package, optional), GPU renderer in `ConsoleEngine.Rendering3D.OpenGL/` (same picture; callers fall back to `Rasterizer` when `GlRenderer.TryCreate` fails), GPU plan in [`docs/design/gpu-rendering-plan.md`](docs/design/gpu-rendering-plan.md), rules in [`docs/agent/03-rules.md`](docs/agent/03-rules.md) (Kartster rows) |
 | Why KeraLua, and what Lua costs per entity | `ConsoleEngine.Benchmarks/README.md` |
 | How to use the engine | `Examples/Snake` (smallest), `Examples/TerraForM` (scenes, assets, tests), `Examples/<Game>.Ecs` (ECS port of each game: components, systems, queries, `EcsScene`; compare with `Examples/<Game>`. `Snake.Ecs` is the smallest, `TerraForM.Ecs` the fullest), `Examples/Swarm` (ECS at scale, system ordering attributes), `Examples/PhysicsSandbox` (physics: bodies, colliders, fixed step, kinematic platform), `Examples/PhysicsShowcase` (every physics feature), `Examples/EternalDigger` (a full original ECS game: endless grid world, particle effects, lighting; start at [`Examples/EternalDigger/README.md`](Examples/EternalDigger/README.md), design contract in [`docs/design/eternal-digger.md`](docs/design/eternal-digger.md)) |
 | Build/test pipeline | `.github/workflows/build-and-test.yml` |
@@ -53,6 +53,7 @@ Every name in `docs/agent/` is grep-able. Search for the identifier you are inte
 | `ConsoleEngine.Abstractions` | `ConsoleEngine.Abstractions/` | Library: interfaces + value types | — |
 | `ConsoleEngine.Physics` | `ConsoleEngine.Physics/` | Library (NuGet): 2D physics on the ECS. Optional: games without physics don't reference it | ConsoleEngine, Xna |
 | `ConsoleEngine.Rendering3D` | `ConsoleEngine.Rendering3D/` | Library (NuGet): 3D meshes, OBJ reading, console palette, `IRenderer3D` and the CPU `Rasterizer` (`System.Numerics`). Optional | — (only .NET; not ConsoleEngine, not Xna) |
+| `ConsoleEngine.Rendering3D.OpenGL` | `ConsoleEngine.Rendering3D.OpenGL/` | Library (NuGet): `GlRenderer : IRenderer3D` on OpenGL 3.3 core in a hidden GLFW window (Silk.NET 2.23.0). Optional | Rendering3D |
 | `ConsoleEngine.Scripting` | `ConsoleEngine.Scripting/` | Library (not packed): Lua 5.4 scripting for ECS entities (KeraLua 1.4.11). Optional | ConsoleEngine |
 | `ConsoleEngine.Windows` | `Libs/ConsoleEngine.Windows/` | Library, namespace `ConsoleEngine.Native` | Abstractions |
 | `ConsoleEngine.Logger` | `Libs/ConsoleEngine.Logger/` | Exe: TCP log viewer (port 11000) | — |
@@ -68,6 +69,7 @@ Every name in `docs/agent/` is grep-able. Search for the identifier you are inte
 | `ConsoleEngine.Tests` | `ConsoleEngine.Tests/` | NUnit 5, hand-written fakes in `Fakes/` | ConsoleEngine, Scripting |
 | `ConsoleEngine.Physics.Tests` | `ConsoleEngine.Physics.Tests/` | NUnit 5 | ConsoleEngine.Physics |
 | `ConsoleEngine.Rendering3D.Tests` | `ConsoleEngine.Rendering3D.Tests/` | NUnit 5 | ConsoleEngine.Rendering3D |
+| `ConsoleEngine.Rendering3D.OpenGL.Tests` | `ConsoleEngine.Rendering3D.OpenGL.Tests/` | NUnit 5, `[Category("Gpu")]`, ignored without OpenGL 3.3 (CI) | ConsoleEngine.Rendering3D.OpenGL |
 | `ConsoleEngine.Benchmarks` | `ConsoleEngine.Benchmarks/` | Exe: BenchmarkDotNet 0.15.8 | ConsoleEngine, Physics, Scripting |
 
 All projects: `net11.0`, `LangVersion` 15, `TreatWarningsAsErrors` = `True`. Solution: `ConsoleEngine.sln`.
@@ -107,8 +109,9 @@ ReportGenerator is a local tool pinned in `dotnet-tools.json`. There is no cover
 
 Games need a real Windows console, so an agent cannot run them headless. TerraForM loads `Assets/Maps/*.txt` and the
 logger exe by **relative path**, so run a game's exe from its output folder (e.g.
-`Examples/TerraForM/bin/Debug/net11.0/`). CI runs restore → build → test with coverage on `windows-latest` for PRs to
-`main`. The coverage summary is in the job summary, and the HTML report is the `coverage-report` artifact.
+`Examples/TerraForM/bin/Debug/net11.0/`). CI runs restore → build → test with coverage on `windows-latest`, `macos-latest` and `ubuntu-latest` for pushes
+and PRs to `main`. The coverage summary is in the job summary, and the HTML report is the `coverage-report-<os>`
+artifact. CI has no usable OpenGL, so the `Gpu` tests are ignored there; run them locally.
 
 To play the ECS games, start the launcher. It builds them first and starts each one from its output folder: on Windows in its
 own classic console window (`conhost.exe`, even when Windows Terminal is the default), on macOS and Linux in the
@@ -176,6 +179,8 @@ ConsoleEngine.Tests/              engine unit tests (mirrors ConsoleEngine/ fold
 ConsoleEngine.Rendering3D/        3D (namespace ConsoleEngine.Rendering3D): IRenderer3D, Rasterizer (CPU), Mesh
                                   (Version/MarkChanged), ObjFile, ConsolePalette
 ConsoleEngine.Rendering3D.Tests/  RasterizerTests, ScreenDoorTests, ObjFileTests, MeshTests
+ConsoleEngine.Rendering3D.OpenGL/ GlRenderer (OpenGL 3.3: R8UI framebuffer, shaders, per-mesh GPU cache)
+ConsoleEngine.Rendering3D.OpenGL.Tests/  GlRendererTests (GPU vs. CPU pixels, allocation, fallback)
 ConsoleEngine.Scripting/          Script + ScriptFaulted (components), LuaScriptSystem, LuaRenderSystem,
                                   LuaRuntime (Lua state, engine API, hook trampoline), LuaScript (module, reload),
                                   LowLevel/LuaNative.cs (direct lua54 P/Invoke)
@@ -397,7 +402,7 @@ Use [Conventional Commits 1.0.0](https://www.conventionalcommits.org/en/v1.0.0/#
 | **ECS memory** | `World` keeps component data in native memory (`NativeMemory.AlignedAlloc`, 16 KiB chunks, 64-byte aligned columns). Always `Dispose` a world (tests: `using var world = new World();`): there is no finalizer, so an undisposed world leaks its chunks. Components must be `unmanaged` structs. Never store a `ref` from `World.Get<T>` across a structural change. Create/Add/Remove/Destroy inside a query loop throws: record them in a `CommandBuffer` (`EntitySystem.Commands`). `Destroy`/`Add`/`Remove` of a dead entity are skipped at playback. Test components are named `Location`/`Speed` so they don't shadow the engine's `Position`/`Velocity` (namespace lookup beats `using`). `Archetype`, `Chunk` and `ComponentMask` are `internal`: tests reach them through `World.GetArchetype` / `World.ChunkPool` (`InternalsVisibleTo`) |
 | **Threading** | Everything runs on the game-loop thread, including `GameTime.SetInterval` callbacks. The only other thread is `Log`'s `"Logger"` thread. There is no locking, so never touch engine state from another thread |
 | **NuGet package** | `ConsoleEngine` has `GeneratePackageOnBuild`, so every build produces a `.nupkg` (gitignored). `PackageVersion` (0.2.0) is bumped by hand, and no pipeline publishes it. Any change to its public API is a breaking change for consumers (`!` commit) |
-| **Dependencies** | `CommunityToolkit.HighPerformance` 8.4.2 supplies `Span2D<T>` (namespace `CommunityToolkit.HighPerformance`). It replaced the deprecated `Microsoft.Toolkit.HighPerformance`. `KeraLua` 1.4.11 (MIT, NuGet) supplies Lua 5.4 for `ConsoleEngine.Scripting`. It was chosen over Lua-CSharp, NLua and MoonSharp by a benchmark (numbers in `ConsoleEngine.Benchmarks/README.md`). That decision is made: don't add other Lua libraries |
+| **Dependencies** | `CommunityToolkit.HighPerformance` 8.4.2 supplies `Span2D<T>` (namespace `CommunityToolkit.HighPerformance`). It replaced the deprecated `Microsoft.Toolkit.HighPerformance`. `KeraLua` 1.4.11 (MIT, NuGet) supplies Lua 5.4 for `ConsoleEngine.Scripting`. It was chosen over Lua-CSharp, NLua and MoonSharp by a benchmark (numbers in `ConsoleEngine.Benchmarks/README.md`). That decision is made: don't add other Lua libraries. `Silk.NET.OpenGL` and `Silk.NET.Windowing` 2.23.0 (MIT) supply OpenGL and the hidden window for `ConsoleEngine.Rendering3D.OpenGL`; Windowing brings GLFW 3.4 (zlib licence) through `Ultz.Native.GLFW`, copied to `runtimes/<rid>/native/` (`glfw3.dll` on Windows). Only that project references them |
 | **Third-party code / licence** | `Libs/Microsoft.Xna.Framework` is copied from MonoGame (see its `README.md`). The repo has **no LICENSE file**. Don't copy in more third-party code, and don't add or change licensing, without asking the owner |
 | **Lua host functions** | Static `LuaFunction` delegates that find their `LuaRuntime` through upvalue 1 (a `GCHandle`). They must **never raise a Lua error** (`lua_error`, `luaL_check*`, `luaL_opt*`): it long-jumps across managed frames and crashes the process. Catch every exception, store it in `_hostError`, return 0 |
 | **Lua scripts in tests** | `LuaRuntime`'s internal ctor takes a `RenderConsole` and a `Func<int, KeyState>`, so tests need neither Win32 nor `Input.Instance` (`InternalsVisibleTo` for `ConsoleEngine.Tests` and `ConsoleEngine.Benchmarks`). Tests write scripts to a temp folder, load them by absolute path, run a `World` with two `SystemGroup`s and assert on components. `FakeConsoleHandler.Render` copies the frame, so allocation checks run frames without `Display` |

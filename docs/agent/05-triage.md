@@ -304,3 +304,33 @@ pressed F5 but nothing changed", "error about lua54.dll".
    - They edited the file in the **project** folder → **Cause:** `Reload` reads the copy in the output folder (`FullPath`). **Fix:** edit the output copy, or rebuild and restart. Stop.
    - A removed function still runs → reload removes fields that the new module no longer has, so the returned table still has it: the copy in the output folder (`FullPath`) still defines it. **Fix:** edit the output copy. Stop.
    - A reload error → `ReloadAll` returned it, but `ScriptReloadSystem` only sends it to `Log.WriteLine`, which is dropped without `EnableLogger`, and the old version stays. **Fix:** check the script for errors (load it in a test), then reload again. Stop.
+
+<a id="p20"></a>
+## P20 — 3D: GPU mode not available / falls back to CPU / GPU picture differs
+
+**Symptom [inferred]:** "GPU mode doesn't work", "it always uses the CPU", "`GlRenderer` throws", "glfw3.dll is
+missing", "the GPU picture looks different".
+
+No game uses `GlRenderer` yet (`ConsoleEngine.Rendering3D.OpenGL`, [01](01-system-map.md)); this is for code that
+does.
+
+1. `InvalidOperationException` starting `OpenGL 3.3 is not available: ` (or `GlRenderer.TryCreate` returned false and
+   the caller fell back to `Rasterizer`) → read the rest of the message ([06 § 3D](06-diagnostics.md#rendering3d)):
+   - A GLFW or windowing message (no suitable platform, `DllNotFoundException` for `glfw3`) → **Cause:** `glfw3.dll`
+     is missing from `runtimes/<rid>/native/` (partial copy of the output folder), or no desktop session (service,
+     SSH, CI) ([07 § Q13](07-checks.md#q13)). **Fix:** copy the whole output folder; run in a desktop session. Stop.
+   - A context/version message from GLFW (WGL, "version", "pixel format") → **Cause:** the driver has no OpenGL 3.3
+     core profile: no GPU driver installed (Microsoft Basic Display Adapter), a remote desktop session or a VM
+     **[external]**. **Fix:** install the GPU vendor's driver, or use `Rasterizer` (the same picture on the CPU). Stop.
+   - `the R8UI framebuffer is not complete (<status>)` → **Cause:** the driver cannot render to an `R8UI` target, or
+     width/height is 0. **Fix:** use `Rasterizer`; report the GPU and driver (the `RGBA8` reserve in
+     `docs/design/gpu-rendering-plan.md` § 7 is not built). Stop.
+   - `the <shader type> did not compile: …` / `the shaders did not link: …` / `setting up failed with <error>` →
+     **Cause:** driver bug or a shader change. **Fix:** escalate with the message and GPU/driver. Stop.
+2. Crash or black frame later, from another thread → **Cause:** the GL context belongs to the thread that created the
+   renderer ([03](03-rules.md) `GlRenderer` row). **Fix:** create and use it on the game-loop
+   thread. Stop.
+3. A mesh changed in place but the GPU still shows the old one → **Cause:** `Mesh.MarkChanged()` was not called; the
+   GPU copy is only refreshed when `Mesh.Version` moves. **Fix:** call `MarkChanged()` after editing the arrays. Stop.
+4. GPU and CPU pictures differ → only edge pixels may differ (fill rules); `GlRendererTests` require ≥ 97 % equal
+   pixels and measure 100 % on the test scenes. More than edges → escalate with both frames. Stop.

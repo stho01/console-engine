@@ -94,6 +94,18 @@ Runtime exceptions without repo-authored text (message comes from .NET and varie
 `IndexOutOfRangeException`, `NullReferenceException`, `TypeInitializationException`. Match by **type + stack frame**
 using [04](04-flows.md).
 
+<a id="rendering3d"></a>
+### 3D rendering (`ConsoleEngine.Rendering3D.OpenGL`)
+
+| Text | Emitted by | Meaning |
+|---|---|---|
+| `OpenGL 3.3 is not available: <reason>` | `GlRenderer` ctor (`InvalidOperationException`, the original exception as `InnerException`). `GlRenderer.TryCreate` returns false instead | No GPU renderer: the caller should fall back to `Rasterizer` ([P20](05-triage.md#p20)). `<reason>` is one of the rows below or a GLFW/Silk.NET message |
+| `the R8UI framebuffer is not complete (<status>)` | `GlRenderer.CreateFramebuffer` (inside the message above) | The driver can't render to the palette-index target, or the size is 0 (`FramebufferIncompleteAttachment`) |
+| `the <VertexShader\|FragmentShader> did not compile: <log>` | `GlRenderer.CompileShader` (inside the message above) | Driver rejected a shader |
+| `the shaders did not link: <log>` | `GlRenderer.CreateProgram` (inside the message above) | Driver rejected the program |
+| `setting up failed with <GL error>` | `GlRenderer` ctor (inside the message above) | A GL call during setup failed |
+| `OpenGL 3.3 not available` | `GlRendererTests` (`Assert.Ignore`) | GPU tests skipped: no context, or not Windows (CI) |
+
 ### Kartster
 
 | Text | Emitted by | Meaning |

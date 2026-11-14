@@ -15,8 +15,8 @@ public sealed class ConsolePalette
     //** fields
     //**********************************************************
 
-    private const int LookupBits = 5;
-    private const int LookupSize = 1 << LookupBits;
+    internal const int LookupBits = 5;
+    internal const int LookupSize = 1 << LookupBits;
     private const float DitherStrength = 0.12f;
 
     private static readonly float[] DitherOffsets = BuildDitherOffsets();
@@ -47,6 +47,14 @@ public sealed class ConsolePalette
     ]);
 
     public uint[] Colors { get; }
+
+    /// <summary>
+    /// The nearest colour per 32³ RGB cell, <c>index = r &lt;&lt; 10 | g &lt;&lt; 5 | b</c> (a GPU renderer copies it).
+    /// </summary>
+    internal ReadOnlySpan<ConsoleColor> Nearest => _nearest;
+
+    /// <summary>What <see cref="ToConsoleColor"/> adds to a pixel, <c>(y &amp; 3) &lt;&lt; 2 | (x &amp; 3)</c>.</summary>
+    internal static ReadOnlySpan<float> Dither => DitherOffsets;
 
     //**********************************************************
     //** public methods

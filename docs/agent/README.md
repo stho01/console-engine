@@ -49,6 +49,7 @@ Tags used throughout:
 | Launcher: "game says (not built)", "launcher won't start a game", "game window stops at Press any key" | [P16](05-triage.md#p16) |
 | EternalDigger: "I'm stuck in a hole", "how do I get my ladders back", "can't jump", "where is my inventory", "can't dig the grass", "SPACE/E does nothing", "lost my ore", "can't see any ore", "my save is gone", "no CONTINUE", "can't build the lift", "fell down the shaft", "can't dig at 110 m", "TOO HARD", "can't plant dynamite", "the lamp keeps getting darker", "climbing got slow" | [P17](05-triage.md#p17) |
 | "Things pass through each other", "things sink into the floor", "bullet didn't hit", "hit counted twice", "physics events don't fire", "raycast misses", "platformer player stuck or falls through", "bodies hang in the air", "box doesn't spin" | [P18](05-triage.md#p18) |
+| 3D: "GPU mode not available", "it falls back to CPU", "`GlRenderer` throws", "glfw3.dll missing", "GPU picture differs from CPU" | [P20](05-triage.md#p20) |
 | Lua: "my script doesn't load / run", "the object stands still", "F5 doesn't reload my change", "lua54.dll missing" | [P19](05-triage.md#p19) |
 
 ## File index
@@ -59,7 +60,7 @@ Tags used throughout:
 | [02-state-model.md](02-state-model.md) | Runtime state (no DB): engine objects, TerraForM state, map file format |
 | [03-rules.md](03-rules.md) | Disputable rules: frame timing, key semantics, scenes, TerraForM power/score/sequences/maps |
 | [04-flows.md](04-flows.md) | Startup, frame loop, scenes, logger, map load, TerraForM command flow, launcher, EternalDigger miner frame and start/save, physics step and queries, Lua script load and hooks — each with "stops here if" |
-| [05-triage.md](05-triage.md) | **Entry point.** Facts to collect, first checks, playbooks P1–P19 |
+| [05-triage.md](05-triage.md) | **Entry point.** Facts to collect, first checks, playbooks P1–P20 |
 | [06-diagnostics.md](06-diagnostics.md) | Where evidence lives (there are no log files), every user-visible message verbatim |
 | [07-checks.md](07-checks.md) | Read-only diagnostic commands, one per named question (replaces SQL, since there is no DB) |
 | [08-operator-actions.md](08-operator-actions.md) | What a user/support can do without a code change, and what to escalate |

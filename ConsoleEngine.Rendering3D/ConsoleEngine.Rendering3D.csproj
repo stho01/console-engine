@@ -8,4 +8,7 @@
         <PackageVersion>0.2.0</PackageVersion>
         <TreatWarningsAsErrors>True</TreatWarningsAsErrors>
     </PropertyGroup>
+    <ItemGroup>
+      <InternalsVisibleTo Include="ConsoleEngine.Rendering3D.OpenGL" />
+    </ItemGroup>
 </Project>

@@ -9,6 +9,7 @@ Nothing is hosted and nothing is exposed to the internet. Every unit is a local 
 | `ConsoleEngine` (`ConsoleEngine/ConsoleEngine.csproj`) | Library, NuGet `PackageVersion` 0.2.0, `GeneratePackageOnBuild` | `GameBase` game loop, `RenderConsole`, `Input`, `GameTime`, `SceneManager`, `Log`, `Deque<T>`, ECS (namespace `ConsoleEngine.Ecs`: `World`, `Query`, `CommandBuffer`, `EntitySystem`, `SystemGroup`, `EcsScene<TGame>`, `FixedTimestep`, built-in components and systems). Runs only inside an `EcsScene` or game code that calls it |
 | `ConsoleEngine.Physics` (`ConsoleEngine.Physics/ConsoleEngine.Physics.csproj`) | Library, NuGet `PackageVersion` 0.2.0, `GeneratePackageOnBuild`. Optional | 2D physics on the ECS (namespace `ConsoleEngine.Physics`): `PhysicsSystem` (implements `IPhysicsEvents` and `IPhysicsQueries`), `RigidBody`, `Collider`, `AngularVelocity`, `PolygonLibrary`, `TileGrid`, `CharacterMover`, `Interpolation`/`InterpolationSystem`, events. Depends on `ConsoleEngine` only; the engine knows nothing about it. Used by Asteroids.Ecs, PhysicsSandbox, PhysicsShowcase and Platformer.Ecs |
 | `ConsoleEngine.Rendering3D` (`ConsoleEngine.Rendering3D/ConsoleEngine.Rendering3D.csproj`) | Library, NuGet `PackageVersion` 0.2.0, `GeneratePackageOnBuild`. Optional | 3D on the console (namespace `ConsoleEngine.Rendering3D`): `IRenderer3D` (`Clear`, `Draw`, `Finish`, `Colors`), the CPU `Rasterizer`, `Mesh` (`Version`/`MarkChanged`), `ObjFile`, `ConsolePalette`. Depends on .NET only (`System.Numerics`), not on `ConsoleEngine` or Xna. Used by Kartster |
+| `ConsoleEngine.Rendering3D.OpenGL` (`ConsoleEngine.Rendering3D.OpenGL/ConsoleEngine.Rendering3D.OpenGL.csproj`) | Library, NuGet `PackageVersion` 0.2.0, `GeneratePackageOnBuild`. Optional | `GlRenderer : IRenderer3D`: draws the same picture as `Rasterizer` on the GPU (OpenGL 3.3 core in a hidden GLFW window, Silk.NET 2.23.0) into an `R8UI` palette-index framebuffer and reads it back in `Finish`. The ctor throws `InvalidOperationException` without OpenGL 3.3; `GlRenderer.TryCreate` returns false instead, so callers fall back to `Rasterizer`. Use it only from the thread that created it. Not used by any game yet |
 | `ConsoleEngine.Abstractions` | Library | `IConsoleHandler`, `IInputHandler`, `Pixel`, `FontInfo`, `Key`, `KeyState` |
 | `ConsoleEngine.Windows` (`Libs/ConsoleEngine.Windows`, namespace `ConsoleEngine.Native`) | Library | Win32 implementation: `ConsoleHandler`, `InputHandler`, P/Invoke in `LowLevel/Kernel32.cs`, `LowLevel/User32.cs` |
 | `ConsoleEngine.Logger` (`Libs/ConsoleEngine.Logger`) | **Exe** `ConsoleEngine.Logger.exe` | Separate console window that shows `Log.WriteLine` output and FPS. Referenced by `ConsoleEngine.csproj`, so the build copies it next to every game |
@@ -18,6 +19,7 @@ Nothing is hosted and nothing is exposed to the internet. Every unit is a local 
 | `ConsoleEngine.Tests` (`ConsoleEngine.Tests/`) | NUnit test project | Engine tests: `RenderConsole`, `Sprite`, `SceneManager`, `GameTime.Interval`, `Deque<T>`, `ArrayExtensions`, ECS (`Ecs/`: `World`, `Query`, `CommandBuffer`, `SystemGroup`, `EcsScene`, `FixedTimestep`, `Archetype`, `ComponentMask`, `Systems/`), Lua (`Scripting/LuaScriptSystemTests`). Uses `Fakes/`, no Win32 |
 | `ConsoleEngine.Physics.Tests` (`ConsoleEngine.Physics.Tests/`) | NUnit test project | Physics tests: `Collision`, `SpatialHashGrid`, `PhysicsSystem` (rules, events), `PhysicsSolverTests` (contact response over whole steps), `TileGridTests`, `PhysicsQueryTests`, `CharacterMoverTests`, `RotationTests`, `TileContactTests`, `SleepTests`, `InterpolationTests`. `InternalsVisibleTo` from `ConsoleEngine.Physics` |
 | `ConsoleEngine.Rendering3D.Tests` (`ConsoleEngine.Rendering3D.Tests/`) | NUnit test project | `RasterizerTests` (culling, near-plane clipping, depth test, lighting), `ScreenDoorTests` (screen-door transparency, unlit meshes), `ObjFileTests` (OBJ parsing), `MeshTests` (`MarkChanged` bumps `Version`) |
+| `ConsoleEngine.Rendering3D.OpenGL.Tests` (`ConsoleEngine.Rendering3D.OpenGL.Tests/`) | NUnit test project, `[Category("Gpu")]` | `GlRendererTests`: the CPU tests' scenes rendered by `Rasterizer` and `GlRenderer`, ≥ 97 % equal pixels; steady-state frame allocates nothing; fallback exception; dispose and create again. `Assert.Ignore("OpenGL 3.3 not available")` when `TryCreate` fails or the OS is not Windows (so in CI) |
 | `ConsoleEngine.Benchmarks` (`ConsoleEngine.Benchmarks/`) | **Exe**, BenchmarkDotNet 0.15.8 | `Baseline/OopUpdateBenchmarks` (list of classes vs. struct arrays), `Ecs/WorldBenchmarks`, `Ecs/QueryBenchmarks`, `Physics/BruteForceCollisionBenchmarks` (all-pairs circle test, the baseline) and `Physics/PhysicsStepBenchmarks` (one whole `PhysicsSystem` step on the same bodies), `Physics/PhysicsQueryBenchmarks` (1 000 raycasts / box casts), `Scripting/LuaScriptBenchmarks` (`LuaScriptSystem` vs. the same logic in C#). Built by CI, never run by CI |
 | `ConsoleEngine.Scripting` (`ConsoleEngine.Scripting/`) | Library (not packed) | Lua 5.4 scripting for ECS entities on KeraLua 1.4.11: components `Script`, `ScriptFaulted`, systems `LuaScriptSystem`, `LuaRenderSystem`, and `LuaRuntime`, `LuaScript`, `LuaScriptException`. Only games that reference it get Lua |
 | `Scripted` (`Examples/Scripted`) | Exe | ECS demo: a player and 30 fireflies, each scripted in `Assets/Scripts/*.lua`. F5 reloads the scripts |
@@ -40,6 +42,11 @@ Games that reference `ConsoleEngine.Scripting` also load the native Lua library 
 `runtimes/<rid>/native/` in their output folder (shipped by the KeraLua package for win-x64/x86/arm/arm64, and
 macOS/Linux). Besides KeraLua's own calls, `LuaNative.lua_tolstring` and `LuaNative.lua_pushlstring`
 (`ConsoleEngine.Scripting/LowLevel/`) are direct P/Invokes into it.
+
+Code that creates a `GlRenderer` (`ConsoleEngine.Rendering3D.OpenGL`) loads GLFW (`glfw3.dll` on Windows,
+`libglfw.so.3` on Linux, from `runtimes/<rid>/native/`, shipped by `Ultz.Native.GLFW` through Silk.NET.Windowing) and
+the system OpenGL driver (`opengl32.dll` on Windows). It needs an OpenGL 3.3 core context. There are no P/Invokes in
+the repo for these: Silk.NET makes all the calls.
 
 ## Processes and what talks to what
 
@@ -102,8 +109,8 @@ There is no dev/staging/prod split. What changes behaviour:
 
 ## CI
 
-`.github/workflows/build-and-test.yml`: on push/PR to `main`, `windows-latest`, .NET 11.0.x,
+`.github/workflows/build-and-test.yml`: on push/PR to `main`, on `windows-latest`, `macos-latest` and `ubuntu-latest` (matrix, `fail-fast: false`), .NET 11.0.x,
 `dotnet restore` → `dotnet build --no-restore` → `dotnet test --no-build` with `--settings coverage.runsettings
 --collect:"XPlat Code Coverage"` → `dotnet reportgenerator` (local tool from `dotnet-tools.json`). The Markdown summary
-goes to the job summary, and the HTML report is uploaded as the `coverage-report` artifact. There is no coverage
+goes to the job summary, and the HTML report is uploaded as the `coverage-report-<os>` artifact. The `Gpu` tests (`ConsoleEngine.Rendering3D.OpenGL.Tests`) are ignored there (no OpenGL 3.3, or not Windows), which does not fail the job. There is no coverage
 threshold, so coverage never fails the build. All projects set `TreatWarningsAsErrors`.

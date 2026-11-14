@@ -3,8 +3,8 @@
 Navn: `Examples/Kartster` er konsollversjonen i dette repoet (het `KartViewer` til 2026-11-14). «Kartster» alene
 betyr originalspillet (MonoGame) i `C:\Forse\kartster-server`.
 
-Status (2026-11-14): fase 1 er ferdig (`ConsoleEngine.Rendering3D` og testprosjektet, Kartster tegner gjennom
-`IRenderer3D`). Fase 2 og 3 er ikke startet.
+Status (2026-11-14): fase 1 og 2 er ferdige (`ConsoleEngine.Rendering3D` med testprosjekt, Kartster tegner gjennom
+`IRenderer3D`; `ConsoleEngine.Rendering3D.OpenGL` med `GlRenderer` og GPU-testene). Fase 3 er ikke startet.
 
 ## 1. Mål og ikke-mål
 
@@ -86,6 +86,23 @@ sammen med `RasterizerTests` og OBJ-testene, mens `Load_ShippedKart_SkipsMarkerP
   objects (asynkront) er et senere steg om målingen viser behov.
 - **Bakflate-culling:** `GL_CULL_FACE` med samme vinding som CPU-en (mot klokka sett utenfra er forsiden).
 
+**Slik ble fase 2:** `GlRenderer(width, height, palette)` kaster `InvalidOperationException("OpenGL 3.3 is not
+available: …")`, og `GlRenderer.TryCreate` gir `false` i stedet. Avvik fra planen over:
+
+- **Palett:** i stedet for «nærmeste av de 16 farger» i shaderen laster vi opp `ConsolePalette` sin egen 32³-tabell
+  (3D-tekstur `R8UI`) og dither-forskyvningene (uniform-array), og regner samme celle som `ToConsoleColor`. Da blir
+  GPU-en lik CPU-en også der to farger er like nære. `ConsolePalette` fikk `internal` `Nearest`, `Dither` og
+  `LookupSize` (`InternalsVisibleTo` for OpenGL-prosjektet).
+- **Lys i hjørneshaderen**, ikke fragmentshaderen: fargen er flat per trekant, så den regnes én gang per hjørne og
+  sendes som `flat`.
+- **Ubelyst** er en uniform per mesh (`Mesh.IsUnlit` gjelder hele meshen), ikke et hjørne-attributt.
+- **Bayer-cella** telles fra øverste venstre hjørne (`y = height − 1 − gl_FragCoord.y`), så mønstrene treffer CPU-en.
+- **Mesher** blir liggende på GPU-en til `Dispose` (ingen utkastelse). Endringer krever `MarkChanged()`.
+- **Tråd:** konteksten hører til tråden som lagde rendereren; `Clear` gjør konteksten gjeldende igjen hvis en annen
+  renderer på samme tråd har tatt den.
+- **Målt (Intel Arc, Release, 320×180):** 3 201 trekanter, `Clear` + 2 `Draw` + `Finish` 0,43 ms per frame, 0 byte
+  allokert. Testscenene (64×64) er 100 % like CPU-en.
+
 ## 5. Testing
 
 - Tester som trenger OpenGL er merket `[Category("Gpu")]` og hopper over seg selv (`Assert.Ignore`) når konteksten
@@ -95,6 +112,10 @@ sammen med `RasterizerTests` og OBJ-testene, mens `Load_ShippedKart_SkipsMarkerP
   ubelyst mesh) rendres på begge, og minst 97 % av pikslene skal være like. Forskjeller kommer bare fra kantpiksler
   (ulike rasteriseringsregler).
 - CPU-testene flyttes uendret og kjører alltid.
+- **Slik ble det:** eget testprosjekt `ConsoleEngine.Rendering3D.OpenGL.Tests`, så CPU-testprosjektet ikke får de
+  native avhengighetene. Testene hopper også over seg selv når OS-et ikke er Windows (GLFW vil ha hovedtråden på
+  macOS, og NUnit kjører ikke tester der). CI-matrisen (Windows, macOS, Ubuntu) har ingen GPU, så der er de alltid
+  ignorert.
 
 ## 6. Faser
 
