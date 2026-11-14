@@ -69,6 +69,7 @@ team's process differs.
 | Kartster (select track) | UP DOWN / LEFT RIGHT / ENTER / ESC | Choose a row / change track, laps (1–5) or mode (`RACE` against 5 bots, `TIME TRIAL` alone against the ghost of the best lap) / start the race / kart menu | `SelectTrackScene.OnUpdate` |
 | Kartster (time trial) | Same keys as a race | Drive alone; the see-through kart is the best lap so far on this track with this kart. R or pause RESTART: a new attempt, same ghost. To drop the ghost, delete `%LOCALAPPDATA%\Kartster\ghosts\<track>.<kart>.ghost` ([Q16](07-checks.md#q16)) | `TimeTrial`, `GhostFile` |
 | Kartster (race) | W / S / A D / SPACE (held) | Gas / brake, then reverse / steer left/right (ramped) / handbrake | `KartInputSystem` → `KartControls` → `KartPhysicsSystem` |
+| Kartster (race) | N | Night on/off for this race: night sky, dim moon, every kart's headlights and rear lights, glowing lenses (on at the start on Prism Loop, Kartster's night track; R restarts with the track's default) | `KartLights.Begin` (called by `KartRenderSystem`) |
 | Kartster (race) | R | Every kart back on the grid, countdown again (restarts `TrackScene`, same laps) | `TrackScene.UpdateFlow` |
 | Kartster (race) | ENTER or ESC | Pause: the race stops, `PAUSED` menu over it | `TrackScene.UpdateFlow`, `PauseMenu` |
 | Kartster (paused) | UP DOWN / ENTER / ESC | Choose RESUME, RESTART or QUIT TO TITLE / pick it / resume | `PauseMenu.Update` |

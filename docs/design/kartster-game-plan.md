@@ -370,3 +370,18 @@ Levert på grenen til P2. Regler og tall i `docs/agent/03-rules.md` (Kartster-ra
   `docs/agent/03-rules.md` (Kartster-raden om bot-trafikk).
 - **24-bit i cross-platform:** `CrossPlatformConsoleHandler.SetTrueColor`/RGB-`Render` på true-colour-terminaler
   (`COLORTERM`), så `--truecolor`/C virker også på macOS og Linux. Regler i `docs/agent/03-rules.md` § True colour.
+**Status L (lys og stemning): levert.** Regler og tall i `docs/agent/03-rules.md` (raden «3D (any game)» om lys og
+Kartster-raden om lys og stemning), N i `08-operator-actions.md`, motorlyset i `gpu-rendering-plan.md` § 4c.
+- Motor: `IRenderer3D.Lighting` (`SceneLighting`: ambient, solfarge, opptil 16 `PointLight` per piksel, punkt- eller
+  spotlys, farget i 24-bit). Uten lys er bildet byte for byte som før. GPU og CPU er like i testene.
+- Kartster (`Lighting/KartLights`, `Lighting/KartLamps`): blob-skygge under hver kart dag og natt; natt med N (på fra
+  start på `prism-loop`, originalens nattbane), mørk himmel, svak måne, frontlys fra `light_front*`, `light_long*` og
+  dempet rødt baklys fra `light_rear*` (posisjonene leses fra OBJ-filene, `KartModel.cs` er urørt), lysende linser
+  (`lamp_*`) om natten. Om dagen er lyktene av, som i originalen.
+- `KartRenderSystem` (å flette): `using Kartster.Lighting;`, feltene `_kartWorlds` og `_lights`, `PlaceKarts()` og
+  `_lights.Begin(...)` før bakken, `_lights.DrawShadows(...)` etter bremsesporene, kartene tegnes fra `_kartWorlds` i
+  en løkke, `_lights.DrawLenses(...)` etter kartene; `DrawKarts` ble `PlaceKarts` (fyller `_kartWorlds` i stedet for å
+  tegne). Høydeagentens kart-verdensmatrise hører hjemme i `PlaceKarts`.
+  `KartsterGame` og `TrackScene` er urørt (natthimmelen
+  tegnes med en ekstra `Clear` i `KartLights.Begin`).
+- Ikke gjort: bremselys som lyser sterkere, skygger under scenerimodeller, lys fra power-ups og hazards.

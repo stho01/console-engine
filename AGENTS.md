@@ -37,7 +37,7 @@ scripting loads the native `lua54.dll` that the KeraLua package ships for each r
 | Performance measurements | `ConsoleEngine.Benchmarks/` (BenchmarkDotNet) |
 | Exporting Kartster tracks (ribbon, spline, scenery, race markers, collision, power-up pads) from the original game | `tools/KartsterExport/` and its [`README.md`](tools/KartsterExport/README.md): `list`, `export <outDir> <trackId...>`, one `ITrackExporter` class per file. Not in the solution: needs the original's source (`KartsterRoot`, default `C:\Forse\kartster-server`) |
 | Lua scripting: components, `self` fields, hooks, errors, reload | [`docs/agent/03-rules.md § Lua`](docs/agent/03-rules.md#lua), `ConsoleEngine.Scripting/`, `Examples/Scripted` |
-| 3D rendering (`IRenderer3D`, software `Rasterizer`, OpenGL `GlRenderer`, near-plane clipping, OBJ models, 16-colour dithering or 24-bit true colour with alpha blending, lighting: `SceneLighting` ambient + sun + up to 16 per-pixel point/spot `PointLight`s) | `ConsoleEngine.Rendering3D/` (own assembly and NuGet package, optional), GPU renderer in `ConsoleEngine.Rendering3D.OpenGL/` (same picture; callers fall back to `Rasterizer` when `GlRenderer.TryCreate` fails), GPU plan in [`docs/design/gpu-rendering-plan.md`](docs/design/gpu-rendering-plan.md), rules in [`docs/agent/03-rules.md`](docs/agent/03-rules.md) (Kartster rows, "3D (any game)" lighting row) |
+| 3D rendering (`IRenderer3D`, software `Rasterizer`, OpenGL `GlRenderer`, near-plane clipping, OBJ models, 16-colour dithering or 24-bit true colour with alpha blending, lighting: `SceneLighting` ambient + sun + up to 16 per-pixel point/spot `PointLight`s) | `ConsoleEngine.Rendering3D/` (own assembly and NuGet package, optional), GPU renderer in `ConsoleEngine.Rendering3D.OpenGL/` (same picture; callers fall back to `Rasterizer` when `GlRenderer.TryCreate` fails), GPU plan in [`docs/design/gpu-rendering-plan.md`](docs/design/gpu-rendering-plan.md), rules in [`docs/agent/03-rules.md`](docs/agent/03-rules.md) (Kartster rows, "3D (any game)" lighting row); Kartster's headlights, night and blob shadows in `Examples/Kartster/Lighting/` |
 | Why KeraLua, and what Lua costs per entity | `ConsoleEngine.Benchmarks/README.md` |
 | How to use the engine | `Examples/Snake` (smallest), `Examples/TerraForM` (scenes, assets, tests), `Examples/<Game>.Ecs` (ECS port of each game: components, systems, queries, `EcsScene`; compare with `Examples/<Game>`. `Snake.Ecs` is the smallest, `TerraForM.Ecs` the fullest), `Examples/Swarm` (ECS at scale, system ordering attributes), `Examples/PhysicsSandbox` (physics: bodies, colliders, fixed step, kinematic platform), `Examples/PhysicsShowcase` (every physics feature), `Examples/EternalDigger` (a full original ECS game: endless grid world, particle effects, lighting; start at [`Examples/EternalDigger/README.md`](Examples/EternalDigger/README.md), design contract in [`docs/design/eternal-digger.md`](docs/design/eternal-digger.md)), `Examples/Starguard` (ECS-only game with every system unit-tested through `Starguard.Tests/Battle`) |
 | Build/test pipeline | `.github/workflows/build-and-test.yml` |
@@ -254,7 +254,8 @@ Examples/
                                   (KartInputSystem, KartPhysicsSystem, KartGroundSystem, KartEffectsSystem,
                                   KartRenderSystem, all karts), Bots/ (BotDriverSystem, BotRoad, BotRoutePlan,
                                   BotTraffic + BotTrafficState + TrafficKart: passing, following, leaning),
-                                  Effects/ (SkidMarks, SlideSmoke, KartWheels), Components/ (Kart with its Index,
+                                  Effects/ (SkidMarks, SlideSmoke, KartWheels), Lighting/ (KartLights: blob shadows, night
+                                  on N, kart lights; KartLamps: light_ markers, glowing lenses), Components/ (Kart with its Index,
                                   PlayerKart tag, Bot), KartEntity (a kart's physics body),
                                   KartFrame (physics <-> kart frame), KartModel (Kartster part folders), Track
                                   (exported ribbon + spline + scenery + power-up pads), Scenery (scenery file: model instances +
@@ -286,7 +287,7 @@ Examples/
   Kartster.Tests/               KartModelTests, TrackTests, ShippedTracksTests, SceneryTests, KartPhysicsSystemTests,
                                   KartFrameTests, KartInputSystemTests, Driving/KartDynamicsTests, Driving/KartReferenceTests,
                                   Driving/KartCatalogTests,
-                                  Effects/EffectsTests (skid marks, slide smoke), Race/ (RaceMarkersTests,
+                                  Effects/EffectsTests (skid marks, slide smoke), Lighting/KartLightsTests, Race/ (RaceMarkersTests,
                                   RaceSessionTests, RaceSystemTests, RaceReportTests, RaceWiringTests, RaceEndingTests),
                                   Modes/TimeTrialTests (ghost recording/playback, ghost file, a lap alone), Ui/ (PixelFont, TextFormat,
                                   PixelTarget, Hud, Minimap,

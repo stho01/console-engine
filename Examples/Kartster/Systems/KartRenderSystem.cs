@@ -5,6 +5,7 @@ using ConsoleEngine.Ecs.Components;
 using ConsoleEngine.Rendering3D;
 using Kartster.Components;
 using Kartster.Effects;
+using Kartster.Lighting;
 using Kartster.PowerUps;
 
 namespace Kartster.Systems;
@@ -13,7 +14,8 @@ namespace Kartster.Systems;
 /// Draws the ground, the road, the scenery (culled, see <see cref="Scenery.Draw"/>), the skid marks, every kart and
 /// the slide smoke through the game's renderer, seen by a chase camera that eases towards its place behind the
 /// <paramref name="player"/>'s kart, so turns swing it round instead of snapping. Draws the karts where their
-/// interpolation puts them (<c>RenderOffset</c>), so add it after the <c>InterpolationSystem</c>.
+/// interpolation puts them (<c>RenderOffset</c>), so add it after the <c>InterpolationSystem</c>. Shadows, night and the
+/// karts' lights come from <see cref="KartLights"/>.
 /// </summary>
 /// <param name="kartMeshes">One per kart, by <see cref="Kart.Index"/>.</param>
 public sealed class KartRenderSystem(Entity player, KartsterGame game, Mesh[] kartMeshes, SkidMarks skidMarks,
@@ -29,6 +31,9 @@ public sealed class KartRenderSystem(Entity player, KartsterGame game, Mesh[] ka
     private const float CameraStiffness = 6f; // how fast the chase camera catches up, per second
 
     private Query _karts;
+    private readonly Matrix4x4[] _kartWorlds = new Matrix4x4[kartMeshes.Length]; // by Kart.Index, this frame
+    private readonly KartLights _lights = new(kartMeshes, game.KartFolders, game.Track.Name, game.Renderer.Width,
+        game.Renderer.Height);
     private Vector3 _eye;
     private bool _hasEye;
 
@@ -62,11 +67,16 @@ public sealed class KartRenderSystem(Entity player, KartsterGame game, Mesh[] ka
         var viewProjection = ViewProjection = view * game.Projection;
         var renderer = game.Renderer;
         var track = game.Track;
+        PlaceKarts();
+        _lights.Begin(renderer, _kartWorlds, _eye);
         renderer.Draw(track.Ground, track.GroundWorld, viewProjection, KartsterGame.ToSun);
         renderer.Draw(track.Road, Matrix4x4.Identity, viewProjection, KartsterGame.ToSun);
         track.Scenery.Draw(renderer, viewProjection, _eye, KartsterGame.ToSun);
         renderer.Draw(skidMarks.Mesh, Matrix4x4.Identity, viewProjection, KartsterGame.ToSun);
-        DrawKarts(renderer, viewProjection);
+        _lights.DrawShadows(renderer, viewProjection, _kartWorlds);
+        for (var i = 0; i < kartMeshes.Length; i++)
+            renderer.Draw(kartMeshes[i], _kartWorlds[i], viewProjection, KartsterGame.ToSun);
+        _lights.DrawLenses(renderer, viewProjection, _kartWorlds);
         PowerUps?.Draw(renderer, viewProjection, KartsterGame.ToSun, deltaSeconds);
 
         var look = Vector3.Normalize(target - _eye);
@@ -79,7 +89,8 @@ public sealed class KartRenderSystem(Entity player, KartsterGame game, Mesh[] ka
     //** internals
     //**********************************************************
 
-    private void DrawKarts(IRenderer3D renderer, Matrix4x4 viewProjection)
+    /// <summary>Where every kart is drawn this frame, into <see cref="_kartWorlds"/>.</summary>
+    private void PlaceKarts()
     {
         foreach (var chunk in _karts.GetChunks())
         {
@@ -90,8 +101,7 @@ public sealed class KartRenderSystem(Entity player, KartsterGame game, Mesh[] ka
             for (var i = 0; i < chunk.Count; i++)
             {
                 var (position, forward) = Pose(positions[i], rotations[i], offsets[i], karts[i]);
-                renderer.Draw(kartMeshes[karts[i].Index], Matrix4x4.CreateWorld(position, forward, Vector3.UnitY),
-                    viewProjection, KartsterGame.ToSun);
+                _kartWorlds[karts[i].Index] = Matrix4x4.CreateWorld(position, forward, Vector3.UnitY);
             }
         }
     }
