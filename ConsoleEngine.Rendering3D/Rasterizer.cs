@@ -33,6 +33,7 @@ public sealed class Rasterizer : IRenderer3D
     private int _lightMask; // of the triangle being filled: bit i set = Lighting.Lights[i] can reach it
     private Vector3 _albedo; // of the triangle being filled, while _lightMask != 0
     private Vector3 _normal; // of the triangle being filled, world space, while _lightMask != 0
+    private int _meshLights; // of the mesh being drawn: bit i set = Lighting.Lights[i] reaches its bounding box
 
     // Lights sorted into 8×8-pixel screen tiles (bit i: light i's bounds cover the tile), so a pixel only evaluates
     // the lights that can reach it. Rebuilt when the lights or the camera change.
@@ -137,12 +138,20 @@ public sealed class Rasterizer : IRenderer3D
             TileLights(viewProjection);
 
         var worldViewProjection = world * viewProjection;
+        var min = new Vector3(float.MaxValue);
+        var max = new Vector3(float.MinValue);
         for (var i = 0; i < positions.Length; i++)
         {
             _clip[i] = Vector4.Transform(positions[i], worldViewProjection);
+            var worldPosition = lit ? Vector3.Transform(positions[i], world) : default;
+            min = Vector3.Min(min, worldPosition);
+            max = Vector3.Max(max, worldPosition);
             // garbage behind the near plane, those corners are clipped first
-            _corners[i] = ToCorner(_clip[i], lit ? Vector3.Transform(positions[i], world) : default);
+            _corners[i] = ToCorner(_clip[i], worldPosition);
         }
+
+        if (lit)
+            _meshLights = LightsTouching(min, max);
 
         // True colour: opaque triangles first, then the blended ones over them (palette mode: one pass, in order).
         var passes = TrueColor && mesh.TriangleOpacity != null ? 2 : 1;
@@ -182,6 +191,19 @@ public sealed class Rasterizer : IRenderer3D
             if (_opacity <= 0f || (TrueColor && (_opacity < 1f) != blendedPass))
                 continue;
 
+            // z < 0 is in front of the near plane (System.Numerics projections map near..far to 0..1).
+            var behind = (_clip[ia].Z < 0 ? 1 : 0) + (_clip[ib].Z < 0 ? 1 : 0) + (_clip[ic].Z < 0 ? 1 : 0);
+            if (behind == 3)
+                continue;
+
+            // Counter-clockwise front faces turn clockwise (negative area) once screen y points down. Back faces are
+            // dropped before they are shaded, which is most of the cost of a small triangle.
+            var area = behind == 0
+                ? Edge(_corners[ia].Screen, _corners[ib].Screen, _corners[ic].Screen.X, _corners[ic].Screen.Y)
+                : -1f;
+            if (!(area < 0)) // also NaN
+                continue;
+
             var color = mesh.TriangleColors[t];
             _lightMask = 0;
             if (!mesh.IsUnlit)
@@ -197,11 +219,9 @@ public sealed class Rasterizer : IRenderer3D
                 color *= ambient + sunColor * MathF.Max(0, Vector3.Dot(normal, toLight));
             }
 
-            // z < 0 is in front of the near plane (System.Numerics projections map near..far to 0..1).
-            var behind = (_clip[ia].Z < 0 ? 1 : 0) + (_clip[ib].Z < 0 ? 1 : 0) + (_clip[ic].Z < 0 ? 1 : 0);
             if (behind == 0)
-                FillIfFrontFacing(_corners[ia], _corners[ib], _corners[ic], color);
-            else if (behind < 3)
+                Fill(_corners[ia], _corners[ib], _corners[ic], area, color);
+            else
                 ClipAndFill(ia, ib, ic, color);
         }
     }
@@ -219,9 +239,26 @@ public sealed class Rasterizer : IRenderer3D
         var mask = 0;
         for (var i = 0; i < lights.Length; i++)
         {
+            if ((_meshLights & (1 << i)) == 0)
+                continue;
+
             var touch = _boundRadii[i] + reach;
             if (Vector3.Dot(normal, lights[i].Position - a) > 0
                 && Vector3.DistanceSquared(_boundCenters[i], center) < touch * touch)
+                mask |= 1 << i;
+        }
+
+        return mask;
+    }
+
+    /// <summary>The lights whose bounding sphere touches the box <paramref name="min"/>..<paramref name="max"/>.</summary>
+    private int LightsTouching(Vector3 min, Vector3 max)
+    {
+        var mask = 0;
+        for (var i = 0; i < Lighting.Lights.Length; i++)
+        {
+            var nearest = Vector3.Clamp(_boundCenters[i], min, max);
+            if (Vector3.DistanceSquared(nearest, _boundCenters[i]) <= _boundRadii[i] * _boundRadii[i])
                 mask |= 1 << i;
         }
 
