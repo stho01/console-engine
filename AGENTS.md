@@ -248,7 +248,8 @@ Examples/
                                   the race.txt grid (StartingSlot, StandInGridSlot, CreateSession,
                                   CreateKarts, AddDriving), PauseMenu, GarageScene: orbit camera, from the title), Systems/
                                   (KartInputSystem, KartPhysicsSystem, KartGroundSystem, KartEffectsSystem,
-                                  KartRenderSystem, all karts), Bots/ (BotDriverSystem, BotRoutePlan),
+                                  KartRenderSystem, all karts), Bots/ (BotDriverSystem, BotRoad, BotRoutePlan,
+                                  BotTraffic + BotTrafficState + TrafficKart: passing, following, leaning),
                                   Effects/ (SkidMarks, SlideSmoke, KartWheels), Components/ (Kart with its Index,
                                   PlayerKart tag, Bot), KartEntity (a kart's physics body),
                                   KartFrame (physics <-> kart frame), KartModel (Kartster part folders), Track
@@ -262,8 +263,8 @@ Examples/
                                   RaceSystem, AutopilotSystem, RaceFinish), Assets/Karts/ (olabil, wagon), Assets/Tracks/
                                   (star-circuit, star-rally, prism-loop, eight-ball: ribbon, spline, scenery.txt, race.txt each,
                                   star-circuit also collision.txt; written by tools/KartsterExport) and Assets/Scenery/
-                                  (Pipe.obj from Kartster, Box.obj), copied to output, Bots/ (BotDriverSystem,
-                                  BotRoutePlan), Components/ (Kart with Index, PlayerKart, Bot),
+                                  (Pipe.obj from Kartster, Box.obj), copied to output, Bots/ (see above),
+                                  Components/ (Kart with Index, PlayerKart, Bot),
                                   Ui/ (pixel UI kit: IPixelTarget, PaletteTarget, RgbTarget, PixelFont 3×5,
                                   TextFormat, Shapes, UiColors, Hud + HudState, Minimap, RaceResults, IKartsterMenus,
                                   IUiLayer), Scenes/Menus/ (MenuScreen, MenuItem, MenuKeys, TitleScene,
@@ -275,6 +276,7 @@ Examples/
                                   PixelTarget, Hud, Minimap,
                                   Menu, MenuFlow tests; UiPreview writes ui-preview/*.ppm to the output), Bots/BotDriverSystemTests,
                                   Bots/RaceTests (grid, input, headless 3-bot race, kart collisions, allocation),
+                                  Bots/BotTrafficTests (road widths, passing, following, leaning, 6-bot race),
                                   Collision/TrackCollisionTests (file, walls, pipe, race with walls, allocation)
 tools/
   KartsterExport/                 track exporter (not in the solution): Program (list, export), ITrackExporter,

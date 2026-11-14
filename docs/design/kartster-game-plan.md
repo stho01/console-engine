@@ -124,7 +124,7 @@ FixedSimulation.Add(new RaceSystem(race)); // kjører etter KartGroundSystem
   Kollisjon mellom karter går gjennom boksene (restitusjon 0,1, friksjon 0,3). Flettet i bølge 2: rutenettet kommer fra
   `race.txt` (`TrackScene.StartingSlot`; `StandInGridSlot` bare når banen mangler den), `Bot.Progress` er fjernet
   (den var bare en målestokk for testene, som nå leser `RaceProgress`), og botene tar kartmappene fra
-  `KartsterGame.KartFolders`. Mangler: trafikk (forbikjøring), dytting, power-ups.
+  `KartsterGame.KartFolders`. Trafikk og dytting kom i bølge 3 (§ 8, O). Mangler: power-ups.
 
 ## 6. Åpne spørsmål
 
@@ -218,3 +218,22 @@ Levert. Regler og tall i `docs/agent/03-rules.md` (Kartster-radene Minimap, Paus
 - Eneste kodeendring i spillet: `Track.Load` stopper senterlinjen ved første hopp over 2 m. Spline-eksporten har
   alle grener etter ruten (Prism Loops `north-section-*`), så banen ble ellers ikke lukket.
 - Bakker, broer og terreng trenger høyde i fysikken (eller terreng under veien) før flere av originalens baner passer.
+
+### Status: bots i trafikk (O)
+
+Levert, bare i `Bots/`. Tall og regler står i `docs/agent/03-rules.md` (raden «Bot traffic»).
+
+- **Veien:** `BotRoad` lages én gang i `BotDriverSystem.OnCreate`: prøvene hver ~2 m, retning og hvor langt asfalten
+  når til hver side (målt på ribbon-meshen med `Track.TryGetRoadHeight`). Alle `BotRoutePlan` deler den.
+- **Trafikk:** hvert steg plasseres alle karter (også spilleren) på veien i en forhåndsallokert `TrafficKart[]`.
+  `BotTraffic.Avoid` som originalens `BotTraffic`: hold en fil unna en kart ved siden av, kjør forbi en tregere kart
+  foran (tidsluke 1,2 s, 8–30 m) på egen side eller den andre, bare på asfalten og bare der det er ledig, og følg
+  (fartsgrense) i stedet for å kjøre inn i en kart foran når det ikke er plass. Filen glir dit med 3 m/s.
+- **Dytting:** `BotTraffic.Lean`, en mild utgave av originalens `BotBumping`: av og til (sjanse 0–0,4 etter ferdighet,
+  hvert 3. sekund) lener boten seg på en kart ved siden av i 1 s. Aldri når den bremser til en sving, aldri utenfor
+  kantmarginen.
+- **Originalens øvrige:** slingring (`Wanders`, på, Earl/Merlin) og rubber-banding (`RubberBanding`, av som i
+  originalen).
+- **`BotDriverSystem`:** samme konstruktør og samme `Drive`; nytt er en `Drive`-overlast med fil, fartsgrense og
+  tempo, og egenskapene `RubberBanding`, `Wanders`, `Road`, `GetTraffic`, `GetLaneOffset`. Ikke gjort: dytte tilbake
+  (trenger kontakthendelser), power-ups.
