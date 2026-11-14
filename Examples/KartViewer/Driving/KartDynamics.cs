@@ -98,6 +98,12 @@ public sealed class KartDynamics
     /// <summary>Whether an axle slid or spun more than <see cref="SlidingThreshold"/> in the last step.</summary>
     public bool IsSliding { get; private set; }
 
+    /// <summary>How fast the front axle slid sideways (or spun) last step, m/s. Kartster's <c>KartAxleSlip</c>.</summary>
+    public float FrontSlip { get; private set; }
+
+    /// <summary>As <see cref="FrontSlip"/>, for the rear axle.</summary>
+    public float RearSlip { get; private set; }
+
     /// <summary>Wheel loads used in the last step, newtons.</summary>
     public KartWheelLoads WheelLoads { get; private set; }
 
@@ -159,6 +165,8 @@ public sealed class KartDynamics
         var (frontSlip, rearSlip) = ApplySteering(tuning, traction, velocity, yawRate, forward, right, frontRight,
             frontArm, rearArm, loads, dt);
 
+        FrontSlip = frontSlip;
+        RearSlip = rearSlip;
         IsSliding = frontSlip > SlidingThreshold || rearSlip > SlidingThreshold;
         if (IsSliding)
         {

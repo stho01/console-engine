@@ -20,6 +20,13 @@ public sealed class Rasterizer
 
     private readonly ConsolePalette _palette;
     private readonly float[] _depth;
+    private float _opacity = 1f; // of the triangle being filled
+
+    /// <summary>
+    /// Screen-door transparency: a pixel of a triangle with opacity <c>o</c> is drawn where this 4×4 ordered
+    /// threshold is below <c>o</c>, so <c>o</c> of the pixels show and the rest let the scene behind through.
+    /// </summary>
+    private static readonly float[] ScreenDoor = BuildScreenDoor();
     private Vector4[] _clip = [];
     private Vector3[] _screen = [];
 
@@ -80,6 +87,10 @@ public sealed class Rasterizer
             var ia = indices[t * 3];
             var ib = indices[t * 3 + 1];
             var ic = indices[t * 3 + 2];
+            _opacity = mesh.TriangleOpacity == null ? 1f : mesh.TriangleOpacity[t];
+            if (_opacity <= 0f)
+                continue;
+
             var color = Shade(mesh, t, world, toLight);
 
             // z < 0 is in front of the near plane (System.Numerics projections map near..far to 0..1).
@@ -97,6 +108,9 @@ public sealed class Rasterizer
 
     private static Vector3 Shade(Mesh mesh, int triangle, Matrix4x4 world, Vector3 toLight)
     {
+        if (mesh.IsUnlit)
+            return mesh.TriangleColors[triangle];
+
         var normal = Vector3.Normalize(Vector3.TransformNormal(mesh.TriangleNormals[triangle], world));
         return mesh.TriangleColors[triangle] * (Ambient + Diffuse * MathF.Max(0, Vector3.Dot(normal, toLight)));
     }
@@ -143,6 +157,15 @@ public sealed class Rasterizer
             Fill(a, b, c, area, color);
     }
 
+    private static float[] BuildScreenDoor()
+    {
+        int[] bayer = [0, 8, 2, 10, 12, 4, 14, 6, 3, 11, 1, 9, 15, 7, 13, 5];
+        var thresholds = new float[bayer.Length];
+        for (var i = 0; i < bayer.Length; i++)
+            thresholds[i] = (bayer[i] + 0.5f) / bayer.Length;
+        return thresholds;
+    }
+
     /// <summary>Twice the signed area of the triangle a, b, p.</summary>
     private static float Edge(Vector3 a, Vector3 b, float px, float py) =>
         (b.X - a.X) * (py - a.Y) - (b.Y - a.Y) * (px - a.X);
@@ -183,7 +206,7 @@ public sealed class Rasterizer
                 if (weightA >= 0 && weightB >= 0 && weightC >= 0)
                 {
                     var depth = weightA * a.Z + weightB * b.Z + weightC * c.Z;
-                    if (depth < _depth[index])
+                    if (depth < _depth[index] && (_opacity >= 1f || ScreenDoor[((y & 3) << 2) | (x & 3)] < _opacity))
                     {
                         _depth[index] = depth;
                         Colors[index] = _palette.ToConsoleColor(color, x, y);

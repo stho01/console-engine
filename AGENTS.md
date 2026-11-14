@@ -219,7 +219,8 @@ Examples/
   KartViewer/                     3D experiment: KartViewerGame (shared rasterizer, palette, sky, karts, track;
                                   Enter/Tab/R/Esc), Scenes/ (TrackScene: EcsScene at 120 Hz, GarageScene: orbit
                                   camera), Systems/ (KartInputSystem, KartPhysicsSystem, KartGroundSystem,
-                                  KartRenderSystem), Components/Kart, KartEntity (the kart's physics body),
+                                  KartEffectsSystem, KartRenderSystem), Effects/ (SkidMarks, SlideSmoke, KartWheels),
+                                  Components/Kart, KartEntity (the kart's physics body),
                                   KartFrame (physics <-> kart frame), KartModel (Kartster part folders), Track
                                   (exported ribbon + spline), Rendering/ (Rasterizer, Mesh, ObjFile, ConsolePalette),
                                   Driving/ (Kartster-like planar kart model: KartDynamics computes force + yaw
@@ -227,7 +228,8 @@ Examples/
                                   KartTraction, KartLoadTransfer, Surface), Assets/Karts/ (olabil, wagon) and
                                   Assets/Tracks/ (star-circuit), exported from Kartster, copied to output
   KartViewer.Tests/               RasterizerTests, ObjFileTests, TrackTests, KartPhysicsSystemTests, KartFrameTests,
-                                  KartInputSystemTests, Driving/KartDynamicsTests
+                                  KartInputSystemTests, Driving/KartDynamicsTests, Driving/KartReferenceTests,
+                                  Effects/EffectsTests (skid marks, slide smoke, screen-door transparency)
 .github/workflows/                build-and-test.yml
 ```
 

@@ -39,6 +39,15 @@ public sealed class Mesh
     public Vector3[] TriangleNormals { get; }
     public int TriangleCount => TriangleNormals.Length;
 
+    /// <summary>
+    /// 0..1 per triangle, drawn as screen-door transparency (see <see cref="Rasterizer"/>). Null: every triangle is
+    /// opaque.
+    /// </summary>
+    public float[] TriangleOpacity { get; init; }
+
+    /// <summary>Drawn in <see cref="TriangleColors"/> as they are, without the light (smoke, glowing things).</summary>
+    public bool IsUnlit { get; init; }
+
     //**********************************************************
     //** public methods
     //**********************************************************

@@ -2,6 +2,7 @@ using ConsoleEngine.Ecs;
 using ConsoleEngine.Ecs.Components;
 using ConsoleEngine.Physics;
 using KartViewer.Driving;
+using KartViewer.Effects;
 using KartViewer.Systems;
 using Microsoft.Xna.Framework;
 
@@ -57,7 +58,10 @@ public sealed class TrackScene : EcsScene<KartViewerGame>
 
         Simulation.Add(new KartInputSystem(_kart));
 
+        var skidMarks = new SkidMarks(Track.Asphalt);
+        var smoke = new SlideSmoke();
         Presentation.Add(new InterpolationSystem(FixedTimestep));
-        Presentation.Add(new KartRenderSystem(_kart, Game));
+        Presentation.Add(new KartEffectsSystem(_kart, Game.Tuning, _physics, skidMarks, smoke));
+        Presentation.Add(new KartRenderSystem(_kart, Game, skidMarks, smoke));
     }
 }

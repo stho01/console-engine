@@ -22,7 +22,7 @@ public sealed class Track
     private const float GroundDrop = 0.3f;   // below the road, so the two never fight in the depth buffer
     private const float TangentSpan = 3f;    // metres either side of a point used for its direction
 
-    private static readonly Vector3 Asphalt = new(0.33f, 0.33f, 0.35f);
+    public static readonly Vector3 Asphalt = new(0.33f, 0.33f, 0.35f);
     private static readonly Vector3 WallColor = new(0.8f, 0.78f, 0.72f);
     private static readonly Vector3 Grass = new(0.2f, 0.45f, 0.15f);
     private static readonly Vector3 OtherGrass = new(0.26f, 0.52f, 0.18f);
