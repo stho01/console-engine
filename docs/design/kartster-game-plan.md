@@ -71,8 +71,8 @@ Levert i bølge 1, koblet inn i bølge 2 (`KartsterGame` starter på `TitleScene
   `StartRace(trackIndex, laps)`; `Renderer`, `Projection`, `Kart` og `KartCenter` finnes allerede. Etter
   `Renderer.Finish` i `OnRender` kaller spillet `(Scene as IUiLayer)?.DrawUi(target)`, og `TrackScene` tegner HUD-en
   der. Spillets egne Enter/Esc/Tab/R må bare gjelde på banen, ellers krasjer de med menyene.
-- Palett-modus: `ScenePalette` har ikke gult, så UI-ets gule (valgt rad, nål, logo) blir det brune
-  (`0xB06A30`). Enten få inn én gul i paletten, eller godta det; 24-bit viser fargene som de er.
+- Palett-modus: `ScenePalette` har fått gult (`0xFFD23F`, `UiColors.Selected`) i stedet for mellomgrått `0x949497`
+  (bølge 2), så valgt rad, nål og logo er gule også i 16 farger.
 
 ## 4. Bølger
 
@@ -141,6 +141,8 @@ Ferdig. Detaljer og tall står i `docs/agent/03-rules.md` (Kartster-radene), tas
   botene. `RaceSession` per løp med antall runder fra menyen; kartene registreres med `Kart.Index`. Ingen kjører
   under nedtellingen. 4 s etter at spilleren er i mål (originalens `ResultsDelaySeconds`) stoppes løpet og
   resultatene vises; de som ikke er i mål får DNF (originalen kjører dem ferdig med autopilot og `FinishRemaining`).
+- **Palett:** gult `0xFFD23F` i `ScenePalette` i stedet for mellomgrått `0x949497` (ditheres fra naboene); gult
+  er også banens kantsteiner og dekkstabler og gule kartdeler.
 - **HUD:** `RaceReport.FillHud` fyller `HudState` hver frame uten allokering: fart, runde, klokke, plassering,
   topp 3 med navn og avstand per port (`RaceSession.GapToLeader`), nedtelling, `GO!`, `FINISHED`. Tegnes etter
   `Renderer.Finish` gjennom `PaletteTarget` eller `RgbTarget`.

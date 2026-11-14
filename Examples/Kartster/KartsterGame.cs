@@ -45,14 +45,19 @@ public class KartsterGame(string kartsFolder, string tracksFolder, bool startOnG
     private static readonly Vector3 SkyTop = new(0.35f, 0.55f, 0.95f);
     private static readonly Vector3 SkyHorizon = new(0.85f, 0.85f, 0.95f);
 
-    /// <summary>Colours for this scene: greys for asphalt, tyres and chrome, greens, sky blues, the player blue.</summary>
-    private static readonly ConsolePalette ScenePalette = new([
+    /// <summary>
+    /// Colours for this scene: greys for asphalt, tyres and chrome, greens, sky blues, the player blue, brown and
+    /// yellow. The yellow is the UI's (<c>UiColors.Selected</c>), and also the kerbs, tyre stacks and yellow kart parts;
+    /// it took the place of the mid grey <c>0x949497</c>, which dithers from its neighbours.
+    /// </summary>
+    public static readonly ConsolePalette ScenePalette = new([
         0x080808, 0x2B2B2D, 0x4A4A4C, 0x6B6B6E, // greys: tyres, shadowed and lit asphalt
-        0x949497, 0xC4C4C6, 0xF0F0F0,           // greys: chrome and white
+        0xC4C4C6, 0xF0F0F0,                     // greys: chrome and white
         0x22521A, 0x346B24, 0x4A8530,           // grass
         0x6A96EE, 0xA2BEF0, 0xD6DBF0,           // sky
         0x0F2A78, 0x2060D8,                     // player blue
-        0xB06A30                                // wood, leather, red lamps
+        0xB06A30,                               // wood, leather, red lamps
+        0xFFD23F                                // yellow: UI selection, kerbs, yellow parts
     ]);
 
     private readonly ConsoleColor[] _sky = new ConsoleColor[ScreenWidth * ScreenHeight];

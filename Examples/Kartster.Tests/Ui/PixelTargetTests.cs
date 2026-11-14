@@ -77,6 +77,17 @@ public class PixelTargetTests
     }
 
     [Test]
+    public void ScenePalette_UiYellow_IsInThePalette()
+    {
+        var colors = KartsterGame.ScenePalette.Colors;
+        Assert.That(colors, Has.Length.EqualTo(16));
+        Assert.That(colors[(int)PaletteTarget.Nearest(colors, UiColors.Selected)], Is.EqualTo(UiColors.Selected),
+            "selection, needle and logo stay yellow in 16 colours");
+        Assert.That(colors[(int)PaletteTarget.Nearest(colors, 0xF2C729)], Is.EqualTo(UiColors.Selected),
+            "the scenery's yellow kerbs (0.95, 0.78, 0.16) too");
+    }
+
+    [Test]
     public void Shapes_Lerp_BlendsChannels()
     {
         Assert.That(Shapes.Lerp(0x000000, 0xFF8040, 0f), Is.EqualTo(0x000000));
