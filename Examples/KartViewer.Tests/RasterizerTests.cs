@@ -27,7 +27,7 @@ public class RasterizerTests
 
     private static Rasterizer Cleared()
     {
-        var rasterizer = new Rasterizer(Size, Size);
+        var rasterizer = new Rasterizer(Size, Size, ConsolePalette.Campbell);
         rasterizer.Clear(new ConsoleColor[Size * Size]); // all Black
         return rasterizer;
     }
@@ -60,6 +60,20 @@ public class RasterizerTests
         rasterizer.Draw(Triangle(10, White), Matrix4x4.Identity, ViewProjection, Vector3.UnitZ);
 
         Assert.That(Center(rasterizer), Is.EqualTo(ConsoleColor.Black));
+    }
+
+    [Test]
+    public void Draw_FloorReachingBehindCamera_IsClippedAndStillFillsTheBottom()
+    {
+        var rasterizer = Cleared();
+        // A floor 1 below the camera, from 10 behind it to 50 in front: every triangle crosses the near plane.
+        Vector3[] positions = [new(-20, -1, 15), new(20, -1, 15), new(20, -1, -50), new(-20, -1, -50)];
+        var floor = new Mesh(positions, [0, 1, 2, 0, 2, 3], [White, White]);
+
+        rasterizer.Draw(floor, Matrix4x4.Identity, ViewProjection, Vector3.UnitY);
+
+        Assert.That(rasterizer.Colors[(Size - 1) * Size + Size / 2], Is.Not.EqualTo(ConsoleColor.Black));
+        Assert.That(rasterizer.Colors[Size / 2], Is.EqualTo(ConsoleColor.Black)); // the sky above the horizon
     }
 
     [TestCase(true)]

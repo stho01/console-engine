@@ -45,6 +45,7 @@ Grep these to locate the code path. None of them has a log level.
 | `#<FPS>:` + n | `Log.ReportFps` (wire format, never shown) | — |
 | `Input handler not set` | `Input.GetKey` (`InvalidOperationException`) | Unreachable in practice: `Handler` is a static readonly `new InputHandler()` |
 | `Empty deque` | `Deque<T>.PopFront` / `PopBack` (`InvalidOperationException`) | Game popped an empty `Deque` |
+| `A palette needs exactly 16 colours.` (`ArgumentException`, param `value`; KartViewer's `ConsolePalette` ctor: param `colors`) | `RenderConsole.Palette` setter | A palette with another number of colours |
 | `no go` | `Move.OnUpdate` / `GetVisualRepresentation` (`Exception`) | Invalid `Direction` value. Unreachable via the UI |
 | `worldName` (param name of `ArgumentNullException`) | `GameScene` ctor | `GameScene` created with null name |
 | `No game exe found next to start-conhost.cmd.` | `Examples/start-conhost.cmd` | The launcher was run outside a game's output folder, or the folder holds only `ConsoleEngine.Logger.exe` |
@@ -100,7 +101,9 @@ using [04](04-flows.md).
 | `No kart folders in <full path>` | `KartViewerGame.OnInitialize` (`DirectoryNotFoundException`) | The karts folder (default `Assets/Karts`, relative to the working directory) has no sub-folders |
 | `No kart parts (*.obj) in <folder>` | `KartModel.Load` (`InvalidDataException`) | A kart folder has no drawable OBJ parts |
 | `<path>:<line>: a face needs at least three corners` | `ObjFile.Read` (`InvalidDataException`) | Broken OBJ file |
-| `KartViewer - <kart> (<n> triangles) - <fps> fps` (window title) | `KartViewerGame.OnInitialize` interval, every 250 ms | Running |
+| `<id>.spline.obj needs at least two centerline points` | `Track.Load` (`InvalidDataException`) | Broken or empty track spline export |
+| `KartViewer - <kart> on <track> - <n> km/h - <fps> fps` (window title) | `KartViewerGame.OnInitialize` interval, every 250 ms | Running, track mode |
+| `KartViewer - <kart> (<n> triangles) - <fps> fps` (window title) | `KartViewerGame.OnInitialize` interval, every 250 ms | Running, garage mode |
 
 ### Launcher (`LauncherTexts`, `GameLocator`)
 

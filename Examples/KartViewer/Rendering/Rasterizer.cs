@@ -4,7 +4,8 @@ using System.Numerics;
 namespace KartViewer.Rendering;
 
 /// <summary>
-/// Software triangle rasterizer: transforms a <see cref="Mesh"/>, culls back faces, lights each triangle flat
+/// Software triangle rasterizer: transforms a <see cref="Mesh"/>, clips it at the near plane, culls back faces,
+/// lights each triangle flat
 /// (ambient + one directional light) and fills it into <see cref="Colors"/> with a depth test. Allocates nothing per
 /// frame once its vertex buffer has grown to the largest mesh.
 /// </summary>
@@ -17,15 +18,18 @@ public sealed class Rasterizer
     private const float Ambient = 0.35f;
     private const float Diffuse = 0.65f;
 
+    private readonly ConsolePalette _palette;
     private readonly float[] _depth;
+    private Vector4[] _clip = [];
     private Vector3[] _screen = [];
 
     //**********************************************************
     //** ctor
     //**********************************************************
 
-    public Rasterizer(int width, int height)
+    public Rasterizer(int width, int height, ConsolePalette palette)
     {
+        _palette = palette;
         Width = width;
         Height = height;
         Colors = new ConsoleColor[width * height];
@@ -57,52 +61,87 @@ public sealed class Rasterizer
     public void Draw(Mesh mesh, Matrix4x4 world, Matrix4x4 viewProjection, Vector3 toLight)
     {
         var positions = mesh.Positions;
-        if (_screen.Length < positions.Length)
+        if (_clip.Length < positions.Length)
+        {
+            _clip = new Vector4[positions.Length];
             _screen = new Vector3[positions.Length];
+        }
 
         var worldViewProjection = world * viewProjection;
         for (var i = 0; i < positions.Length; i++)
         {
-            var clip = Vector4.Transform(positions[i], worldViewProjection);
-            if (clip.Z < 0) // in front of the near plane
-            {
-                _screen[i] = new Vector3(float.NaN);
-                continue;
-            }
-
-            var inverseW = 1f / clip.W;
-            _screen[i] = new Vector3(
-                (clip.X * inverseW + 1f) * 0.5f * Width,
-                (1f - clip.Y * inverseW) * 0.5f * Height,
-                clip.Z * inverseW);
+            _clip[i] = Vector4.Transform(positions[i], worldViewProjection);
+            _screen[i] = ToScreen(_clip[i]); // garbage behind the near plane, those corners are clipped first
         }
 
         var indices = mesh.Indices;
         for (var t = 0; t < mesh.TriangleCount; t++)
         {
-            var a = _screen[indices[t * 3]];
-            var b = _screen[indices[t * 3 + 1]];
-            var c = _screen[indices[t * 3 + 2]];
+            var ia = indices[t * 3];
+            var ib = indices[t * 3 + 1];
+            var ic = indices[t * 3 + 2];
+            var color = Shade(mesh, t, world, toLight);
 
-            // shortcut: a triangle with a corner behind the near plane is dropped, not clipped. Fine while the
-            // camera looks at the scene from outside; clip it once the camera drives inside one (a track).
-            if (float.IsNaN(a.X) || float.IsNaN(b.X) || float.IsNaN(c.X))
-                continue;
-
-            // Counter-clockwise front faces turn clockwise (negative area) once screen y points down.
-            var area = Edge(a, b, c.X, c.Y);
-            if (area >= 0)
-                continue;
-
-            var normal = Vector3.Normalize(Vector3.TransformNormal(mesh.TriangleNormals[t], world));
-            var light = Ambient + Diffuse * MathF.Max(0, Vector3.Dot(normal, toLight));
-            Fill(a, b, c, area, mesh.TriangleColors[t] * light);
+            // z < 0 is in front of the near plane (System.Numerics projections map near..far to 0..1).
+            var behind = (_clip[ia].Z < 0 ? 1 : 0) + (_clip[ib].Z < 0 ? 1 : 0) + (_clip[ic].Z < 0 ? 1 : 0);
+            if (behind == 0)
+                FillIfFrontFacing(_screen[ia], _screen[ib], _screen[ic], color);
+            else if (behind < 3)
+                ClipAndFill(_clip[ia], _clip[ib], _clip[ic], color);
         }
     }
 
     //**********************************************************
     //** internals
     //**********************************************************
+
+    private static Vector3 Shade(Mesh mesh, int triangle, Matrix4x4 world, Vector3 toLight)
+    {
+        var normal = Vector3.Normalize(Vector3.TransformNormal(mesh.TriangleNormals[triangle], world));
+        return mesh.TriangleColors[triangle] * (Ambient + Diffuse * MathF.Max(0, Vector3.Dot(normal, toLight)));
+    }
+
+    private Vector3 ToScreen(Vector4 clip)
+    {
+        var inverseW = 1f / clip.W;
+        return new Vector3(
+            (clip.X * inverseW + 1f) * 0.5f * Width,
+            (1f - clip.Y * inverseW) * 0.5f * Height,
+            clip.Z * inverseW);
+    }
+
+    /// <summary>
+    /// Cuts the part of the triangle behind the near plane (z &lt; 0) off. One or two corners behind leave a
+    /// triangle or a quad, filled as one or two triangles. Corner order is kept, so the winding stays.
+    /// </summary>
+    private void ClipAndFill(Vector4 a, Vector4 b, Vector4 c, Vector3 color)
+    {
+        Span<Vector3> kept = stackalloc Vector3[4];
+        var count = 0;
+        ClipEdge(a, b, kept, ref count);
+        ClipEdge(b, c, kept, ref count);
+        ClipEdge(c, a, kept, ref count);
+
+        for (var i = 2; i < count; i++)
+            FillIfFrontFacing(kept[0], kept[i - 1], kept[i], color);
+    }
+
+    /// <summary>Keeps <paramref name="from"/> if in front, and where the edge crosses the near plane.</summary>
+    private void ClipEdge(Vector4 from, Vector4 to, Span<Vector3> kept, ref int count)
+    {
+        if (from.Z >= 0)
+            kept[count++] = ToScreen(from);
+        if ((from.Z < 0) != (to.Z < 0))
+            kept[count++] = ToScreen(Vector4.Lerp(from, to, from.Z / (from.Z - to.Z)));
+    }
+
+    private void FillIfFrontFacing(Vector3 a, Vector3 b, Vector3 c, Vector3 color)
+    {
+        // Counter-clockwise front faces turn clockwise (negative area) once screen y points down.
+        var area = Edge(a, b, c.X, c.Y);
+        if (area < 0)
+            Fill(a, b, c, area, color);
+    }
 
     /// <summary>Twice the signed area of the triangle a, b, p.</summary>
     private static float Edge(Vector3 a, Vector3 b, float px, float py) =>
@@ -147,7 +186,7 @@ public sealed class Rasterizer
                     if (depth < _depth[index])
                     {
                         _depth[index] = depth;
-                        Colors[index] = ConsolePalette.ToConsoleColor(color, x, y);
+                        Colors[index] = _palette.ToConsoleColor(color, x, y);
                     }
                 }
 

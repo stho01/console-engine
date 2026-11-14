@@ -19,8 +19,8 @@ Nothing is hosted and nothing is exposed to the internet. Every unit is a local 
 | `ConsoleEngine.Benchmarks` (`ConsoleEngine.Benchmarks/`) | **Exe**, BenchmarkDotNet 0.15.8 | `Baseline/OopUpdateBenchmarks` (list of classes vs. struct arrays), `Ecs/WorldBenchmarks`, `Ecs/QueryBenchmarks`, `Physics/BruteForceCollisionBenchmarks` (all-pairs circle test, the baseline) and `Physics/PhysicsStepBenchmarks` (one whole `PhysicsSystem` step on the same bodies), `Physics/PhysicsQueryBenchmarks` (1 000 raycasts / box casts), `Scripting/LuaScriptBenchmarks` (`LuaScriptSystem` vs. the same logic in C#). Built by CI, never run by CI |
 | `ConsoleEngine.Scripting` (`ConsoleEngine.Scripting/`) | Library (not packed) | Lua 5.4 scripting for ECS entities on KeraLua 1.4.11: components `Script`, `ScriptFaulted`, systems `LuaScriptSystem`, `LuaRenderSystem`, and `LuaRuntime`, `LuaScript`, `LuaScriptException`. Only games that reference it get Lua |
 | `Scripted` (`Examples/Scripted`) | Exe | ECS demo: a player and 30 fireflies, each scripted in `Assets/Scripts/*.lua`. F5 reloads the scripts |
-| `KartViewer` (`Examples/KartViewer`) | Exe | 3D experiment: a Kartster kart on a chequered floor, drawn by a software rasterizer (`Rendering/Rasterizer`) into one coloured cell per pixel. Loads every sub-folder of `Assets/Karts` (or of the first command-line argument) as a kart |
-| `KartViewer.Tests` (`Examples/KartViewer.Tests`) | NUnit test project | `RasterizerTests` (culling, depth test, lighting), `ObjFileTests` (OBJ parsing, loading the shipped `olabil`) |
+| `KartViewer` (`Examples/KartViewer`) | Exe | 3D experiment: a Kartster kart driving a Kartster track with a chase camera, or orbited in a garage, drawn by a software rasterizer (`Rendering/Rasterizer`) into one coloured cell per pixel. Karts: every sub-folder of `Assets/Karts`. Track: the first `<id>.ribbon.obj` + `<id>.spline.obj` in `Assets/Tracks` (Kartster's track-editor export format) |
+| `KartViewer.Tests` (`Examples/KartViewer.Tests`) | NUnit test project | `RasterizerTests` (culling, near-plane clipping, depth test, lighting), `ObjFileTests` (OBJ parsing, loading the shipped `olabil`), `TrackTests` (the shipped `star-circuit`: closed loop, wrap, direction) |
 | `Snake`, `Asteroids`, `Platformer`, `ConsoleGame` and their ECS ports `Snake.Ecs`, `Asteroids.Ecs`, `Platformer.Ecs`, `ConsoleGame.Ecs`, `TerraForM.Ecs` (`Examples/*`) | Exe | Small demo games. Each `*.Ecs` project is the same game rebuilt on the ECS (`ConsoleEngine.Ecs`) for comparison |
 | `Swarm` (`Examples/Swarm`) | Exe | ECS-only stress test: 100 000 particles (first argument) chasing a moving attractor |
 | `PhysicsSandbox` (`Examples/PhysicsSandbox`) | Exe | ECS-only physics demo: balls and boxes dropped into a walled box with two ledges and a moving platform (`ConsoleEngine.Physics`) |
@@ -31,7 +31,7 @@ Nothing is hosted and nothing is exposed to the internet. Every unit is a local 
 | `EternalDigger.Tests` | NUnit test project | `MineTests`, `TilesTests`, `ShopTests`, `LightMapTests`, `ParticleLooksTests`, `MinerControlSystemTests` (plays frames with scripted `MinerInput`, no keyboard), `MinerVisibilityTests` (renders into a `RenderConsole` over `Fakes/FakeConsoleHandler`), `ElevatorTests`, `DynamiteTests`, `ShopCounterTests`, `UpgradesTests`, `LampOilTests`, `BagWeightTests`, `SaveFileTests`, `SaveSystemTests` (temp folders), `TitleMenuTests`, `InventorySystemTests`, `DeepCampTests`, `GasTests`, `DarknessTests`, `ProgressTests` |
 
 Hard dependency: **Windows only.** `ConsoleHandler` and `InputHandler` call `kernel32.dll`/`user32.dll` directly
-(`GetStdHandle`, `WriteConsoleOutputW`, `SetCurrentConsoleFontEx`, `GetAsyncKeyState`…). No other platform
+(`GetStdHandle`, `WriteConsoleOutputW`, `SetCurrentConsoleFontEx`, `Get`/`SetConsoleScreenBufferInfoEx` (palette), `GetAsyncKeyState`…). No other platform
 implementation exists; macOS support is GitHub issue 7, open.
 
 Games that reference `ConsoleEngine.Scripting` also load the native Lua library `lua54.dll` from
@@ -81,7 +81,7 @@ callbacks that run on the game loop thread ([03 § Intervals](03-rules.md#interv
 | `PhysicsShowcaseGame` | 120 × 60 | 10×10 Consolas (square cells) | `Name = "Physics Showcase"`, `ShowFps = true` |
 | `EternalDiggerGame` | 120 × 48 (`Layout.ScreenWidth` × `Layout.ScreenHeight`) | 8×16 Consolas | `Name = "EternalDigger"`. First command-line argument = seed for a NEW MINE (default `Environment.TickCount`); CONTINUE uses the saved seed. Reads and writes `<LocalApplicationData>/EternalDigger/save.dat` (+ `.tmp`, `.bad`). No logger, no FPS |
 | `ScriptedGame` | 80 × 40 | 12×12 Consolas | `ShowFps = true` |
-| `KartViewerGame` | 240 × 135 | 4×4 Consolas (square cells) | `Name = "KartViewer"`, `Console.PixelMode = true`, `ClearScreenOnEachFrame = false`. First command-line argument = folder of kart folders (default `Assets/Karts`). Title shows kart, triangle count and FPS every 250 ms |
+| `KartViewerGame` | 240 × 135 | 4×4 Consolas (square cells) | `Name = "KartViewer"`, `Console.PixelMode = true`, `Console.Palette = ScenePalette.Colors` (its own 16 colours), `ClearScreenOnEachFrame = false`. First command-line argument = folder of kart folders (default `Assets/Karts`), second = folder of tracks (default `Assets/Tracks`, optional: without a track it starts in the garage). Near 0.2, far 400. Title shows kart, track, speed and FPS every 250 ms |
 
 `GameBase(width, height, fontWidth, fontHeight)` always uses face `"Consolas"`.
 

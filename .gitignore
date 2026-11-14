@@ -75,6 +75,7 @@ StyleCopReport.xml
 *.ilk
 *.meta
 *.obj
+!Examples/KartViewer/Assets/**/*.obj
 *.iobj
 *.pch
 *.pdb
