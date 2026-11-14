@@ -1,5 +1,6 @@
 using System.Numerics;
 using ConsoleEngine.Rendering3D;
+using Kartster.Modes;
 
 namespace Kartster.Ui;
 
@@ -28,6 +29,9 @@ public interface IKartsterMenus
     /// <summary>Makes kart <paramref name="index"/> the chosen one: loads its model and tuning.</summary>
     void SelectKart(int index);
 
-    /// <summary>Loads the track and starts a race of <paramref name="laps"/> laps with the chosen kart.</summary>
-    void StartRace(int trackIndex, int laps);
+    /// <summary>
+    /// Loads the track and starts a race of <paramref name="laps"/> laps with the chosen kart, against the bots or as
+    /// a time trial (<paramref name="mode"/>).
+    /// </summary>
+    void StartRace(int trackIndex, int laps, RaceMode mode);
 }

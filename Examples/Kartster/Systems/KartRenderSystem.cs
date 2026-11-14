@@ -39,6 +39,9 @@ public sealed class KartRenderSystem(Entity player, KartsterGame game, Mesh[] ka
     /// <summary>The race's pads, hazards and cans, drawn after the karts; null: none.</summary>
     public PowerUpView PowerUps { get; init; }
 
+    /// <summary>The chase camera's view × projection of this frame, for whatever is drawn after the karts.</summary>
+    public Matrix4x4 ViewProjection { get; private set; }
+
     //**********************************************************
     //** lifecycle
     //**********************************************************
@@ -56,7 +59,7 @@ public sealed class KartRenderSystem(Entity player, KartsterGame game, Mesh[] ka
 
         var target = position + forward * LookAhead + Vector3.UnitY;
         var view = Matrix4x4.CreateLookAt(_eye, target, Vector3.UnitY);
-        var viewProjection = view * game.Projection;
+        var viewProjection = ViewProjection = view * game.Projection;
         var renderer = game.Renderer;
         var track = game.Track;
         renderer.Draw(track.Ground, track.GroundWorld, viewProjection, KartsterGame.ToSun);

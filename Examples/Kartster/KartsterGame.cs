@@ -9,6 +9,7 @@ using ConsoleEngine.Infrastructure.Inputs;
 using ConsoleEngine.Rendering3D;
 using ConsoleEngine.Rendering3D.OpenGL;
 using Kartster.Driving;
+using Kartster.Modes;
 using Kartster.Race;
 using Kartster.Scenes;
 using Kartster.Scenes.Menus;
@@ -212,8 +213,11 @@ public class KartsterGame(string kartsFolder, string tracksFolder, bool startOnG
 
     public void SelectKart(int index) => LoadKart(index);
 
-    /// <summary>Loads track <paramref name="trackIndex"/> and its <c>race.txt</c> (unless loaded), then races.</summary>
-    public void StartRace(int trackIndex, int laps)
+    /// <summary>
+    /// Loads track <paramref name="trackIndex"/> and its <c>race.txt</c> (unless loaded), then races: against the
+    /// bots, or in a <see cref="RaceMode.TimeTrial"/> alone with the ghost of the best lap of this track and kart.
+    /// </summary>
+    public void StartRace(int trackIndex, int laps, RaceMode mode = RaceMode.Race)
     {
         if (trackIndex != _trackIndex)
         {
@@ -223,7 +227,9 @@ public class KartsterGame(string kartsFolder, string tracksFolder, bool startOnG
             _trackIndex = trackIndex;
         }
 
-        Scenes.Set(new TrackScene(laps));
+        Scenes.Set(mode == RaceMode.TimeTrial
+            ? new TrackScene(laps, botCount: 0, new TimeTrial(GhostFile.PathFor(Track.Name, KartName)))
+            : new TrackScene(laps));
     }
 
     /// <summary>The sky in 24-bit colour at screen row <paramref name="y"/>: a smooth gradient, no dither.</summary>

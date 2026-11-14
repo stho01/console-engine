@@ -153,7 +153,8 @@ using [04](04-flows.md).
 | `3`, `2`, `1`, `GO!`, `FINISHED` | `Hud.Draw` (top-centre) | Countdown, start, player finished |
 | `KARTSTER`, `PRESS ENTER`, `SPACE GARAGE   ESC QUIT` | `TitleScene` (`Logo`, `Prompt`, `Footer`) | Title menu, the first scene |
 | `SELECT KART`, `UP/DOWN CHOOSE   ENTER OK   ESC BACK` | `SelectKartScene` | Kart menu |
-| `SELECT TRACK`, `TRACK`, `LAPS`, `START RACE`, `NONE`, `LEFT/RIGHT CHANGE   ENTER START   ESC BACK` | `SelectTrackScene` | Race setup menu; `NONE` when there are no tracks (then Enter does nothing) |
+| `SELECT TRACK`, `TRACK`, `LAPS`, `MODE`, `RACE`, `TIME TRIAL`, `START RACE`, `NONE`, `LEFT/RIGHT CHANGE   ENTER START   ESC BACK` | `SelectTrackScene` (`ModeChoices`) | Race setup menu; `NONE` when there are no tracks (then Enter does nothing) |
+| `BEST <m:ss.cc>` or `BEST -`, and above it one `<n>  <m:ss.cc>` row per lap done | `TimeTrial.DrawUi` (`BestLabel`, `NoTime`), bottom-left over the lap line instead of the standings | Time trial: this attempt's lap times (the one equal to the best in yellow) and the best lap so far; `BEST -` = no best lap saved for this track and kart, or the file couldn't be read ([Q16](07-checks.md#q16)) |
 | `RESULTS`, `POS`, `NAME`, `TIME`, `BEST`, `DNF`, `ENTER RACE AGAIN   ESC TITLE` | `ResultsScene` | Results table once the race is over: 4 s of `FINISHED` after the player finishes, then `FINISHING RACE` until everybody is home or the cap; the track name in upper case |
 
 ### Launcher (`LauncherTexts`, `GameLocator`)

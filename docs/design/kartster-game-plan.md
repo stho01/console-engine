@@ -272,8 +272,56 @@ Levert på grenen til P. Regler og tall står i `docs/agent/03-rules.md` (Kartst
 | H | Høyde i kartfysikken: helning, veien på flere nivåer, terreng under veien. Deretter flere av originalens baner | `Driving/` (høyde), `Track.cs`, `Systems/KartGroundSystem.cs`, `Systems/KartPhysicsSystem.cs`, terreng-eksport i `tools/` | Ett tegnekall for terreng i `KartRenderSystem` |
 | K2 | Alle originalens karter med tuning | `Driving/KartCatalog.cs`, `Assets/Karts/`, `KartModel.cs` | Ingenting |
 | P2 | De resterende power-up-typene og usårbarhet | `PowerUps/` | Ingenting |
-| G | Tidskjøring med spøkelseskart, delt skjerm for to spillere hvis det lar seg gjøre | `Modes/`, `Scenes/Menus/` (modusvalg) | `TrackScene` (registrering), `KartsterGame` (flyt) |
+| G | Tidskjøring med spøkelseskart (ferdig), delt skjerm for to spillere hvis det lar seg gjøre (design, se under) | `Modes/`, `Scenes/Menus/` (modusvalg) | `TrackScene` (registrering), `KartsterGame` (flyt) |
 | E | Motor: pause i `EcsScene`, statiske kropper i broadphase, kontakthendelser til bots, 24-bit i cross-platform | `ConsoleEngine*`, `Libs/` | `TrackScene` (pause-bruk), `Bots/` (dytt tilbake) |
 | L | Lys og stemning: frontlys, natt, enkle skygger | `ConsoleEngine.Rendering3D*` (lys), `Lighting/` | `KartRenderSystem` |
 
 Prosjektlederen fletter `TrackScene`, `KartRenderSystem` og `KartsterGame`.
+
+### Status G: spillmoduser (tidskjøring ferdig, delt skjerm som design)
+
+Originalen har ingen tidskjøring og ingen opptak av beste runde: `Docs/replays.md` tar opp hele løp som øyeblikksbilder
+(30 per sekund, til `~/.kartster/replays`) for avspilling, ikke som spøkelse. Det vi tar fra den: spøkelseskarter
+tegnes gjennomsiktige med `KartGhost.GhostOpacity` 0,35 og kolliderer ikke (`Docs/rigid-body-physics.md`, «Ghost on a
+boost»). Delt skjerm finnes: `SplitScreenLayout` gir 2 spillere side om side (venstre/høyre halvdel), 3–4 i kvadranter;
+HUD-en ankres i spillerens region, men har samme størrelse (`Docs/hud.md`). Tastaturet er én spiller i originalen
+(W/S/A/D og piltastene samtidig); spiller 2+ er håndkontroller.
+
+- **Bygd:** `MODE`-rad i `SelectTrackScene` (`RACE` / `TIME TRIAL`), `IKartsterMenus.StartRace(track, laps, mode)`.
+  Tidskjøring = `TrackScene(laps, botCount: 0, TimeTrial)`: spilleren alene, rundetider og `BEST` nede til venstre i
+  stedet for stillingen, hver runde tatt opp per fast steg i en forhåndsallokert `GhostLap` (ingen allokering per steg,
+  testet), beste runde som spøkelse (samme mesh, `TriangleOpacity` 0,35: blandet i 24-bit, skjermdør i 16 farger),
+  ingen entitet og derfor ingen kollisjon, lagret straks i `%LOCALAPPDATA%/Kartster/ghosts/<bane>.<kart>.ghost`
+  (`GhostFile`, binært med versjon og sjekk; ødelagt fil gir ikke noe spøkelse og kaster ikke). R og RESTART beholder
+  spøkelset.
+- **Rørt utenfor `Modes/` og `Scenes/Menus/`:** `TrackScene` (ny ctor-parameter `TimeTrial timeTrial = null`,
+  `timeTrial?.AddTo(...)` etter `KartRenderSystem`, `timeTrial?.DrawUi(...)` i `DrawUi`, de to omstartene sender den
+  videre, `using Kartster.Modes`), `KartsterGame.StartRace` (modus-parameter, velger scene), `Ui/IKartsterMenus`
+  (modus-parameter), `KartRenderSystem.ViewProjection` (ny egenskap, satt der den regnes ut).
+- **Utenfor:** modusen huskes ikke mellom besøk i menyen; power-ups er på også i tidskjøring; spøkelsets egne
+  trekanter ses gjennom hverandre i 24-bit (originalen tegner dybden først); runde 1 starter på startrutenettet, så
+  spøkelset fra en senere runde starter ved streken.
+
+**Delt skjerm (ikke bygd; anslått for stort for denne bølgen fordi det rører fire andres filer).** Plan:
+
+1. **Oppsett:** som originalens `SplitScreenLayout` for 2: venstre og høyre halvdel, 160×180 hver (bildeforhold
+   160/180, egen `Projection`). `Modes/SplitScreen.Viewports(width, height)` gir to rektangler; test: dekker skjermen
+   uten overlapp.
+2. **Rendering:** `KartsterGame` får `IRenderer3D[] ViewRenderers` (to CPU-`Rasterizer`e på 160×180, eller to
+   `GlRenderer`e; samme G/C-bytte og `MatchConsoleColors` for begge) og en himmel per halvdel. `OnUpdate` tømmer begge,
+   `OnRender` kaller `Finish` på begge og kopierer radene inn i hver sin halvdel av konsollen (samme løkke som nå,
+   med x-forskyvning). `KartRenderSystem` må ta inn renderer, projeksjon og spiller i stedet for å lese
+   `game.Renderer`/`game.Projection` (eies av L/H nå): én `KartRenderSystem` per halvdel. `SlideSmoke.BuildQuads`
+   bygges før hver tegning (kamera per visning), `PowerUpView.Draw` får `deltaSeconds` bare fra den første.
+3. **Input:** `PlayerKart` får et `Number` (0/1). `KartInputSystem` leser en tastetabell per nummer: spiller 1
+   W/S/A/D + Space, spiller 2 piltastene + `Key.NUMPAD0` (håndbrems). Kolliderer ikke med G/C/E/T/B/R/Enter/Esc.
+   Power-ups for spiller 2 (`PowerUpInputSystem`, eies av P2): `Key.NUMPAD1` bruk, `NUMPAD2` kast, `NUMPAD3` slipp, med samme
+   `RequestUse` per kart-indeks.
+4. **Løp:** `RaceSession` støtter flere mennesker allerede (`Register(id, isHuman: true)`, løpet venter på alle).
+   `CreateKarts` må ta en liste med spillerindekser (rutenett 0 og 1), to `RaceReport`-er (én per `playerId`),
+   autopilot per ferdig spiller (virker allerede per `PlayerKart`), resultatene når begge er i mål.
+5. **HUD:** `IPixelTarget` for en delflate (`ViewportTarget`: `Frame`, `X`, `Width`, `Height`, `Set` med forskyvning),
+   `Hud.Draw` og `Minimap.Draw` per halvdel (samme størrelse, som originalen: dekker mer av visningen). Pausemenyen
+   over hele skjermen.
+6. **Tester:** visningsoppsett, input-ruting (spiller 2 påvirker bare sin kart), to mennesker i `RaceSession`
+   (venter på begge), `ViewportTarget` klipper til sin halvdel.

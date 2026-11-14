@@ -66,7 +66,8 @@ team's process differs.
 | Scripted | ESC | Quit (`Stop()`) | `ScriptedGame.OnUpdate` |
 | Kartster (title) | ENTER / SPACE / ESC | Kart menu / garage / quit | `TitleScene.OnUpdate` |
 | Kartster (select kart) | UP DOWN / ENTER / ESC | Highlight and choose a kart (loads at once) / race setup / title | `SelectKartScene.OnUpdate` |
-| Kartster (select track) | UP DOWN / LEFT RIGHT / ENTER / ESC | Choose a row / change track or laps (1–5) / start the race / kart menu | `SelectTrackScene.OnUpdate` |
+| Kartster (select track) | UP DOWN / LEFT RIGHT / ENTER / ESC | Choose a row / change track, laps (1–5) or mode (`RACE` against 5 bots, `TIME TRIAL` alone against the ghost of the best lap) / start the race / kart menu | `SelectTrackScene.OnUpdate` |
+| Kartster (time trial) | Same keys as a race | Drive alone; the see-through kart is the best lap so far on this track with this kart. R or pause RESTART: a new attempt, same ghost. To drop the ghost, delete `%LOCALAPPDATA%\Kartster\ghosts\<track>.<kart>.ghost` ([Q16](07-checks.md#q16)) | `TimeTrial`, `GhostFile` |
 | Kartster (race) | W / S / A D / SPACE (held) | Gas / brake, then reverse / steer left/right (ramped) / handbrake | `KartInputSystem` → `KartControls` → `KartPhysicsSystem` |
 | Kartster (race) | R | Every kart back on the grid, countdown again (restarts `TrackScene`, same laps) | `TrackScene.UpdateFlow` |
 | Kartster (race) | ENTER or ESC | Pause: the race stops, `PAUSED` menu over it | `TrackScene.UpdateFlow`, `PauseMenu` |

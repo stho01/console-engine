@@ -167,3 +167,16 @@ Test-Path C:\Forse\kartster-server\src\Kartster\Kartster.csproj; Test-Path C:\Fo
 original here, so no exporting; the game itself only needs the files already in `Examples/Kartster/Assets/Tracks`.
 `False` on the second → build the original first (`dotnet build src/Kartster/Kartster.csproj` in its folder). Then
 `dotnet run --project tools/KartsterExport -- list` prints the built-in track ids.
+
+<a id="q16"></a>
+## Q16 — Is there a saved Kartster time-trial ghost?
+
+```powershell
+Get-ChildItem "$env:LOCALAPPDATA\Kartster\ghosts" -ErrorAction SilentlyContinue | Select-Object Name, Length, LastWriteTime
+```
+One `<track>.<kart>.ghost` per track and kart with a best lap (`GhostFile.PathFor`), written the moment a lap beats
+the best. Its size is 20 + 16 bytes per fixed step of the lap (about 77 KB for a 40 s lap). No folder or no file for
+that track and kart = no best lap yet, so no ghost. A file that is there but shows no ghost is unreadable
+(`GhostFile.Read`: damaged, cut short, or from another format version or step) and is ignored; the next best lap
+overwrites it. `<file>.tmp` left behind = a save was interrupted (the old file is intact). Delete the file to drop
+the ghost.

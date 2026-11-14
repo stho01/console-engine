@@ -1,6 +1,7 @@
 using System.Collections.Generic;
 using System.Numerics;
 using ConsoleEngine.Rendering3D;
+using Kartster.Modes;
 using Kartster.Scenes.Menus;
 using Kartster.Ui;
 using NUnit.Framework;
@@ -30,7 +31,8 @@ public class MenuFlowTests
             Calls.Add($"kart {index}");
         }
 
-        public void StartRace(int trackIndex, int laps) => Calls.Add($"race {trackIndex} {laps}");
+        public void StartRace(int trackIndex, int laps, RaceMode mode) =>
+            Calls.Add($"race {trackIndex} {laps} {mode}");
     }
 
     [Test]
@@ -57,7 +59,22 @@ public class MenuFlowTests
         menu.Update(Right); // 4 laps
 
         Assert.That(SelectTrackScene.StartRace(menu, menus), Is.True);
-        Assert.That(menus.Calls, Is.EqualTo(new[] { "race 1 4" }));
+        Assert.That(menus.Calls, Is.EqualTo(new[] { "race 1 4 Race" }));
+    }
+
+    [Test]
+    public void SelectTrack_ModeTimeTrial_StartsATimeTrial()
+    {
+        var menus = new FakeMenus(["a"]);
+        var menu = SelectTrackScene.CreateMenu(menus.TrackNames);
+        Assert.That(SelectTrackScene.Mode(menu), Is.EqualTo(RaceMode.Race), "a race unless chosen");
+        menu.Update(Down);
+        menu.Update(Down);
+        menu.Update(Right); // MODE < TIME TRIAL >
+
+        Assert.That(menu.Items[menu.Selected].Value, Is.EqualTo("TIME TRIAL"));
+        Assert.That(SelectTrackScene.StartRace(menu, menus), Is.True);
+        Assert.That(menus.Calls, Is.EqualTo(new[] { "race 0 3 TimeTrial" }));
     }
 
     [Test]

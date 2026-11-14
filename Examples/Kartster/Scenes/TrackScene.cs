@@ -12,6 +12,7 @@ using Kartster.Collision;
 using Kartster.Components;
 using Kartster.Driving;
 using Kartster.Effects;
+using Kartster.Modes;
 using Kartster.PowerUps;
 using Kartster.Race;
 using Kartster.Scenes.Menus;
@@ -40,7 +41,8 @@ namespace Kartster.Scenes;
 /// </summary>
 /// <param name="lapCount">Laps to race, at least 1.</param>
 /// <param name="botCount">Bots on the grid besides the player.</param>
-public sealed class TrackScene(int lapCount, int botCount = TrackScene.DefaultBotCount)
+/// <param name="timeTrial">A time trial (with no bots): records the laps and shows the best one as a ghost.</param>
+public sealed class TrackScene(int lapCount, int botCount = TrackScene.DefaultBotCount, TimeTrial timeTrial = null)
     : EcsScene<KartsterGame>, IUiLayer
 {
     //**********************************************************
@@ -286,8 +288,9 @@ public sealed class TrackScene(int lapCount, int botCount = TrackScene.DefaultBo
         var smoke = new SlideSmoke(kartCount: count);
         Presentation.Add(new InterpolationSystem(FixedTimestep));
         _effects = Presentation.Add(new KartEffectsSystem(_physics, skidMarks, smoke));
-        Presentation.Add(new KartRenderSystem(_player, Game, meshes, skidMarks, smoke)
+        var render = Presentation.Add(new KartRenderSystem(_player, Game, meshes, skidMarks, smoke)
             { PowerUps = new PowerUpView(_powerUps.Field) });
+        timeTrial?.AddTo(FixedSimulation, Presentation, Race, render, Game, FixedTimestep);
     }
 
     /// <summary>
@@ -304,6 +307,7 @@ public sealed class TrackScene(int lapCount, int botCount = TrackScene.DefaultBo
 
         _report.FillHud(ref _hudState, Speed * MetresPerSecondToKmh);
         _hudState.PowerUp = _powerUps.HudName(PlayerSlot);
+        timeTrial?.DrawUi(target, ref _hudState);
         _hud.Draw(target, _hudState);
 
         foreach (var chunk in _karts.GetChunks())
@@ -377,7 +381,7 @@ public sealed class TrackScene(int lapCount, int botCount = TrackScene.DefaultBo
                     SetPaused(false);
                     break;
                 case PauseChoice.Restart:
-                    Game.Scenes.Set(new TrackScene(lapCount, botCount));
+                    Game.Scenes.Set(new TrackScene(lapCount, botCount, timeTrial));
                     break;
                 case PauseChoice.QuitToTitle:
                     Game.Scenes.Set(new TitleScene());
@@ -394,7 +398,7 @@ public sealed class TrackScene(int lapCount, int botCount = TrackScene.DefaultBo
         }
         else if (input.GetKey(Key.R).Pressed)
         {
-            Game.Scenes.Set(new TrackScene(lapCount, botCount));
+            Game.Scenes.Set(new TrackScene(lapCount, botCount, timeTrial));
         }
         else if (_report.Update(seconds))
         {

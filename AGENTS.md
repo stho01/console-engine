@@ -264,7 +264,10 @@ Examples/
                                   PowerUps/ (Kartster's power-ups: PowerUpField (pure: pads, reel, draw, hazards, cans),
                                   PowerUpCatalog, PowerUpKind/PowerUpAim, KartEffects, KartEffectTuning, BotPowerUps,
                                   PowerUpSystem (fixed step; Add wires it all), PowerUpInputSystem (E/T/B), PowerUpView,
-                                  PowerUpPads (powerups.txt)),
+                                  PowerUpPads (powerups.txt)), Modes/ (RaceMode, TimeTrial: the player alone,
+                                  laps recorded per fixed step (TimeTrialSystem, GhostLap, GhostPose), the best lap
+                                  as a see-through ghost (GhostRenderSystem) and in GhostFile under
+                                  %LOCALAPPDATA%/Kartster/ghosts),
                                   Assets/Karts/ (olabil, wagon), Assets/Tracks/
                                   (star-circuit, star-rally, prism-loop, eight-ball: ribbon, spline, scenery.txt, race.txt, powerups.txt,
                                   collision.txt each; written by tools/KartsterExport) and Assets/Scenery/
@@ -277,7 +280,8 @@ Examples/
   Kartster.Tests/               KartModelTests, TrackTests, ShippedTracksTests, SceneryTests, KartPhysicsSystemTests,
                                   KartFrameTests, KartInputSystemTests, Driving/KartDynamicsTests, Driving/KartReferenceTests,
                                   Effects/EffectsTests (skid marks, slide smoke), Race/ (RaceMarkersTests,
-                                  RaceSessionTests, RaceSystemTests, RaceReportTests, RaceWiringTests, RaceEndingTests), Ui/ (PixelFont, TextFormat,
+                                  RaceSessionTests, RaceSystemTests, RaceReportTests, RaceWiringTests, RaceEndingTests),
+                                  Modes/TimeTrialTests (ghost recording/playback, ghost file, a lap alone), Ui/ (PixelFont, TextFormat,
                                   PixelTarget, Hud, Minimap,
                                   Menu, MenuFlow tests; UiPreview writes ui-preview/*.ppm to the output), Bots/BotDriverSystemTests,
                                   Bots/RaceTests (grid, input, headless 3-bot race, kart collisions, allocation),
