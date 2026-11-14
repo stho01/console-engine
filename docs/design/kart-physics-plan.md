@@ -1,7 +1,8 @@
 # Plan: Kartster-lik kart-fysikk i KartViewer
 
 Status (2026-11-14): steg 3 (kart-modellen, § 6) finnes som ren planmodell i `Examples/KartViewer/Driving/`, med
-tester, men er ikke koblet inn i spillet ennå. Dagens `Examples/KartViewer/KartDriving.cs` er fortsatt en leke-modell
+tester, men er ikke koblet inn i spillet ennå. Steg 4 (§ 7) er gjort: `KartReferenceTests` sammenligner modellen med
+tall målt fra Kartsters egen fysikk, og alle mål er innenfor toleransen uten endringer i modellen. Dagens `Examples/KartViewer/KartDriving.cs` er fortsatt en leke-modell
 (fast akselerasjon, styring som roterer kursen direkte) og skal erstattes.
 
 Kilde for alt om originalen: `C:\Forse\kartster-server` (Kartster, MonoGame). Stier som begynner med `Kartster/` under
@@ -200,6 +201,9 @@ Målt med `KartIntegrator` på 1/120 s, full gass på flat asfalt (Joyride):
 | olabil | 32,00 m/s | 16,00 m/s | 0,66 s | 1,68 s | 0,82 s, 8,8 m |
 | wagon | 32,21 m/s | 16,11 m/s | 0,68 s | 1,87 s | 0,70 s, 8,0 m |
 
+Bremsetallene her ble målt på en annen måte enn i § 7. Med Kartsters manøver (kjørt opp til 80 km/t med full gass,
+stopp under 0,5 m/s) bremser wagon på 7,16 m, som originalen (§ 7).
+
 Et `KartPhysicsSystem : EntitySystem` i spillet (ikke i motoren), som skriver til `Force` hvert steg etter § 3. Filer
 (forslag):
 
@@ -242,6 +246,36 @@ Kartster måler hva hver kart klarer med `Kartster.BotBench envelope --karts ola
 Testene kjører modellen uten konsoll, som `KartDrivingTests` i dag. Hvis `envelope` ikke gir alle målene, må vi enten
 legge til målinger i BotBench (endring i kartster-repoet) eller regne referansen fra formlene.
 
+**Gjort (2026-11-14):** `envelope` ga ikke alle målene, så referansen ble målt med et eget måleprogram (utenfor begge
+repoene) som kaller Kartsters `ArcadeKartPhysics.Update` direkte, uendret: flat bakke med `DriftProbe.Step`
+(`KartGroundConstraint.Apply` etter hvert steg), 1/120 s, Joyride, `SemiAutomatic`, per-steg-tuning som
+`RaceSimulation.StepPhysics` (`KartEffectTuning.Apply` + `ApplySurfaceSpeedLimit`). Inndata er trinn (ingen rampe).
+Manøvrene:
+
+1. Toppfart: full gass i 60 s. Fart = |v| i planet.
+2. 0–50 / 0–80 km/t: første steg med fart ≥ 13,889 / 22,222 m/s.
+3. Brems: full gass til ≥ 22,222 m/s, så full brems; strekning til farten er under 0,5 m/s.
+4. Sving: full gass til målfarten, så 5 s full høyrelås med P-regulator `u = 3 · (mål - fart)`,
+   gass = clamp(u, 0, 1), brems = clamp(-u, 0, 1) (rundet til 16 bit som `KartInputState`); radius = fart / |ω| til slutt.
+5. Gress: som 1 på gress hele tiden.
+6. Håndbrekk: full gass til ≥ 13,889 m/s, så 1 s full høyrelås og håndbrekk uten gass/brems; kursendring.
+
+`Examples/KartViewer.Tests/Driving/KartReferenceTests.cs` kjører de samme manøvrene med `KartDynamics` +
+`KartIntegrator` og har Kartsters tall som konstanter. Toleransene er de over, pluss ±15 % for håndbrekk-svingen.
+
+| Mål | Kart: Kartster / vår | olabil: Kartster / vår | wagon: Kartster / vår |
+|---|---|---|---|
+| Toppfart asfalt (m/s) | 32,001 / 32,001 | 32,001 / 32,001 | 32,214 / 32,214 |
+| 0–50 km/t (s) | 0,658 / 0,658 | 0,658 / 0,658 | 0,683 / 0,683 |
+| 0–80 km/t (s) | 1,675 / 1,675 | 1,675 / 1,675 | 1,867 / 1,867 |
+| Bremselengde fra 80 km/t (m) | 8,844 / 8,844 | 8,844 / 8,844 | 7,160 / 7,163 |
+| Svingradius 20 km/t (m) | 2,865 / 2,865 | 2,973 / 2,877 (−3,2 %) | 2,839 / 2,838 |
+| Svingradius 50 km/t (m) | 14,819 / 14,818 | 17,519 / 16,989 (−3,0 %) | 12,789 / 12,788 |
+| Toppfart gress (m/s) | 16,000 / 16,000 | 16,000 / 16,000 | 16,107 / 16,107 |
+| Håndbrekk 1 s fra 50 km/t (grader) | −86,21 / −86,22 | −77,46 / −79,42 (+2,5 %) | −101,99 / −101,99 |
+
+Kart og wagon treffer på tredje siffer; eneste avvik er olabil i sving (§ 10).
+
 ## 8. Leveranser
 
 | Steg | Innhold | Commit |
@@ -249,7 +283,7 @@ legge til målinger i BotBench (endring i kartster-repoet) eller regne referanse
 | 1 | `Force` i `ConsoleEngine.Physics`, tester, docs (`03-rules` § Physics, `physics-plan.md`) | `feat(physics): …` |
 | 2 | KartViewer banemodus på ECS og `PhysicsSystem`, foreløpig med dagens enkle modell over krefter | `refactor: …` |
 | 3 | Kart-modellen og tuning for de tre kartene, `KartDriving` fjernes | `feat: …` |
-| 4 | Referansetester mot `BotBench envelope` | `test: …` |
+| 4 | Referansetester mot tall målt fra Kartsters egen fysikk (`KartReferenceTests`) | `test: …` |
 
 Hvert steg bygges, testes og prøvekjøres for seg.
 
@@ -289,4 +323,10 @@ Hvert steg bygges, testes og prøvekjøres for seg.
   Ingen allokering per steg.
 - **Utelatt som i § 1:** bremse-lås, downforce, boost, kroppsrulling (olabil skiller seg derfor fra Kart bare i
   styrelås, sporvidde og `LateralLoadTransferScale`), stuping, fly/glide.
+- **olabil uten kroppsrulling (steg 4):** Kartsters olabil har `HasBodyRoll` (`KartCatalog.TuneOlabil`,
+  `Kartster/Models/Karts/KartCatalog.cs` linje 1382). Rullingen (`KartBodyRoll.Update`, kalt fra
+  `ArcadeKartPhysics.cs` linje 391) flytter tyngdepunktet mot ytterhjulene i vektoverføringen
+  (`GetRolledCenterOfMass`, linje 638–650), så olabil griper litt mindre i sving. Vi har ikke rulling (§ 1), og
+  olabil svinger derfor omtrent 3 % trangere (20 og 50 km/t) og roterer 2,5 % mer i håndbrekk-svingen enn i Kartster.
+  Innenfor toleransene i § 7, som ikke er endret.
 - **Første steg** har ingen målt akselerasjon (forrige fart mangler), så vektoverføringen starter statisk.
