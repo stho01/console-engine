@@ -1,4 +1,5 @@
 using System;
+using System.Runtime.InteropServices;
 using ConsoleEngine.Ecs;
 using ConsoleEngine.Ecs.Components;
 using Microsoft.Xna.Framework;
@@ -64,6 +65,13 @@ public sealed partial class PhysicsSystem : EntitySystem, IPhysicsEvents, IPhysi
     private readonly ArrayBuffer<int> _staticBodies = new();
 
     private readonly ArrayBuffer<StaticBounds> _staticBounds = new();
+
+    /// <summary>
+    /// By body index: what a static body's slots were filled from, so an unchanged static skips <see cref="Gather"/>'s
+    /// work (Box2D keeps static bodies out of the step entirely). Valid where its stamp is the previous step's.
+    /// </summary>
+    private readonly ArrayBuffer<StaticInput> _staticInputs = new();
+
     private int _staticCount;
     private bool _staticsChanged;
     private readonly PairCache _pairCache = new();
@@ -272,6 +280,7 @@ public sealed partial class PhysicsSystem : EntitySystem, IPhysicsEvents, IPhysi
         var states = _states.Resize(bodyCount);
         var sims = _sims.Resize(bodyCount);
         var bodyEntities = _entities.Resize(count);
+        var staticInputs = _staticInputs.Resize(count);
         _indexStamp++;
         _anySleeping = false;
         _movingBodies.Clear();
@@ -299,6 +308,17 @@ public sealed partial class PhysicsSystem : EntitySystem, IPhysicsEvents, IPhysi
                 var angle = rotations.IsEmpty ? 0f : rotations[i].Radians;
                 if (!interpolations.IsEmpty)
                     RememberTransform(ref interpolations[i], positions[i].Value, angle);
+
+                // Unchanged since the previous step, in the same slot: every body array still holds this static.
+                var isStatic = !canMove || rigidBodies[i].Type == BodyType.Static;
+                ref var input = ref staticInputs[index];
+                if (isStatic && input.IsSame(_indexStamp - 1, entities[i], positions[i].Value, angle, collider))
+                {
+                    input.Stamp = _indexStamp;
+                    NoteStatic(index, proxies[index]);
+                    continue;
+                }
+
                 var (sin, cos) = angle == 0f ? (0f, 1f) : MathF.SinCos(angle);
                 ref var shape = ref shapes[index];
                 shape.Position = positions[i].Value;
@@ -338,9 +358,14 @@ public sealed partial class PhysicsSystem : EntitySystem, IPhysicsEvents, IPhysi
                 sim.Restitution = collider.Restitution;
                 bodyEntities[index] = entities[i];
                 if (sim.Type == BodyType.Static)
+                {
+                    input = new StaticInput(_indexStamp, entities[i], positions[i].Value, angle, collider);
                     NoteStatic(index, proxy);
+                }
                 else
+                {
                     _movingBodies.Add(index);
+                }
             }
         }
 
@@ -1195,4 +1220,23 @@ public sealed partial class PhysicsSystem : EntitySystem, IPhysicsEvents, IPhysi
 
     /// <summary>A static body's bounding box as the static grid holds it.</summary>
     private readonly record struct StaticBounds(Vector2 Center, Vector2 Extents);
+
+    /// <summary>The components a static body's slots were filled from, and the step they were filled in.</summary>
+    private struct StaticInput(int stamp, Entity entity, Vector2 position, float radians, in Collider collider)
+    {
+        public int Stamp = stamp;
+        private readonly Entity _entity = entity;
+        private readonly Vector2 _position = position;
+        private readonly float _radians = radians;
+        private readonly Collider _collider = collider;
+
+        /// <summary>
+        /// The collider is compared byte by byte: a difference only in padding or in the sign of a zero recomputes the
+        /// body, which is still correct.
+        /// </summary>
+        public readonly bool IsSame(int stamp, Entity entity, Vector2 position, float radians, in Collider collider) =>
+            Stamp == stamp && _entity == entity && _position == position && _radians == radians &&
+            MemoryMarshal.AsBytes(new ReadOnlySpan<Collider>(in _collider))
+                .SequenceEqual(MemoryMarshal.AsBytes(new ReadOnlySpan<Collider>(in collider)));
+    }
 }

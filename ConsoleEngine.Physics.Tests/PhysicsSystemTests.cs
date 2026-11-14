@@ -404,6 +404,33 @@ public class PhysicsSystemTests
         });
     }
 
+    [Test]
+    public void Update_ManyUnchangedStatics_KeepCollidingAndBeingHitStepAfterStep()
+    {
+        // Turned boxes and circles that no step changes: after the first step they are reused, not read again.
+        for (var i = 0; i < 300; i++)
+        {
+            _world.Create(new Position(new Vector2(i * 4f, 10)), new Rotation(i * .3f), Collider.Box(new Vector2(1, .5f)));
+            _world.Create(new Position(new Vector2(i * 4f, -10)), Collider.Circle(1f));
+        }
+
+        var target = _world.Create(new Position(new Vector2(600, 0)), new Rotation(.5f), Collider.Box(new Vector2(1, 1)));
+        var ball = _world.Create(new Position(new Vector2(590, 0)), new Velocity(new Vector2(10, 0)),
+            RigidBody.Dynamic(gravityScale: 0f), Collider.Circle(1f));
+        for (var i = 0; i < 20; i++)
+            _group.Update(Step);
+
+        Assert.Multiple(() =>
+        {
+            Assert.That(_world.Get<Position>(ball).Value.X, Is.LessThan(600f), "stopped by the target");
+            Assert.That(_physics.Raycast(new Vector2(700, 0), new Vector2(-150, 0), Collider.AllCategories, out var hit),
+                Is.True);
+            Assert.That(hit.Entity, Is.EqualTo(target));
+            Assert.That(_physics.Raycast(new Vector2(1196, 0), new Vector2(0, 20), Collider.AllCategories, out hit),
+                Is.True, "the last turned box");
+        });
+    }
+
     //**********************************************************
     //** components
     //**********************************************************

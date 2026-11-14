@@ -3,6 +3,7 @@ using BenchmarkDotNet.Attributes;
 using ConsoleEngine.Ecs;
 using ConsoleEngine.Physics;
 using EnginePosition = ConsoleEngine.Ecs.Components.Position;
+using EngineRotation = ConsoleEngine.Ecs.Components.Rotation;
 using EngineVelocity = ConsoleEngine.Ecs.Components.Velocity;
 using Microsoft.Xna.Framework;
 
@@ -11,7 +12,8 @@ namespace ConsoleEngine.Benchmarks.Physics;
 /// <summary>
 /// A <see cref="PhysicsSystem"/> step in a level made mostly of static bodies, as a race track's walls or a pool
 /// table's cushions: a few dynamic balls rolling among <see cref="StaticCount"/> static boxes laid out in a grid, so
-/// the static bodies' share of the broadphase shows.
+/// the static bodies' share of the broadphase shows. <see cref="StaticLayout.TurnedBoxesAndCircles"/> adds as many
+/// static circles as boxes and turns the boxes, as a track's trees and building walls.
 /// </summary>
 [MemoryDiagnoser]
 public class StaticBodiesStepBenchmarks
@@ -32,8 +34,17 @@ public class StaticBodiesStepBenchmarks
     //** props
     //**********************************************************
 
+    public enum StaticLayout
+    {
+        Boxes,
+        TurnedBoxesAndCircles
+    }
+
     [Params(30, 150, 1_000)]
     public int StaticCount { get; set; }
+
+    [Params(StaticLayout.Boxes, StaticLayout.TurnedBoxesAndCircles)]
+    public StaticLayout Layout { get; set; }
 
     //**********************************************************
     //** setup
@@ -50,7 +61,16 @@ public class StaticBodiesStepBenchmarks
         for (var i = 0; i < StaticCount; i++)
         {
             var position = new Vector2(i % columns * Spacing, i / columns * Spacing);
-            _world.Create(new EnginePosition(position), RigidBody.Static(), Collider.Box(new Vector2(2f, .5f)));
+            if (Layout == StaticLayout.Boxes)
+            {
+                _world.Create(new EnginePosition(position), RigidBody.Static(), Collider.Box(new Vector2(2f, .5f)));
+                continue;
+            }
+
+            _world.Create(new EnginePosition(position), new EngineRotation(i * .37f % MathF.PI), RigidBody.Static(),
+                Collider.Box(new Vector2(2f, .5f)));
+            _world.Create(new EnginePosition(position + new Vector2(Spacing * .5f)), RigidBody.Static(),
+                Collider.Circle(.75f));
         }
 
         // Four long walls around the grid (more static bodies, each in many cells) keep the balls in.
