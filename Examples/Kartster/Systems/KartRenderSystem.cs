@@ -8,9 +8,10 @@ using Kartster.Effects;
 namespace Kartster.Systems;
 
 /// <summary>
-/// Draws the ground, the road, the skid marks, the kart and its slide smoke through the game's renderer, seen by a
-/// chase camera that eases towards its place behind the kart, so turns swing it round instead of snapping. Draws the kart where its interpolation puts it
-/// (<c>RenderOffset</c>), so add it after the <c>InterpolationSystem</c>.
+/// Draws the ground, the road, the scenery (culled, see <see cref="Scenery.Draw"/>), the skid marks, the kart and its
+/// slide smoke through the game's renderer, seen by a chase camera that eases towards its place behind the kart, so
+/// turns swing it round instead of snapping. Draws the kart where its interpolation puts it (<c>RenderOffset</c>), so
+/// add it after the <c>InterpolationSystem</c>.
 /// </summary>
 public sealed class KartRenderSystem(Entity kart, KartsterGame game, SkidMarks skidMarks, SlideSmoke smoke)
     : EntitySystem
@@ -50,6 +51,7 @@ public sealed class KartRenderSystem(Entity kart, KartsterGame game, SkidMarks s
         var track = game.Track;
         renderer.Draw(track.Ground, track.GroundWorld, viewProjection, KartsterGame.ToSun);
         renderer.Draw(track.Road, Matrix4x4.Identity, viewProjection, KartsterGame.ToSun);
+        track.Scenery.Draw(renderer, viewProjection, _eye, KartsterGame.ToSun);
         renderer.Draw(skidMarks.Mesh, Matrix4x4.Identity, viewProjection, KartsterGame.ToSun);
         renderer.Draw(game.Kart, Matrix4x4.CreateWorld(position, forward, Vector3.UnitY), viewProjection,
             KartsterGame.ToSun);

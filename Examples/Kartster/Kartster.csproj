@@ -18,6 +18,7 @@
 
     <ItemGroup>
       <None Include="Assets\**\*.obj" CopyToOutputDirectory="PreserveNewest" />
+      <None Include="Assets\**\*.txt" CopyToOutputDirectory="PreserveNewest" />
     </ItemGroup>
 
 </Project>

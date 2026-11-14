@@ -9,7 +9,8 @@ namespace Kartster;
 /// <summary>
 /// A Kartster track as its editor exports it (<c>Docs/track-meshes.md</c> in Kartster): <c>&lt;id&gt;.ribbon.obj</c>
 /// is the road surface and its edge walls, <c>&lt;id&gt;.spline.obj</c> the centerline, one vertex per metre, sections
-/// in route order. Plus a flat chequered ground under it all.
+/// in route order. Plus a flat chequered ground under it all, and the scenery from <c>&lt;id&gt;.scenery.txt</c> when
+/// there is one (models from the <c>Scenery</c> folder beside the tracks folder).
 /// </summary>
 public sealed class Track
 {
@@ -75,13 +76,15 @@ public sealed class Track
     public float GroundHalfSize { get; }
     public float Length { get; }
     public bool IsClosed { get; }
+    public Scenery Scenery { get; private set; } = Scenery.Empty;
 
     //**********************************************************
     //** public methods
     //**********************************************************
 
     /// <summary>
-    /// Loads <c>&lt;id&gt;.ribbon.obj</c> and <c>&lt;id&gt;.spline.obj</c> from <paramref name="folder"/>.
+    /// Loads <c>&lt;id&gt;.ribbon.obj</c>, <c>&lt;id&gt;.spline.obj</c> and, if it is there, <c>&lt;id&gt;.scenery.txt</c>
+    /// from <paramref name="folder"/>.
     /// </summary>
     public static Track Load(string folder, string id)
     {
@@ -107,7 +110,12 @@ public sealed class Track
         if (centerline.Count < 2)
             throw new InvalidDataException($"{id}.spline.obj needs at least two centerline points");
 
-        return new Track(id, road, centerline.ToArray());
+        var track = new Track(id, road, centerline.ToArray());
+        var scenery = Path.Combine(folder, id + ".scenery.txt");
+        if (File.Exists(scenery))
+            track.Scenery = Scenery.Load(scenery, Path.Combine(folder, "..", "Scenery"), track.GroundHeight);
+
+        return track;
     }
 
     /// <summary>

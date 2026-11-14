@@ -235,11 +235,13 @@ Examples/
                                   KartEffectsSystem, KartRenderSystem), Effects/ (SkidMarks, SlideSmoke, KartWheels),
                                   Components/Kart, KartEntity (the kart's physics body),
                                   KartFrame (physics <-> kart frame), KartModel (Kartster part folders), Track
-                                  (exported ribbon + spline), Driving/ (Kartster-like planar kart model: KartDynamics computes force + yaw
-                                  torque per step, KartIntegrator, KartTuning, KartCatalog, KartEngine,
-                                  KartTraction, KartLoadTransfer, Surface), Assets/Karts/ (olabil, wagon) and
-                                  Assets/Tracks/ (star-circuit), exported from Kartster, copied to output
-  Kartster.Tests/               KartModelTests, TrackTests, KartPhysicsSystemTests, KartFrameTests,
+                                  (exported ribbon + spline + scenery), Scenery (scenery file: model instances +
+                                  triangle cells, culled per bounding sphere), Driving/ (Kartster-like planar kart
+                                  model: KartDynamics computes force + yaw torque per step, KartIntegrator, KartTuning, KartCatalog, KartEngine,
+                                  KartTraction, KartLoadTransfer, Surface), Assets/Karts/ (olabil, wagon),
+                                  Assets/Tracks/ (star-circuit: ribbon, spline, scenery.txt) and Assets/Scenery/
+                                  (Pipe.obj from Kartster, Box.obj), exported from Kartster, copied to output
+  Kartster.Tests/               KartModelTests, TrackTests, SceneryTests, KartPhysicsSystemTests, KartFrameTests,
                                   KartInputSystemTests, Driving/KartDynamicsTests, Driving/KartReferenceTests,
                                   Effects/EffectsTests (skid marks, slide smoke)
 .github/workflows/                build-and-test.yml

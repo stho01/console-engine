@@ -117,6 +117,11 @@ using [04](04-flows.md).
 | `No kart parts (*.obj) in <folder>` | `KartModel.Load` (`InvalidDataException`) | A kart folder has no drawable OBJ parts |
 | `<path>:<line>: a face needs at least three corners` | `ObjFile.Read` (`InvalidDataException`) | Broken OBJ file |
 | `<id>.spline.obj needs at least two centerline points` | `Track.Load` (`InvalidDataException`) | Broken or empty track spline export |
+| `<file>:<line>: expected 'model <name> x y z yawDegrees scaleX scaleY scaleZ r g b'` | `Scenery.Parse` (`InvalidDataException`) | A `model` line without exactly 11 values |
+| `<file>:<line>: expected 'tri x1 y1 z1 x2 y2 z2 x3 y3 z3 r g b'` | `Scenery.Parse` (`InvalidDataException`) | A `tri` line without exactly 12 values |
+| `<file>:<line>: '<text>' is not a number` | `Scenery.Parse` (`InvalidDataException`) | A value in a scenery line does not parse (invariant culture) |
+| `<file>:<line>: unknown line '<word>', expected model or tri` | `Scenery.Parse` (`InvalidDataException`) | A scenery line starts with something else |
+| `<file>:<line>: model file <full path> not found` | `Scenery.Parse` (`InvalidDataException`) | A `model` line names an OBJ that is not in the `Scenery` folder beside the tracks folder |
 | `Kartster - <kart> on <track> - <n> km/h - gear <g> - <rpm> rpm - <CPU\|GPU\|CPU (no GPU)> 3D <ms> ms - <colours> - <fps> fps` (window title; 3D = `Clear` to `Finish`, smoothed) | `KartsterGame.OnInitialize` interval, every 250 ms | Running, track mode |
 | `Kartster - <kart> (<n> triangles) - <CPU\|GPU\|CPU (no GPU)> 3D <ms> ms - <colours> - <fps> fps` (window title) | `KartsterGame.OnInitialize` interval, every 250 ms | Running, garage mode |
 | `<colours>` in the titles: `24-bit`, `16 colours`, or `16 colours (no 24-bit)` | `KartsterGame.ColorLabel` | 24-bit on / off / asked for (`--truecolor`, C) but `Console.TrueColorActive` is false ([05 § P2](05-triage.md#p2) step 7) |

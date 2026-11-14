@@ -306,6 +306,9 @@ Hvert steg bygges, testes og prøvekjøres for seg.
 
 - Vegger fra ribbon-eksporten (`*_wall_*`-objektene) som statiske kropper: kontaktløseren tar dem.
 - Flere karter (bots) som kolliderer med hverandre.
+- ~~Kulisser (gjerder, rør, skilt, power-up-bokser, start/mål-linje, trær)~~: gjort, `Examples/Kartster/Scenery.cs`
+  og `<id>.scenery.txt` (regler i `docs/agent/03-rules.md`, Kartster). Bare tegnet; kollisjon med gjerder og rør
+  står igjen.
 - Kantstein og grus fra Kartsters underlagskart (`SurfaceMap`), ikke bare vei/gress.
 - Om modellen viser seg nyttig for flere spill: flytte de generelle delene (aksel, dekk, motor) til en valgfri
   assembly, som Unitys `WheelCollider` eller Godots `VehicleBody`.
