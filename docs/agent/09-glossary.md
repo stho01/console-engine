@@ -4,7 +4,7 @@ Support/user words are **[inferred]**. The team may also use Norwegian terms. Ad
 
 | User / support word | Meaning | Code identifier |
 |---|---|---|
-| the game / the app | One example exe built on the engine | `GameBase` subclass: `TerraformGame`, `SnakeGame`, `AsteroidsGame`, `PlatformerGame`, `ConsoleGame.Game`, and the ECS ports `TerraformEcsGame`, `SnakeEcsGame`, `AsteroidsEcsGame`, `PlatformerEcsGame`, `ConsoleEcsGame`, the ECS stress test `SwarmGame`, the physics demos `PhysicsSandboxGame` and `PhysicsShowcaseGame`, and the ECS game `EternalDiggerGame` |
+| the game / the app | One example exe built on the engine | `GameBase` subclass: `TerraformGame`, `SnakeGame`, `AsteroidsGame`, `PlatformerGame`, `ConsoleGame.Game`, and the ECS ports `TerraformEcsGame`, `SnakeEcsGame`, `AsteroidsEcsGame`, `PlatformerEcsGame`, `ConsoleEcsGame`, the ECS stress test `SwarmGame`, the physics demos `PhysicsSandboxGame` and `PhysicsShowcaseGame`, the ECS game `EternalDiggerGame`, and the Lua demo `ScriptedGame` |
 | the engine | The shared library | `ConsoleEngine` project, namespace `ConsoleEngine` |
 | window / screen | The console window and its cell buffer | `RenderConsole`, `ConsoleHandler`, `IConsoleHandler` |
 | pixel / cell / character | One console cell | `Pixel` (`Char`, `ForegroundColor`, `BackgroundColor`) |
@@ -67,6 +67,14 @@ Support/user words are **[inferred]**. The team may also use Norwegian terms. Ad
 | game over | HUD state, not a stop | `GameScene.GameOver`, `Sprites.GameOver` |
 | restart | Reload same map | `R` → `Scenes.Set(new GameScene(_worldName))` |
 | player name | Typed on first screen (PII) | `TerraformGame.Playername`, `InputNameScene` |
+| script / Lua script | A `.lua` file that returns a module table with `on_start`/`on_update`/`on_render` | `LuaScript`, `LuaRuntime.Load` |
+| script on an entity / scripted entity | An entity that runs a Lua script | `Script` component (`LuaScript.Component`), `LuaScriptSystem`, `LuaRenderSystem` |
+| `self` / entity fields | The Lua view of an entity: its `Position` (`x`, `y`), `Velocity` (`vx`, `vy`), `Glyph` (`char`, `color`, `background`), plus `data` | `run` in `LuaRuntime.EngineSource`, `LuaRuntime.RunHook`/`ReadResults` |
+| script data | A script's own per-entity state | `self.data` |
+| hook | `on_start`, `on_update`, `on_render` in a script's module | `LuaScript.OnStart`/`OnUpdate`/`OnRender` |
+| host function | A C# function callable from Lua (`input.*`, `console.*`, `print`) | `LuaRuntime.RegisterApi` |
+| reload / hot reload / F5 | Re-run scripts and update their modules in place | `LuaScript.Reload`, `LuaRuntime.ReloadAll` |
+| script error / broken script / faulted | A Lua error stopped an entity's script until the script reloads | `ScriptFaulted` tag, `LuaScriptSystem.GetError`, `LuaScriptException` (load errors) |
 | debug mode | Developer overlay | `PlatformerGame.IsDebugMode` (F1), `TerraformGame.IsDebugMode` (unreachable) |
 | launcher / menu / game picker | Text menu that starts the ECS games, one at a time | `Examples/Launcher`: `LauncherApp`, `GameCatalog`, `GameLocator`, `GameRunner` |
 

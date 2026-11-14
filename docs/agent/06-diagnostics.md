@@ -4,7 +4,9 @@
 ## There are no logs
 
 - The engine and the example games **never write a log line**. No `ILogger`, no file, no level, no event log entry of
-  their own. `Log.WriteLine` exists for game authors, but no code in this repo calls it.
+  their own. The only callers of `Log.WriteLine` are `ConsoleEngine.Scripting` (Lua errors and Lua `print`) and
+  the Scripted demo's `ScriptReloadSystem`, and they reach the logger window only with `EnableLogger = true`, which
+  no game that uses Lua sets.
 - Consequence: **absence of output is never evidence.** Every success path and almost every failure path is silent.
   Win32 return values are all ignored ([04 § F1](04-flows.md#f1)).
 - Evidence sources, best first:
@@ -45,6 +47,8 @@ Grep these to locate the code path. None of them has a log level.
 | `Empty deque` | `Deque<T>.PopFront` / `PopBack` (`InvalidOperationException`) | Game popped an empty `Deque` |
 | `no go` | `Move.OnUpdate` / `GetVisualRepresentation` (`Exception`) | Invalid `Direction` value. Unreachable via the UI |
 | `worldName` (param name of `ArgumentNullException`) | `GameScene` ctor | `GameScene` created with null name |
+| `No game exe found next to start-conhost.cmd.` | `Examples/start-conhost.cmd` | The launcher was run outside a game's output folder, or the folder holds only `ConsoleEngine.Logger.exe` |
+| Window title = `GameBase.Name` | `GameBase.Initialize` → `SetTitle` | Default `"Game"`. Platformer `"Platformer game"` |
 | `Entity(<id>v<version>) is not alive.` | `World` (`EcsThrowHelper.ThrowNotAlive`, `InvalidOperationException`) | Entity destroyed, stale handle or `Entity.Null`. After `World.Dispose()` the same calls throw `ObjectDisposedException` instead ([03 § ECS](03-rules.md#ecs)) |
 | `Entity(<id>v<version>) has no <Type> component.` | `World.Get`/`Set`/`Remove` (`InvalidOperationException`) | Component missing |
 | `Entity(<id>v<version>) already has a <Type> component.` | `World.Add` (`InvalidOperationException`) | Use `Set` to overwrite |
@@ -64,6 +68,25 @@ Grep these to locate the code path. None of them has a log level.
 | `Cannot register <Type>: the ECS supports at most 256 component types.` | `ComponentRegistry.Register` (`InvalidOperationException`, wrapped in `TypeInitializationException`) | 257th component type used in the process |
 | `An archetype row needs <n> bytes and does not fit in one 16384-byte chunk.` | `Archetype` ctor (`InvalidOperationException`) | A component set too large for a chunk |
 | Window title = `GameBase.Name` | `GameBase.Initialize` → `SetTitle` | Default `"Game"`. Platformer `"Platformer game"`, Asteroids.Ecs `"Asteroids (ECS)"`, Snake.Ecs `"Snake (ECS)"`, TerraForM.Ecs `"TerraForM (ECS)"`, Platformer.Ecs `"Platformer (ECS)"`, Swarm `"Swarm (ECS)"`, PhysicsSandbox `"Physics Sandbox"`, PhysicsShowcase `"Physics Showcase"`, EternalDigger `"EternalDigger"` |
+
+### Lua scripting (`ConsoleEngine.Scripting`)
+
+All entity errors below are what `LuaScriptSystem.GetError(entity)` returns once the entity has the `ScriptFaulted`
+tag.
+
+| Text | Emitted by | Meaning |
+|---|---|---|
+| `Lua script '<name>': <message>` | `LuaScriptException` (thrown by `LuaRuntime.Load`, `LuaScript.Reload`; returned by `LuaRuntime.ReloadAll`) | Script could not be loaded. `<name>` is the path as passed to `Load` ([04 § F15](04-flows.md#f15)) |
+| `the script must return a table` | `LuaScript.Reload` (inside `LuaScriptException`) | The file ran but did not `return` its module table |
+| `<name>:<line>: <message>` | Lua itself (syntax and runtime errors), inside `LuaScriptException` or an entity error | Where the script failed. Names over 60 bytes are shortened to `...<end>` |
+| `<name>:<line>: unknown field '<key>' on an entity, put script data in self.data` | `guard` in `LuaRuntime.EngineSource` (`__newindex` of every `self`) | Script wrote a field that is no component field |
+| `<name>:<line>: self.<field> needs a <Component> component on the entity` | `guard` in `LuaRuntime.EngineSource` | Script wrote e.g. `self.vx` on an entity without `Velocity` |
+| `self.x must be a number` (also `self.y`, `self.vx`, `self.vy`, `self.color`, `self.background`) | `LuaRuntime.ReadResults` | Hook stored a non-number in that field |
+| `self.char must be a string or a code point` | `LuaRuntime.ReadResults` | Hook stored something else in `self.char` |
+| `<ExceptionType>: <message>` | `LuaRuntime.Call` | A .NET exception inside `input.*`, `console.*` or `print` |
+| `Lua: <error>` | `LuaScriptSystem.RunHook` (`Log.WriteLine`) | An entity faulted ([04 § F16](04-flows.md#f16)). Logger only |
+| `Lua: <print arguments, tab-separated>` | Lua `print` (`LuaRuntime.Print`) | Script debug output. Logger only |
+| The error text on the bottom row, white on dark red | `ScriptErrorSystem` | Scripted demo: first `ScriptFaulted` entity's error |
 
 Runtime exceptions without repo-authored text (message comes from .NET and varies): `DllNotFoundException`,
 `SocketException`, `Win32Exception`, `FileNotFoundException`, `DirectoryNotFoundException`, `FormatException`,
