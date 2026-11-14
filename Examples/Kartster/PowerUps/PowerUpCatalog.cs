@@ -1,4 +1,5 @@
 using System;
+using System.Numerics;
 
 namespace Kartster.PowerUps;
 
@@ -98,19 +99,132 @@ public static class PowerUpCatalog
     public const float ThrowUpSpeed = 8.5f;
     public const float Gravity = 9.81f;
 
+    /// <summary>Invulnerable 5 s: hazards, cans, blasts, the magnet and the train pass it by; bumps don't move it.
+    /// </summary>
+    public const float InvulnerableSeconds = 5f;
+
+    /// <summary>
+    /// How heavy an invulnerable kart is in a kart contact: Kartster hands the solver an immovable body; the port's
+    /// solver needs a mass, so a thousand times its own (<see cref="PowerUpContactSystem"/>).
+    /// </summary>
+    public const float ImmovableMass = 1000f;
+
+    /// <summary>Magnet: everyone within 26 m (not the invulnerable) is pulled at 14 m/s² towards the kart, 5 s.</summary>
+    public const float MagnetPull = 14f;
+    public const float MagnetSeconds = 5f;
+    public const float MagnetRadius = 26f;
+
+    /// <summary>Anvil: four times as heavy in kart contacts for 8 s.</summary>
+    public const float AnvilMass = 4f;
+    public const float AnvilSeconds = 8f;
+
+    /// <summary>Lightning: every other kart held to two thirds of its top speed, and drawn half size, for 6 s.</summary>
+    public const float LightningTopSpeed = 0.667f;
+    public const float LightningShrink = 0.5f;
+    public const float LightningSeconds = 6f;
+
+    /// <summary>Vampire: the kart one place ahead at 0.75× power, the user at 1.25×, 8 s. From the lead: nothing.
+    /// </summary>
+    public const float VampireDrain = 0.75f;
+    public const float VampireGain = 1.25f;
+    public const float VampireSeconds = 8f;
+
+    /// <summary>
+    /// Earthquake and Glitch on every other kart for 5 s (Kartster's disruption time): steering ± up to 0.3 of
+    /// full lock at random each step, or left and right swapped.
+    /// </summary>
+    public const float DisruptionSeconds = 5f;
+    public const float EarthquakeSteeringNoise = 0.3f;
+    public const float GlitchSteeringScale = -1f;
+
+    /// <summary>
+    /// Smoke bomb: dropped like a banana, goes off when its 0.8 s fuse runs out and blasts every kart within 8 m
+    /// (the dropper too): down to 60% of its speed, spun up to 5 rad/s, shoved up to 10 m/s from the middle, grip
+    /// 0.3 back over 1.2 s, all fading to nothing at the edge. Then a 9 m cloud for 10 s.
+    /// </summary>
+    public const float SmokeFuseSeconds = 0.8f;
+    public const float SmokeSeconds = 10.8f;
+    public const float SmokeRadius = 9f;
+    public const float SmokeBlastRadius = 8f;
+    public const float SmokeBlastSpeedKept = 0.6f;
+    public const float SmokeBlastSpin = 5f;
+    public const float SmokeBlastShove = 10f;
+    public const float SmokeBlastGrip = 0.3f;
+    public const float SmokeBlastGripSeconds = 1.2f;
+    public const float SmokeDarkness = 0.85f;
+
+    /// <summary>Fake power-up: a pad that is a can lying on the road (1.2 m, armed after 1 s).</summary>
+    public const float FakePadRadius = PickUpRadius;
+    public const float FakePadArmingSeconds = 1f;
+
+    /// <summary>
+    /// Roadblocks, put down 3.5 m behind and turned across the way the kart faces: plastic 2.4 × 0.5 m, 45 kg,
+    /// 30 s, sliding to a stop at 6 m/s²; concrete 2 × 0.6 m, fixed, for the race. A kart closing on one faster than
+    /// 4 m/s crashes, once a second: plastic keeps 75% of its speed, concrete none.
+    /// </summary>
+    public const float ObstacleDropDistance = 3.5f;
+    public static readonly Vector2 RoadblockHalf = new(1.2f, 0.25f);
+    public static readonly Vector2 ConcreteHalf = new(1f, 0.3f);
+    public const float RoadblockHeight = 1f;
+    public const float ConcreteHeight = 0.8f;
+    public const float RoadblockMass = 45f;
+    public const float RoadblockSeconds = 30f;
+    public const float RoadblockRestitution = 0.3f;
+    public const float ConcreteRestitution = 0.05f;
+    public const float RoadblockSlideDeceleration = 6f;
+    public const float RoadblockSpinDamping = 3f;
+    public const float CrashSpeed = 4f;
+    public const float CrashCooldownSeconds = 1f;
+    public const float RoadblockCrashSpeedKept = 0.75f;
+
+    /// <summary>
+    /// The locomotive: engine 3 × 13 m and cart 3 × 8 m (0.8 m apart), 70 m/s along the route, starting 4 m clear of
+    /// the kart in its lane and easing onto the centerline over 60 m. Each kart it touches once: 30% of its speed
+    /// kept, spun at 6 rad/s, shoved 22 m/s along and 12 m/s off its side. Fades 40 m past the leader (sent back:
+    /// the last kart), after 40 s at the latest, over 1.2 s, hitting nobody.
+    /// </summary>
+    public const float TrainSpeed = 70f;
+    public const float TrainHalfWidth = 1.5f;
+    public const float EngineLength = 13f;
+    public const float CartLength = 8f;
+    public const float CouplingGap = 0.8f;
+    public const float TrainLength = EngineLength + CouplingGap + CartLength;
+    public const float TrainStartClearance = 4f;
+    public const float TrainJoinLineMeters = 60f;
+    public const float TrainSpeedKept = 0.3f;
+    public const float TrainSpin = 6f;
+    public const float TrainShoveAlong = 22f;
+    public const float TrainShoveAside = 12f;
+    public const float TrainPassMargin = 40f;
+    public const float TrainFadeSeconds = 1.2f;
+    public const float TrainSeconds = 40f;
+
     private static readonly SetEntry[] NormalSet =
     [
-        // Kartster's "normal" set, (front, back) weights, in its order. Its other 17 entries (roadblocks, smoke,
-        // trampoline, invulnerable, anvil, lightning, magnet, vampire, the view effects, the fakes, the locomotive)
-        // are left out: Kartster's roll skips refused entries and the rest keep their ratios (PowerUpSetDefinition.Roll).
+        // Kartster's "normal" set, (front, back) weights, in its order. Three are left out, Trampoline (1.5, 0.5: a
+        // launch needs height), Bug Splat (0.3, 1.5) and Smudge (0, 1.5) (they only change a screen): Kartster's roll
+        // skips refused entries and the rest keep their ratios (PowerUpSetDefinition.Roll).
         new(PowerUpKind.SpeedBoost, 2f, 6f),
         new(PowerUpKind.EngineTune, 2f, 3f),
         new(PowerUpKind.GripTune, 2f, 3f),
         new(PowerUpKind.Banana, 4f, 1f),
+        new(PowerUpKind.Roadblock, 2.5f, 0.5f),
+        new(PowerUpKind.ConcreteRoadblock, 1f, 0.2f),
+        new(PowerUpKind.FakePowerUp, 1.5f, 0.5f),
+        new(PowerUpKind.FakeFinish, 1.5f, 0.5f),
+        new(PowerUpKind.SmokeBomb, 2f, 0.5f),
+        new(PowerUpKind.Invulnerable, 1.5f, 0.5f),
+        new(PowerUpKind.Anvil, 1.5f, 0.3f),
         new(PowerUpKind.Lapskaus, 0f, 2.5f),
         new(PowerUpKind.TripleLapskaus, 0f, 1f),
         new(PowerUpKind.HomingJoika, 0f, 2f),
         new(PowerUpKind.TripleHomingJoika, 0f, 0.8f),
+        new(PowerUpKind.Lightning, 0f, 0.8f),
+        new(PowerUpKind.Magnet, 0f, 2f),
+        new(PowerUpKind.Vampire, 0f, 2f),
+        new(PowerUpKind.Earthquake, 0f, 1.5f),
+        new(PowerUpKind.Glitch, 0f, 1f),
+        new(PowerUpKind.Locomotive, 0f, 2.5f),
     ];
 
     //**********************************************************
@@ -128,6 +242,19 @@ public static class PowerUpCatalog
         PowerUpKind.TripleLapskaus => "TRIPLE LAPSKAUS",
         PowerUpKind.HomingJoika => "HOMING JOIKA",
         PowerUpKind.TripleHomingJoika => "TRIPLE HOMING JOIKA",
+        PowerUpKind.Invulnerable => "INVULNERABLE",
+        PowerUpKind.Magnet => "MAGNET",
+        PowerUpKind.Anvil => "ANVIL",
+        PowerUpKind.Lightning => "LIGHTNING",
+        PowerUpKind.Vampire => "VAMPIRE",
+        PowerUpKind.Earthquake => "EARTHQUAKE",
+        PowerUpKind.Glitch => "GLITCH",
+        PowerUpKind.SmokeBomb => "SMOKE BOMB",
+        PowerUpKind.FakeFinish => "FAKE FINISH",
+        PowerUpKind.FakePowerUp => "FAKE POWER-UP",
+        PowerUpKind.Roadblock => "ROADBLOCK",
+        PowerUpKind.ConcreteRoadblock => "CONCRETE ROADBLOCK",
+        PowerUpKind.Locomotive => "LOCOMOTIVE",
         _ => null,
     };
 
@@ -144,6 +271,15 @@ public static class PowerUpCatalog
         or PowerUpKind.HomingJoika or PowerUpKind.TripleHomingJoika;
 
     public static bool IsHoming(PowerUpKind kind) => kind is PowerUpKind.HomingJoika or PowerUpKind.TripleHomingJoika;
+
+    /// <summary>Put down behind on its own key, thrown ahead on T (Kartster's <c>CanBeThrown</c>).</summary>
+    public static bool IsDropped(PowerUpKind kind) => kind is PowerUpKind.Banana or PowerUpKind.SmokeBomb
+        or PowerUpKind.FakePowerUp or PowerUpKind.Roadblock or PowerUpKind.ConcreteRoadblock;
+
+    public static bool IsObstacle(PowerUpKind kind) => kind is PowerUpKind.Roadblock or PowerUpKind.ConcreteRoadblock;
+
+    public static Vector2 ObstacleHalf(PowerUpKind kind) =>
+        kind == PowerUpKind.ConcreteRoadblock ? ConcreteHalf : RoadblockHalf;
 
     /// <summary>
     /// The weight of <paramref name="kind"/> for a kart at <paramref name="normalizedPosition"/> (0 leader, 1 last):

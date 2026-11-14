@@ -261,10 +261,12 @@ Examples/
                                   rules: RaceMarkers loads <id>.race.txt, RaceGate, GridSlot, RaceSession (pure:
                                   countdown, gates, laps, positions, gaps), RaceReport (HUD state), Racer, RacePhase, RaceProgress (component),
                                   RaceSystem, AutopilotSystem, RaceFinish),
-                                  PowerUps/ (Kartster's power-ups: PowerUpField (pure: pads, reel, draw, hazards, cans),
-                                  PowerUpCatalog, PowerUpKind/PowerUpAim, KartEffects, KartEffectTuning, BotPowerUps,
-                                  PowerUpSystem (fixed step; Add wires it all), PowerUpInputSystem (E/T/B), PowerUpView,
-                                  PowerUpPads (powerups.txt)), Modes/ (RaceMode, TimeTrial: the player alone,
+                                  PowerUps/ (Kartster's power-ups: PowerUpField (pure: pads, reel, draw, hazards, cans,
+                                  roadblocks, fake finishes, trains, magnet), PowerUpCatalog, PowerUpKind/PowerUpAim,
+                                  KartEffects, KartEffectTuning, BotPowerUps, PowerUpSystem (fixed step, roadblock
+                                  bodies; Add wires it all), PowerUpContactSystem (+ PowerUpSteeringSystem: glitch,
+                                  earthquake, anvil and invulnerable mass round the kart model), PowerUpInputSystem
+                                  (E/T/B), PowerUpView, PowerUpPads (powerups.txt)), Modes/ (RaceMode, TimeTrial: the player alone,
                                   laps recorded per fixed step (TimeTrialSystem, GhostLap, GhostPose), the best lap
                                   as a see-through ghost (GhostRenderSystem) and in GhostFile under
                                   %LOCALAPPDATA%/Kartster/ghosts),
@@ -289,7 +291,7 @@ Examples/
                                   Bots/BotTrafficTests (road widths, passing, following, leaning, 6-bot race),
                                   Collision/TrackCollisionTests (file, walls, pipe, bots lap every track with walls,
                                   allocation),
-                                  PowerUps/ (PowerUpFieldTests, PowerUpSystemTests)
+                                  PowerUps/ (PowerUpFieldTests, PowerUpSystemTests, PowerUpKindsTests)
 tools/
   KartsterExport/                 track exporter (not in the solution): Program (list, export), ITrackExporter,
                                   RibbonExporter, SplineExporter, SceneryExporter, RaceExporter,

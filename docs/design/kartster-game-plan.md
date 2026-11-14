@@ -338,3 +338,20 @@ HUD-en ankres i spillerens region, men har samme størrelse (`Docs/hud.md`). Tas
   Detaljer i `docs/agent/03-rules.md` (raden «Kart catalog»).
 - **Risiko:** de ekte bilene har 20 000–40 000 trekanter hver (olabil 3 200); mange av dem i et løp koster
   rasteriseringstid. Ingen LOD ennå.
+### Status: P2 (resten av power-upene)
+Levert på grenen til P2. Regler og tall i `docs/agent/03-rules.md` (Kartster-raden om power-ups).
+- **Med, som originalen:** Invulnerable (5 s: farer, bokser, Joika, røyk, magnet, sperrer og tog går forbi; 1000×
+  masse i kontakt), Anvil (4× masse i 8 s), Magnet, Lightning (toppfart 0,667), Vampire, Glitch og Earthquake (på
+  styringen), Smoke Bomb (smellet; skyen tegnet som fem klumper), Fake Power-up, Roadblock og Concrete Roadblock (egne
+  fysikk-kropper), Fake Finish (bare tegnet), Locomotive (langs midtlinjen); alle i trekningen med originalens vekter,
+  bots etter `Simple`-reglene. Usårbar kart: blinkende gull-plate under kartet.
+- **Utenfor trekningen:** Trampoline (trenger høyde), Bug Splat og Smudge (bare skjermeffekter); de andre beholder
+  forholdet seg imellom.
+- **Tilnærmet:** ingen hopp (planet), toget går på midtlinjen og er ingen fast kropp, ≥ 0,7 sprett mot ambolt-kart er
+  ute, glitchede bots styrer ikke tilbake.
+- **Kroker som trengs utenfor `PowerUps/`** (ikke gjort): `KartRenderSystem` tegner kartet i
+  `PowerUpField.Effects(k).DrawScale` (lyn); HUD/`TrackScene` legger `PowerUpField.SmokeCover(øye)` som mørk vask over
+  bildet, snur bildet når `Effects(spiller).SteeringScale < 0` og rister kameraet når `SteeringNoise > 0`;
+  `BotTraffic` lener seg ikke på karter med `IsInvulnerable` eller `Mass > 1` (originalens `BotBumping`).
+- **Rørt utenfor `PowerUps/`:** bare dokumentasjon. `PowerUpSystem.Add` legger nå også til `PowerUpSteeringSystem` og
+  `PowerUpContactSystem` (plassert med `UpdateBefore`/`UpdateAfter` rundt `KartPhysicsSystem`).

@@ -25,7 +25,7 @@ public sealed class KartEffectTuning(PowerUpField field)
     private const float PowerStep = 0.01f;
     private const float GripStep = 0.05f;
 
-    private Dictionary<int, KartTuning>[] _cache;
+    private Dictionary<long, KartTuning>[] _cache;
 
     //**********************************************************
     //** public methods
@@ -57,25 +57,29 @@ public sealed class KartEffectTuning(PowerUpField field)
 
         var power = Math.Max(1, (int)MathF.Round(effects.EnginePower / PowerStep));
         var grip = Math.Max(1, (int)MathF.Round(effects.TyreGrip / GripStep));
+        var topSpeed = Math.Clamp((int)MathF.Round(effects.TopSpeed / PowerStep), 1, 100);
         var boosting = effects.IsBoosting;
-        if (power == 100 && grip == 20 && !boosting)
+        if (power == 100 && grip == 20 && topSpeed == 100 && !boosting)
             return null;
 
-        _cache ??= new Dictionary<int, KartTuning>[field.KartCount];
-        var cache = _cache[index] ??= new Dictionary<int, KartTuning>();
-        var key = ((power * 1024 + grip) * 8 + (int)surface) * 2 + (boosting ? 1 : 0);
+        _cache ??= new Dictionary<long, KartTuning>[field.KartCount];
+        var cache = _cache[index] ??= new Dictionary<long, KartTuning>();
+        var key = ((((long)power * 1024 + grip) * 128 + topSpeed) * 8 + (int)surface) * 2 + (boosting ? 1 : 0);
         if (!cache.TryGetValue(key, out var tuning))
         {
-            tuning = Build(dynamics, power * PowerStep, grip * GripStep, surface, boosting);
+            tuning = Build(dynamics, power * PowerStep, grip * GripStep, surface, boosting, topSpeed * PowerStep);
             cache[key] = tuning;
         }
 
         return tuning;
     }
 
-    /// <summary>Kartster's <c>Apply</c> then <c>ApplySurfaceSpeedLimit</c> on the kart's own tuning.</summary>
+    /// <summary>
+    /// Kartster's <c>Apply</c> then <c>ApplySurfaceSpeedLimit</c> on the kart's own tuning; the surface's top-speed
+    /// share times <paramref name="topSpeedMultiplier"/> (lightning).
+    /// </summary>
     public static KartTuning Build(KartDynamics dynamics, float powerMultiplier, float gripMultiplier, Surface surface,
-        bool isBoosting)
+        bool isBoosting, float topSpeedMultiplier = 1f)
     {
         var own = dynamics.Tuning;
         var surfaceGrip = SurfaceHandling.GetGripMultiplier(surface);
@@ -87,7 +91,8 @@ public sealed class KartEffectTuning(PowerUpField field)
             RollingResistance = own.RollingResistance * SurfaceHandling.GetRollingDragMultiplier(surface),
         };
 
-        var fraction = isBoosting ? GetBoostedTopSpeedFraction(surface) : SurfaceHandling.GetTopSpeedFraction(surface);
+        var fraction = (isBoosting ? GetBoostedTopSpeedFraction(surface) : SurfaceHandling.GetTopSpeedFraction(surface))
+                       * MathF.Max(topSpeedMultiplier, 0f);
         if (fraction >= 1f)
             return tuning;
 

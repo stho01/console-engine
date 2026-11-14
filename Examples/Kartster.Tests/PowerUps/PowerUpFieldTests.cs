@@ -175,11 +175,12 @@ public class PowerUpFieldTests
             if (last == PowerUpKind.SpeedBoost) lastBoosts++;
         }
 
-        // Kartster's weights: speed boost 2 → 6, bananas 4 → 1, cans 0 → 6.3 (of 10 at the front, 19.3 at the back).
+        // Kartster's weights: speed boost 2 → 6, bananas 4 → 1, cans 0 → 6.3 (of 21.5 at the front, 32.1 at the back,
+        // without the trampoline, bug splat and smudge).
         Assert.That(leaderCans, Is.Zero);
-        Assert.That(leaderBoosts / (float)draws, Is.EqualTo(0.2f).Within(0.015f));
-        Assert.That(lastBoosts / (float)draws, Is.EqualTo(6f / 19.3f).Within(0.015f));
-        Assert.That(lastCans / (float)draws, Is.EqualTo(6.3f / 19.3f).Within(0.015f));
+        Assert.That(leaderBoosts / (float)draws, Is.EqualTo(2f / 21.5f).Within(0.01f));
+        Assert.That(lastBoosts / (float)draws, Is.EqualTo(6f / 32.1f).Within(0.01f));
+        Assert.That(lastCans / (float)draws, Is.EqualTo(6.3f / 32.1f).Within(0.01f));
         Assert.That(PowerUpCatalog.WeightAt(PowerUpKind.Banana, 0.5f), Is.EqualTo(2.5f));
     }
 

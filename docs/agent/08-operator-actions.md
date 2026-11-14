@@ -72,7 +72,7 @@ team's process differs.
 | Kartster (race) | R | Every kart back on the grid, countdown again (restarts `TrackScene`, same laps) | `TrackScene.UpdateFlow` |
 | Kartster (race) | ENTER or ESC | Pause: the race stops, `PAUSED` menu over it | `TrackScene.UpdateFlow`, `PauseMenu` |
 | Kartster (paused) | UP DOWN / ENTER / ESC | Choose RESUME, RESTART or QUIT TO TITLE / pick it / resume | `PauseMenu.Update` |
-| Kartster (race) | E / T / B (pressed) | Use the power-up held: its own way / throw it ahead (bananas) / drop it behind (cans); while the reel spins, stop it on the face shown. Nothing during the countdown. Kartster drops on G, which the port keeps for the GPU switch | `PowerUpInputSystem` → `PowerUpField.RequestUse` |
+| Kartster (race) | E / T / B (pressed) | Use the power-up held: its own way / throw it ahead (bananas, smoke bomb, fake power-up, roadblocks) / drop it behind (cans; a locomotive is sent back); while the reel spins, stop it on the face shown. Nothing during the countdown. Kartster drops on G, which the port keeps for the GPU switch | `PowerUpInputSystem` → `PowerUpField.RequestUse` |
 | Kartster (results) | ENTER / ESC | Race again (race setup) / title | `ResultsScene.OnUpdate` |
 | Kartster (garage) | A D / W S / Q E (held), SPACE, TAB, ESC | Orbit left/right / up/down, zoom in/out, auto-spin on/off, next kart (also chosen for the race), title | `GarageScene.OnUpdate` |
 | Kartster (any scene) | G | Switch between the CPU `Rasterizer` and the OpenGL `GlRenderer`; stays on the CPU (title `CPU (no GPU)`) when OpenGL 3.3 isn't available | `KartsterGame.ToggleGpu` |
