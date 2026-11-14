@@ -143,3 +143,14 @@ No `runtimes\win-x64\native\glfw3.dll` (or the folder for this machine's archite
 step 1 (partial copy). A video controller named `Microsoft Basic Display Adapter`, or a remote desktop / VM session,
 usually means no OpenGL 3.3 core profile **[external]**. In a developer checkout, `dotnet test
 ConsoleEngine.Rendering3D.OpenGL.Tests` answers it: tests ignored with `OpenGL 3.3 not available` mean no context.
+
+<a id="q14"></a>
+## Q14 — Can this console do 24-bit colour (VT sequences)?
+
+In the same kind of window the game opens in:
+```powershell
+[System.Environment]::OSVersion.Version; Write-Host "$([char]27)[48;2;255;128;0m  orange?  $([char]27)[0m"
+```
+Build 14393 (Windows 10 1607) or newer and an orange block → VT works in that console, so `SetTrueColor` should
+succeed. Literal `[48;2;...` text instead → VT is not available there ([P2](05-triage.md#p2) step 7). **[external]**:
+PowerShell turns VT on for its own output, so an orange block is strong, not certain, evidence for the game.

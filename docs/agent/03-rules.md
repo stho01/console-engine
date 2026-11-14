@@ -27,6 +27,17 @@ Every frame, in this order: `GameTime.Update()` → `Input.Instance.Update()` �
   wrong until the game draws something different there.
 - Why: conhost's cost scales with the rows written, unchanged or not, and it is almost the whole cost of a frame
   (numbers in `AGENTS.md` § Performance).
+- **24-bit colour** (`SetTrueColor(true)`): `GetConsoleMode`, then `SetConsoleMode` with
+  `ENABLE_VIRTUAL_TERMINAL_PROCESSING` and `ENABLE_PROCESSED_OUTPUT` on and `ENABLE_WRAP_AT_EOL_OUTPUT` off (writing
+  the last column never scrolls). Either call failing returns false (console stays as it was, palette output). The
+  16 colours for `PaletteColor` cells are read from the console's colour table (`GetConsoleScreenBufferInfoEx`, again
+  after `SetPalette`). `SetTrueColor(false)` gives the original mode back; so do `Close()` and `ProcessExit`.
+- While it is on, `Render(pixels, foregroundRgb, backgroundRgb)` builds the frame with `VtFrame.Build`: only cells
+  whose character or colours changed since the last written frame, `ESC[row;colH` before each run of changed cells,
+  `ESC[38;2;r;g;b` / `48;2;r;g;b` only when the colour differs from the previous written cell (only the layer that
+  changed), control characters and NUL as spaces. One `WriteConsoleW`; a failed or short write makes the next frame
+  write every cell. A frame equal to the last one writes nothing. Switching between palette and VT output rewrites
+  everything on the next frame.
 
 <a id="true-colour"></a>
 ### True colour (`RenderConsole.TrueColor`, `DrawRgb`)

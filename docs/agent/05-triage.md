@@ -61,6 +61,15 @@
 4. The user resized/maximised the window → `Resizeable` is false by default, so the Maximize/Size menu items are removed. Dragging the border may still work **[external]**. **Cause:** the buffer is fixed at construction. **Fix:** restart the game without resizing. Stop.
 5. Their own game reads `Console.FontInfo` and gets 14×14 → **Cause:** getter returns the ctor default, not the applied font ([02](02-state-model.md)). **Fix:** escalate as a bug. Stop.
 6. Colours are wrong (Kartster: purple/red sky, garish road), or another console's colours changed after a game → **Cause:** `RenderConsole.Palette` remaps the 16 colours ([04 § F1](04-flows.md#f1) step 7b). Windows Terminal and terminals without true colour ignore it **[external]**, so the game's colour indices show as default colours. **Fix:** run in `conhost` (`start-conhost.cmd`, `run-game.ps1`). The original colours come back on exit (`Close()`, `ProcessExit`); a process that was killed leaves them changed until that console window closes.
+7. A game in 24-bit colour (`RenderConsole.TrueColor`, Kartster `--truecolor`/C) shows 16 colours, banded or
+   dithered → is `RenderConsole.TrueColorActive` false (Kartster: title says `16 colours (no 24-bit)`)? → **Cause:**
+   `SetConsoleMode` with `ENABLE_VIRTUAL_TERMINAL_PROCESSING` failed ([04 § F1](04-flows.md#f1) step 9b): Windows
+   older than 10 1607, or output not a console **[external]**; `DrawRgb` then draws the nearest palette colour. Check
+   [07 § Q14](07-checks.md#q14). **Fix:** a newer Windows; otherwise accept 16 colours. Stop.
+8. 24-bit colour is on and the game is much slower than in 16 colours, in conhost → **Cause:** conhost parses every
+   colour change of the VT text; frames with many per-cell colour changes cost 5–7× the palette write (numbers in
+   `AGENTS.md` § Performance). **Fix:** turn 24-bit off (Kartster: C), or the developer makes the picture smoother.
+   Stop.
 
 <a id="p3"></a>
 ## P3 — Keys don't work / react in other windows / presses missed
@@ -150,7 +159,8 @@
 
 1. Level vanished when the menu opened (TerraForM `ESC`) → **Cause:** `Push` pauses the level and paused scenes don't render ([03 § Scenes](03-rules.md#scenes)). **Fix:** press `H` to return. Stop.
 2. Old characters stay on screen → is `ClearScreenOnEachFrame = false` (Snake, or their own game)? → **Cause:** buffer not cleared (`GameBase.Start`). Their game must blank cells itself. Stop.
-3. Text printed with `System.Console.Write` (or by another program) stays on screen, or cells stay wrong after it, on Windows → **Cause:** `ConsoleHandler.Render` writes only the rows that changed in the game's frame ([03 § Console output](03-rules.md#console-output)), so it never overwrites what something else wrote until the game draws something different there. **Fix:** draw through `RenderConsole` instead of `System.Console`. Stop.
+3. Text printed with `System.Console.Write` (or by another program) stays on screen, or cells stay wrong after it, on Windows → **Cause:** `ConsoleHandler.Render` writes only the rows that changed in the game's frame ([03 § Console output](03-rules.md#console-output)), so it never overwrites what something else wrote until the game draws something different there. **Fix:** draw through `RenderConsole` instead of `System.Console`. Stop. In 24-bit colour the same holds per cell
+   (`VtFrame` writes only changed cells).
 
 <a id="p13"></a>
 ## P13 — Snake goes off screen / can't lose

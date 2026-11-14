@@ -194,7 +194,7 @@ ConsoleEngine.Abstractions/
   Inputs/  IInputHandler, Key, KeyState
   Rendering/  IConsoleHandler, Pixel, FontInfo
 Libs/
-  ConsoleEngine.Windows/          ConsoleHandler, InputHandler, LowLevel/ (P/Invoke + structs)
+  ConsoleEngine.Windows/          ConsoleHandler, VtFrame (24-bit VT text), InputHandler, LowLevel/ (P/Invoke + structs)
   ConsoleEngine.Logger/           Program.cs (logger exe)
   Microsoft.Xna.Framework/        Vector2/3/4, Point, Rectangle, Matrix, …
 Examples/
@@ -269,7 +269,8 @@ Examples/
   that way: a future macOS backend (issue 7) must be able to replace that project alone. One known leak:
   `GameBase` and `Input` currently `new` up `ConsoleHandler`/`InputHandler` directly.
 - Win32 return values are mostly ignored. `ConsoleHandler.Render` checks `WriteConsoleOutput` (a failed write makes
-  the next frame rewrite every row). When touching `ConsoleHandler`, prefer checking them over adding more silent
+  the next frame rewrite every row); `SetTrueColor` checks `GetConsoleMode`/`SetConsoleMode` and the RGB `Render`
+  checks `WriteConsole`. When touching `ConsoleHandler`, prefer checking them over adding more silent
   calls. `ConsoleEngine.Windows` has `InternalsVisibleTo` for `ConsoleEngine.Tests` and `ConsoleEngine.Benchmarks`.
 - Lua scripts are ECS behaviour: `LuaRuntime(game)` → `Load` → put `LuaScript.Component` (a `Script` component) on
   an entity → `LuaScriptSystem` (simulation) runs `on_start`/`on_update`, `LuaRenderSystem` (presentation) runs
@@ -330,6 +331,29 @@ mean ms per frame over 1000 frames, 200 at 480×270):
   of 33 ms at 320×180; an unchanged frame 0.04 ms; a frame where every row changes the same as before.
 - For speed, leave cells unchanged where you can (a static sky, HUD) and avoid needless per-cell colour alternation.
   Copying a whole frame of colours through `Draw` per cell is fine (0.3 ms at 320×180).
+
+**24-bit colour (`RenderConsole.TrueColor`) vs the palette**, mean ms per `ConsoleHandler.Render` call (the time the
+game loop waits), 300 frames in conhost / 200 in Windows Terminal, Consolas; a scratch harness drove the engine's
+`ConsoleHandler` with fixed frames. (a) is a 3D-like true-colour frame: static sky gradient, grass and a shaded road
+with scrolling bands, a moving kart, a few colour changes per row; the palette column draws its nearest 16 colours.
+(b) is a dithered 16-colour frame, drawn through VT as `PaletteColor` cells. (c) changes every cell's colour randomly.
+
+| Frame | 320×180 @ 3×3 palette | 320×180 VT 24-bit | 240×135 @ 4×4 palette | 240×135 VT 24-bit | WT 320×180 palette / VT |
+|---|---|---|---|---|---|
+| (a) smooth 3D-like | 1.5 | 1.0 (2.7 all cells) | 0.5 | 0.4 (1.3 all cells) | 0.8 / 0.2 |
+| (b) dithered | 13 | 96 | 4.4 | 57 | 5.1 / 7.8 |
+| (c) noise | 48 | 258 | 18 | 120 | 11 / 18 |
+| (d) unchanged | 0.03 | 0.14 | 0.02 | 0.06 | 0.03 / 0.11 |
+
+- conhost parses VT synchronously, so its cost is the text: about 0.24 µs per character at 320×180 (a noise frame is
+  1.08 M characters, a smooth frame written whole 70 k). Every colour change costs a ~20-character SGR, which is why
+  dithered and noise frames are 5–7× slower than the palette. Smooth frames are as fast or faster. Building the text
+  is under 2 ms even for noise (0.17 ms for (a)).
+- The palette write returns sooner because conhost paints it later (its median is a fraction of its mean, with
+  spikes); the means above are what the game loop sees.
+- So 24-bit pays off for smooth, shaded pictures (no dither needed) and hurts with per-cell colour noise: keep RGB
+  frames smooth, and leave dithering to palette mode. `WriteFile` of the same text as UTF-8 measured the same as
+  `WriteConsoleW`, which needs no code-page change.
 
 Tag performance work as `perf:` commits.
 
@@ -440,6 +464,7 @@ Use [Conventional Commits 1.0.0](https://www.conventionalcommits.org/en/v1.0.0/#
 | **Lua `self` tables** | Components are unmanaged, so each entity's `self` lives in `LuaScriptSystem._instances`, indexed by `Entity.Id` and checked against `Entity.Version`. A destroyed entity's table is freed when its id is reused (or with the runtime). One `LuaScriptSystem` per `World`. Dispose the `LuaRuntime` with the scene (`EcsScene.OnDestroy`) |
 | **Lua reload** | `Reload` reads the copy in the **output** folder. Editing `Examples/*/Assets/Scripts` changes nothing until the next build |
 | **Kartster vs. Kartster** | `Examples/Kartster` (namespace `Kartster`, `KartsterGame`) is this repo's console port of the MonoGame kart racer Kartster (`C:\Forse\kartster-server`, not in this repo). In comments and docs, "Kartster's …" (physics, `KartCatalog`, palettes, keyboard steering) means the original game; the port names its own files by path. It was called `KartViewer` until 2026-11-14 |
+| **Windows Terminal** | The classic-console calls (size, font, `SetPalette`) are ignored there, so the palette path shows wrong sizes and colours. 24-bit output (`RenderConsole.TrueColor`) is VT text, which Windows Terminal draws in exact colours (and fast, see § Performance), but the window and font still aren't set: a 320×180 frame doesn't fit unless the user shrinks the font. Not checked by eye |
 | **Running games** | Not possible headless. Verify with `dotnet build` + `dotnet test`, and say plainly that a change was not checked in a real console |
 
 <a id="keep-docs-current"></a>

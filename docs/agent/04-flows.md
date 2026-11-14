@@ -20,7 +20,7 @@ the code continues with no signal at all.
 | 7b | If `RenderConsole.Palette` is set (16 colours, `0xRRGGBB`): `SetPalette`. Windows: `GetConsoleScreenBufferInfoEx` → keep the original `ColorTable` once (restored by `Close()` and on `ProcessExit`, because `Stop()` exits through `Environment.Exit`) → `SetConsoleScreenBufferInfoEx` with the window's right/bottom grown by one (else conhost shrinks the window a cell). Cross-platform: true-colour terminals use it, others keep their 16 ANSI colours | `ConsoleHandler.SetPalette`, `CrossPlatformConsoleHandler.SetPalette` | `GetConsoleScreenBufferInfoEx` fails → `return`; the Set result is ignored. Windows Terminal ignores it **[external]** | Silent: the console keeps its default colours, so a game's colour indices show as the wrong colours |
 | 8 | If `!Resizeable` (default): remove Maximize/Size from the system menu | `ConsoleHandler.Resizable(false)` | `GetConsoleWindow()` returns `IntPtr.Zero` → `return` | Silent: window stays resizable |
 | 9 | `SetCursorVisible(!HideCursor)` | `ConsoleHandler.SetCursorVisible` | fails: ignored | Silent: blinking cursor visible |
-| 9b | If `RenderConsole.TrueColor`: `TrueColorActive = SetTrueColor(true)`; when true, allocate the two RGB buffers once and fill them with `IConsoleHandler.PaletteColor` ([03 § True colour](03-rules.md#true-colour)) | `RenderConsole.ApplyTrueColor` → `IConsoleHandler.SetTrueColor` | Handler returns false (default method, or the console can't) | `TrueColorActive == false`: `DrawRgb` draws the nearest palette colour |
+| 9b | If `RenderConsole.TrueColor`: `TrueColorActive = SetTrueColor(true)`; when true, allocate the two RGB buffers once and fill them with `IConsoleHandler.PaletteColor` ([03 § True colour](03-rules.md#true-colour)) | `RenderConsole.ApplyTrueColor` → `IConsoleHandler.SetTrueColor` | Handler returns false (default method, or the console can't). Windows: `GetConsoleMode` or `SetConsoleMode` (with `ENABLE_VIRTUAL_TERMINAL_PROCESSING`) fails: Windows before 10 1607, output redirected **[external]** | `TrueColorActive == false`: `DrawRgb` draws the nearest palette colour |
 | 10 | If `ShowFps`: `GameTime.SetInterval(100, () => Log.ReportFps(GameTime.Fps))` | `GameBase.Initialize` | — | FPS reaches the logger **only if** `EnableLogger` ([P4](05-triage.md#p4)) |
 | 11 | `Start()`: `Thread.Sleep(100)`, then loop until `_running = false` ([F2](#f2)) | `GameBase.Start` | — | — |
 
@@ -39,7 +39,7 @@ the final `Width`/`Height`, because those come from the ctor arguments.
 | 5 | Game `OnUpdate` | game | — | — |
 | 6 | Render top scene | `SceneManager.Render` → `Scene.Render` | No scene → skipped. `IsPaused` → `return` | Scene not drawn |
 | 7 | Game `OnRender` | game | — | — |
-| 8 | Write buffer to console. `RenderConsole.Display` calls `Render(pixels, foregroundRgb, backgroundRgb)` while `TrueColorActive`, else `Render(pixels)`, which | `ConsoleHandler.Render`: converts `Pixel`s to `CharInfo`s, `FindChangedRows` against the last written frame, then one `WriteConsoleOutput` of the rows from the first to the last changed one | No row changed → no write. First frame, after `InitializeConsole`, or after a failed write (`_shownCharsValid == false`) → all rows. Write fails → `_shownCharsValid = false` | Silent: screen not updated this frame, the next frame rewrites every row |
+| 8 | Write buffer to console. `RenderConsole.Display` calls `Render(pixels, foregroundRgb, backgroundRgb)` while `TrueColorActive`, else `Render(pixels)`, which | `ConsoleHandler.Render`: converts `Pixel`s to `CharInfo`s, `FindChangedRows` against the last written frame, then one `WriteConsoleOutput` of the rows from the first to the last changed one | No row changed → no write. First frame, after `InitializeConsole`, or after a failed write (`_shownCharsValid == false`) → all rows. Write fails → `_shownCharsValid = false`. 24-bit: `VtFrame.Build` → one `WriteConsoleW`; no changed cell → no write; failed or short write → `VtFrame.Invalidate` | Silent: screen not updated this frame, the next frame rewrites every row (24-bit: every cell) |
 | 9 | Unload queued scenes, `GC.Collect()` | `SceneManager.Cleanup` | Queue empty → `return` | — |
 
 <a id="f3"></a>
@@ -51,7 +51,9 @@ the final `Width`/`Height`, because those come from the ctor arguments.
 | 2 | `_running = false`, then `_console.Close()` | `RenderConsole.Close` | **Calls `Environment.Exit(0)`: the process ends here** |
 | 3 | `if (EnableLogger) Log.Stop()` | `GameBase.Stop` | **Never reached** (step 2 exited). The logger socket isn't closed by `Log.Stop` |
 
-`ConsoleHandler.Close()` is an empty method and is not called.
+`ConsoleHandler.Close()` (gives back the palette and, after 24-bit colour, the console mode) runs only through
+`RenderConsole.Restore` (Ctrl+C, an exception in the loop). `Stop()` exits first, so both are also restored on
+`ProcessExit`.
 
 <a id="f4"></a>
 ## F4 — Logger (`Log`, game side; `ConsoleEngine.Logger/Program.cs`, logger side)

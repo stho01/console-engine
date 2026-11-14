@@ -35,7 +35,7 @@ Nothing is hosted and nothing is exposed to the internet. Every unit is a local 
 | `EternalDigger.Tests` | NUnit test project | `MineTests`, `TilesTests`, `ShopTests`, `LightMapTests`, `ParticleLooksTests`, `MinerControlSystemTests` (plays frames with scripted `MinerInput`, no keyboard), `MinerVisibilityTests` (renders into a `RenderConsole` over `Fakes/FakeConsoleHandler`), `ElevatorTests`, `DynamiteTests`, `ShopCounterTests`, `UpgradesTests`, `LampOilTests`, `BagWeightTests`, `SaveFileTests`, `SaveSystemTests` (temp folders), `TitleMenuTests`, `InventorySystemTests`, `DeepCampTests`, `GasTests`, `DarknessTests`, `ProgressTests` |
 
 Hard dependency: **Windows only.** `ConsoleHandler` and `InputHandler` call `kernel32.dll`/`user32.dll` directly
-(`GetStdHandle`, `WriteConsoleOutputW`, `SetCurrentConsoleFontEx`, `Get`/`SetConsoleScreenBufferInfoEx` (palette), `GetAsyncKeyState`…). No other platform
+(`GetStdHandle`, `WriteConsoleOutputW`, `SetCurrentConsoleFontEx`, `Get`/`SetConsoleScreenBufferInfoEx` (palette), `GetConsoleMode`/`SetConsoleMode` and `WriteConsoleW` (24-bit colour through VT sequences), `GetAsyncKeyState`…). No other platform
 implementation exists; macOS support is GitHub issue 7, open.
 
 Games that reference `ConsoleEngine.Scripting` also load the native Lua library `lua54.dll` from
@@ -62,7 +62,7 @@ the repo for these: Silk.NET makes all the calls.
 | Link | Direction | Detail | Where |
 |---|---|---|---|
 | Launcher → game process | spawn | `Process.Start` of `%SystemRoot%System32nhost.exe cmd.exe /c ".<ProjectName>.exe || pause"` with `UseShellExecute = true` and `WorkingDirectory` = the exe's folder, so the game gets a **classic console window** even when Windows Terminal is the default terminal. The launcher waits for conhost to exit (`WaitForExit`), so one game runs at a time. Exe path: `Examples/<ProjectName>/<launcher's output path, e.g. bin/Debug/net11.0>/<ProjectName>.exe`. **On macOS and Linux** there is no conhost: the apphost has no extension (`<ProjectName>`) and is started directly (`UseShellExecute = false`, same working directory), inheriting the launcher's terminal | `GameRunner.Run`, `GameRunner.BuildArguments`, `GameLocator.GetExecutablePath` |
-| Game → console window | out | At most one `WriteConsoleOutput` per frame: the rows from the first to the last one that changed since the last frame (none when nothing changed) | `ConsoleHandler.Render`, `ConsoleHandler.FindChangedRows` |
+| Game → console window | out | At most one `WriteConsoleOutput` per frame: the rows from the first to the last one that changed since the last frame (none when nothing changed). With 24-bit colour on: at most one `WriteConsoleW` of VT text (cursor moves, SGR `38;2`/`48;2`, the changed cells only) | `ConsoleHandler.Render`, `ConsoleHandler.FindChangedRows`, `VtFrame.Build` |
 | Keyboard → game | in | `GetAsyncKeyState(i)` polled for all 256 virtual keys every frame | `InputHandler.Update` |
 | Game → logger | out, TCP | Game **listens** on `Dns.GetHostEntry("localhost").AddressList[0]`, port **11000** (hard-coded). No auth. Messages are UTF-8 and end with `'\0'` | `Log` static ctor, `Log.Start` |
 | Game → logger process | spawn | `Process.Start` of `"ConsoleEngine.Logger.exe"` with `UseShellExecute = true` (relative file name) | `Log.Start` |
