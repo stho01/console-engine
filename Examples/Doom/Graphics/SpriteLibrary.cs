@@ -85,6 +85,8 @@ public sealed class SpriteLibrary
     //**********************************************************
 
     private readonly Dictionary<string, SpriteDefinition> _sprites = new(StringComparer.Ordinal);
+    private readonly Dictionary<string, int> _ids = new(StringComparer.Ordinal);
+    private readonly List<SpriteDefinition> _byId = [];
 
     //**********************************************************
     //** public methods
@@ -120,6 +122,13 @@ public sealed class SpriteLibrary
     /// <summary>The sprite called <paramref name="name"/>, or null.</summary>
     public SpriteDefinition Find(string name) => _sprites.GetValueOrDefault(name);
 
+    /// <summary>A number for the sprite called <paramref name="name"/> (for <see cref="Get"/>), or -1 when there is
+    /// none.</summary>
+    public int IdOf(string name) => name != null && _ids.TryGetValue(name, out var id) ? id : -1;
+
+    /// <summary>The sprite with id <paramref name="id"/> from <see cref="IdOf"/>.</summary>
+    public SpriteDefinition Get(int id) => _byId[id];
+
     /// <summary>Adds a picture as frame <paramref name="frame"/>, rotation <paramref name="rotation"/> ('0'-'8').</summary>
     public void Add(string name, char frame, char rotation, Picture picture, bool mirrored)
     {
@@ -132,6 +141,8 @@ public sealed class SpriteLibrary
         {
             sprite = new SpriteDefinition(name);
             _sprites.Add(name, sprite);
+            _ids.Add(name, _byId.Count);
+            _byId.Add(sprite);
         }
 
         var spriteFrame = sprite.Frames[frameIndex] ??= new SpriteFrame();

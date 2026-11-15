@@ -68,7 +68,9 @@ Doom's, not a port of its code. The exact numbers are in
 | `Wad/` | `WadFile` (directory and lumps), `WadLocator` (where the WAD is looked for) |
 | `Graphics/` | `Palette`, `Picture` (patch format), `Texture`/`Flat`, `TextureLibrary`, `SpriteLibrary`, `ConsoleShades` (256 → 16 colours with dithering) |
 | `Maps/` | `Map` and its geometry types, `MapLoader`, `MapNames` (map order) |
-| `Play/` | `Level` (split into movement, combat, monsters, player and specials), `Actor`, `Player`, `ThingTypes`, `Weapons`, `LineActions`, `SectorMover` |
+| `Play/` | `Level` (split into movement and map collision, combat, monster rules, the player and specials), `Player`, `ThingTypes`/`ThingInfo`, `Animator`, `Weapons`, `LineActions`, `SectorMover` |
+| `Components/` | The ECS components of a thing: `Thing` (kind, flags, state, health), `Body` (position, footprint, sector), `Momentum`, `Animation`, `Monster`, `Missile`, `Explosive`, `Collectible` |
+| `Systems/` | One tic of the things: `PickupSystem`, `MonsterSystem`, `MissileSystem`, `DyingSystem`, `StaticThingSystem`. `Level.Tick` runs them after the player |
 | `Rendering/` | `WorldRenderer`, `WeaponRenderer`, `Automap`, `Hud`, `Presenter`, `FrameBuffer`, `Camera` |
 | `Scenes/` | `TitleScene`, `LevelScene`, `IntermissionScene`, `MissingWadScene` |
 

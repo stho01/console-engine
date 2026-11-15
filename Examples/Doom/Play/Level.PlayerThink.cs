@@ -1,4 +1,6 @@
 using System;
+using ConsoleEngine.Ecs;
+using Doom.Components;
 using Doom.Maps;
 
 namespace Doom.Play;
@@ -40,10 +42,11 @@ public sealed partial class Level
     private void TickPlayer(in PlayerCommand command)
     {
         var player = Player;
-        var body = player.Body;
+        ref var body = ref World.Get<Body>(player.Body);
+        ref var momentum = ref World.Get<Momentum>(player.Body);
         if (player.Dead)
         {
-            TickDeadPlayer(player, command);
+            TickDeadPlayer(player, ref body, ref momentum, command);
             return;
         }
 
@@ -57,17 +60,17 @@ public sealed partial class Level
             var factor = player.Running ? RunFactor : 1f;
             var cos = MathF.Cos(body.Angle);
             var sin = MathF.Sin(body.Angle);
-            body.MomX += (cos * command.Forward * WalkThrust + sin * command.Strafe * StrafeThrust) * factor;
-            body.MomY += (sin * command.Forward * WalkThrust - cos * command.Strafe * StrafeThrust) * factor;
+            momentum.X += (cos * command.Forward * WalkThrust + sin * command.Strafe * StrafeThrust) * factor;
+            momentum.Y += (sin * command.Forward * WalkThrust - cos * command.Strafe * StrafeThrust) * factor;
         }
 
-        MoveByMomentum(body);
+        MoveByMomentum(player.Body);
         if (Exited)
             return;
 
-        if (body.Sector.Moved)
+        if (SectorMoved(body))
         {
-            CheckPosition(body, body.X, body.Y, out var check);
+            CheckPosition(player.Body, body.X, body.Y, out var check);
             body.FloorZ = check.FloorZ;
             body.CeilingZ = check.CeilingZ;
         }
@@ -79,36 +82,34 @@ public sealed partial class Level
             body.Z = body.FloorZ;
         }
 
-        ApplyGravity(body);
-        if (previousZ > body.Z + 8 && body.Z <= body.FloorZ && body.MomZ == 0)
+        ApplyGravity(ref body, ref momentum);
+        if (previousZ > body.Z + 8 && body.Z <= body.FloorZ && momentum.Z == 0)
             player.CurrentViewHeight -= MathF.Min(8, (previousZ - body.Z) / 4);
 
         if (body.Z <= body.FloorZ)
         {
-            body.MomX *= Friction;
-            body.MomY *= Friction;
-            if (MathF.Abs(body.MomX) < 0.05f && MathF.Abs(body.MomY) < 0.05f && command.Forward == 0
+            momentum.X *= Friction;
+            momentum.Y *= Friction;
+            if (MathF.Abs(momentum.X) < 0.05f && MathF.Abs(momentum.Y) < 0.05f && command.Forward == 0
                 && command.Strafe == 0)
             {
-                body.MomX = 0;
-                body.MomY = 0;
+                momentum.X = 0;
+                momentum.Y = 0;
             }
         }
 
-        UpdateView(player);
-        TouchPickups(player);
+        UpdateView(player, body, momentum);
         if (command.Use)
-            UseLines(body);
+            UseLines(player.Body, body);
         TickWeapon(player, command);
-        TickSectorSpecial(player);
+        TickSectorSpecial(player, body);
         TickPowerUps(player);
     }
 
-    private void TickDeadPlayer(Player player, in PlayerCommand command)
+    private void TickDeadPlayer(Player player, ref Body body, ref Momentum momentum, in PlayerCommand command)
     {
-        var body = player.Body;
-        body.MomX = 0;
-        body.MomY = 0;
+        momentum.X = 0;
+        momentum.Y = 0;
         if (player.CurrentViewHeight > DeadViewHeight)
             player.CurrentViewHeight = MathF.Max(DeadViewHeight, player.CurrentViewHeight - 1);
         player.ViewZ = body.Z + player.CurrentViewHeight;
@@ -119,10 +120,9 @@ public sealed partial class Level
     }
 
     /// <summary>Eye height: recovers from steps and landings, plus a bob that grows with speed.</summary>
-    private static void UpdateView(Player player)
+    private static void UpdateView(Player player, in Body body, in Momentum momentum)
     {
-        var body = player.Body;
-        var speedSquared = body.MomX * body.MomX + body.MomY * body.MomY;
+        var speedSquared = momentum.X * momentum.X + momentum.Y * momentum.Y;
         player.Bob = MathF.Min(MaxBob, speedSquared / 4) / 2;
         player.BobPhase = (player.BobPhase + BobSpeed) % (MathF.PI * 2);
 
@@ -139,7 +139,7 @@ public sealed partial class Level
     /// Presses the first line within <see cref="UseRange"/> straight ahead: one with a use special activates (from
     /// its front side); a solid wall or closed opening stops the search.
     /// </summary>
-    private void UseLines(Actor body)
+    private void UseLines(Entity user, in Body body)
     {
         var cos = MathF.Cos(body.Angle);
         var sin = MathF.Sin(body.Angle);
@@ -165,7 +165,7 @@ public sealed partial class Level
         }
 
         if (nearest is { Special: not 0 })
-            ActivateLine(nearest, body, LineTrigger.Use, nearest.SideOf(body.X, body.Y) > 0);
+            ActivateLine(nearest, user, LineTrigger.Use, nearest.SideOf(body.X, body.Y) > 0);
     }
 
     //**********************************************************
@@ -250,7 +250,8 @@ public sealed partial class Level
     private void FireWeapon(Player player)
     {
         var info = Weapons.Get(player.Weapon);
-        var body = player.Body;
+        var shooter = player.Body;
+        ref var body = ref World.Get<Body>(shooter);
         if (info.Ammo != AmmoType.None)
             player.Ammo[(int)info.Ammo] -= info.AmmoPerShot;
 
@@ -263,167 +264,37 @@ public sealed partial class Level
                 var damage = RandomRange(info.DamageMin, info.DamageMax);
                 if (player.Berserk && info.Type == WeaponType.Fist)
                     damage *= 10;
-                var target = Hitscan(body, body.Angle + (Random.Next(256) - Random.Next(256)) / 255f * 0.05f,
+                var target = Hitscan(shooter, body.Angle + (Random.Next(256) - Random.Next(256)) / 255f * 0.05f,
                     info.Range, damage);
-                if (target != null)
-                    body.Angle = AngleTo(body, target.X, target.Y);
+                if (target != Entity.Null)
+                {
+                    ref var targetBody = ref World.Get<Body>(target);
+                    body.Angle = AngleTo(body, targetBody.X, targetBody.Y);
+                }
+
                 break;
             case WeaponKind.Hitscan:
                 for (var i = 0; i < info.Pellets; i++)
                 {
                     var accurate = info.FirstShotAccurate && !player.Refiring;
                     var spread = accurate ? 0 : (Random.Next(256) - Random.Next(256)) / 255f * info.Spread;
-                    Hitscan(body, body.Angle + spread, info.Range, RandomRange(info.DamageMin, info.DamageMax));
+                    Hitscan(shooter, body.Angle + spread, info.Range, RandomRange(info.DamageMin, info.DamageMax));
                 }
 
                 break;
             case WeaponKind.Missile:
-                SpawnMissile(body, info.Missile, body.Angle, null);
+                SpawnMissile(shooter, info.Missile, body.Angle, Entity.Null);
                 break;
         }
 
         player.Refiring = true;
         if (info.Type != WeaponType.Fist)
-            NoiseAlert(body.Sector);
+            NoiseAlert(Map.Sectors[body.Sector]);
     }
 
     //**********************************************************
-    //** pickups
+    //** power-ups
     //**********************************************************
-
-    private void TouchPickups(Player player)
-    {
-        var body = player.Body;
-        for (var i = 0; i < _actors.Count; i++)
-        {
-            var item = _actors[i];
-            if (item.Removed || !item.Has(ThingFlags.Pickup))
-                continue;
-
-            var reach = body.Radius + item.Radius;
-            if (MathF.Abs(item.X - body.X) >= reach || MathF.Abs(item.Y - body.Y) >= reach)
-                continue;
-            if (item.Z > body.Z + body.Height || item.Z + 8 < body.Z)
-                continue;
-            if (!TryPickup(player, item))
-                continue;
-
-            item.Removed = true;
-            player.BonusCount = Math.Min(player.BonusCount + 6, 24);
-            if (item.Info.Has(ThingFlags.CountItem))
-                Stats.Items++;
-        }
-    }
-
-    /// <summary>Applies a pickup. Returns false (and leaves it) when the player can't use it now.</summary>
-    public bool TryPickup(Player player, Actor item)
-    {
-        var pickup = item.Info.Pickup;
-        switch (pickup.Kind)
-        {
-            case PickupKind.Health:
-                if (player.Health >= Player.MaxHealth)
-                    return false;
-                player.Health = Math.Min(Player.MaxHealth, player.Health + pickup.Amount);
-                break;
-            case PickupKind.HealthBonus:
-                player.Health = Math.Min(Player.MaxBonusHealth, player.Health + pickup.Amount);
-                break;
-            case PickupKind.SoulSphere:
-                player.Health = Math.Min(Player.MaxBonusHealth, player.Health + pickup.Amount);
-                break;
-            case PickupKind.ArmorBonus:
-                player.Armor = Math.Min(Player.MaxArmor, player.Armor + pickup.Amount);
-                if (player.ArmorClass == 0)
-                    player.ArmorClass = 1;
-                break;
-            case PickupKind.Armor:
-                if (player.Armor >= pickup.Amount)
-                    return false;
-                player.Armor = pickup.Amount;
-                player.ArmorClass = pickup.ArmorClass;
-                break;
-            case PickupKind.Ammo:
-                if (!GiveAmmo(player, pickup.Ammo, item.Dropped ? Math.Max(1, pickup.Amount / 2) : pickup.Amount))
-                    return false;
-                break;
-            case PickupKind.Backpack:
-                if (!player.Backpack)
-                    player.Backpack = true;
-                GiveAmmo(player, AmmoType.Bullets, 10);
-                GiveAmmo(player, AmmoType.Shells, 4);
-                GiveAmmo(player, AmmoType.Rockets, 1);
-                GiveAmmo(player, AmmoType.Cells, 20);
-                break;
-            case PickupKind.Weapon:
-                var owned = player.OwnedWeapons[(int)pickup.Weapon];
-                var gotAmmo = pickup.Ammo != AmmoType.None && GiveAmmo(player, pickup.Ammo,
-                    item.Dropped ? Math.Max(1, pickup.Amount / 2) : pickup.Amount);
-                if (owned && !gotAmmo)
-                    return false;
-                if (!owned)
-                {
-                    player.OwnedWeapons[(int)pickup.Weapon] = true;
-                    player.PendingWeapon = pickup.Weapon;
-                }
-
-                break;
-            case PickupKind.Key:
-                player.Keys |= pickup.Key;
-                break;
-            case PickupKind.Berserk:
-                player.Berserk = true;
-                player.BerserkFade = 0;
-                player.Health = Math.Max(player.Health, Player.MaxHealth);
-                if (player.OwnedWeapons[(int)WeaponType.Fist])
-                    player.PendingWeapon = WeaponType.Fist;
-                break;
-            case PickupKind.Invulnerability:
-                player.InvulnerabilityLeft = Player.InvulnerabilityTics;
-                break;
-            case PickupKind.RadiationSuit:
-                player.RadiationSuitLeft = Player.RadiationSuitTics;
-                break;
-            case PickupKind.Invisibility:
-                player.InvisibilityLeft = Player.InvisibilityTics;
-                break;
-            case PickupKind.ComputerMap:
-                player.HasComputerMap = true;
-                break;
-            case PickupKind.LightAmp:
-                player.LightAmpLeft = Player.LightAmpTics;
-                break;
-            default:
-                return false;
-        }
-
-        Say(pickup.Message);
-        return true;
-    }
-
-    private static bool GiveAmmo(Player player, AmmoType type, int amount)
-    {
-        var max = player.MaxAmmoOf(type);
-        if (player.Ammo[(int)type] >= max)
-            return false;
-
-        var hadNone = player.Ammo[(int)type] == 0;
-        player.Ammo[(int)type] = Math.Min(max, player.Ammo[(int)type] + amount);
-        if (!hadNone || player.Weapon is not (WeaponType.Fist or WeaponType.Pistol))
-            return true;
-
-        // Like Doom: picking up ammo for a better weapon while on fist or pistol switches to it.
-        var better = type switch
-        {
-            AmmoType.Bullets => WeaponType.Chaingun,
-            AmmoType.Shells => WeaponType.Shotgun,
-            AmmoType.Cells => WeaponType.PlasmaGun,
-            _ => player.Weapon
-        };
-        if (better != player.Weapon && player.OwnedWeapons[(int)better])
-            player.PendingWeapon = better;
-        return true;
-    }
 
     private static void TickPowerUps(Player player)
     {

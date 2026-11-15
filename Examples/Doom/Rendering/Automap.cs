@@ -1,4 +1,5 @@
 using System;
+using Doom.Components;
 using Doom.Graphics;
 using Doom.Maps;
 using Doom.Play;
@@ -56,7 +57,7 @@ public sealed class Automap
     public void Draw(FrameBuffer frame, Level level)
     {
         frame.Clear(0);
-        var body = level.Player.Body;
+        ref var body = ref level.PlayerBody;
         var allMap = level.Player.HasComputerMap;
         foreach (var line in level.Map.Lines)
         {
@@ -76,12 +77,19 @@ public sealed class Automap
 
         if (ShowThings)
         {
-            var actors = level.Actors;
-            for (var i = 0; i < actors.Count; i++)
+            foreach (var chunk in level.Things.GetChunks())
             {
-                var actor = actors[i];
-                if (!actor.IsPlayer && !actor.Removed && actor.Sprite != null)
-                    DrawWorldLine(frame, body, actor.X - 4, actor.Y, actor.X + 4, actor.Y, _thingColor);
+                var things = chunk.GetSpan<Thing>();
+                var bodies = chunk.GetSpan<Body>();
+                var animations = chunk.GetSpan<Animation>();
+                for (var i = 0; i < chunk.Count; i++)
+                {
+                    if (things[i].Removed || animations[i].Sprite < 0)
+                        continue;
+
+                    ref var thing = ref bodies[i];
+                    DrawWorldLine(frame, body, thing.X - 4, thing.Y, thing.X + 4, thing.Y, _thingColor);
+                }
             }
         }
 
@@ -105,7 +113,7 @@ public sealed class Automap
         return 0;
     }
 
-    private void DrawWorldLine(FrameBuffer frame, Actor center, float x1, float y1, float x2, float y2, byte color)
+    private void DrawWorldLine(FrameBuffer frame, in Body center, float x1, float y1, float x2, float y2, byte color)
     {
         var halfWidth = frame.Width / 2f;
         var halfHeight = frame.Height / 2f;
@@ -120,7 +128,7 @@ public sealed class Automap
         frame.DrawLine((int)sx1, (int)sy1, (int)sx2, (int)sy2, color);
     }
 
-    private void DrawArrow(FrameBuffer frame, Actor body)
+    private void DrawArrow(FrameBuffer frame, in Body body)
     {
         var length = 16 * Zoom / 8 * 2;
         var cos = MathF.Cos(body.Angle);

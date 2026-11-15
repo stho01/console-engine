@@ -1,4 +1,6 @@
 using System;
+using ConsoleEngine.Ecs;
+using Doom.Components;
 using Doom.Graphics;
 using Doom.Maps;
 
@@ -41,12 +43,12 @@ public sealed partial class Level
     /// monsters only set off the specials marked for them. Single-use specials clear the line afterwards; switches
     /// change their texture. Returns true if something happened.
     /// </summary>
-    public bool ActivateLine(Line line, Actor activator, LineTrigger trigger, bool fromFront)
+    public bool ActivateLine(Line line, Entity activator, LineTrigger trigger, bool fromFront)
     {
         var action = LineActions.Find(line.Special);
         if (action == null || action.Trigger != trigger)
             return false;
-        if (!activator.IsPlayer && !action.MonstersToo)
+        if (!IsPlayer(activator) && !action.MonstersToo)
             return false;
         if (action.Effect == LineEffect.Teleport && !fromFront)
             return false;
@@ -55,7 +57,7 @@ public sealed partial class Level
 
         if (action.Key != KeyCards.None && (Player.Keys & action.Key) == 0)
         {
-            if (activator.IsPlayer)
+            if (IsPlayer(activator))
                 Say(action.Key switch
                 {
                     KeyCards.Blue => DoomTexts.NeedBlueKey,
@@ -80,7 +82,7 @@ public sealed partial class Level
     //** internals: line actions
     //**********************************************************
 
-    private bool Perform(LineAction action, Line line, Actor activator)
+    private bool Perform(LineAction action, Line line, Entity activator)
     {
         switch (action.Effect)
         {
@@ -294,35 +296,44 @@ public sealed partial class Level
         return true;
     }
 
-    private bool Teleport(Line line, Actor actor)
+    private bool Teleport(Line line, Entity entity)
     {
-        if (actor.Has(ThingFlags.Missile))
+        ref var thing = ref World.Get<Thing>(entity);
+        if ((thing.Flags & ThingFlags.Missile) != 0)
             return false;
 
+        ref var body = ref World.Get<Body>(entity);
         foreach (var destination in _teleportDestinations)
         {
-            if (destination.Sector.Tag != line.Tag)
+            ref var spot = ref World.Get<Body>(destination);
+            var sector = Map.Sectors[spot.Sector];
+            if (sector.Tag != line.Tag)
                 continue;
 
-            var oldX = actor.X;
-            var oldY = actor.Y;
-            CheckPosition(actor, destination.X, destination.Y, out var check);
-            if (check.BlockingActor != null && !check.BlockingActor.IsPlayer && actor.IsPlayer)
-                Kill(check.BlockingActor, actor);
+            var oldX = body.X;
+            var oldY = body.Y;
+            CheckPosition(entity, spot.X, spot.Y, out var check);
+            if (check.BlockingThing != Entity.Null && !IsPlayer(check.BlockingThing) && IsPlayer(entity))
+                Kill(check.BlockingThing, entity);
 
-            actor.X = destination.X;
-            actor.Y = destination.Y;
-            actor.Sector = destination.Sector;
-            actor.FloorZ = destination.Sector.FloorHeight;
-            actor.CeilingZ = destination.Sector.CeilingHeight;
-            actor.Z = actor.Has(ThingFlags.Float) ? actor.Z : actor.FloorZ + TeleportZ;
-            actor.Angle = destination.Angle;
-            actor.MomX = 0;
-            actor.MomY = 0;
-            Spawn(ThingTypes.TeleportFog, oldX, oldY, float.NaN);
-            Spawn(ThingTypes.TeleportFog, destination.X + MathF.Cos(destination.Angle) * 20,
-                destination.Y + MathF.Sin(destination.Angle) * 20, float.NaN);
-            if (actor.IsPlayer)
+            body.X = spot.X;
+            body.Y = spot.Y;
+            body.Sector = spot.Sector;
+            body.FloorZ = sector.FloorHeight;
+            body.CeilingZ = sector.CeilingHeight;
+            body.Z = (thing.Flags & ThingFlags.Float) != 0 ? body.Z : body.FloorZ + TeleportZ;
+            body.Angle = spot.Angle;
+            if (World.Has<Momentum>(entity))
+            {
+                ref var momentum = ref World.Get<Momentum>(entity);
+                momentum.X = 0;
+                momentum.Y = 0;
+            }
+
+            Enqueue(new SpawnRequest(ThingTypes.TeleportFog, oldX, oldY, float.NaN));
+            Enqueue(new SpawnRequest(ThingTypes.TeleportFog, spot.X + MathF.Cos(spot.Angle) * 20,
+                spot.Y + MathF.Sin(spot.Angle) * 20, float.NaN));
+            if (IsPlayer(entity))
                 Player.CurrentViewHeight = Player.ViewHeight;
             return true;
         }
@@ -507,13 +518,17 @@ public sealed partial class Level
         if (!shrinking)
             return false;
 
-        for (var i = 0; i < _actors.Count; i++)
+        foreach (var chunk in _bodies.GetChunks())
         {
-            var actor = _actors[i];
-            if (actor.Removed || actor.Sector != sector || !actor.Has(ThingFlags.Solid))
-                continue;
-            if (ceiling - floor < actor.Height)
-                return true;
+            var things = chunk.GetSpan<Thing>();
+            var bodies = chunk.GetSpan<Body>();
+            for (var i = 0; i < chunk.Count; i++)
+            {
+                if (things[i].Removed || bodies[i].Sector != sector.Index || (things[i].Flags & ThingFlags.Solid) == 0)
+                    continue;
+                if (ceiling - floor < bodies[i].Height)
+                    return true;
+            }
         }
 
         return false;
@@ -521,11 +536,17 @@ public sealed partial class Level
 
     private void CrushThings(SectorMover mover)
     {
-        for (var i = 0; i < _actors.Count; i++)
+        var sector = mover.Sector.Index;
+        foreach (var chunk in _bodies.GetChunks())
         {
-            var actor = _actors[i];
-            if (!actor.Removed && actor.Sector == mover.Sector && actor.Has(ThingFlags.Shootable))
-                Damage(actor, null, null, SectorMover.CrushDamage);
+            var entities = chunk.Entities;
+            var things = chunk.GetSpan<Thing>();
+            var bodies = chunk.GetSpan<Body>();
+            for (var i = 0; i < chunk.Count; i++)
+            {
+                if (!things[i].Removed && bodies[i].Sector == sector && (things[i].Flags & ThingFlags.Shootable) != 0)
+                    Damage(entities[i], Entity.Null, Entity.Null, SectorMover.CrushDamage);
+            }
         }
     }
 
@@ -615,10 +636,9 @@ public sealed partial class Level
     }
 
     /// <summary>Secrets, damaging floors, and the end-of-episode floor (special 11).</summary>
-    private void TickSectorSpecial(Player player)
+    private void TickSectorSpecial(Player player, in Body body)
     {
-        var body = player.Body;
-        var sector = body.Sector;
+        var sector = Map.Sectors[body.Sector];
         if (sector.Special == SecretSector)
         {
             sector.Special = 0;

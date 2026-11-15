@@ -1,4 +1,5 @@
 using System;
+using ConsoleEngine.Ecs;
 
 namespace Doom.Play;
 
@@ -25,7 +26,7 @@ public sealed class PlayerLoadout
 
 /// <summary>
 /// The player: health, armor, inventory, power-ups and the weapon state. Position and collision live in
-/// <see cref="Body"/>, an invisible <see cref="Actor"/> that monsters target.
+/// <see cref="Body"/>, an invisible thing in the level's world that monsters target.
 /// </summary>
 public sealed class Player
 {
@@ -55,7 +56,7 @@ public sealed class Player
     //** ctor
     //**********************************************************
 
-    public Player(Actor body, PlayerLoadout loadout)
+    public Player(Entity body, PlayerLoadout loadout, float z)
     {
         Body = body;
         Health = loadout.Health;
@@ -66,7 +67,7 @@ public sealed class Player
         Backpack = loadout.Backpack;
         Weapon = OwnedWeapons[(int)loadout.Weapon] ? loadout.Weapon : WeaponType.Pistol;
         PendingWeapon = Weapon;
-        ViewZ = body.Z + ViewHeight;
+        ViewZ = z + ViewHeight;
         CurrentViewHeight = ViewHeight;
     }
 
@@ -74,7 +75,9 @@ public sealed class Player
     //** props
     //**********************************************************
 
-    public Actor Body { get; }
+    /// <summary>The player's thing: it has a <see cref="Components.Thing"/>, <see cref="Components.Body"/> and
+    /// <see cref="Components.Momentum"/>, but no <see cref="Components.Animation"/> (it is never drawn).</summary>
+    public Entity Body { get; }
     public int Health { get; set; }
     public int Armor { get; set; }
 
@@ -140,6 +143,86 @@ public sealed class Player
         return info.Ammo == AmmoType.None || Ammo[(int)info.Ammo] >= info.AmmoPerShot;
     }
 
+    /// <summary>
+    /// Applies a pickup. Returns false (and the pickup stays where it is) when the player can't use it now.
+    /// <paramref name="dropped"/> ammo, from a dead monster, gives half.
+    /// </summary>
+    public bool Give(in Pickup pickup, bool dropped)
+    {
+        switch (pickup.Kind)
+        {
+            case PickupKind.Health:
+                if (Health >= MaxHealth)
+                    return false;
+                Health = Math.Min(MaxHealth, Health + pickup.Amount);
+                return true;
+            case PickupKind.HealthBonus:
+            case PickupKind.SoulSphere:
+                Health = Math.Min(MaxBonusHealth, Health + pickup.Amount);
+                return true;
+            case PickupKind.ArmorBonus:
+                Armor = Math.Min(MaxArmor, Armor + pickup.Amount);
+                if (ArmorClass == 0)
+                    ArmorClass = 1;
+                return true;
+            case PickupKind.Armor:
+                if (Armor >= pickup.Amount)
+                    return false;
+                Armor = pickup.Amount;
+                ArmorClass = pickup.ArmorClass;
+                return true;
+            case PickupKind.Ammo:
+                return GiveAmmo(pickup.Ammo, dropped ? Math.Max(1, pickup.Amount / 2) : pickup.Amount);
+            case PickupKind.Backpack:
+                Backpack = true;
+                GiveAmmo(AmmoType.Bullets, 10);
+                GiveAmmo(AmmoType.Shells, 4);
+                GiveAmmo(AmmoType.Rockets, 1);
+                GiveAmmo(AmmoType.Cells, 20);
+                return true;
+            case PickupKind.Weapon:
+                var owned = OwnedWeapons[(int)pickup.Weapon];
+                var gotAmmo = pickup.Ammo != AmmoType.None
+                              && GiveAmmo(pickup.Ammo, dropped ? Math.Max(1, pickup.Amount / 2) : pickup.Amount);
+                if (owned && !gotAmmo)
+                    return false;
+                if (!owned)
+                {
+                    OwnedWeapons[(int)pickup.Weapon] = true;
+                    PendingWeapon = pickup.Weapon;
+                }
+
+                return true;
+            case PickupKind.Key:
+                Keys |= pickup.Key;
+                return true;
+            case PickupKind.Berserk:
+                Berserk = true;
+                BerserkFade = 0;
+                Health = Math.Max(Health, MaxHealth);
+                if (OwnedWeapons[(int)WeaponType.Fist])
+                    PendingWeapon = WeaponType.Fist;
+                return true;
+            case PickupKind.Invulnerability:
+                InvulnerabilityLeft = InvulnerabilityTics;
+                return true;
+            case PickupKind.RadiationSuit:
+                RadiationSuitLeft = RadiationSuitTics;
+                return true;
+            case PickupKind.Invisibility:
+                InvisibilityLeft = InvisibilityTics;
+                return true;
+            case PickupKind.ComputerMap:
+                HasComputerMap = true;
+                return true;
+            case PickupKind.LightAmp:
+                LightAmpLeft = LightAmpTics;
+                return true;
+            default:
+                return false;
+        }
+    }
+
     /// <summary>What carries over to the next level.</summary>
     public PlayerLoadout ToLoadout() => new()
     {
@@ -166,5 +249,33 @@ public sealed class Player
             return RadiationSuitLeft > 0 ? 13 : 0;
 
         return 0;
+    }
+
+    //**********************************************************
+    //** internals
+    //**********************************************************
+
+    private bool GiveAmmo(AmmoType type, int amount)
+    {
+        var max = MaxAmmoOf(type);
+        if (Ammo[(int)type] >= max)
+            return false;
+
+        var hadNone = Ammo[(int)type] == 0;
+        Ammo[(int)type] = Math.Min(max, Ammo[(int)type] + amount);
+        if (!hadNone || Weapon is not (WeaponType.Fist or WeaponType.Pistol))
+            return true;
+
+        // Like Doom: picking up ammo for a better weapon while on fist or pistol switches to it.
+        var better = type switch
+        {
+            AmmoType.Bullets => WeaponType.Chaingun,
+            AmmoType.Shells => WeaponType.Shotgun,
+            AmmoType.Cells => WeaponType.PlasmaGun,
+            _ => Weapon
+        };
+        if (better != Weapon && OwnedWeapons[(int)better])
+            PendingWeapon = better;
+        return true;
     }
 }

@@ -62,7 +62,7 @@ public sealed class LevelScene(string mapName, PlayerLoadout loadout) : Scene<Do
         _sky = assets.SkyFor(mapName);
     }
 
-    public override void OnUnload() { }
+    public override void OnUnload() => _level.Dispose();
 
     public override void OnUpdate()
     {
@@ -111,10 +111,10 @@ public sealed class LevelScene(string mapName, PlayerLoadout loadout) : Scene<Do
         }
         else
         {
-            var body = player.Body;
+            ref var body = ref _level.PlayerBody;
             var fixedLight = FixedLight(player);
             _world.Render(_level, new Camera(body.X, body.Y, player.ViewZ, body.Angle), _sky, fixedLight);
-            _weapon.Draw(player, _level.Tic, body.Sector.LightLevel, fixedLight);
+            _weapon.Draw(player, _level.Tic, _level.Map.Sectors[body.Sector].LightLevel, fixedLight);
         }
 
         var assets = Game.Wad;

@@ -1,4 +1,6 @@
 using System;
+using ConsoleEngine.Ecs;
+using Doom.Components;
 using Doom.Maps;
 
 namespace Doom.Play;
@@ -17,10 +19,10 @@ public struct PositionCheck
     /// <summary>The wall that blocks, or null.</summary>
     public Line BlockingLine;
 
-    /// <summary>The thing that blocks, or null.</summary>
-    public Actor BlockingActor;
+    /// <summary>The thing that blocks, or <see cref="Entity.Null"/>.</summary>
+    public Entity BlockingThing;
 
-    public bool Blocked => BlockingLine != null || BlockingActor != null;
+    public bool Blocked => BlockingLine != null || BlockingThing != Entity.Null;
 }
 
 public sealed partial class Level
@@ -37,12 +39,14 @@ public sealed partial class Level
     //**********************************************************
 
     /// <summary>
-    /// Checks <paramref name="actor"/>'s footprint (a circle) at (x, y) against every line and solid thing. A line
+    /// Checks <paramref name="entity"/>'s footprint (a circle) at (x, y) against every line and solid thing. A line
     /// blocks when it is one-sided, flagged as blocking, or its opening is too low; the floor and ceiling heights are
     /// the tightest of the sector at the centre and every two-sided line the circle touches.
     /// </summary>
-    public void CheckPosition(Actor actor, float x, float y, out PositionCheck check)
+    public void CheckPosition(Entity entity, float x, float y, out PositionCheck check)
     {
+        ref var thing = ref World.Get<Thing>(entity);
+        ref var body = ref World.Get<Body>(entity);
         var sector = Map.SectorAt(x, y);
         check = new PositionCheck
         {
@@ -51,9 +55,9 @@ public sealed partial class Level
             DropOffZ = sector.FloorHeight
         };
 
-        var radius = actor.Radius;
-        var isMissile = actor.Has(ThingFlags.Missile);
-        var isMonster = actor.Has(ThingFlags.Monster);
+        var radius = body.Radius;
+        var isMissile = (thing.Flags & ThingFlags.Missile) != 0;
+        var isMonster = (thing.Flags & ThingFlags.Monster) != 0;
         var lines = Map.Lines;
         for (var i = 0; i < lines.Length; i++)
         {
@@ -85,66 +89,76 @@ public sealed partial class Level
             check.FloorZ = MathF.Max(check.FloorZ, openBottom);
             check.CeilingZ = MathF.Min(check.CeilingZ, openTop);
             check.DropOffZ = MathF.Min(check.DropOffZ, lowFloor);
-            if (isMissile && (actor.Z < openBottom || actor.Z + actor.Height > openTop))
+            if (isMissile && (body.Z < openBottom || body.Z + body.Height > openTop))
             {
                 check.BlockingLine = line;
                 return;
             }
         }
 
-        for (var i = 0; i < _actors.Count; i++)
+        var owner = isMissile ? World.Get<Missile>(entity).Owner : Entity.Null;
+        foreach (var chunk in _bodies.GetChunks())
         {
-            var other = _actors[i];
-            if (other == actor || other.Removed || !other.Has(ThingFlags.Solid) || other == actor.Owner)
-                continue;
-            if (isMissile && other.Has(ThingFlags.Missile))
-                continue;
+            var entities = chunk.Entities;
+            var things = chunk.GetSpan<Thing>();
+            var bodies = chunk.GetSpan<Body>();
+            for (var i = 0; i < chunk.Count; i++)
+            {
+                ref var other = ref things[i];
+                var otherEntity = entities[i];
+                if (otherEntity == entity || other.Removed || (other.Flags & ThingFlags.Solid) == 0
+                    || otherEntity == owner)
+                    continue;
+                if (isMissile && (other.Flags & ThingFlags.Missile) != 0)
+                    continue;
 
-            var reach = radius + other.Radius;
-            var dx = other.X - x;
-            var dy = other.Y - y;
-            if (MathF.Abs(dx) >= reach || MathF.Abs(dy) >= reach)
-                continue;
-            if (isMissile && (actor.Z > other.Z + other.Height || actor.Z + actor.Height < other.Z))
-                continue;
+                ref var otherBody = ref bodies[i];
+                var reach = radius + otherBody.Radius;
+                if (MathF.Abs(otherBody.X - x) >= reach || MathF.Abs(otherBody.Y - y) >= reach)
+                    continue;
+                if (isMissile && (body.Z > otherBody.Z + otherBody.Height || body.Z + body.Height < otherBody.Z))
+                    continue;
 
-            check.BlockingActor = other;
-            return;
+                check.BlockingThing = otherEntity;
+                return;
+            }
         }
     }
 
     /// <summary>
-    /// Moves <paramref name="actor"/> to (x, y) if nothing blocks it there: the opening must fit its height, a step
+    /// Moves <paramref name="entity"/> to (x, y) if nothing blocks it there: the opening must fit its height, a step
     /// up must be at most <see cref="MaxStepHeight"/>, and monsters don't step off ledges higher than that.
     /// </summary>
-    public bool TryMove(Actor actor, float x, float y, out PositionCheck check)
+    public bool TryMove(Entity entity, float x, float y, out PositionCheck check)
     {
-        CheckPosition(actor, x, y, out check);
+        CheckPosition(entity, x, y, out check);
         if (check.Blocked)
             return false;
 
-        if (!actor.Has(ThingFlags.Missile))
+        var flags = World.Get<Thing>(entity).Flags;
+        ref var body = ref World.Get<Body>(entity);
+        if ((flags & ThingFlags.Missile) == 0)
         {
-            if (check.CeilingZ - check.FloorZ < actor.Height)
+            if (check.CeilingZ - check.FloorZ < body.Height)
                 return Block(ref check);
-            if (!actor.Has(ThingFlags.Float))
+            if ((flags & ThingFlags.Float) == 0)
             {
-                if (check.FloorZ - actor.Z > MaxStepHeight || check.CeilingZ - actor.Z < actor.Height)
+                if (check.FloorZ - body.Z > MaxStepHeight || check.CeilingZ - body.Z < body.Height)
                     return Block(ref check);
-                if (actor.Has(ThingFlags.Monster) && check.FloorZ - check.DropOffZ > MaxStepHeight)
+                if ((flags & ThingFlags.Monster) != 0 && check.FloorZ - check.DropOffZ > MaxStepHeight)
                     return Block(ref check);
             }
-            else if (actor.Z < check.FloorZ || actor.Z + actor.Height > check.CeilingZ)
+            else if (body.Z < check.FloorZ || body.Z + body.Height > check.CeilingZ)
             {
                 return Block(ref check);
             }
         }
 
-        actor.X = x;
-        actor.Y = y;
-        actor.FloorZ = check.FloorZ;
-        actor.CeilingZ = check.CeilingZ;
-        actor.Sector = Map.SectorAt(x, y);
+        body.X = x;
+        body.Y = y;
+        body.FloorZ = check.FloorZ;
+        body.CeilingZ = check.CeilingZ;
+        body.Sector = Map.SectorAt(x, y).Index;
         return true;
     }
 
@@ -166,10 +180,12 @@ public sealed partial class Level
     /// Moves a walker by its momentum in steps of at most <see cref="MaxStep"/>, sliding along walls: when the full
     /// step is blocked it tries the x and y parts alone and cancels the blocked part.
     /// </summary>
-    private void MoveByMomentum(Actor actor)
+    private void MoveByMomentum(Entity entity)
     {
-        var momX = actor.MomX;
-        var momY = actor.MomY;
+        ref var body = ref World.Get<Body>(entity);
+        ref var momentum = ref World.Get<Momentum>(entity);
+        var momX = momentum.X;
+        var momY = momentum.Y;
         var steps = (int)MathF.Ceiling(MathF.Max(MathF.Abs(momX), MathF.Abs(momY)) / MaxStep);
         if (steps < 1)
             return;
@@ -178,36 +194,37 @@ public sealed partial class Level
         var stepY = momY / steps;
         for (var i = 0; i < steps; i++)
         {
-            var oldX = actor.X;
-            var oldY = actor.Y;
-            if (!TryMove(actor, oldX + stepX, oldY + stepY, out _))
+            var oldX = body.X;
+            var oldY = body.Y;
+            if (!TryMove(entity, oldX + stepX, oldY + stepY, out _))
             {
-                if (stepX != 0 && TryMove(actor, oldX + stepX, oldY, out _))
+                if (stepX != 0 && TryMove(entity, oldX + stepX, oldY, out _))
                 {
                     stepY = 0;
-                    actor.MomY = 0;
+                    momentum.Y = 0;
                 }
-                else if (stepY != 0 && TryMove(actor, oldX, oldY + stepY, out _))
+                else if (stepY != 0 && TryMove(entity, oldX, oldY + stepY, out _))
                 {
                     stepX = 0;
-                    actor.MomX = 0;
+                    momentum.X = 0;
                 }
                 else
                 {
-                    actor.MomX = 0;
-                    actor.MomY = 0;
+                    momentum.X = 0;
+                    momentum.Y = 0;
                     return;
                 }
             }
 
-            if (actor.IsPlayer)
-                CheckWalkLines(actor, oldX, oldY);
+            if (IsPlayer(entity))
+                CheckWalkLines(entity, oldX, oldY);
         }
     }
 
     /// <summary>Fires the walk-over specials of every line the move from (oldX, oldY) crossed.</summary>
-    private void CheckWalkLines(Actor actor, float oldX, float oldY)
+    private void CheckWalkLines(Entity entity, float oldX, float oldY)
     {
+        ref var body = ref World.Get<Body>(entity);
         for (var i = 0; i < _walkLines.Count; i++)
         {
             var line = _walkLines[i];
@@ -215,30 +232,30 @@ public sealed partial class Level
                 continue;
 
             var before = line.SideOf(oldX, oldY);
-            var after = line.SideOf(actor.X, actor.Y);
-            if ((before > 0) == (after > 0) || !SegmentsCross(oldX, oldY, actor.X, actor.Y, line, out _))
+            var after = line.SideOf(body.X, body.Y);
+            if ((before > 0) == (after > 0) || !SegmentsCross(oldX, oldY, body.X, body.Y, line, out _))
                 continue;
 
-            ActivateLine(line, actor, LineTrigger.Walk, before > 0);
+            ActivateLine(line, entity, LineTrigger.Walk, before > 0);
             if (Exited)
                 return;
         }
     }
 
     /// <summary>Gravity and floor contact for a walker.</summary>
-    private static void ApplyGravity(Actor actor)
+    internal static void ApplyGravity(ref Body body, ref Momentum momentum)
     {
-        if (actor.Z > actor.FloorZ)
+        if (body.Z > body.FloorZ)
         {
-            actor.MomZ -= Gravity;
-            actor.Z += actor.MomZ;
+            momentum.Z -= Gravity;
+            body.Z += momentum.Z;
         }
 
-        if (actor.Z > actor.FloorZ)
+        if (body.Z > body.FloorZ)
             return;
 
-        actor.Z = actor.FloorZ;
-        actor.MomZ = 0;
+        body.Z = body.FloorZ;
+        momentum.Z = 0;
     }
 
     public static float DistanceToSegmentSquared(float x, float y, Line line)
@@ -284,7 +301,7 @@ public sealed partial class Level
     /// to the target's feet and head is narrowed by every two-sided line's opening in between; a one-sided line or a
     /// closed window blocks.
     /// </summary>
-    public bool CanSee(Actor from, Actor to)
+    public bool CanSee(in Body from, in Body to)
     {
         var ax = from.X;
         var ay = from.Y;
@@ -334,8 +351,8 @@ public sealed partial class Level
         return true;
     }
 
-    private static float AngleTo(Actor from, float x, float y) => MathF.Atan2(y - from.Y, x - from.X);
+    internal static float AngleTo(in Body from, float x, float y) => MathF.Atan2(y - from.Y, x - from.X);
 
-    private static float Distance(Actor a, Actor b) =>
+    internal static float Distance(in Body a, in Body b) =>
         MathF.Sqrt((b.X - a.X) * (b.X - a.X) + (b.Y - a.Y) * (b.Y - a.Y));
 }

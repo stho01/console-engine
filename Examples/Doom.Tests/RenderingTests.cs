@@ -10,17 +10,22 @@ namespace Doom.Tests;
 
 public class RenderingTests
 {
-    private static (Level Level, WorldRenderer Renderer, FrameBuffer Frame, Palette Palette) Setup()
+    private Level _level;
+
+    [TearDown]
+    public void DisposeLevel() => _level?.Dispose();
+
+    private (Level Level, WorldRenderer Renderer, FrameBuffer Frame, Palette Palette) Setup()
     {
         var (_, palette, textures, _) = TestWad.Load();
-        var level = TestWad.CreateLevel();
+        var level = _level = TestWad.CreateLevel();
         var frame = new FrameBuffer(Layout.ViewWidth, Layout.ViewHeight);
         return (level, new WorldRenderer(frame, palette, textures), frame, palette);
     }
 
     private static Camera CameraOf(Level level)
     {
-        var body = level.Player.Body;
+        ref var body = ref level.PlayerBody;
         return new Camera(body.X, body.Y, level.Player.ViewZ, body.Angle);
     }
 
@@ -52,7 +57,7 @@ public class RenderingTests
     public void Render_EveryDirection_LeavesNoColumnOpen()
     {
         var (level, renderer, frame, _) = Setup();
-        var body = level.Player.Body;
+        var body = level.PlayerBody;
 
         for (var turn = 0; turn < 16; turn++)
         {
@@ -103,7 +108,7 @@ public class RenderingTests
     [Test]
     public void Draw_Hud_ShowsHealth()
     {
-        var level = TestWad.CreateLevel();
+        using var level = TestWad.CreateLevel();
         var console = new RenderConsole(new FakeConsoleHandler(Layout.ScreenWidth, Layout.ScreenHeight));
 
         new Hud().Draw(console, level, "E1M1", Layout.HudTop);

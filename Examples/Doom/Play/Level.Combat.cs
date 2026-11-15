@@ -1,4 +1,6 @@
 using System;
+using ConsoleEngine.Ecs;
+using Doom.Components;
 using Doom.Maps;
 
 namespace Doom.Play;
@@ -12,17 +14,19 @@ public sealed partial class Level
     /// <summary>
     /// Fires an instant shot from <paramref name="shooter"/> along <paramref name="angle"/>. Aiming is 2D, like
     /// Doom's auto-aim: the shot hits the nearest shootable thing whose footprint the line passes through, unless a
-    /// solid wall or a closed opening is nearer. Walls get a puff, things blood (or a puff). Returns what was hit.
+    /// solid wall or a closed opening is nearer. Walls get a puff, things blood (or a puff). Returns what was hit, or
+    /// <see cref="Entity.Null"/>.
     /// </summary>
-    public Actor Hitscan(Actor shooter, float angle, float range, int damage)
+    public Entity Hitscan(Entity shooter, float angle, float range, int damage)
     {
+        ref var shooterBody = ref World.Get<Body>(shooter);
         var cos = MathF.Cos(angle);
         var sin = MathF.Sin(angle);
-        var sx = shooter.X;
-        var sy = shooter.Y;
+        var sx = shooterBody.X;
+        var sy = shooterBody.Y;
         var ex = sx + cos * range;
         var ey = sy + sin * range;
-        var shotZ = shooter.Z + shooter.Height * 0.73f;
+        var shotZ = shooterBody.Z + shooterBody.Height * 0.73f;
 
         var wallFraction = 1f;
         Line wall = null;
@@ -52,43 +56,51 @@ public sealed partial class Level
         }
 
         var wallDistance = wallFraction * range;
-        Actor hit = null;
+        var hit = Entity.Null;
         var hitDistance = wallDistance;
-        for (var i = 0; i < _actors.Count; i++)
+        foreach (var chunk in _bodies.GetChunks())
         {
-            var target = _actors[i];
-            if (target == shooter || target.Removed || !target.Has(ThingFlags.Shootable))
-                continue;
+            var entities = chunk.Entities;
+            var things = chunk.GetSpan<Thing>();
+            var bodies = chunk.GetSpan<Body>();
+            for (var i = 0; i < chunk.Count; i++)
+            {
+                ref var thing = ref things[i];
+                if (entities[i] == shooter || thing.Removed || (thing.Flags & ThingFlags.Shootable) == 0)
+                    continue;
 
-            var dx = target.X - sx;
-            var dy = target.Y - sy;
-            var along = dx * cos + dy * sin;
-            if (along <= 0)
-                continue;
+                ref var body = ref bodies[i];
+                var dx = body.X - sx;
+                var dy = body.Y - sy;
+                var along = dx * cos + dy * sin;
+                if (along <= 0)
+                    continue;
 
-            var across = MathF.Abs(-dx * sin + dy * cos);
-            if (across > target.Radius)
-                continue;
+                var across = MathF.Abs(-dx * sin + dy * cos);
+                if (across > body.Radius)
+                    continue;
 
-            var entry = along - MathF.Sqrt(target.Radius * target.Radius - across * across);
-            if (entry >= hitDistance)
-                continue;
+                var entry = along - MathF.Sqrt(body.Radius * body.Radius - across * across);
+                if (entry >= hitDistance)
+                    continue;
 
-            hit = target;
-            hitDistance = MathF.Max(entry, 0);
+                hit = entities[i];
+                hitDistance = MathF.Max(entry, 0);
+            }
         }
 
-        if (hit != null)
+        if (hit != Entity.Null)
         {
-            var spot = hit.Has(ThingFlags.NoBlood) ? ThingTypes.BulletPuff : ThingTypes.Blood;
-            var z = hit.Z + hit.Height * 0.5f + RandomRange(-8, 8);
-            Spawn(spot, sx + cos * hitDistance, sy + sin * hitDistance, z);
+            ref var hitBody = ref World.Get<Body>(hit);
+            var spot = (World.Get<Thing>(hit).Flags & ThingFlags.NoBlood) != 0 ? ThingTypes.BulletPuff : ThingTypes.Blood;
+            var z = hitBody.Z + hitBody.Height * 0.5f + RandomRange(-8, 8);
+            Enqueue(new SpawnRequest(spot, sx + cos * hitDistance, sy + sin * hitDistance, z));
             Damage(hit, shooter, shooter, damage);
             return hit;
         }
 
         if (wall == null)
-            return null;
+            return Entity.Null;
 
         if (wall.Special != 0)
             ActivateLine(wall, shooter, LineTrigger.Shoot, wall.SideOf(sx, sy) > 0);
@@ -99,54 +111,61 @@ public sealed partial class Level
         {
             var puffTop = MathF.Max(puffSector.FloorHeight, puffSector.CeilingHeight - 4);
             var puffZ = Math.Clamp(shotZ, puffSector.FloorHeight, puffTop);
-            Spawn(ThingTypes.BulletPuff, sx + cos * back, sy + sin * back, puffZ);
+            Enqueue(new SpawnRequest(ThingTypes.BulletPuff, sx + cos * back, sy + sin * back, puffZ));
         }
 
-        return null;
+        return Entity.Null;
     }
 
     /// <summary>
     /// Deals damage. The player loses health through armor; a monster may flinch and turns on whoever hurt it; at 0
-    /// health things die (barrels explode).
+    /// health things die (barrels explode). <paramref name="inflictor"/> (what hit, for knockback) and
+    /// <paramref name="source"/> (who is to blame) may be <see cref="Entity.Null"/>.
     /// </summary>
-    public void Damage(Actor target, Actor inflictor, Actor source, int damage)
+    public void Damage(Entity target, Entity inflictor, Entity source, int damage)
     {
-        if (damage <= 0 || target.Removed || !target.Has(ThingFlags.Shootable))
+        ref var thing = ref World.Get<Thing>(target);
+        if (damage <= 0 || thing.Removed || (thing.Flags & ThingFlags.Shootable) == 0)
             return;
 
-        if (target.IsPlayer)
+        if (IsPlayer(target))
         {
             DamagePlayer(damage);
             return;
         }
 
-        target.Health -= damage;
-        if (target.Health <= 0)
+        thing.Health -= damage;
+        if (thing.Health <= 0)
         {
             Kill(target, source);
             return;
         }
 
-        var monster = target.Info.Monster;
-        if (monster == null)
+        var info = ThingInfo.ById(thing.Type);
+        var monsterInfo = info.Monster;
+        if (monsterInfo == null)
             return;
 
-        if (source != null && source != target && !source.Removed && (source.IsPlayer || source.Has(ThingFlags.Monster)))
-            target.Target = source;
-        if (target.State is ActorState.Idle)
+        ref var monster = ref World.Get<Monster>(target);
+        if (source != Entity.Null && source != target && World.IsAlive(source) && !World.Get<Thing>(source).Removed
+            && (IsPlayer(source) || (World.Get<Thing>(source).Flags & ThingFlags.Monster) != 0))
+            monster.Target = source;
+        if (thing.State is ThingState.Idle)
             Wake(target);
-        if (Random.Next(256) < monster.PainChance && target.State != ActorState.Charge)
+        if (Random.Next(256) < monsterInfo.PainChance && thing.State != ThingState.Charge)
         {
-            target.State = ActorState.Pain;
-            target.Play(monster.PainFrames, 6, false);
+            thing.State = ThingState.Pain;
+            Animator.Play(ref World.Get<Animation>(target), info, AnimationClip.Pain, 6, false);
         }
 
-        if (inflictor != null && !target.Has(ThingFlags.Float))
+        if (inflictor != Entity.Null && (thing.Flags & ThingFlags.Float) == 0)
         {
-            var push = damage * 0.12f / MathF.Max(1, target.Info.Health / 100f);
-            var angle = AngleTo(inflictor, target.X, target.Y);
-            target.MomX += MathF.Cos(angle) * MathF.Min(push, 8);
-            target.MomY += MathF.Sin(angle) * MathF.Min(push, 8);
+            ref var body = ref World.Get<Body>(target);
+            ref var momentum = ref World.Get<Momentum>(target);
+            var push = MathF.Min(damage * 0.12f / MathF.Max(1, info.Health / 100f), 8);
+            var angle = AngleTo(World.Get<Body>(inflictor), body.X, body.Y);
+            momentum.X += MathF.Cos(angle) * push;
+            momentum.Y += MathF.Sin(angle) * push;
         }
     }
 
@@ -154,41 +173,52 @@ public sealed partial class Level
     /// Damages every shootable thing within <paramref name="damage"/> world units of <paramref name="center"/> that
     /// it can see: full damage at the centre, one point less per unit of distance (from the thing's edge).
     /// </summary>
-    public void RadiusDamage(Actor center, Actor source, int damage)
+    public void RadiusDamage(Entity center, Entity source, int damage)
     {
-        for (var i = 0; i < _actors.Count; i++)
+        ref var centerBody = ref World.Get<Body>(center);
+        foreach (var chunk in _bodies.GetChunks())
         {
-            var target = _actors[i];
-            if (target == center || target.Removed || !target.Has(ThingFlags.Shootable))
-                continue;
+            var entities = chunk.Entities;
+            var things = chunk.GetSpan<Thing>();
+            var bodies = chunk.GetSpan<Body>();
+            for (var i = 0; i < chunk.Count; i++)
+            {
+                ref var thing = ref things[i];
+                if (entities[i] == center || thing.Removed || (thing.Flags & ThingFlags.Shootable) == 0)
+                    continue;
 
-            var distance = MathF.Max(0, Distance(center, target) - target.Radius);
-            var dealt = (int)(damage - distance);
-            if (dealt <= 0 || !CanSee(center, target))
-                continue;
+                ref var body = ref bodies[i];
+                var distance = MathF.Max(0, Distance(centerBody, body) - body.Radius);
+                var dealt = (int)(damage - distance);
+                if (dealt <= 0 || !CanSee(centerBody, body))
+                    continue;
 
-            Damage(target, center, source, dealt);
+                Damage(entities[i], center, source, dealt);
+            }
         }
     }
 
-    /// <summary>Launches a projectile from <paramref name="shooter"/> at <paramref name="angle"/>, rising or falling
-    /// towards <paramref name="target"/>'s middle when there is one.</summary>
-    public Actor SpawnMissile(Actor shooter, ThingInfo info, float angle, Actor target)
+    /// <summary>
+    /// Launches a projectile from <paramref name="shooter"/> at <paramref name="angle"/>, rising or falling towards
+    /// <paramref name="target"/>'s middle when there is one (else <see cref="Entity.Null"/>). It joins the level at
+    /// the end of the tic.
+    /// </summary>
+    public void SpawnMissile(Entity shooter, ThingInfo info, float angle, Entity target)
     {
-        var z = shooter.Z + 32;
-        var missile = Spawn(info, shooter.X, shooter.Y, z);
-        missile.Owner = shooter;
-        missile.Target = shooter;
-        missile.Angle = angle;
-        missile.MomX = MathF.Cos(angle) * info.Speed;
-        missile.MomY = MathF.Sin(angle) * info.Speed;
-        if (target != null)
+        ref var shooterBody = ref World.Get<Body>(shooter);
+        var z = shooterBody.Z + 32;
+        var momentum = new Momentum { X = MathF.Cos(angle) * info.Speed, Y = MathF.Sin(angle) * info.Speed };
+        if (target != Entity.Null)
         {
-            var distance = MathF.Max(1, Distance(shooter, target)) / info.Speed;
-            missile.MomZ = (target.Z + target.Height / 2 - z) / MathF.Max(1, distance);
+            ref var targetBody = ref World.Get<Body>(target);
+            var tics = MathF.Max(1, Distance(shooterBody, targetBody)) / info.Speed;
+            momentum.Z = (targetBody.Z + targetBody.Height / 2 - z) / MathF.Max(1, tics);
         }
 
-        return missile;
+        Enqueue(new SpawnRequest(info, shooterBody.X, shooterBody.Y, z)
+        {
+            Angle = angle, Momentum = momentum, Owner = shooter
+        });
     }
 
     //**********************************************************
@@ -219,98 +249,70 @@ public sealed partial class Level
         if (!player.Dead)
             return;
 
-        player.Body.Flags &= ~(ThingFlags.Shootable | ThingFlags.Solid);
+        World.Get<Thing>(player.Body).Flags &= ~(ThingFlags.Shootable | ThingFlags.Solid);
     }
 
-    private void Kill(Actor target, Actor source)
+    /// <summary>Starts a thing's death: it stops blocking, plays its death frames, and drops what it carries.</summary>
+    private void Kill(Entity target, Entity source)
     {
-        target.Health = 0;
-        target.Flags &= ~(ThingFlags.Shootable | ThingFlags.Solid | ThingFlags.Float);
-        target.State = ActorState.Dying;
-        target.MomX = 0;
-        target.MomY = 0;
-        target.Target = source;
-        if (target.Info.DeathSprite != null)
-            target.Sprite = Sprites.Find(target.Info.DeathSprite);
-        target.Play(target.Info.DeathFrames, 5, false);
-        if (target.Info.SplashDamage > 0)
-            target.PendingSplash = target.Info.SplashDamage;
-        if (target.Info.Has(ThingFlags.CountKill))
+        ref var thing = ref World.Get<Thing>(target);
+        ref var body = ref World.Get<Body>(target);
+        ref var animation = ref World.Get<Animation>(target);
+        var info = ThingInfo.ById(thing.Type);
+        thing.Health = 0;
+        thing.Flags &= ~(ThingFlags.Shootable | ThingFlags.Solid | ThingFlags.Float);
+        thing.State = ThingState.Dying;
+        if (World.Has<Momentum>(target))
+        {
+            ref var momentum = ref World.Get<Momentum>(target);
+            momentum.X = 0;
+            momentum.Y = 0;
+        }
+
+        if (World.Has<Explosive>(target))
+        {
+            ref var explosive = ref World.Get<Explosive>(target);
+            explosive.PendingDamage = info.SplashDamage;
+            explosive.Source = source;
+        }
+
+        if (info.DeathSprite != null)
+            animation.Sprite = Sprites.IdOf(info.DeathSprite);
+        Animator.Play(ref animation, info, AnimationClip.Death, 5, false);
+        if (info.Has(ThingFlags.CountKill))
             Stats.Kills++;
 
-        if (target.Info.Has(ThingFlags.Float) && !target.Info.RemoveAfterDeath)
-            target.Z = target.FloorZ;
+        if (info.Has(ThingFlags.Float) && !info.RemoveAfterDeath)
+            body.Z = body.FloorZ;
 
-        var drop = target.Info.Monster?.Drops ?? 0;
+        var drop = info.Monster?.Drops ?? 0;
         if (drop == 0)
             return;
 
-        var info = ThingTypes.Find(drop);
-        if (info == null)
-            return;
-
-        var dropped = Spawn(info, target.X, target.Y, float.NaN);
-        dropped.Dropped = true;
+        var dropInfo = ThingTypes.Find(drop);
+        if (dropInfo != null)
+            Enqueue(new SpawnRequest(dropInfo, body.X, body.Y, float.NaN) { Dropped = true });
     }
 
-    /// <summary>Flies a projectile one tic: it explodes on a wall, the floor or ceiling, or a thing it hits.</summary>
-    private void TickMissile(Actor missile)
+    /// <summary>Stops a projectile and plays its explosion; rockets deal their splash damage now.</summary>
+    internal void Explode(Entity missile)
     {
-        missile.Animate();
-        var steps = (int)MathF.Ceiling(MathF.Max(MathF.Abs(missile.MomX), MathF.Abs(missile.MomY)) / MaxStep);
-        steps = Math.Max(1, steps);
-        var stepX = missile.MomX / steps;
-        var stepY = missile.MomY / steps;
-        var stepZ = missile.MomZ / steps;
-        for (var i = 0; i < steps; i++)
-        {
-            missile.Z += stepZ;
-            if (!TryMove(missile, missile.X + stepX, missile.Y + stepY, out var check))
-            {
-                if (check.BlockingActor != null)
-                    Damage(check.BlockingActor, missile, missile.Owner, RandomRange(missile.Info.DamageMin,
-                        missile.Info.DamageMax));
-                else if (check.BlockingLine is { Back: not null } line && IsSkyHole(line, missile))
-                {
-                    missile.Removed = true;
-                    return;
-                }
-
-                Explode(missile);
-                return;
-            }
-
-            if (missile.Z <= missile.FloorZ || missile.Z + missile.Height >= missile.CeilingZ)
-            {
-                if (missile.Z + missile.Height >= missile.CeilingZ && missile.Sector.CeilingFlat == Textures.SkyFlat)
-                {
-                    missile.Removed = true;
-                    return;
-                }
-
-                Explode(missile);
-                return;
-            }
-        }
+        ref var thing = ref World.Get<Thing>(missile);
+        ref var momentum = ref World.Get<Momentum>(missile);
+        var info = ThingInfo.ById(thing.Type);
+        momentum = default;
+        thing.Flags &= ~ThingFlags.Missile;
+        thing.State = ThingState.Dying;
+        Animator.Play(ref World.Get<Animation>(missile), info, AnimationClip.Death, 4, false);
+        if (info.SplashDamage > 0)
+            RadiusDamage(missile, World.Get<Missile>(missile).Owner, info.SplashDamage);
     }
 
     /// <summary>A missile flying into the sky above a two-sided line just vanishes.</summary>
-    private bool IsSkyHole(Line line, Actor missile)
+    internal bool IsSkyHole(Line line, in Body missile)
     {
         var top = MathF.Min(line.FrontSector.CeilingHeight, line.BackSector.CeilingHeight);
         return missile.Z + missile.Height > top && line.FrontSector.CeilingFlat == Textures.SkyFlat
                                                 && line.BackSector.CeilingFlat == Textures.SkyFlat;
-    }
-
-    private void Explode(Actor missile)
-    {
-        missile.MomX = 0;
-        missile.MomY = 0;
-        missile.MomZ = 0;
-        missile.Flags &= ~ThingFlags.Missile;
-        missile.State = ActorState.Dying;
-        missile.Play(missile.Info.DeathFrames, 4, false);
-        if (missile.Info.SplashDamage > 0)
-            RadiusDamage(missile, missile.Owner, missile.Info.SplashDamage);
     }
 }

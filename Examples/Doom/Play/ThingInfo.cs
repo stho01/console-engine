@@ -1,4 +1,5 @@
 using System;
+using System.Collections.Generic;
 
 namespace Doom.Play;
 
@@ -154,6 +155,35 @@ public sealed class MonsterInfo
 /// </summary>
 public sealed class ThingInfo
 {
+    //**********************************************************
+    //** fields
+    //**********************************************************
+
+    /// <summary>Shown when a sequence has no letters.</summary>
+    private const string FirstFrame = "A";
+
+    private static readonly List<ThingInfo> Registry = [];
+
+    //**********************************************************
+    //** ctor
+    //**********************************************************
+
+    public ThingInfo()
+    {
+        lock (Registry)
+        {
+            Id = Registry.Count;
+            Registry.Add(this);
+        }
+    }
+
+    //**********************************************************
+    //** props
+    //**********************************************************
+
+    /// <summary>A number for this kind, unique in the process: what a <see cref="Components.Thing"/> stores.</summary>
+    public int Id { get; }
+
     public int DoomEdNum { get; init; }
 
     /// <summary>Four letter sprite name in the WAD, or null for things that are never drawn.</summary>
@@ -197,5 +227,26 @@ public sealed class ThingInfo
     public MonsterInfo Monster { get; init; }
     public Pickup Pickup { get; init; }
 
+    //**********************************************************
+    //** public methods
+    //**********************************************************
+
+    /// <summary>The kind with <see cref="Id"/> <paramref name="id"/>.</summary>
+    public static ThingInfo ById(int id) => Registry[id];
+
     public bool Has(ThingFlags flag) => (Flags & flag) != 0;
+
+    /// <summary>The frame letters of <paramref name="clip"/>; "A" when the kind has none.</summary>
+    public string FramesOf(AnimationClip clip)
+    {
+        var frames = clip switch
+        {
+            AnimationClip.Walk => Monster?.WalkFrames,
+            AnimationClip.Attack => Monster?.AttackFrames,
+            AnimationClip.Pain => Monster?.PainFrames,
+            AnimationClip.Death => DeathFrames,
+            _ => Frames
+        };
+        return string.IsNullOrEmpty(frames) ? FirstFrame : frames;
+    }
 }

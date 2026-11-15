@@ -1,4 +1,5 @@
 using System;
+using Doom.Components;
 using Doom.Graphics;
 using Doom.Maps;
 using Doom.Play;
@@ -498,29 +499,38 @@ public sealed class WorldRenderer
 
     private void DrawSprites(Level level)
     {
-        var actors = level.Actors;
-        for (var i = 0; i < actors.Count; i++)
+        var sprites = level.Sprites;
+        var sectors = level.Map.Sectors;
+        foreach (var chunk in level.Things.GetChunks())
         {
-            var actor = actors[i];
-            if (actor.Removed || actor.IsPlayer || actor.Sprite == null || actor.Has(ThingFlags.Invisible))
-                continue;
+            var things = chunk.GetSpan<Thing>();
+            var bodies = chunk.GetSpan<Body>();
+            var animations = chunk.GetSpan<Animation>();
+            for (var i = 0; i < chunk.Count; i++)
+            {
+                ref var thing = ref things[i];
+                ref var animation = ref animations[i];
+                if (thing.Removed || animation.Sprite < 0 || (thing.Flags & ThingFlags.Invisible) != 0)
+                    continue;
 
-            DrawSprite(actor);
+                DrawSprite(sprites.Get(animation.Sprite), animation.Frame, thing.Flags, bodies[i],
+                    sectors[bodies[i].Sector].LightLevel);
+            }
         }
     }
 
-    private void DrawSprite(Actor actor)
+    private void DrawSprite(SpriteDefinition sprite, char letter, ThingFlags flags, in Body body, int sectorLight)
     {
-        _camera.ToView(actor.X, actor.Y, out var side, out var depth);
+        _camera.ToView(body.X, body.Y, out var side, out var depth);
         if (depth < NearPlane * 2)
             return;
 
-        var frame = actor.Sprite.Get(actor.Frame);
+        var frame = sprite.Get(letter);
         if (frame == null)
             return;
 
-        var toViewer = MathF.Atan2(_camera.Y - actor.Y, _camera.X - actor.X);
-        var relative = Level.WrapAngle(toViewer - actor.Angle + MathF.PI / 8);
+        var toViewer = MathF.Atan2(_camera.Y - body.Y, _camera.X - body.X);
+        var relative = Level.WrapAngle(toViewer - body.Angle + MathF.PI / 8);
         var rotation = (int)(relative / (MathF.PI / 4)) & 7;
         var picture = frame.Get(rotation, out var mirrored);
         if (picture == null)
@@ -529,7 +539,7 @@ public sealed class WorldRenderer
         var scale = _focal / depth;
         var centerX = _halfWidth + side * scale;
         var left = centerX - (mirrored ? picture.Width - picture.LeftOffset : picture.LeftOffset) * scale;
-        var top = _horizon - (actor.Z + picture.TopOffset - _camera.Z) * scale;
+        var top = _horizon - (body.Z + picture.TopOffset - _camera.Z) * scale;
         var x0 = Math.Max(0, RowAt(left));
         var x1 = Math.Min(_width, RowAt(left + picture.Width * scale));
         var y0 = Math.Max(0, RowAt(top));
@@ -537,9 +547,9 @@ public sealed class WorldRenderer
         if (x0 >= x1 || y0 >= y1)
             return;
 
-        var bright = actor.Has(ThingFlags.FullBright);
-        var light = _fixedLight >= 0 ? _fixedLight : bright ? 0 : LightIndex(actor.Sector.LightLevel, depth);
-        var shadow = actor.Has(ThingFlags.Shadow);
+        var bright = (flags & ThingFlags.FullBright) != 0;
+        var light = _fixedLight >= 0 ? _fixedLight : bright ? 0 : LightIndex(sectorLight, depth);
+        var shadow = (flags & ThingFlags.Shadow) != 0;
         if (shadow)
             light = Math.Min(Palette.LightLevels - 1, light + 6);
 
