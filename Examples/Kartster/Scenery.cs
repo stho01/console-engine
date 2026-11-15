@@ -3,7 +3,9 @@ using System.Collections.Generic;
 using System.Globalization;
 using System.IO;
 using System.Numerics;
+using ConsoleEngine.Assets;
 using ConsoleEngine.Rendering3D;
+using Kartster.Loading;
 
 namespace Kartster;
 
@@ -68,10 +70,6 @@ public sealed class Scenery
     //** public methods
     //**********************************************************
 
-    /// <summary>Loads a scenery file; its models come from <paramref name="modelsFolder"/>.</summary>
-    public static Scenery Load(string path, string modelsFolder, float groundHeight) =>
-        Parse(File.ReadLines(path), Path.GetFileName(path), modelsFolder, groundHeight);
-
     /// <summary>Meshes in world space, each drawn and culled on its own (the terrain's tiles).</summary>
     public static Scenery FromMeshes(Mesh[] meshes)
     {
@@ -87,9 +85,13 @@ public sealed class Scenery
     }
 
     /// <param name="source">The file name, for error messages.</param>
+    /// <param name="assets">Where the models are read from.</param>
+    /// <param name="modelsFolder">The folder in <paramref name="assets"/> with a <c>&lt;name&gt;.obj</c> per model.</param>
     /// <exception cref="InvalidDataException">A line is not a model or tri line, or its model is missing.</exception>
-    public static Scenery Parse(IEnumerable<string> lines, string source, string modelsFolder, float groundHeight)
+    public static Scenery Parse(IEnumerable<string> lines, string source, AssetManager assets, AssetPath modelsFolder,
+        float groundHeight)
     {
+        using var files = assets.CreateScope();
         var models = new Dictionary<string, Model>();
         var meshes = new Dictionary<(string, Vector3), Mesh>();
         var instances = new List<(Mesh Mesh, Matrix4x4 World, Vector3 Center, float Radius)>();
@@ -120,7 +122,7 @@ public sealed class Scenery
 
                 if (!models.TryGetValue(name, out var model))
                 {
-                    model = Model.Load(Path.Combine(modelsFolder, name + ".obj"), source, lineNumber);
+                    model = Model.Load(files, modelsFolder.Resolve(name + ".obj"), source, lineNumber);
                     models[name] = model;
                 }
 
@@ -269,14 +271,14 @@ public sealed class Scenery
     /// <summary>An OBJ model and its bounding sphere, in model space.</summary>
     private sealed record Model(Vector3[] Positions, int[] Indices, Vector3 Center, float Radius)
     {
-        public static Model Load(string path, string source, int lineNumber)
+        public static Model Load(AssetScope files, AssetPath path, string source, int lineNumber)
         {
-            if (!File.Exists(path))
-                throw Error(source, lineNumber, $"model file {Path.GetFullPath(path)} not found");
+            if (!files.TryLoad<ObjGeometry>(path, out var geometry))
+                throw Error(source, lineNumber, $"model file {files.Manager.Source.Describe(path)} not found");
 
             var positions = new List<Vector3>();
             var indices = new List<int>();
-            ObjFile.Read(path, positions, indices);
+            geometry.AppendTo(positions, indices);
             var (center, radius) = Bounds(positions);
             return new Model(positions.ToArray(), indices.ToArray(), center, radius);
         }

@@ -83,7 +83,13 @@ public class Sprite
             };
             
             Data[x + dataX, y] = pixelReplacement;
-        }  
+        }
     }
+
+    /// <summary>
+    /// A copy with its own pixels and the same <see cref="Origin"/>. Take one before drawing into a sprite that came
+    /// from <c>GameBase.Assets</c>: cached assets are shared.
+    /// </summary>
+    public Sprite Clone() => new((Pixel[,])Data.Clone()) { Origin = Origin };
 
 }

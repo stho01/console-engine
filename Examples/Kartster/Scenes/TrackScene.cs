@@ -2,6 +2,7 @@ using System;
 using System.Collections.Generic;
 using System.Numerics;
 using ConsoleEngine.Abstractions.Inputs;
+using ConsoleEngine.Assets;
 using ConsoleEngine.Ecs;
 using ConsoleEngine.Ecs.Components;
 using ConsoleEngine.Infrastructure.Inputs;
@@ -269,7 +270,7 @@ public sealed class TrackScene(int lapCount, int botCount = TrackScene.DefaultBo
         Race = CreateSession(track, Game.Markers, lapCount);
         var karts = CreateKarts(World, track, Game.Markers, tunings, PlayerSlot, Race);
         _player = karts[PlayerSlot];
-        TrackCollision.Load(System.IO.Path.Combine("Assets", "Tracks"), track.Name).AddTo(World);
+        TrackCollision.Load(Game.TrackAssets, Game.TracksFolder, track.Name).AddTo(World);
         _report = new RaceReport(Race, names, PlayerSlot);
 
         FixedTimestep = new FixedTimestep(StepSeconds, MaxStepsPerFrame);
@@ -351,7 +352,7 @@ public sealed class TrackScene(int lapCount, int botCount = TrackScene.DefaultBo
     private void LoadBotKarts(KartTuning[] tunings, Mesh[] meshes, string[] names, int playerIndex)
     {
         var folders = Game.KartFolders;
-        var loaded = new Dictionary<string, Mesh>();
+        var loaded = new Dictionary<AssetPath, Mesh>();
         var botNumber = 0;
         for (var i = 0; i < tunings.Length; i++)
         {
@@ -360,12 +361,12 @@ public sealed class TrackScene(int lapCount, int botCount = TrackScene.DefaultBo
 
             var kartFolder = folders[botNumber % folders.Length];
             if (!loaded.TryGetValue(kartFolder, out var mesh))
-                loaded[kartFolder] = mesh = KartModel.Load(kartFolder, BodyKey);
-            tunings[i] = KartCatalog.ForKart(System.IO.Path.GetFileName(kartFolder));
+                loaded[kartFolder] = mesh = KartModel.Load(Game.KartAssets, kartFolder, BodyKey);
+            tunings[i] = KartCatalog.ForKart(kartFolder.FileName);
             var rgb = BotRgb[botNumber % BotRgb.Length];
             meshes[i] = KartModel.Recolor(mesh, BodyKey, Rgb(rgb));
             _kartColors[i] = rgb;
-            names[i] = $"{System.IO.Path.GetFileName(kartFolder).ToUpperInvariant()} {botNumber + 1}";
+            names[i] = $"{kartFolder.FileName.ToUpperInvariant()} {botNumber + 1}";
             botNumber++;
         }
     }

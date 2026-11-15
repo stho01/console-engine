@@ -43,8 +43,8 @@ public sealed class KartRenderSystem(Entity player, KartsterGame game, Mesh[] ka
     private Query _karts;
     private readonly Matrix4x4[] _kartWorlds = new Matrix4x4[kartMeshes.Length]; // by Kart.Index, this frame
     private readonly KartLod[] _lods = Array.ConvertAll(kartMeshes, mesh => new KartLod(mesh));
-    private readonly KartLights _lights = new(kartMeshes, game.KartFolders, game.Track.Name, game.Renderer.Width,
-        game.Renderer.Height);
+    private readonly KartLights _lights = new(kartMeshes, game.KartAssets, game.KartFolders, game.Track.Name,
+        game.Renderer.Width, game.Renderer.Height);
     private Vector3 _eye;
     private bool _hasEye;
     private float _seconds; // drawn time, for the shake

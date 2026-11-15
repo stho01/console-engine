@@ -21,7 +21,7 @@ public class PowerUpSystemTests
     private const float Step = TrackScene.StepSeconds;
 
     private static readonly Lazy<Track> StarCircuit =
-        new(() => Track.Load(Path.Combine("Assets", "Tracks"), "star-circuit"));
+        new(() => TestAssets.Track("star-circuit"));
 
     /// <summary>Karts 40 m apart side by side facing -Z, the kart model, the physics and the power-ups.</summary>
     private static (SystemGroup Group, PowerUpField Field, Entity[] Karts) Karts(World world, int count, int bots = 0)
@@ -211,7 +211,7 @@ public class PowerUpSystemTests
         using var world = new World();
         var tunings = new KartTuning[6];
         Array.Fill(tunings, KartCatalog.Kart);
-        var markers = RaceMarkers.Load(Path.Combine("Assets", "Tracks"), "star-circuit");
+        var markers = TestAssets.Markers("star-circuit");
         var race = TrackScene.CreateSession(track, markers, laps: 3);
         TrackScene.CreateKarts(world, track, markers, tunings, playerIndex: -1, race);
         var group = new SystemGroup(world);

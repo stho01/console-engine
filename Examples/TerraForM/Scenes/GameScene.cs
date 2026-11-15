@@ -16,7 +16,8 @@ public class GameScene(string worldName) : Scene<TerraformGame>
     //** fields
     //**********************************************************
 
-    private const string MapAssetPath = "Assets/Maps";
+    /// <summary>Folder of the map files, under <c>Assets/</c> next to the exe.</summary>
+    private const string MapFolder = "Maps";
     private readonly string _worldName = worldName ?? throw new ArgumentNullException(nameof(worldName));
     private readonly Queue<Command> _currentCommands = new();
               
@@ -41,7 +42,7 @@ public class GameScene(string worldName) : Scene<TerraformGame>
     public override void OnLoad()
     {
         Game.Camera.Position = Vector2.Zero;
-        World = WorldLoader.LoadWorld(Game, $"{MapAssetPath}/{_worldName}.txt");
+        World = WorldLoader.LoadWorld(Game, Assets.Load<string[]>($"{MapFolder}/{_worldName}.txt"));
         Rover = new Rover(this) {
             Position = World.StartingPoint.Position,
             Velocity = Vector2.Zero

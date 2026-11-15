@@ -58,7 +58,11 @@ public class TerraformEcsGame : GameBase
     //** overrides
     //**********************************************************
 
-    protected override void OnInitialize() => Scenes.Set<InputNameScene>();
+    protected override void OnInitialize()
+    {
+        Assets.RegisterLoader(new MapLoader());
+        Scenes.Set<InputNameScene>();
+    }
 
     protected override void OnUpdate() { }
 

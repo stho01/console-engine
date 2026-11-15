@@ -3,6 +3,7 @@ using System.Collections.Generic;
 using System.Globalization;
 using System.IO;
 using System.Numerics;
+using ConsoleEngine.Assets;
 
 namespace Kartster.PowerUps;
 
@@ -19,10 +20,11 @@ public static class PowerUpPads
     //**********************************************************
 
     /// <summary>The pads of track <paramref name="id"/> in <paramref name="folder"/>; none without the file.</summary>
-    public static Vector3[] Load(string folder, string id)
+    public static Vector3[] Load(AssetManager assets, AssetPath folder, string id)
     {
-        var path = Path.Combine(folder, id + ".powerups.txt");
-        return File.Exists(path) ? Parse(File.ReadLines(path), Path.GetFileName(path)) : [];
+        using var files = assets.CreateScope();
+        var path = folder.Resolve(id + ".powerups.txt");
+        return files.TryLoad<string[]>(path, out var lines) ? Parse(lines, path.FileName) : [];
     }
 
     /// <exception cref="InvalidDataException">A line is not <c>pad x y z setId</c>.</exception>

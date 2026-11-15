@@ -1,10 +1,16 @@
+using System.Collections.Generic;
 using System.IO;
+using ConsoleEngine.Assets;
 using Microsoft.Xna.Framework;
 using TerraForM.Ecs.Components;
 
 namespace TerraForM.Ecs;
 
-/// <summary>A parsed map file: header values and one <see cref="TileKind"/> per grid cell.</summary>
+/// <summary>
+/// A parsed map file: header values and one <see cref="TileKind"/> per grid cell. Cached by
+/// <see cref="ConsoleEngine.GameBase.Assets"/> and shared by every load of the same map (a restart, the next round of
+/// the rotation), so it is only read, never changed.
+/// </summary>
 public sealed class Map
 {
     public string Name { get; init; }
@@ -19,8 +25,9 @@ public sealed class Map
 /// <summary>
 /// Reads <c>Assets/Maps/mapN.txt</c> exactly like the original's <c>WorldLoader</c>, quirks included: grid rows before
 /// <c>!width</c> and <c>!height</c> are dropped, and every header line after both are set starts a new, empty grid.
+/// Registered with <see cref="AssetManager.RegisterLoader{T}"/> in <see cref="TerraformEcsGame"/>.
 /// </summary>
-public static class MapLoader
+public sealed class MapLoader : IAssetLoader<Map>
 {
     //**********************************************************
     //** fields
@@ -30,16 +37,30 @@ public static class MapLoader
     public const int TileSize = 5;
 
     //**********************************************************
+    //** props
+    //**********************************************************
+
+    public IReadOnlyList<string> Extensions { get; } = ["txt"];
+
+    //**********************************************************
     //** public methods
     //**********************************************************
 
-    public static Map Load(string path) => Parse(File.ReadAllLines(path));
+    public Map Load(Stream stream, AssetLoadContext context)
+    {
+        using var reader = new StreamReader(stream, leaveOpen: true);
+        var lines = new List<string>();
+        while (reader.ReadLine() is { } line)
+            lines.Add(line);
+
+        return Parse(lines);
+    }
 
     //**********************************************************
     //** internals
     //**********************************************************
 
-    private static Map Parse(string[] lines)
+    private static Map Parse(List<string> lines)
     {
         var name = string.Empty;
         var sequences = 0;

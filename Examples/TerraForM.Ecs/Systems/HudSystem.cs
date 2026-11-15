@@ -34,6 +34,8 @@ public sealed class HudSystem(TerraformEcsGame game, Level level) : EntitySystem
     private const string QueuedCommandsPrefix = HudTexts.QueuedCommands + " ";
 
     private readonly char[] _text = new char[256];
+    // The game's root scope, not the level's: every level shows the same screen, so it is loaded once per game.
+    private readonly Sprite _gameOver = game.Assets.Load<Sprite>(SpritePaths.GameOver);
 
     //**********************************************************
     //** props
@@ -75,7 +77,7 @@ public sealed class HudSystem(TerraformEcsGame game, Level level) : EntitySystem
 
     private void DrawGameOver()
     {
-        var sprite = Sprites.GameOver;
+        var sprite = _gameOver;
         Console.Draw(
             (int)Console.ScreenCenter.X - sprite.Width / 2,
             (int)Console.ScreenCenter.Y - sprite.Height / 2,

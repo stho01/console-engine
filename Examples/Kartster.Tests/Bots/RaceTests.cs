@@ -20,7 +20,7 @@ public class RaceTests
     private const float Step = TrackScene.StepSeconds;
 
     private static readonly Lazy<Track> StarCircuit =
-        new(() => Track.Load(Path.Combine("Assets", "Tracks"), "star-circuit"));
+        new(() => TestAssets.Track("star-circuit"));
 
     private static KartTuning[] Tunings(int count)
     {
@@ -80,7 +80,7 @@ public class RaceTests
         var track = StarCircuit.Value;
         using var world = new World();
         var tunings = Tunings(3);
-        var markers = RaceMarkers.Load(Path.Combine("Assets", "Tracks"), "star-circuit");
+        var markers = TestAssets.Markers("star-circuit");
         var race = TrackScene.CreateSession(track, markers, laps: 5);
         var karts = TrackScene.CreateKarts(world, track, markers, tunings, playerIndex: -1, race);
         var group = new SystemGroup(world);

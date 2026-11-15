@@ -1,6 +1,7 @@
 ﻿using System;
 using System.Collections.Generic;
 using System.Linq;
+using ConsoleEngine.Assets;
 
 namespace ConsoleEngine.Infrastructure.Scenery;
 
@@ -11,6 +12,7 @@ public class SceneManager
     //**********************************************************
 
     private readonly GameBase _game;
+    private readonly AssetManager _assets;
     private readonly Stack<Scene> _scenes = new();
     private readonly Queue<Scene> _unloadScenes = new();
 
@@ -18,9 +20,13 @@ public class SceneManager
     //** ctor:
     //**********************************************************
 
-    internal SceneManager(GameBase game)
+    internal SceneManager(GameBase game) : this(game, game?.Assets) { }
+
+    /// <summary>Tests pass <c>null</c> as the game and their own <paramref name="assets"/>.</summary>
+    internal SceneManager(GameBase game, AssetManager assets)
     {
         _game = game;
+        _assets = assets;
     }
               
     //**********************************************************
@@ -100,6 +106,7 @@ public class SceneManager
             current.Pause();
 
         scene.Game = _game;
+        scene.AssetManager = _assets;
         scene.OnLoad();
         _scenes.Push(scene);
     }

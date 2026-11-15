@@ -52,6 +52,7 @@ Tags used throughout:
 | 3D: "GPU mode not available", "it falls back to CPU", "`GlRenderer` throws", "glfw3.dll missing", "GPU picture differs from CPU" | [P21](05-triage.md#p21) |
 | SkyStack: "can't reach the next floor", "my combo vanished", "the screen killed me", "high score is gone" | [P20](05-triage.md#p20) |
 | Lua: "my script doesn't load / run", "the object stands still", "F5 doesn't reload my change", "lua54.dll missing" | [P19](05-triage.md#p19) |
+| "Asset not found", "No loader for …", "Failed to load asset …" | [P22](05-triage.md#p22) |
 
 ## File index
 
@@ -59,9 +60,9 @@ Tags used throughout:
 |---|---|
 | [01-system-map.md](01-system-map.md) | Projects, processes, Win32 surface, TCP logger link, CI |
 | [02-state-model.md](02-state-model.md) | Runtime state (no DB): engine objects, TerraForM state, map file format |
-| [03-rules.md](03-rules.md) | Disputable rules: frame timing, key semantics, scenes, TerraForM power/score/sequences/maps |
-| [04-flows.md](04-flows.md) | Startup, frame loop, scenes, logger, map load, TerraForM command flow, launcher, EternalDigger miner frame and start/save, physics step and queries, Lua script load and hooks — each with "stops here if" |
-| [05-triage.md](05-triage.md) | **Entry point.** Facts to collect, first checks, playbooks P1–P21 |
+| [03-rules.md](03-rules.md) | Disputable rules: frame timing, key semantics, scenes, asset loading, TerraForM power/score/sequences/maps |
+| [04-flows.md](04-flows.md) | Startup, frame loop, scenes, logger, map load, TerraForM command flow, launcher, EternalDigger miner frame and start/save, physics step and queries, Lua script load and hooks, asset load — each with "stops here if" |
+| [05-triage.md](05-triage.md) | **Entry point.** Facts to collect, first checks, playbooks P1–P22 |
 | [06-diagnostics.md](06-diagnostics.md) | Where evidence lives (there are no log files), every user-visible message verbatim |
 | [07-checks.md](07-checks.md) | Read-only diagnostic commands, one per named question (replaces SQL, since there is no DB) |
 | [08-operator-actions.md](08-operator-actions.md) | What a user/support can do without a code change, and what to escalate |

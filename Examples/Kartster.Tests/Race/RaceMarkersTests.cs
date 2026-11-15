@@ -71,7 +71,7 @@ public class RaceMarkersTests
     [Test]
     public void Load_ShippedStarCircuit_HasKartstersMarkers()
     {
-        var markers = RaceMarkers.Load(Path.Combine("Assets", "Tracks"), "star-circuit");
+        var markers = TestAssets.Markers("star-circuit");
 
         Assert.That(markers.LapCount, Is.EqualTo(3));
         Assert.That(markers.Checkpoints, Has.Length.EqualTo(7));
@@ -105,9 +105,8 @@ public class RaceMarkersTests
     [TestCaseSource(nameof(TrackIds))]
     public void StandOn_ShippedTrack_TakesInItsRoadButNotAnotherLevel(string id)
     {
-        var folder = Path.Combine(AppContext.BaseDirectory, "Assets", "Tracks");
-        var track = Track.Load(folder, id);
-        var markers = RaceMarkers.Load(folder, id);
+        var track = TestAssets.Track(id);
+        var markers = TestAssets.Markers(id);
         var gates = new List<RaceGate>(markers.Checkpoints) { markers.Start };
         var levels = 0;
         foreach (var marker in gates)

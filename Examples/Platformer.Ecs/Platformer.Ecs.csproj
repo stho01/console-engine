@@ -15,4 +15,9 @@
       <ProjectReference Include="..\..\Libs\Microsoft.Xna.Framework\Microsoft.Xna.Framework.csproj" />
     </ItemGroup>
 
+    <!-- The level and sprites go next to the exe, where GameBase.Assets reads them. -->
+    <ItemGroup>
+      <None Update="Assets\**" CopyToOutputDirectory="PreserveNewest" />
+    </ItemGroup>
+
 </Project>
