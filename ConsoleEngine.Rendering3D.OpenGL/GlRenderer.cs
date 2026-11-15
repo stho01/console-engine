@@ -1,6 +1,8 @@
 using System;
 using System.Collections.Generic;
 using System.Numerics;
+using System.Runtime.InteropServices;
+using System.Runtime.Intrinsics;
 using Silk.NET.Core.Contexts;
 using Silk.NET.OpenGL;
 using Silk.NET.Windowing;
@@ -46,6 +48,7 @@ public sealed class GlRenderer : IRenderer3D
         void main() {
             gl_Position = uWorldViewProjection * vec4(aPosition, 1.0);
             gl_Position.z = 2.0 * gl_Position.z - gl_Position.w; // System.Numerics z 0..1 -> GL -w..w
+            gl_Position.y = -gl_Position.y; // row 0 is the top row, as in Colors and Rgb: read back as it is
             vec3 normal = normalize(mat3(uWorld) * aNormal);
             vColor = uUnlit ? aColor : aColor * (uAmbient + uSunColor * max(0.0, dot(normal, uToLight)));
             vAlbedo = aColor;
@@ -95,12 +98,11 @@ public sealed class GlRenderer : IRenderer3D
     private const string FragmentShader = """
         uniform usampler3D uNearest;
         uniform float uDither[16];
-        uniform int uHeight;
         out uint paletteIndex;
         const float Bayer[16] = float[16](0, 8, 2, 10, 12, 4, 14, 6, 3, 11, 1, 9, 15, 7, 13, 5);
         void main() {
             int x = int(gl_FragCoord.x);
-            int y = uHeight - 1 - int(gl_FragCoord.y); // the CPU counts rows from the top
+            int y = int(gl_FragCoord.y); // rows are drawn top-down (see the vertex shader), like the CPU's
             int cell = ((y & 3) << 2) | (x & 3);
             if (vOpacity < 1.0 && (Bayer[cell] + 0.5) / 16.0 >= vOpacity)
                 discard;
@@ -150,8 +152,8 @@ public sealed class GlRenderer : IRenderer3D
     // shortcut: a mesh stays on the GPU until Dispose; add eviction if games create meshes per level or per frame.
     private readonly Dictionary<Mesh, GpuMesh> _meshes = new();
     private readonly ConsoleColor[] _background;
-    private readonly byte[] _pixels;
-    private readonly uint[] _bgra; // true colour: the read-back, 0xAARRGGBB, rows bottom-up
+    private readonly byte[] _pixels; // palette mode: the read-back
+    private static bool _discreteGpuRequested;
     private readonly uint[] _clearColor = [NoGeometry, 0, 0, 0];
     private readonly float[] _clearDepth = [1f];
     private bool _disposed;
@@ -173,10 +175,15 @@ public sealed class GlRenderer : IRenderer3D
         Rgb = trueColor ? new uint[width * height] : [];
         _background = trueColor ? [] : new ConsoleColor[width * height];
         _pixels = trueColor ? [] : new byte[width * height];
-        _bgra = trueColor ? new uint[width * height] : [];
 
         try
         {
+            if (PreferDiscreteGpu && OperatingSystem.IsWindows() && !_discreteGpuRequested)
+            {
+                _discreteGpuRequested = true;
+                NativeLibrary.TryLoad("nvapi64.dll", out _); // not there without an NVIDIA driver: the default GPU
+            }
+
             _window = Window.Create(WindowOptions.Default with
             {
                 IsVisible = false,
@@ -187,6 +194,7 @@ public sealed class GlRenderer : IRenderer3D
             });
             _window.Initialize();
             _gl = GL.GetApi(_window);
+            Description = $"{_gl.GetStringS(StringName.Renderer)} (OpenGL {_gl.GetStringS(StringName.Version)})";
 
             if (trueColor)
                 (_backgroundFramebuffer, _backgroundTexture) = CreateBackground();
@@ -213,7 +221,6 @@ public sealed class GlRenderer : IRenderer3D
             {
                 _nearestTexture = CreateNearestTexture(palette);
                 _gl.Uniform1(_gl.GetUniformLocation(_program, "uNearest"), 0);
-                _gl.Uniform1(_gl.GetUniformLocation(_program, "uHeight"), height);
                 _gl.Uniform1(_gl.GetUniformLocation(_program, "uDither"), ConsolePalette.Dither);
             }
 
@@ -222,7 +229,8 @@ public sealed class GlRenderer : IRenderer3D
             _gl.DepthFunc(DepthFunction.Less);
             _gl.Enable(EnableCap.CullFace);
             _gl.CullFace(TriangleFace.Back);
-            _gl.FrontFace(FrontFaceDirection.Ccw);
+            _gl.FrontFace(FrontFaceDirection.CW); // counter-clockwise faces, mirrored by the vertex shader's y flip
+            _gl.ProvokingVertex(VertexProvokingMode.FirstVertexConvention); // see Build
             _gl.PixelStore(PixelStoreParameter.PackAlignment, 1);
 
             var error = _gl.GetError();
@@ -252,6 +260,18 @@ public sealed class GlRenderer : IRenderer3D
 
     /// <inheritdoc/>
     public SceneLighting Lighting { get; set; }
+
+    /// <summary>The graphics adapter and driver the context runs on, e.g. to tell an integrated GPU from a discrete one.</summary>
+    public string Description { get; }
+
+    /// <summary>
+    /// Ask for the discrete GPU of a laptop that also has an integrated one (default true; set it before the first
+    /// renderer is created, later it does nothing). Windows only, and only NVIDIA: its driver runs OpenGL on the
+    /// discrete GPU for a process that has loaded <c>nvapi64.dll</c> before its first context. Elsewhere, and with
+    /// false, the driver's own choice stands: on such laptops usually the integrated GPU.
+    /// </summary>
+    public static bool PreferDiscreteGpu { get; set; } = true;
+
 
     //**********************************************************
     //** public methods
@@ -292,8 +312,8 @@ public sealed class GlRenderer : IRenderer3D
     }
 
     /// <summary>
-    /// Starts a true-colour frame: uploads the background and copies it into the GPU image (flipped to OpenGL's
-    /// bottom-up rows), so blending sees the real background.
+    /// Starts a true-colour frame: uploads the background and copies it into the GPU image, so blending sees the
+    /// real background.
     /// </summary>
     public void Clear(ReadOnlySpan<uint> backgroundRgb)
     {
@@ -305,7 +325,7 @@ public sealed class GlRenderer : IRenderer3D
         _gl.TexSubImage2D(TextureTarget.Texture2D, 0, 0, 0, (uint)Width, (uint)Height, PixelFormat.Bgra,
             PixelType.UnsignedInt8888Rev, backgroundRgb[..(Width * Height)]);
         _gl.BindFramebuffer(FramebufferTarget.ReadFramebuffer, _backgroundFramebuffer);
-        _gl.BlitFramebuffer(0, 0, Width, Height, 0, Height, Width, 0, ClearBufferMask.ColorBufferBit,
+        _gl.BlitFramebuffer(0, 0, Width, Height, 0, 0, Width, Height, ClearBufferMask.ColorBufferBit,
             BlitFramebufferFilter.Nearest);
         _gl.BindFramebuffer(FramebufferTarget.Framebuffer, _framebuffer);
         _gl.ClearBuffer(BufferKind.Depth, 0, _clearDepth.AsSpan());
@@ -325,15 +345,15 @@ public sealed class GlRenderer : IRenderer3D
         _gl.Uniform1(_unlitLocation, mesh.IsUnlit ? 1 : 0);
         UploadLighting(mesh.IsUnlit);
         _gl.BindVertexArray(gpuMesh.VertexArray);
-        var vertexCount = (uint)(mesh.TriangleCount * 3);
+        var indexCount = (uint)(mesh.TriangleCount * 3);
         if (!TrueColor)
         {
-            _gl.DrawArrays(PrimitiveType.Triangles, 0, vertexCount);
+            _gl.DrawElements(PrimitiveType.Triangles, indexCount, DrawElementsType.UnsignedInt, (void*)0);
             return;
         }
 
         _gl.Uniform1(_blendedPassLocation, 0);
-        _gl.DrawArrays(PrimitiveType.Triangles, 0, vertexCount);
+        _gl.DrawElements(PrimitiveType.Triangles, indexCount, DrawElementsType.UnsignedInt, (void*)0);
         if (mesh.TriangleOpacity == null)
             return;
 
@@ -341,7 +361,7 @@ public sealed class GlRenderer : IRenderer3D
         _gl.Uniform1(_blendedPassLocation, 1);
         _gl.DepthMask(false);
         _gl.Enable(EnableCap.Blend);
-        _gl.DrawArrays(PrimitiveType.Triangles, 0, vertexCount);
+        _gl.DrawElements(PrimitiveType.Triangles, indexCount, DrawElementsType.UnsignedInt, (void*)0);
         _gl.Disable(EnableCap.Blend);
         _gl.DepthMask(true); // ClearBuffer(Depth) needs it
     }
@@ -355,19 +375,30 @@ public sealed class GlRenderer : IRenderer3D
             return;
         }
 
+        // As bytes (measured faster than letting the driver widen them into Colors), then eight pixels at a time:
+        // the index as a ConsoleColor, or the background where nothing was drawn.
+        ReadOnlySpan<byte> pixels = _pixels;
         _gl.ReadPixels(0, 0, (uint)Width, (uint)Height, PixelFormat.RedInteger, PixelType.UnsignedByte,
             _pixels.AsSpan());
+        var colors = MemoryMarshal.Cast<ConsoleColor, int>(Colors.AsSpan());
+        var background = MemoryMarshal.Cast<ConsoleColor, int>(_background.AsSpan());
 
-        for (var y = 0; y < Height; y++)
+        var i = 0;
+        var noGeometry = Vector128.Create((int)NoGeometry);
+        for (; i <= pixels.Length - 8; i += 8)
         {
-            var row = (Height - 1 - y) * Width; // OpenGL rows go bottom-up
-            var index = y * Width;
-            for (var x = 0; x < Width; x++, index++)
-            {
-                var value = _pixels[row + x];
-                Colors[index] = value == NoGeometry ? _background[index] : (ConsoleColor)value;
-            }
+            var indices = Vector128.WidenLower(Vector128.CreateScalarUnsafe(MemoryMarshal.Read<ulong>(pixels[i..]))
+                .AsByte());
+            var low = Vector128.WidenLower(indices).AsInt32();
+            var high = Vector128.WidenUpper(indices).AsInt32();
+            Vector128.ConditionalSelect(Vector128.Equals(low, noGeometry), Vector128.Create(background[i..]), low)
+                .CopyTo(colors[i..]);
+            Vector128.ConditionalSelect(Vector128.Equals(high, noGeometry), Vector128.Create(background[(i + 4)..]),
+                high).CopyTo(colors[(i + 4)..]);
         }
+
+        for (; i < pixels.Length; i++)
+            colors[i] = pixels[i] == NoGeometry ? background[i] : pixels[i];
     }
 
     public void Dispose()
@@ -382,6 +413,7 @@ public sealed class GlRenderer : IRenderer3D
             foreach (var gpuMesh in _meshes.Values)
             {
                 _gl.DeleteBuffer(gpuMesh.VertexBuffer);
+                _gl.DeleteBuffer(gpuMesh.IndexBuffer);
                 _gl.DeleteVertexArray(gpuMesh.VertexArray);
             }
 
@@ -453,16 +485,16 @@ public sealed class GlRenderer : IRenderer3D
 
     private void FinishTrueColor()
     {
-        _gl.ReadPixels(0, 0, (uint)Width, (uint)Height, PixelFormat.Bgra, PixelType.UnsignedInt8888Rev,
-            _bgra.AsSpan());
+        // Straight into Rgb as 0xAARRGGBB, then the alpha is cleared.
+        var rgb = Rgb.AsSpan();
+        _gl.ReadPixels(0, 0, (uint)Width, (uint)Height, PixelFormat.Bgra, PixelType.UnsignedInt8888Rev, rgb);
 
-        for (var y = 0; y < Height; y++)
-        {
-            var row = (Height - 1 - y) * Width; // OpenGL rows go bottom-up
-            var index = y * Width;
-            for (var x = 0; x < Width; x++, index++)
-                Rgb[index] = _bgra[row + x] & 0xFFFFFF;
-        }
+        var i = 0;
+        var colorBits = new Vector<uint>(0xFFFFFF);
+        for (; i <= rgb.Length - Vector<uint>.Count; i += Vector<uint>.Count)
+            (new Vector<uint>(rgb[i..]) & colorBits).CopyTo(rgb[i..]);
+        for (; i < rgb.Length; i++)
+            rgb[i] &= 0xFFFFFF;
     }
 
     private (uint Framebuffer, uint Color, uint Depth) CreateFramebuffer()
@@ -569,9 +601,14 @@ public sealed class GlRenderer : IRenderer3D
         }
         else
         {
-            gpuMesh = new GpuMesh(new float[mesh.TriangleCount * 3 * FloatsPerVertex], _gl.GenVertexArray(),
-                _gl.GenBuffer());
+            // At most one vertex per position plus one extra per triangle (see Build).
+            var capacity = mesh.Positions.Length + mesh.TriangleCount;
+            gpuMesh = new GpuMesh(new float[capacity * FloatsPerVertex], new uint[mesh.TriangleCount * 3],
+                new bool[mesh.Positions.Length], _gl.GenVertexArray(), _gl.GenBuffer(), _gl.GenBuffer());
             _gl.BindVertexArray(gpuMesh.VertexArray);
+            _gl.BindBuffer(BufferTargetARB.ElementArrayBuffer, gpuMesh.IndexBuffer); // kept by the vertex array
+            _gl.BufferData(BufferTargetARB.ElementArrayBuffer, (nuint)(gpuMesh.Indices.Length * sizeof(uint)), null,
+                BufferUsageARB.DynamicDraw);
             _gl.BindBuffer(BufferTargetARB.ArrayBuffer, gpuMesh.VertexBuffer);
             _gl.BufferData(BufferTargetARB.ArrayBuffer, (nuint)(gpuMesh.Vertices.Length * sizeof(float)), null,
                 BufferUsageARB.DynamicDraw);
@@ -585,44 +622,92 @@ public sealed class GlRenderer : IRenderer3D
             _meshes.Add(mesh, gpuMesh);
         }
 
-        Expand(mesh, gpuMesh.Vertices);
+        var vertexCount = Build(mesh, gpuMesh);
+        _gl.BindVertexArray(gpuMesh.VertexArray);
         _gl.BindBuffer(BufferTargetARB.ArrayBuffer, gpuMesh.VertexBuffer);
-        _gl.BufferSubData<float>(BufferTargetARB.ArrayBuffer, 0, gpuMesh.Vertices);
+        _gl.BufferSubData<float>(BufferTargetARB.ArrayBuffer, 0,
+            gpuMesh.Vertices.AsSpan(0, vertexCount * FloatsPerVertex));
+        _gl.BufferSubData<uint>(BufferTargetARB.ElementArrayBuffer, 0, gpuMesh.Indices);
         gpuMesh.Version = mesh.Version;
         return gpuMesh;
     }
 
-    /// <summary>Three vertices per triangle, each carrying the triangle's normal, colour and opacity.</summary>
-    private static void Expand(Mesh mesh, float[] vertices)
+    /// <summary>
+    /// Indexed vertices for flat shading. A triangle's normal, colour and opacity come from its first corner (the
+    /// provoking vertex), so each triangle needs a first vertex of its own while the other two corners can be anyone's
+    /// vertex at that position. The mesh's positions come first, one vertex each; a triangle takes over one of its
+    /// corners nobody has taken (turning its corner order, which keeps the winding), or gets an extra vertex. A closed
+    /// mesh ends up with about one vertex per triangle instead of three.
+    /// </summary>
+    /// <returns>The number of vertices.</returns>
+    private static int Build(Mesh mesh, GpuMesh gpuMesh)
     {
-        var v = 0;
+        var vertices = gpuMesh.Vertices;
+        var indices = gpuMesh.Indices;
+        var taken = gpuMesh.Taken;
+        var positions = mesh.Positions;
+        Array.Clear(taken);
+        for (var p = 0; p < positions.Length; p++)
+        {
+            var position = positions[p];
+            var v = p * FloatsPerVertex;
+            vertices[v] = position.X;
+            vertices[v + 1] = position.Y;
+            vertices[v + 2] = position.Z;
+        }
+
+        var count = positions.Length;
         for (var t = 0; t < mesh.TriangleCount; t++)
         {
+            var a = mesh.Indices[t * 3];
+            var b = mesh.Indices[t * 3 + 1];
+            var c = mesh.Indices[t * 3 + 2];
+            int first;
+            if (!taken[a])
+                first = a;
+            else if (!taken[b])
+                (first, a, b, c) = (b, b, c, a);
+            else if (!taken[c])
+                (first, a, b, c) = (c, c, a, b);
+            else
+            {
+                first = count++;
+                var position = positions[a];
+                vertices[first * FloatsPerVertex] = position.X;
+                vertices[first * FloatsPerVertex + 1] = position.Y;
+                vertices[first * FloatsPerVertex + 2] = position.Z;
+            }
+
+            if (first < positions.Length)
+                taken[first] = true;
+
             var normal = mesh.TriangleNormals[t];
             var color = mesh.TriangleColors[t];
-            var opacity = mesh.TriangleOpacity == null ? 1f : mesh.TriangleOpacity[t];
-            for (var corner = 0; corner < 3; corner++)
-            {
-                var position = mesh.Positions[mesh.Indices[t * 3 + corner]];
-                vertices[v++] = position.X;
-                vertices[v++] = position.Y;
-                vertices[v++] = position.Z;
-                vertices[v++] = normal.X;
-                vertices[v++] = normal.Y;
-                vertices[v++] = normal.Z;
-                vertices[v++] = color.X;
-                vertices[v++] = color.Y;
-                vertices[v++] = color.Z;
-                vertices[v++] = opacity;
-            }
+            var attributes = first * FloatsPerVertex + 3;
+            vertices[attributes] = normal.X;
+            vertices[attributes + 1] = normal.Y;
+            vertices[attributes + 2] = normal.Z;
+            vertices[attributes + 3] = color.X;
+            vertices[attributes + 4] = color.Y;
+            vertices[attributes + 5] = color.Z;
+            vertices[attributes + 6] = mesh.TriangleOpacity == null ? 1f : mesh.TriangleOpacity[t];
+            indices[t * 3] = (uint)first;
+            indices[t * 3 + 1] = (uint)b;
+            indices[t * 3 + 2] = (uint)c;
         }
+
+        return count;
     }
 
-    private sealed class GpuMesh(float[] vertices, uint vertexArray, uint vertexBuffer)
+    private sealed class GpuMesh(float[] vertices, uint[] indices, bool[] taken, uint vertexArray, uint vertexBuffer,
+        uint indexBuffer)
     {
         public float[] Vertices { get; } = vertices;
+        public uint[] Indices { get; } = indices;
+        public bool[] Taken { get; } = taken; // per position: a triangle uses it as its first vertex
         public uint VertexArray { get; } = vertexArray;
         public uint VertexBuffer { get; } = vertexBuffer;
+        public uint IndexBuffer { get; } = indexBuffer;
         public int Version { get; set; } = -1;
     }
 }

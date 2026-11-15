@@ -143,7 +143,7 @@ Get-ChildItem -Recurse -Name -Filter glfw3.dll; Get-CimInstance Win32_VideoContr
 No `runtimes\win-x64\native\glfw3.dll` (or the folder for this machine's architecture) → [P21](05-triage.md#p21)
 step 1 (partial copy). A video controller named `Microsoft Basic Display Adapter`, or a remote desktop / VM session,
 usually means no OpenGL 3.3 core profile **[external]**. In a developer checkout, `dotnet test
-ConsoleEngine.Rendering3D.OpenGL.Tests` answers it: tests ignored with `OpenGL 3.3 not available` mean no context.
+ConsoleEngine.Rendering3D.OpenGL.Tests` answers it: tests ignored with `OpenGL 3.3 not available` mean no context. Two video controllers (an integrated one and a discrete one) → which one OpenGL runs on is `GlRenderer.Description` ([P21](05-triage.md#p21) step 5).
 
 <a id="q14"></a>
 ## Q14 — Can this console do 24-bit colour (VT sequences)?

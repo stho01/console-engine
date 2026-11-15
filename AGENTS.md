@@ -35,7 +35,7 @@ scripting loads the native `lua54.dll` that the KeraLua package ships for each r
 | ECS (entities, components, archetypes, chunks) | `ConsoleEngine/Ecs/`, design and phases in [`docs/design/ecs-plan.md`](docs/design/ecs-plan.md) |
 | 2D physics (bodies, circles/boxes/polygons, rotation, forces and torque (`Force`), broadphase, Soft Step contact solver, contact/sensor events, tile grid, sleeping, interpolation, raycasts and box casts, `CharacterMover.MoveAndSlide`) | `ConsoleEngine.Physics/` (own assembly and NuGet package, optional), rules in [`docs/agent/03-rules.md` § Physics](docs/agent/03-rules.md#physics), design and phases in [`docs/design/physics-plan.md`](docs/design/physics-plan.md). Examples: `Examples/PhysicsShowcase` (every feature), `Examples/PhysicsSandbox` (solver), `Examples/Asteroids.Ecs` (sensors, layers), `Examples/Platformer.Ecs` (tile grid, character controller) |
 | Asset loading (`GameBase.Assets`, `AssetManager`, `IAssetLoader<T>` for a game's own formats, `IAssetSource`) | `ConsoleEngine/Assets/`, rules in [`docs/agent/03-rules.md` § Assets](docs/agent/03-rules.md#assets), plan, phases and decision log in [`docs/design/asset-loader-plan.md`](docs/design/asset-loader-plan.md). Phases 0–3 are built (built-in loaders for text, lines, `.sprite`, JSON; `Scene.Assets` scopes released on unload; `AssetHandle<T>` for ECS components). A game's own loader: `Examples/TerraForM.Ecs/MapLoader.cs` (`IAssetLoader<Map>`, registered in `TerraformEcsGame.OnInitialize`, tested in `Examples/TerraForM.Ecs.Tests`). Kartster reads its karts, tracks and scenery through it too (`Examples/Kartster/Loading`: `KartsterAssets`, `ObjLoader`) |
-| Performance measurements | `ConsoleEngine.Benchmarks/` (BenchmarkDotNet) |
+| Performance measurements | `ConsoleEngine.Benchmarks/` (BenchmarkDotNet; CPU vs. GPU 3D frames in `Rendering3D/RendererBenchmarks`, results in its `README.md`) |
 | Exporting Kartster tracks (ribbon, spline, scenery, race markers, collision, power-up pads, terrain) from the original game | `tools/KartsterExport/` and its [`README.md`](tools/KartsterExport/README.md): `list`, `export <outDir> <trackId...>`, one `ITrackExporter` class per file. Not in the solution: needs the original's source (`KartsterRoot`, default `C:\Forse\kartster-server`) |
 | Lua scripting: components, `self` fields, hooks, errors, reload | [`docs/agent/03-rules.md § Lua`](docs/agent/03-rules.md#lua), `ConsoleEngine.Scripting/`, `Examples/Scripted` |
 | 3D rendering (`IRenderer3D`, software `Rasterizer`, OpenGL `GlRenderer`, near-plane clipping, OBJ models, 16-colour dithering or 24-bit true colour with alpha blending, lighting: `SceneLighting` ambient + sun + up to 16 per-pixel point/spot `PointLight`s) | `ConsoleEngine.Rendering3D/` (own assembly and NuGet package, optional), GPU renderer in `ConsoleEngine.Rendering3D.OpenGL/` (same picture; callers fall back to `Rasterizer` when `GlRenderer.TryCreate` fails), GPU plan in [`docs/design/gpu-rendering-plan.md`](docs/design/gpu-rendering-plan.md), rules in [`docs/agent/03-rules.md`](docs/agent/03-rules.md) (Kartster rows, "3D (any game)" lighting row); Kartster's headlights, night and blob shadows in `Examples/Kartster/Lighting/` |
@@ -76,7 +76,7 @@ Every name in `docs/agent/` is grep-able. Search for the identifier you are inte
 | `ConsoleEngine.Physics.Tests` | `ConsoleEngine.Physics.Tests/` | NUnit 5 | ConsoleEngine.Physics |
 | `ConsoleEngine.Rendering3D.Tests` | `ConsoleEngine.Rendering3D.Tests/` | NUnit 5 | ConsoleEngine.Rendering3D |
 | `ConsoleEngine.Rendering3D.OpenGL.Tests` | `ConsoleEngine.Rendering3D.OpenGL.Tests/` | NUnit 5, `[Category("Gpu")]`, ignored without OpenGL 3.3 (CI) | ConsoleEngine.Rendering3D.OpenGL |
-| `ConsoleEngine.Benchmarks` | `ConsoleEngine.Benchmarks/` | Exe: BenchmarkDotNet 0.15.8 | ConsoleEngine, Physics, Scripting |
+| `ConsoleEngine.Benchmarks` | `ConsoleEngine.Benchmarks/` | Exe: BenchmarkDotNet 0.15.8 | ConsoleEngine, Physics, Scripting, Rendering3D, Rendering3D.OpenGL |
 | `KartsterExport` | `tools/KartsterExport/` | Exe, **not in `ConsoleEngine.sln`**: exports the original Kartster's tracks | the original's `Kartster.csproj` (`$(KartsterRoot)`) |
 
 All projects: `net11.0`, `LangVersion` 15, `TreatWarningsAsErrors` = `True`. Solution: `ConsoleEngine.sln`.
@@ -197,7 +197,8 @@ ConsoleEngine.Rendering3D/        3D (namespace ConsoleEngine.Rendering3D): IRen
                                   PointLight, Mesh
                                   (Version/MarkChanged), ObjFile, ConsolePalette
 ConsoleEngine.Rendering3D.Tests/  RasterizerTests, ScreenDoorTests, TrueColorTests, LightingTests, ObjFileTests, MeshTests
-ConsoleEngine.Rendering3D.OpenGL/ GlRenderer (OpenGL 3.3: R8UI or RGBA8 framebuffer, shaders, per-mesh GPU cache)
+ConsoleEngine.Rendering3D.OpenGL/ GlRenderer (OpenGL 3.3: R8UI or RGBA8 framebuffer, shaders, per-mesh indexed GPU cache,
+                                  asks for a laptop's discrete GPU)
 ConsoleEngine.Rendering3D.OpenGL.Tests/  GlRendererTests, GlRendererTrueColorTests, LitScenes (GPU vs. CPU pixels, lights,
                                   allocation, fallback)
 ConsoleEngine.Scripting/          Script + ScriptFaulted (components), LuaScriptSystem, LuaRenderSystem,
@@ -207,6 +208,7 @@ ConsoleEngine.Benchmarks/         BenchmarkDotNet: Baseline/ (OOP vs. struct arr
                                   Physics/ (brute-force baseline, whole PhysicsSystem step, static-heavy step, queries),
                                   Scripting/ (Lua vs. C# system, mover.lua),
                                   Rendering/ (per-cell Draw copy, ConsoleHandler row diff),
+                                  Rendering3D/ (one 3D frame on the CPU Rasterizer vs. the GlRenderer),
                                   Assets/ (handle and store lookup vs. SpriteLibrary, cached Load)
 ConsoleEngine.Abstractions/
   Inputs/  IInputHandler, Key, KeyState
