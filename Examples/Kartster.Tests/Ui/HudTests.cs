@@ -148,13 +148,21 @@ public class HudTests
         state.Countdown = 2;
         _hud.Draw(preview.Target, state); // warm up
 
-        var before = GC.GetAllocatedBytesForCurrentThread();
-        for (var frame = 0; frame < 10; frame++)
+        // An allocation in Draw shows in every batch of frames. The runtime's own one-off allocations on this thread
+        // (seen once on Linux CI: 8072 bytes with Draw unchanged) don't repeat, so one clean batch is enough.
+        var allocated = long.MaxValue;
+        for (var attempt = 0; attempt < 5 && allocated != 0; attempt++)
         {
-            state.RaceSeconds += 0.016f;
-            _hud.Draw(preview.Target, state);
+            var before = GC.GetAllocatedBytesForCurrentThread();
+            for (var frame = 0; frame < 10; frame++)
+            {
+                state.RaceSeconds += 0.016f;
+                _hud.Draw(preview.Target, state);
+            }
+
+            allocated = GC.GetAllocatedBytesForCurrentThread() - before;
         }
 
-        Assert.That(GC.GetAllocatedBytesForCurrentThread() - before, Is.Zero);
+        Assert.That(allocated, Is.Zero);
     }
 }

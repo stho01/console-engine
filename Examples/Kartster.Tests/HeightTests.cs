@@ -384,7 +384,10 @@ public class HeightTests
         using var cpu = new ConsoleEngine.Rendering3D.Rasterizer(320, 180, KartsterGame.ScenePalette, trueColor: true);
         var cpuMs = Frames(cpu, track, sky, out var tiles);
         var gpuMs = double.NaN;
-        if (ConsoleEngine.Rendering3D.OpenGL.GlRenderer.TryCreate(320, 180, KartsterGame.ScenePalette, true, out var gpu))
+        // Windows only, like the other GPU tests: GLFW wants the main thread on macOS, which NUnit doesn't run tests on
+        // (creating the window there hangs the test run).
+        if (OperatingSystem.IsWindows()
+            && ConsoleEngine.Rendering3D.OpenGL.GlRenderer.TryCreate(320, 180, KartsterGame.ScenePalette, true, out var gpu))
         {
             using (gpu)
                 gpuMs = Frames(gpu, track, sky, out _);
