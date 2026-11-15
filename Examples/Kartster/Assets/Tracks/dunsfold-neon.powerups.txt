@@ -1,0 +1,11 @@
+# dunsfold-neon power-up pads, exported from Kartster by PowerUpExport (TrackPowerUpPadResolver).
+# pad x y z setId   (world metres, Kartster axes; the pads a normal race has, extra ones left out)
+pad -138.181 1 -56.984 normal
+pad -140.83 1 -55.576 normal
+pad -143.479 1 -54.168 normal
+pad -453.656 1 258.192 normal
+pad -451.613 1 255.995 normal
+pad -449.571 1 253.797 normal
+pad 320.117 1 -42.115 normal
+pad 321.317 1 -39.365 normal
+pad 322.517 1 -36.615 normal

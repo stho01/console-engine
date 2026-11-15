@@ -1,0 +1,14 @@
+<Project>
+    <!--
+        Every example game gets start-conhost.cmd next to its exe: double-click it to play in the classic console.
+        A Copy task, not a None item, so it does not flow into projects that reference a game (TerraForM.Tests).
+    -->
+    <Target Name="CopyStartConhost" AfterTargets="Build"
+            Condition="'$(OutputType)' == 'Exe' And '$(IsTestProject)' != 'true'">
+        <Copy SourceFiles="$(MSBuildThisFileDirectory)start-conhost.cmd" DestinationFolder="$(OutDir)"
+              SkipUnchangedFiles="true" />
+        <ItemGroup>
+            <FileWrites Include="$(OutDir)start-conhost.cmd" />
+        </ItemGroup>
+    </Target>
+</Project>

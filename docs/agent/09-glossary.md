@@ -4,10 +4,11 @@ Support/user words are **[inferred]**. The team may also use Norwegian terms. Ad
 
 | User / support word | Meaning | Code identifier |
 |---|---|---|
-| the game / the app | One example exe built on the engine | `GameBase` subclass: `TerraformGame`, `SnakeGame`, `AsteroidsGame`, `PlatformerGame`, `ConsoleGame.Game`, and the ECS ports `TerraformEcsGame`, `SnakeEcsGame`, `AsteroidsEcsGame`, `PlatformerEcsGame`, `ConsoleEcsGame`, the ECS stress test `SwarmGame`, the physics demos `PhysicsSandboxGame` and `PhysicsShowcaseGame`, and the ECS game `EternalDiggerGame` |
+| the game / the app | One example exe built on the engine | `GameBase` subclass: `TerraformGame`, `SnakeGame`, `AsteroidsGame`, `PlatformerGame`, `ConsoleGame.Game`, and the ECS ports `TerraformEcsGame`, `SnakeEcsGame`, `AsteroidsEcsGame`, `PlatformerEcsGame`, `ConsoleEcsGame`, the ECS stress test `SwarmGame`, the physics demos `PhysicsSandboxGame` and `PhysicsShowcaseGame`, the ECS game `EternalDiggerGame`, the ECS-only game `StarguardGame`, and the Lua demo `ScriptedGame`, the 3D racer `KartsterGame` |
 | the engine | The shared library | `ConsoleEngine` project, namespace `ConsoleEngine` |
 | window / screen | The console window and its cell buffer | `RenderConsole`, `ConsoleHandler`, `IConsoleHandler` |
 | pixel / cell / character | One console cell | `Pixel` (`Char`, `ForegroundColor`, `BackgroundColor`) |
+| 24-bit / true colour / RGB colours | Any `0xRRGGBB` colour per cell instead of the 16 console colours | `RenderConsole.TrueColor`, `TrueColorActive`, `DrawRgb`, `IConsoleHandler.SetTrueColor`, `IConsoleHandler.PaletteColor` |
 | resolution / size | Columns × rows of cells | `GameBase(width, height, …)`, `RenderConsole.Width`/`Height`/`Area` |
 | font size | Pixel size of each cell | `FontInfo` (`FontFace`, `FontWidth`, `FontHeight`), `ConsoleHandler.SetFont` |
 | logger / log window | Second console window for messages/FPS | `ConsoleEngine.Logger.exe`, `Log`, `GameBase.EnableLogger` |
@@ -73,6 +74,14 @@ Support/user words are **[inferred]**. The team may also use Norwegian terms. Ad
 | game over | HUD state, not a stop | `GameScene.GameOver`, `game-over.sprite` (`SpritePaths.GameOver`) |
 | restart | Reload same map | `R` → `Scenes.Set(new GameScene(_worldName))` |
 | player name | Typed on first screen (PII) | `TerraformGame.Playername`, `InputNameScene` |
+| script / Lua script | A `.lua` file that returns a module table with `on_start`/`on_update`/`on_render` | `LuaScript`, `LuaRuntime.Load` |
+| script on an entity / scripted entity | An entity that runs a Lua script | `Script` component (`LuaScript.Component`), `LuaScriptSystem`, `LuaRenderSystem` |
+| `self` / entity fields | The Lua view of an entity: its `Position` (`x`, `y`), `Velocity` (`vx`, `vy`), `Glyph` (`char`, `color`, `background`), plus `data` | `run` in `LuaRuntime.EngineSource`, `LuaRuntime.RunHook`/`ReadResults` |
+| script data | A script's own per-entity state | `self.data` |
+| hook | `on_start`, `on_update`, `on_render` in a script's module | `LuaScript.OnStart`/`OnUpdate`/`OnRender` |
+| host function | A C# function callable from Lua (`input.*`, `console.*`, `print`) | `LuaRuntime.RegisterApi` |
+| reload / hot reload / F5 | Re-run scripts and update their modules in place | `LuaScript.Reload`, `LuaRuntime.ReloadAll` |
+| script error / broken script / faulted | A Lua error stopped an entity's script until the script reloads | `ScriptFaulted` tag, `LuaScriptSystem.GetError`, `LuaScriptException` (load errors) |
 | debug mode | Developer overlay | `PlatformerGame.IsDebugMode` (F1), `TerraformGame.IsDebugMode` (unreachable) |
 | launcher / menu / game picker | Text menu that starts the ECS games, one at a time | `Examples/Launcher`: `LauncherApp`, `GameCatalog`, `GameLocator`, `GameRunner` |
 
@@ -105,3 +114,12 @@ Support/user words are **[inferred]**. The team may also use Norwegian terms. Ad
 | glint / sparkle | Twinkle that reveals ore in the dark | `GlintSystem`, `ParticleStyle.Glint` |
 | seed | Number that decides the mine's layout | `Mine(int seed)`, first command-line argument |
 
+| climber / player (SkyStack) | The SkyStack player, 2 × 2 cells | `Climber` component, `ClimbPhysics` |
+| tower / floor / platform / ledge (SkyStack) | The endless tower and its one-way platforms, numbered from the ground (0) up | `Tower`, `Floor`, `Tower.GetFloor` |
+| combo (SkyStack) | Landings 2+ floors higher in a row, each within 3 s of the last; pays `floors × jumps × 5` | `RunStats.ComboJumps`, `ComboFloors` |
+| scroll / rising view / speed level / "hurry" (SkyStack) | The view rising by itself after floor 5, faster every 30 s | `Scroller`, `Scroller.Level` |
+| zone (SkyStack) | The colour theme of 50 floors | `TowerLooks.Zones` |
+| pixel / half-block (SkyStack) | One of the two square pixels a console cell shows in SkyStack (`▀`: upper = foreground, lower = background) | `PixelCanvas`, `PixelSprite`, `PixelFont` |
+| power-up pad / box (Kartster) | A spot on the road that hands out a power-up to a kart with an empty slot; back 5 s after it is taken | `PowerUpPad`, `PowerUpField.Pads`, `<id>.powerups.txt` |
+| reel / slot (Kartster) | What a kart holds: a spinning reel for 2.5 s after a pad, then one power-up and its charges | `PowerUpField.Showing`, `Held`, `Charges` |
+| banana / lapskaus / Joika (Kartster) | Power-ups: a peel left on the road, a can fired straight ahead, a can that chases the kart one place ahead | `PowerUpKind.Banana`, `Lapskaus`, `HomingJoika` |

@@ -1,0 +1,19 @@
+<Project Sdk="Microsoft.NET.Sdk">
+
+    <!--
+        Not in ConsoleEngine.sln: it needs the original Kartster's source, which CI does not have. Build the original
+        first (dotnet build src/Kartster/Kartster.csproj in its folder), then this. Other folder: -p:KartsterRoot=...
+    -->
+    <PropertyGroup>
+        <OutputType>Exe</OutputType>
+        <TargetFramework>net11.0</TargetFramework>
+        <LangVersion>15</LangVersion>
+        <TreatWarningsAsErrors>True</TreatWarningsAsErrors>
+        <KartsterRoot Condition="'$(KartsterRoot)' == ''">C:\Forse\kartster-server</KartsterRoot>
+    </PropertyGroup>
+
+    <ItemGroup>
+      <ProjectReference Include="$(KartsterRoot)\src\Kartster\Kartster.csproj" />
+    </ItemGroup>
+
+</Project>

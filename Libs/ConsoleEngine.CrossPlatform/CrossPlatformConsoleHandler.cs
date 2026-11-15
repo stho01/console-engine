@@ -12,15 +12,24 @@ namespace ConsoleEngine.CrossPlatform;
 /// Terminal cells are about twice as tall as they are wide, so in pixel mode the frame is drawn with half blocks:
 /// every cell shows two pixels stacked on top of each other, as colors. If the terminal is smaller than the game
 /// the middle of the frame is shown.
+///
+/// On a true-colour terminal (<c>COLORTERM</c> or <c>CONSOLE_ENGINE_COLORS</c>) <see cref="SetTrueColor"/> turns on
+/// 24-bit frames: <see cref="Render(Span{Pixel}, ReadOnlySpan{uint}, ReadOnlySpan{uint})"/> writes each cell's RGB as
+/// <c>38;2</c>/<c>48;2</c>, and <see cref="IConsoleHandler.PaletteColor"/> shows the pixel's colour from the palette.
 /// </summary>
 public sealed class CrossPlatformConsoleHandler : IConsoleHandler
 {
     private const string Esc = "\u001b";
     private const char UpperHalfBlock = '\u2580';
 
-    private Pixel[] _previous;
+    /// <summary>What each terminal cell shows now, colours as palette indices or, in a 24-bit frame, RGB.</summary>
+    private Cell[] _shown;
+
     private readonly StringBuilder _frame = new();
     private readonly bool _trueColor;
+    private bool _rgb;
+    private bool _shownRgb;
+    private readonly (byte R, byte G, byte B)[] _palette = [.. CampbellPalette];
     private bool _halfBlocks;
     private int _columns;
     private int _rows;
@@ -35,11 +44,16 @@ public sealed class CrossPlatformConsoleHandler : IConsoleHandler
     private int _originalWidth;
     private int _originalHeight;
 
-    public CrossPlatformConsoleHandler(int width, int height)
+    public CrossPlatformConsoleHandler(int width, int height) : this(width, height, DetectTrueColor())
+    {
+    }
+
+    /// <param name="trueColorTerminal">Whether the terminal shows 24-bit colour (tests: no environment needed).</param>
+    internal CrossPlatformConsoleHandler(int width, int height, bool trueColorTerminal)
     {
         Width = width;
         Height = height;
-        _trueColor = DetectTrueColor();
+        _trueColor = trueColorTerminal;
         SetPixelMode(false);
     }
 
@@ -51,7 +65,21 @@ public sealed class CrossPlatformConsoleHandler : IConsoleHandler
         _halfBlocks = DetectHalfBlocks(pixelMode);
         _columns = Width;
         _rows = _halfBlocks ? (Height + 1) / 2 : Height;
-        _previous = new Pixel[_columns * _rows];
+        _shown = new Cell[_columns * _rows];
+        _fullRedraw = true;
+    }
+
+    /// <summary>On only on a true-colour terminal; returns whether it is on.</summary>
+    public bool SetTrueColor(bool trueColor) => _rgb = trueColor && _trueColor;
+
+    /// <summary>
+    /// Used by true-colour terminals only (also for <see cref="IConsoleHandler.PaletteColor"/> cells); the 16 ANSI
+    /// colours are the terminal's own.
+    /// </summary>
+    public void SetPalette(ReadOnlySpan<uint> colors)
+    {
+        for (var i = 0; i < _palette.Length && i < colors.Length; i++)
+            _palette[i] = ((byte)(colors[i] >> 16), (byte)(colors[i] >> 8), (byte)colors[i]);
         _fullRedraw = true;
     }
 
@@ -97,17 +125,35 @@ public sealed class CrossPlatformConsoleHandler : IConsoleHandler
         // Font face and size are owned by the terminal emulator, can't be changed from here.
     }
 
-    public void Render(Span<Pixel> pixels)
-    {
-        if (!_initialized)
-            return;
+    public void Render(Span<Pixel> pixels) => Render(pixels, default, default, false);
 
-        var visibleWidth = Math.Min(_columns, SafeWindowSize(() => Console.WindowWidth, _columns));
-        var visibleHeight = Math.Min(_rows, SafeWindowSize(() => Console.WindowHeight, _rows));
-        if (visibleWidth != _visibleWidth || visibleHeight != _visibleHeight)
+    /// <summary>A 24-bit frame while <see cref="SetTrueColor"/> is on, else <see cref="Render(Span{Pixel})"/>.</summary>
+    public void Render(Span<Pixel> pixels, ReadOnlySpan<uint> foregroundRgb, ReadOnlySpan<uint> backgroundRgb) =>
+        Render(pixels, foregroundRgb, backgroundRgb, _rgb);
+
+    public void Close() => RestoreTerminal();
+
+    //**********************************************************
+    //** internals
+    //**********************************************************
+
+    /// <summary>The text of the last frame <see cref="BuildFrame"/> built.</summary>
+    internal StringBuilder Frame => _frame;
+
+    /// <summary>
+    /// Writes the cells that changed since the last frame into <see cref="Frame"/>, for a terminal showing
+    /// <paramref name="visibleWidth"/> × <paramref name="visibleHeight"/> cells. With <paramref name="rgb"/> the colours
+    /// come from <paramref name="foregroundRgb"/>/<paramref name="backgroundRgb"/> (<c>0xRRGGBB</c>, or
+    /// <see cref="IConsoleHandler.PaletteColor"/> for the pixel's own). False when nothing changed.
+    /// </summary>
+    internal bool BuildFrame(Span<Pixel> pixels, ReadOnlySpan<uint> foregroundRgb, ReadOnlySpan<uint> backgroundRgb,
+        bool rgb, int visibleWidth, int visibleHeight)
+    {
+        if (visibleWidth != _visibleWidth || visibleHeight != _visibleHeight || rgb != _shownRgb)
         {
             _visibleWidth = visibleWidth;
             _visibleHeight = visibleHeight;
+            _shownRgb = rgb;
             _fullRedraw = true;
         }
 
@@ -117,8 +163,8 @@ public sealed class CrossPlatformConsoleHandler : IConsoleHandler
         if (_fullRedraw)
             _frame.Append(Esc).Append("[0m").Append(Esc).Append("[2J");
 
-        var currentFg = -1;
-        var currentBg = -1;
+        var currentFg = -1L;
+        var currentBg = -1L;
         var changed = _fullRedraw;
 
         // Show the middle of the frame when the terminal is too small for all of it.
@@ -130,51 +176,55 @@ public sealed class CrossPlatformConsoleHandler : IConsoleHandler
             var cursorX = -1;
             for (var x = 0; x < visibleWidth; x++)
             {
-                var pixel = GetCell(pixels, x + offsetX, y + offsetY);
-                var c = pixel.Char;
-                ref var previous = ref _previous[(y + offsetY) * _columns + x + offsetX];
+                var cell = GetCell(pixels, foregroundRgb, backgroundRgb, rgb, x + offsetX, y + offsetY);
+                ref var shown = ref _shown[(y + offsetY) * _columns + x + offsetX];
 
-                if (!_fullRedraw
-                    && previous.Char == c
-                    && previous.ForegroundColor == pixel.ForegroundColor
-                    && previous.BackgroundColor == pixel.BackgroundColor)
+                if (!_fullRedraw && shown.Equals(cell))
                     continue;
 
                 changed = true;
-                previous = pixel;
+                shown = cell;
 
                 if (cursorX != x)
                     _frame.Append(Esc).Append('[').Append(y + 1).Append(';').Append(x + 1).Append('H');
 
-                var fg = (int)pixel.ForegroundColor & 0xF;
-                var bg = (int)pixel.BackgroundColor & 0xF;
-                if (fg != currentFg || bg != currentBg)
+                if (cell.Foreground != currentFg || cell.Background != currentBg)
                 {
-                    AppendColors(fg, bg);
-                    currentFg = fg;
-                    currentBg = bg;
+                    AppendColors(cell.Foreground, cell.Background, rgb);
+                    currentFg = cell.Foreground;
+                    currentBg = cell.Background;
                 }
 
-                _frame.Append(c);
+                _frame.Append(cell.Char);
                 cursorX = x + 1;
             }
         }
 
         if (!changed)
-            return;
+            return false;
 
         _frame.Append(Esc).Append("[0m");
         _frame.Append(Esc).Append("[?2026l"); // end synchronized update
         _fullRedraw = false;
-
-        Write(_frame);
+        return true;
     }
-
-    public void Close() => RestoreTerminal();
 
     //**********************************************************
     //** private:
     //**********************************************************
+
+    private void Render(Span<Pixel> pixels, ReadOnlySpan<uint> foregroundRgb, ReadOnlySpan<uint> backgroundRgb,
+        bool rgb)
+    {
+        if (!_initialized)
+            return;
+
+        var visibleWidth = Math.Min(_columns, SafeWindowSize(() => Console.WindowWidth, _columns));
+        var visibleHeight = Math.Min(_rows, SafeWindowSize(() => Console.WindowHeight, _rows));
+        if (BuildFrame(pixels, foregroundRgb, backgroundRgb, rgb, visibleWidth, visibleHeight))
+            Write(_frame);
+    }
+
 
     private void RestoreTerminal()
     {
@@ -233,12 +283,19 @@ public sealed class CrossPlatformConsoleHandler : IConsoleHandler
         }
     }
 
-    private void AppendColors(int fg, int bg)
+    /// <summary>The SGR for a cell's colours: palette indices, or with <paramref name="rgb"/> <c>0xRRGGBB</c>.</summary>
+    private void AppendColors(uint fg, uint bg, bool rgb)
     {
-        if (_trueColor)
+        if (rgb)
         {
-            var (fr, fgG, fb) = Palette[fg];
-            var (br, bgG, bb) = Palette[bg];
+            _frame.Append(Esc).Append("[38;2;").Append((byte)(fg >> 16)).Append(';').Append((byte)(fg >> 8))
+                .Append(';').Append((byte)fg).Append(";48;2;").Append((byte)(bg >> 16)).Append(';')
+                .Append((byte)(bg >> 8)).Append(';').Append((byte)bg).Append('m');
+        }
+        else if (_trueColor)
+        {
+            var (fr, fgG, fb) = _palette[fg];
+            var (br, bgG, bb) = _palette[bg];
             _frame.Append(Esc).Append("[38;2;").Append(fr).Append(';').Append(fgG).Append(';').Append(fb)
                 .Append(";48;2;").Append(br).Append(';').Append(bgG).Append(';').Append(bb).Append('m');
         }
@@ -248,32 +305,52 @@ public sealed class CrossPlatformConsoleHandler : IConsoleHandler
         }
     }
 
-    /// <summary>The character and colors to show in a terminal cell.</summary>
-    private Pixel GetCell(Span<Pixel> pixels, int column, int row)
+    /// <summary>The character and colours to show in a terminal cell.</summary>
+    private Cell GetCell(Span<Pixel> pixels, ReadOnlySpan<uint> foregroundRgb, ReadOnlySpan<uint> backgroundRgb,
+        bool rgb, int column, int row)
     {
         if (!_halfBlocks)
         {
-            var pixel = row * Width + column < pixels.Length ? pixels[row * Width + column] : default;
-            pixel.Char = Sanitize(pixel.Char);
-            return pixel;
+            var i = row * Width + column;
+            var pixel = i < pixels.Length ? pixels[i] : default;
+            return new Cell(Sanitize(pixel.Char), Color(pixel.ForegroundColor, foregroundRgb, i, rgb),
+                Color(pixel.BackgroundColor, backgroundRgb, i, rgb));
         }
 
-        var top = PixelColor(pixels, column, row * 2);
-        var bottom = PixelColor(pixels, column, row * 2 + 1);
-        return top == bottom
-            ? new Pixel { Char = ' ', ForegroundColor = top, BackgroundColor = bottom }
-            : new Pixel { Char = UpperHalfBlock, ForegroundColor = top, BackgroundColor = bottom };
+        var top = PixelColor(pixels, foregroundRgb, backgroundRgb, rgb, column, row * 2);
+        var bottom = PixelColor(pixels, foregroundRgb, backgroundRgb, rgb, column, row * 2 + 1);
+        return new Cell(top == bottom ? ' ' : UpperHalfBlock, top, bottom);
     }
 
     /// <summary>A pixel's color in half block mode: its foreground if anything is drawn there, its background otherwise.</summary>
-    private ConsoleColor PixelColor(Span<Pixel> pixels, int x, int y)
+    private uint PixelColor(Span<Pixel> pixels, ReadOnlySpan<uint> foregroundRgb, ReadOnlySpan<uint> backgroundRgb,
+        bool rgb, int x, int y)
     {
         var i = y * Width + x;
         if (y >= Height || i >= pixels.Length)
-            return ConsoleColor.Black;
+            return Color(ConsoleColor.Black, default, i, rgb);
 
         var pixel = pixels[i];
-        return Sanitize(pixel.Char) == ' ' ? pixel.BackgroundColor : pixel.ForegroundColor;
+        return Sanitize(pixel.Char) == ' '
+            ? Color(pixel.BackgroundColor, backgroundRgb, i, rgb)
+            : Color(pixel.ForegroundColor, foregroundRgb, i, rgb);
+    }
+
+    /// <summary>
+    /// A cell's colour as <see cref="AppendColors"/> takes it: the palette index, or with <paramref name="rgb"/> the
+    /// cell's <c>0xRRGGBB</c>, the palette's RGB of <paramref name="color"/> for <see cref="IConsoleHandler.PaletteColor"/>.
+    /// </summary>
+    private uint Color(ConsoleColor color, ReadOnlySpan<uint> cellRgb, int i, bool rgb)
+    {
+        var index = (int)color & 0xF;
+        if (!rgb)
+            return (uint)index;
+
+        if ((uint)i < (uint)cellRgb.Length && cellRgb[i] != IConsoleHandler.PaletteColor)
+            return cellRgb[i] & 0xFFFFFF;
+
+        var (r, g, b) = _palette[index];
+        return (uint)(r << 16 | g << 8 | b);
     }
 
     /// <summary>
@@ -335,7 +412,7 @@ public sealed class CrossPlatformConsoleHandler : IConsoleHandler
     ];
 
     /// <summary>ConsoleColor (index) to RGB, the Windows console (Campbell) palette so games look the same as on Windows.</summary>
-    private static readonly (byte R, byte G, byte B)[] Palette =
+    private static readonly (byte R, byte G, byte B)[] CampbellPalette =
     [
         (0, 0, 0),       // Black
         (0, 55, 218),    // DarkBlue
@@ -354,4 +431,7 @@ public sealed class CrossPlatformConsoleHandler : IConsoleHandler
         (249, 241, 165), // Yellow
         (242, 242, 242), // White
     ];
+
+    /// <summary>A terminal cell: its character and colours (palette indices, or RGB in a 24-bit frame).</summary>
+    private readonly record struct Cell(char Char, uint Foreground, uint Background);
 }

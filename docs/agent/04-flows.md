@@ -1,7 +1,8 @@
 # 04 — Flows, hop by hop
 
-**No step in any flow writes a log line** ([06](06-diagnostics.md#no-logs)). The "Observable" column is what the user
-sees instead: an unhandled exception (the process dies), a silent no-op, or a visible screen state. "Silent" means
+**No engine step writes a log line** ([06](06-diagnostics.md#no-logs)). The exceptions are Lua script errors
+([F16](#f16)), which go to the logger only when `EnableLogger` is on. The "Observable" column is what the user sees
+instead: an unhandled exception (the process dies), a silent no-op, or a visible screen state. "Silent" means
 the code continues with no signal at all.
 
 <a id="f1"></a>
@@ -16,8 +17,10 @@ the code continues with no signal at all.
 | 5 | `OnInitialize()`: game-specific setup. TerraForM: `Scenes.Set<InputNameScene>()`, `Camera = new Camera(this)` | game | Game code throws | Unhandled exception |
 | 6 | `SetTitle(Name)` | `RenderConsole.SetTitle` → `SetConsoleTitle` | fails: ignored | Silent: title stays as before |
 | 7 | `_console.Initialize()`: shrink window to 1×1 → `SetConsoleScreenBufferSize(width,height)` → `SetConsoleActiveScreenBuffer` → `SetFont(game font)` → `SetConsoleWindowInfo(0,0,width-1,height-1)` | `ConsoleHandler.InitializeConsole` | **Any call fails: every return value is ignored.** Typical causes **[external]**: window larger than the screen allows at that font size, or a host that doesn't support these calls (Windows Terminal) | Silent. Wrong window size, scrollbars, wrapped/garbled picture ([P2](05-triage.md#p2)) |
+| 7b | If `RenderConsole.Palette` is set (16 colours, `0xRRGGBB`): `SetPalette`. Windows: `GetConsoleScreenBufferInfoEx` → keep the original `ColorTable` once (restored by `Close()` and on `ProcessExit`, because `Stop()` exits through `Environment.Exit`) → `SetConsoleScreenBufferInfoEx` with the window's right/bottom grown by one (else conhost shrinks the window a cell). Cross-platform: true-colour terminals use it, others keep their 16 ANSI colours | `ConsoleHandler.SetPalette`, `CrossPlatformConsoleHandler.SetPalette` | `GetConsoleScreenBufferInfoEx` fails → `return`; the Set result is ignored. Windows Terminal ignores it **[external]** | Silent: the console keeps its default colours, so a game's colour indices show as the wrong colours |
 | 8 | If `!Resizeable` (default): remove Maximize/Size from the system menu | `ConsoleHandler.Resizable(false)` | `GetConsoleWindow()` returns `IntPtr.Zero` → `return` | Silent: window stays resizable |
 | 9 | `SetCursorVisible(!HideCursor)` | `ConsoleHandler.SetCursorVisible` | fails: ignored | Silent: blinking cursor visible |
+| 9b | If `RenderConsole.TrueColor`: `TrueColorActive = SetTrueColor(true)`; when true, allocate the two RGB buffers once and fill them with `IConsoleHandler.PaletteColor` ([03 § True colour](03-rules.md#true-colour)) | `RenderConsole.ApplyTrueColor` → `IConsoleHandler.SetTrueColor` | Handler returns false (default method, or the console can't). Cross-platform: the terminal is not true-colour (`CONSOLE_ENGINE_COLORS` not `truecolor` and `COLORTERM` not `truecolor`/`24bit`). Windows: `GetConsoleMode` or `SetConsoleMode` (with `ENABLE_VIRTUAL_TERMINAL_PROCESSING`) fails: Windows before 10 1607, output redirected **[external]** | `TrueColorActive == false`: `DrawRgb` draws the nearest palette colour |
 | 10 | If `ShowFps`: `GameTime.SetInterval(100, () => Log.ReportFps(GameTime.Fps))` | `GameBase.Initialize` | — | FPS reaches the logger **only if** `EnableLogger` ([P4](05-triage.md#p4)) |
 | 11 | `Start()`: `Thread.Sleep(100)`, then loop until `_running = false` ([F2](#f2)) | `GameBase.Start` | — | — |
 
@@ -36,7 +39,7 @@ the final `Width`/`Height`, because those come from the ctor arguments.
 | 5 | Game `OnUpdate` | game | — | — |
 | 6 | Render top scene | `SceneManager.Render` → `Scene.Render` | No scene → skipped. `IsPaused` → `return` | Scene not drawn |
 | 7 | Game `OnRender` | game | — | — |
-| 8 | Write buffer to console | `ConsoleHandler.Render` → `WriteConsoleOutput` | fails: ignored | Silent: screen not updated |
+| 8 | Write buffer to console. `RenderConsole.Display` calls `Render(pixels, foregroundRgb, backgroundRgb)` while `TrueColorActive`, else `Render(pixels)`, which | `ConsoleHandler.Render`: converts `Pixel`s to `CharInfo`s, `FindChangedRows` against the last written frame, then one `WriteConsoleOutput` of the rows from the first to the last changed one | No row changed → no write. First frame, after `InitializeConsole`, or after a failed write (`_shownCharsValid == false`) → all rows. Write fails → `_shownCharsValid = false`. 24-bit: `VtFrame.Build` → one `WriteConsoleW`; no changed cell → no write; failed or short write → `VtFrame.Invalidate` | Silent: screen not updated this frame, the next frame rewrites every row (24-bit: every cell) |
 | 9 | Unload queued scenes, `GC.Collect()` | `SceneManager.Cleanup` | Queue empty → `return` | — |
 
 <a id="f3"></a>
@@ -44,11 +47,13 @@ the final `Width`/`Height`, because those come from the ctor arguments.
 
 | # | Step | Class.method | Note |
 |---|---|---|---|
-| 1 | Game calls `Stop()` on `ESC`: `ConsoleGame`, `ConsoleGame.Ecs`, `Swarm`, `EternalDigger` (after `MineScene.Save`) | `GameBase.Stop` | Other games have no quit path: the user closes the window. EternalDigger: closing the window without `ESC` loses progress since the last save |
+| 1 | Game calls `Stop()` on `ESC`: `ConsoleGame`, `ConsoleGame.Ecs`, `Swarm`, `EternalDigger` (after `MineScene.Save`), `SkyStack` (only on the title; in a run `ESC` goes back to the title) | `GameBase.Stop` | Other games have no quit path: the user closes the window. EternalDigger: closing the window without `ESC` loses progress since the last save |
 | 2 | `_running = false`, then `_console.Close()` | `RenderConsole.Close` | **Calls `Environment.Exit(0)`: the process ends here** |
 | 3 | `if (EnableLogger) Log.Stop()` | `GameBase.Stop` | **Never reached** (step 2 exited). The logger socket isn't closed by `Log.Stop` |
 
-`ConsoleHandler.Close()` is an empty method and is not called.
+`ConsoleHandler.Close()` (gives back the palette and, after 24-bit colour, the console mode) runs only through
+`RenderConsole.Restore` (Ctrl+C, an exception in the loop). `Stop()` exits first, so both are also restored on
+`ProcessExit`.
 
 <a id="f4"></a>
 ## F4 — Logger (`Log`, game side; `ConsoleEngine.Logger/Program.cs`, logger side)
@@ -148,7 +153,7 @@ Runs inside [F2](#f2) steps "Scenes.Update" and "Scenes.Render". Both are skippe
 
 | # | Step | Class.method | Stops / skips if | Observable |
 |---|---|---|---|---|
-| 0 | `FixedTimestep.Advance(delta)` → `steps`; `FixedSimulation.Update(FixedTimestep.StepSeconds)` runs `steps` times, each run doing steps 1–3 below for that group (its own `Commands` played back after every run) | `EcsScene.OnUpdate` → `EcsScene.RunSimulation` | Less than one step of time collected → 0 runs. More than `MaxStepsPerFrame` due → only `MaxStepsPerFrame` runs, the rest of the time is dropped | Fixed-step systems run 0, 1 or several times per frame |
+| 0 | `FixedTimestep.Advance(delta)` → `steps`; `FixedSimulation.Update(FixedTimestep.StepSeconds)` runs `steps` times, each run doing steps 1–3 below for that group (its own `Commands` played back after every run) | `EcsScene.OnUpdate` → `EcsScene.RunSimulation` | `IsSimulationPaused` → steps 0–3 skipped, `Advance` not called (no time collected). Less than one step of time collected → 0 runs. More than `MaxStepsPerFrame` due → only `MaxStepsPerFrame` runs, the rest of the time is dropped | Fixed-step systems run 0, 1 or several times per frame |
 | 1 | `Simulation.Update((float)GameTime.Delta.TotalSeconds)`: each enabled system's `OnUpdate`, in `SystemGroup.RunOrder` (`Add` order adjusted by `UpdateBefore`/`UpdateAfter`) | `EcsScene.OnUpdate` → `SystemGroup.Update` | `EntitySystem.Enabled == false` → that system is skipped | — |
 | 2 | Systems iterate queries and record structural changes in `Commands` | game systems, `MovementSystem` | Direct `World.Create/Destroy/Add/Remove` inside the loop | `InvalidOperationException` ([F8](#f8) step 0) |
 | 3 | Sync point: `Commands.Playback(World)` applies the recorded changes in order (deferred handles from `Create` are swapped for the created entities), then clears the buffer | `CommandBuffer.Playback` | Target entity no longer alive → that `Destroy`/`Add`/`Remove` is **skipped silently**. Foreign or stale deferred handle → `InvalidOperationException` | Entities created/destroyed this frame show up in the render below |
@@ -212,7 +217,7 @@ Runs once per fixed step, where the scene added it to `FixedSimulation`. Rules: 
 |---|---|---|---|---|
 | 1 | Rigid bodies **without** a `Collider` (`Position` + `Velocity` + `RigidBody`): `SubstepCount` substeps of gravity/damping (dynamic) and `p += v * h` (non-static) | `PhysicsSystem.IntegrateJob` | `BodyType.Static` → not moved | Positions change only on fixed steps |
 | 2 | Copy every `Position` + `Collider` into `BodyProxy` (bounds, filter), `BodyShape` (position, rotation, shape), `BodyState` (velocity, 32 bytes) and `BodySim` (mass, inertia, damping, sleep, friction); a sleeping body given a velocity wakes | `PhysicsSystem.Gather`, `ReadBody` | No `RigidBody` or no `Velocity` → static. No `Rotation` + `AngularVelocity` → doesn't turn | `BodyCount` |
-| 3 | Broadphase: hash each body into every grid cell its bounding box (grown by the margin) touches, then list overlapping boxes, each pair once | `SpatialHashGrid.Build`, `FindPairs` | Boxes apart → no pair | — |
+| 3 | Broadphase: hash each moving (dynamic or kinematic) body into every grid cell its bounding box (grown by the margin) touches, rebuild the static bodies' grid only if a static was added, removed or its body index or bounding box changed (`NoteStatic` in `Gather`), then list overlapping boxes moving–moving and moving–static, each pair once | `SpatialHashGrid.Build`, `FindPairs`, `FindPairs(other, …)` | Boxes apart → no pair. Two statics → never paired | — |
 | 4 | Pair rules, then the contact manifold (up to 2 points). A pair of two resting bodies (asleep or static) keeps the previous step's cache entry instead | `PhysicsSystem.CreateContacts`, `ShouldTest`, `Collision.Collide` | Filters reject each other, both static, both sensors, or a non-sensor pair without a dynamic body → skipped **silently**. Sensor pair not touching, or contact pair further apart than both margins → dropped | — |
 | 5 | Add the pair to the cache; touching now but not before → begin event, touching before but not now → end event. Non-sensor pairs become solver contacts, warm-started with last step's impulses | `PhysicsSystem.CreateContacts`, `AddToCache`, `PairCache.Add` | — | `ContactBeginEvents`, `SensorBeginEvents`, `TouchingPairCount`, `ContactCount` |
 | 6 | Every pair of the previous step that touched and isn't in the cache now (moved apart, filtered out, or an entity destroyed) adds an end event. If anything sleeps: bodies that lost a contact wake, islands (union-find over contacts) with an awake body wake whole, resting pairs with a woken body are measured after all, then awake dynamic bodies get contacts with the solid tiles under them (boxes and polygons only against open tile faces, circles skipped against closed ones), and contacts between sleeping bodies are dropped | `PairCache.CollectEnded`, `WakeBodiesThatLostContacts`, `WakeTouchedIslands`, `ResolveRestingPairs`, `CreateTileContacts`, `DropSleepingContacts` | Sleeping bodies get no tile contacts; tile contacts have no events | `ContactEndEvents`, `SensorEndEvents` (entities may be dead) |
@@ -234,7 +239,44 @@ Rules: [03 § Physics](03-rules.md#physics).
 | 4 | `MoveAndSlide`: cast the box by the remaining move; no hit → move all of it and stop; a hit → move to it plus `SkinWidth`, record `Floor`/`Ceiling`/`Wall`, remove the move and velocity parts into the surface, repeat | `CharacterMover.MoveAndSlide` | After `MaxSlides` (4) hits, or when the remaining move is ~0 → stops, the rest of the move is dropped | New centre and velocity, `SlideCollisions` |
 
 <a id="f15"></a>
-## F15 — Asset load (`AssetManager.Load<T>` / `TryLoad<T>`)
+## F15 — Lua script load and reload (`LuaRuntime.Load` → `LuaScript.Reload`)
+
+| # | Step | Class.method | Stops / skips if | Observable |
+|---|---|---|---|---|
+| 1 | Resolve the path: rooted as is, otherwise `Path.Combine(AppContext.BaseDirectory, path)` | `LuaRuntime.Load` | — | — |
+| 2 | Read the file bytes, drop a UTF-8 BOM | `LuaScript.ReadSource` | `IOException` (missing file, folder, locked) | `LuaScriptException` with the .NET message |
+| 3 | Compile with chunk name `"@" + Name` | `KeraLua.Lua.LoadBuffer` | Syntax error | `LuaScriptException`: `Lua script '<name>': <name>:<line>: <message>` |
+| 4 | Run the chunk, expect one result | `LuaRuntime.Call` | Runtime error in top-level code | `LuaScriptException` with Lua's message |
+| 5 | Result must be a table | `LuaScript.Reload` | Not a table | `LuaScriptException`: `the script must return a table` |
+| 6 | First load: keep the table as the module and build `Metatable` = `{ __index = module, __newindex = guard }`. Reload: remove the fields the new module lacks from the existing module, then copy every new field into it | `CreateModule` / `UpdateModule` | — | Running entities use the new functions |
+| 7 | Cache `on_start`, `on_update`, `on_render`. A missing or non-function field becomes "no hook" | `CacheFunction` | — | That hook silently never runs |
+| 8 | `Version++`, `LuaRuntime.ReloadCount++`. `Load` adds the script to the runtime's list (`Id` = its index) | `LuaScript.Reload`, `LuaRuntime.Load` | — | `LuaScriptSystem` retries faulted entities ([F16](#f16) step 1) |
+
+Steps 2–5 throw before anything is replaced, so a failed reload leaves the previous version running.
+`ReloadAll` catches each `LuaScriptException` and returns them as an array. It never throws for script errors.
+
+<a id="f16"></a>
+## F16 — Lua hooks in an ECS frame (`LuaScriptSystem.OnUpdate`, `LuaRenderSystem.OnUpdate`)
+
+Runs inside [F9](#f9): `LuaScriptSystem` wherever the scene added it to `Simulation`, `LuaRenderSystem` in
+`Presentation`.
+
+| # | Step | Class.method | Stops / skips if | Observable |
+|---|---|---|---|---|
+| 1 | `ReloadCount` changed: for each `Script` + `ScriptFaulted` entity whose script `Version` differs from the one it faulted on, clear the error and record `Remove<ScriptFaulted>` | `LuaScriptSystem.RetryReloadedScripts` | Same version → stays faulted | Entity runs again from the next frame |
+| 2 | Query `With<Script>().Without<ScriptFaulted>()`. Per chunk: which of `Position`, `Velocity`, `Glyph` it has | `LuaScriptSystem.Run` | Faulted entities are in other archetypes, never visited | — |
+| 3 | Per entity: find its side-table entry. New entity, reused id (other `Version`) or other script → unref the old `self`, create `{ data = {} }` with the script's metatable. Lost a component → remove its fields | `GetInstance`, `LuaRuntime.CreateSelf` / `ClearFields` | — | Reused id runs `on_start` again |
+| 4 | Simulation only: not started → `on_start` (marked started only on success), then `on_update` | `LuaScriptSystem.Run` → `RunHook` | Hook missing → skipped. `on_start` failed → `on_update` skipped, and `on_start` runs again after a reload | — |
+| 5 | Presentation only: started → `on_render` | `LuaScriptSystem.Render` | Not started, or no `on_render` | Extra drawing |
+| 6 | One native call: the `run` trampoline copies the component fields into `self`, calls the hook, and (steps 4 only) returns the fields | `LuaRuntime.RunHook` | Lua error or stored host exception → step 8 | — |
+| 7 | Check every returned field's type, then write `Position`, `Velocity`, `Glyph` | `LuaRuntime.ReadResults` | Wrong type → nothing written, step 8 | `self.<field> must be …` |
+| 8 | On error: keep the text for `GetError`, `Log.WriteLine("Lua: " + error)`, record `Add<ScriptFaulted>` in the group's `Commands` | `LuaScriptSystem.RunHook` | — | Tag applied at the group's playback. Logger only if `EnableLogger` |
+
+Host functions (`input.*`, `console.*`, `print`) catch every .NET exception, store the first one and return no values.
+They never call `lua_error`.
+
+<a id="f17"></a>
+## F17 — Asset load (`AssetManager.Load<T>` / `TryLoad<T>`)
 
 Rules: [03 § Assets](03-rules.md#assets). Messages: [06](06-diagnostics.md#engine--logger).
 

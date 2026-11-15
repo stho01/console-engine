@@ -15,6 +15,11 @@
     <ItemGroup>
       <ProjectReference Include="..\ConsoleEngine\ConsoleEngine.csproj" />
       <ProjectReference Include="..\ConsoleEngine.Physics\ConsoleEngine.Physics.csproj" />
+      <ProjectReference Include="..\ConsoleEngine.Scripting\ConsoleEngine.Scripting.csproj" />
+    </ItemGroup>
+
+    <ItemGroup>
+      <None Update="Scripting\*.lua" CopyToOutputDirectory="PreserveNewest" />
     </ItemGroup>
 
 </Project>

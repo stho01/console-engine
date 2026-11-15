@@ -5,7 +5,7 @@
 
 | Fact | Why | How to get it |
 |---|---|---|
-| **Which game** (TerraForM, Snake, Asteroids, Platformer, ConsoleGame, their `.Ecs` ports, Swarm, PhysicsSandbox, PhysicsShowcase, EternalDigger, or their own game on `ConsoleEngine`) | Rules differ per game ([03](03-rules.md)) | Ask, or the exe name |
+| **Which game** (TerraForM, Snake, Asteroids, Platformer, ConsoleGame, their `.Ecs` ports, Swarm, PhysicsSandbox, PhysicsShowcase, EternalDigger, SkyStack, Starguard, Scripted, Kartster, or their own game on `ConsoleEngine`) | Rules differ per game ([03](03-rules.md)) | Ask, or the exe name |
 | **OS and console host** | Windows only. Windows Terminal ignores the sizing/font calls **[external]** | [07 § Q1, Q2](07-checks.md#q1) |
 | **How it was launched and from which folder** (double-click the exe, `dotnet run`, IDE, a shortcut, a terminal in another folder) | The logger exe is found by **relative path**. Map files are read next to the exe, so the folder doesn't matter for them | [07 § Q3](07-checks.md#q3) |
 | **The exact error text**, if any | There are no log files. The exception printed to the console is the only record | Ask them to start it from an already-open terminal so the text stays ([06 § Capturing a crash](06-diagnostics.md#capture)) |
@@ -40,13 +40,13 @@
    - `IndexOutOfRangeException`, `FormatException` or `NullReferenceException` with `WorldLoader`/`GameScene.OnLoad` in the stack → step 6.
    - `IndexOutOfRangeException` in `RenderConsole.Draw` / `Sprite.Draw` → **Cause:** game code drew a `Span<string>` or wrote a sprite out of bounds (no bounds check, [03 § Drawing](03-rules.md)). **Fix:** escalate with the stack trace. Stop.
 2. Does it crash only when started from a terminal in another folder, or from an IDE/shortcut? → step 4/5 by game. Otherwise ask them to capture the text (step 1).
-3. `SocketException` at startup, game has `EnableLogger = true` (Asteroids, Asteroids.Ecs, ConsoleGame, ConsoleGame.Ecs, or their own game):
+3. `SocketException` at startup, game has `EnableLogger = true` (Asteroids, Asteroids.Ecs, ConsoleGame, ConsoleGame.Ecs, Swarm, Starguard, or their own game):
    - [07 § Q5](07-checks.md#q5) shows port 11000 in use → **Cause:** another game instance (or another program) already holds port 11000, which `Log.Start` binds unconditionally. **Fix:** close the other instance or program. Only one logger-enabled game can run at a time. Stop.
    - Port free → escalate with the full stack trace (DNS resolution of `localhost` is the remaining suspect, [04 § F4](04-flows.md#f4) step 1).
 4. `Win32Exception` at startup, logger enabled:
    - [07 § Q4](07-checks.md#q4): is `ConsoleEngine.Logger.exe` in the **working directory**? If not → **Cause:** `Log.Start` launches the logger by relative name. **Fix:** start the game from its output folder (double-click the exe there). Stop.
 5. TerraForM / TerraForM.Ecs `AssetNotFoundException` for `Maps/mapN.txt` (appears **after pressing `H`**, not at launch). The message gives the full path it looked at, `<exe folder>\Assets\Maps\mapN.txt`; the working directory doesn't matter:
-   - [07 § Q12](07-checks.md#q12) on that path is `False` → **Cause:** incomplete copy/build output. **Fix:** rebuild (the `.csproj` copies `Assets/**` with `PreserveNewest`) or recopy the `Assets` folder next to the exe. Stop.
+   - [07 § Q17](07-checks.md#q17) on that path is `False` → **Cause:** incomplete copy/build output. **Fix:** rebuild (the `.csproj` copies `Assets/**` with `PreserveNewest`) or recopy the `Assets` folder next to the exe. Stop.
 6. TerraForM map parse failure (custom or edited map): run [07 § Q6](07-checks.md#q6) on the named map and match against [04 § F6](04-flows.md#f6) steps 4–11. In TerraForM.Ecs the same errors arrive as the `InnerException` of `AssetLoadException`. **Cause:** that step. **Fix:** correct the map file (developer/map author). Stop.
 
 <a id="p2"></a>
@@ -54,12 +54,24 @@
 
 **Symptom [inferred]:** "the window is too small/big", "there are scrollbars", "letters are tiny", "the picture is broken/shifted".
 
-1. [07 § Q2](07-checks.md#q2): running in **Windows Terminal**? → **Cause [external]:** `ConsoleHandler.InitializeConsole`/`SetFont` use classic-console APIs that Windows Terminal ignores, and the return values are not checked ([04 § F1](04-flows.md#f1) step 7). **Fix:** set Windows' default terminal application to "Windows Console Host", or start the exe from `conhost.exe`. Stop.
+1. [07 § Q2](07-checks.md#q2): running in **Windows Terminal**? → **Cause [external]:** `ConsoleHandler.InitializeConsole`/`SetFont` use classic-console APIs that Windows Terminal ignores, and the return values are not checked ([04 § F1](04-flows.md#f1) step 7). **Fix:** double-click `start-conhost.cmd` in the game's folder (it starts the game in `conhost.exe`), or set Windows' default terminal application to "Windows Console Host" ([08](08-operator-actions.md)). Stop.
 2. Classic console: does `width × fontWidth` by `height × fontHeight` fit the screen? (Table in [01](01-system-map.md). E.g. TerraForM 72×50 cells at 15×15 px = 1080×750 px plus borders. Asteroids 200×200 at 4×4 = 800×800.)
    - Doesn't fit, or display scaling makes it not fit → **Cause [external]:** `SetConsoleWindowInfo` fails silently when the window would exceed the maximum size. **Fix:** higher resolution, lower display scaling, or a developer reduces size/font in the game ctor. Stop.
 3. Font face: the face is `"Consolas"` for every example. If the user's own game passes another `FontInfo.FontFace`, is that font installed and ≤ 31 characters (`ConsoleFontInfoEx.FaceName` `SizeConst = 32`)? If not → **Cause:** `SetCurrentConsoleFontEx` fails silently. **Fix:** use an installed console font. Stop.
 4. The user resized/maximised the window → `Resizeable` is false by default, so the Maximize/Size menu items are removed. Dragging the border may still work **[external]**. **Cause:** the buffer is fixed at construction. **Fix:** restart the game without resizing. Stop.
 5. Their own game reads `Console.FontInfo` and gets 14×14 → **Cause:** getter returns the ctor default, not the applied font ([02](02-state-model.md)). **Fix:** escalate as a bug. Stop.
+6. Colours are wrong (Kartster: purple/red sky, garish road), or another console's colours changed after a game → **Cause:** `RenderConsole.Palette` remaps the 16 colours ([04 § F1](04-flows.md#f1) step 7b). Windows Terminal and terminals without true colour ignore it **[external]**, so the game's colour indices show as default colours. **Fix:** run in `conhost` (`start-conhost.cmd`, `run-game.ps1`). The original colours come back on exit (`Close()`, `ProcessExit`); a process that was killed leaves them changed until that console window closes.
+7. A game in 24-bit colour (`RenderConsole.TrueColor`, Kartster `--truecolor`/C) shows 16 colours, banded or
+   dithered → is `RenderConsole.TrueColorActive` false (Kartster: title says `16 colours (no 24-bit)`)? → **Cause:**
+   `SetConsoleMode` with `ENABLE_VIRTUAL_TERMINAL_PROCESSING` failed ([04 § F1](04-flows.md#f1) step 9b): Windows
+   older than 10 1607, or output not a console **[external]**; on macOS/Linux the terminal doesn't say it is
+   true-colour (`COLORTERM`); `DrawRgb` then draws the nearest palette colour. Check [07 § Q14](07-checks.md#q14).
+   **Fix:** a newer Windows; on macOS/Linux `CONSOLE_ENGINE_COLORS=truecolor` if the terminal can; otherwise accept
+   16 colours. Stop.
+8. 24-bit colour is on and the game is much slower than in 16 colours, in conhost → **Cause:** conhost parses every
+   colour change of the VT text; frames with many per-cell colour changes cost 5–7× the palette write (numbers in
+   `AGENTS.md` § Performance). **Fix:** turn 24-bit off (Kartster: C), or the developer makes the picture smoother.
+   Stop.
 
 <a id="p3"></a>
 ## P3 — Keys don't work / react in other windows / presses missed
@@ -91,7 +103,7 @@
 
 **Symptom [inferred]:** "how do I exit?", "ESC doesn't quit", "the logger window stays open after the game closes".
 
-1. Which game? Only `ConsoleGame`, `ConsoleGame.Ecs`, `Swarm`, `PhysicsSandbox`, `PhysicsShowcase` and `EternalDigger` quit on `ESC` (`Stop()`). In TerraForM and TerraForM.Ecs `ESC` opens the menu. Others have no quit key. → **Cause:** no quit path ([04 § F3](04-flows.md#f3)). **Fix:** close the console window. Stop.
+1. Which game? Only `ConsoleGame`, `ConsoleGame.Ecs`, `Swarm`, `PhysicsSandbox`, `PhysicsShowcase`, `EternalDigger` and `SkyStack` (from its title screen; in a run `ESC` first goes back to the title) quit on `ESC` (`Stop()`). In TerraForM and TerraForM.Ecs `ESC` opens the menu. Others have no quit key. → **Cause:** no quit path ([04 § F3](04-flows.md#f3)). **Fix:** close the console window. Stop.
 2. Logger stays open after the game exits → **Cause:** `Log.Stop` is never reached, because `RenderConsole.Close` calls `Environment.Exit(0)` first, and the logger only exits on a `SocketException` ([04 § F4](04-flows.md#f4)). How the logger sees the closed connection is **[external]** and unverified. **Fix:** close the logger window. Escalate if it spins CPU.
 
 <a id="p6"></a>
@@ -149,6 +161,8 @@
 
 1. Level vanished when the menu opened (TerraForM `ESC`) → **Cause:** `Push` pauses the level and paused scenes don't render ([03 § Scenes](03-rules.md#scenes)). **Fix:** press `H` to return. Stop.
 2. Old characters stay on screen → is `ClearScreenOnEachFrame = false` (Snake, or their own game)? → **Cause:** buffer not cleared (`GameBase.Start`). Their game must blank cells itself. Stop.
+3. Text printed with `System.Console.Write` (or by another program) stays on screen, or cells stay wrong after it, on Windows → **Cause:** `ConsoleHandler.Render` writes only the rows that changed in the game's frame ([03 § Console output](03-rules.md#console-output)), so it never overwrites what something else wrote until the game draws something different there. **Fix:** draw through `RenderConsole` instead of `System.Console`. Stop. In 24-bit colour the same holds per cell
+   (`VtFrame` writes only changed cells).
 
 <a id="p13"></a>
 ## P13 — Snake goes off screen / can't lose
@@ -280,13 +294,85 @@ flow: [04 § F13](04-flows.md#f13).
    design, as the original). Otherwise escalate with `POS`, `VEL` and `HIT`. Stop.
 
 <a id="p19"></a>
-## P19 — Asset not found / no loader / asset fails to load
+## P19 — Lua: script fails to load / entity does nothing / F5 changes nothing
+
+**Symptom [inferred]:** "my Lua script doesn't run", "the object just stands still", "I edited the script and
+pressed F5 but nothing changed", "error about lua54.dll".
+
+1. Crash at startup with `LuaScriptException` (`Lua script '<name>': …`) → read the message ([06 § Lua](06-diagnostics.md)):
+   - .NET file message (`Could not find file…`) → **Cause:** the script is not in the output folder. `LuaRuntime.Load` resolves relative paths against the exe's folder, not the working directory ([04 § F15](04-flows.md#f15) step 1). **Fix:** set `CopyToOutputDirectory` for `Assets/Scripts/*.lua` in the game's `.csproj` ([07 § Q12](07-checks.md#q12)). Stop.
+   - `<name>:<line>: …` → **Cause:** syntax or runtime error at that line. **Fix:** fix the script. Stop.
+   - `the script must return a table` → **Cause:** the file does not end with `return <module>`. **Fix:** add it ([03 § Lua](03-rules.md#lua)). Stop.
+2. `DllNotFoundException` for `lua54` → **Cause:** the native library is missing from `runtimes/<rid>/native/`, usually a partial copy of the output folder ([07 § Q12](07-checks.md#q12)). **Fix:** rebuild or copy the whole output folder. Stop.
+3. Entity does nothing:
+   - It has the `ScriptFaulted` tag / `LuaScriptSystem.GetError(entity)` is set (Scripted demo: red error line at the bottom) → **Cause:** a Lua error stopped it ([03 § Lua](03-rules.md#lua)). `unknown field '…' on an entity` means the script wrote a field that is not a component field (often a typo like `self.X`, or own state that belongs in `self.data`). `self.vx needs a Velocity component on the entity` means the entity lacks that component. `self.x must be a number` means a wrong type. **Fix:** fix the script and reload. Stop.
+   - The error names a nil global `os`, `io`, `debug`, `package`, `require`, `load`, `loadfile`, `dofile` or `collectgarbage` → **Cause:** the sandbox does not open it, by design ([03 § Lua](03-rules.md#lua)). **Fix:** use `dt` for time and keep data in `self.data`; file access or loading code from scripts is not supported. Stop.
+   - Not faulted → is the hook named exactly `on_update` on the **returned module table**, does the entity have the script's `Component`, and is a `LuaScriptSystem` in the scene's `Simulation` group? Any missing → **Cause:** hook never runs (silent, [04 § F15](04-flows.md#f15) step 7, [F16](04-flows.md#f16)). Stop.
+   - `on_render` draws nothing → no `LuaRenderSystem` in `Presentation`, or it was added before a render system that draws over it. Stop.
+   - Moves in the script but stays put on screen → the move happened in `on_render`, whose field changes are not copied back ([03 § Lua](03-rules.md#lua)). **Fix:** move in `on_update`. Stop.
+   - Not drawn at all → the entity has no `Glyph`, or the scene has no `GlyphRenderSystem`. Stop.
+   - Sets `self.vx` but doesn't move → the scene has no `MovementSystem`. Velocity is only applied by that system. Stop.
+   - Moves very slowly → movement not multiplied by `dt`, or multiplied twice. `dt` is in seconds ([03 § Lua](03-rules.md#lua)). Stop.
+4. F5 changes nothing (Scripted demo):
+   - They edited the file in the **project** folder → **Cause:** `Reload` reads the copy in the output folder (`FullPath`). **Fix:** edit the output copy, or rebuild and restart. Stop.
+   - A removed function still runs → reload removes fields that the new module no longer has, so the returned table still has it: the copy in the output folder (`FullPath`) still defines it. **Fix:** edit the output copy. Stop.
+   - A reload error → `ReloadAll` returned it, but `ScriptReloadSystem` only sends it to `Log.WriteLine`, which is dropped without `EnableLogger`, and the old version stays. **Fix:** check the script for errors (load it in a test), then reload again. Stop.
+
+<a id="p20"></a>
+## P20 — SkyStack: can't jump high enough, combo didn't count, "died for no reason", score not saved
+
+**Symptom [inferred]:** "I can't reach the next floor", "my combo vanished", "the screen killed me", "my high score is
+gone". Rules: [03 § SkyStack](03-rules.md#skystack).
+
+1. Jumps too low → jump height grows with running speed (`ClimbPhysics.JumpSpeed`). Run along the floor or bounce
+   off a wall first. A standing jump always reaches the next floor. Stop.
+2. Combo didn't count → only landings 2+ floors higher count, each within 3 s; a combo pays only with 2+ such jumps,
+   and landing on the same or a lower floor ends it (`RunStats.Land`). Stop.
+3. Game over while "still on screen" → the run ends when the whole climber is below the bottom edge
+   (`Scroller.HasLost`); after floor 5 the view rises by itself and gets faster every 30 s. Stop.
+4. High score gone → best score and floor are only kept while the game runs (`SkyStackGame.BestScore`); there is no
+   save file. A run left with ESC is not recorded. Escalate as a feature request if a saved high score is wanted.
+
+<a id="p21"></a>
+## P21 — 3D: GPU mode not available / falls back to CPU / GPU picture differs
+
+**Symptom [inferred]:** "GPU mode doesn't work", "it always uses the CPU", "`GlRenderer` throws", "glfw3.dll is
+missing", "the GPU picture looks different".
+
+No game uses `GlRenderer` yet (`ConsoleEngine.Rendering3D.OpenGL`, [01](01-system-map.md)); this is for code that
+does.
+
+1. `InvalidOperationException` starting `OpenGL 3.3 is not available: ` (or `GlRenderer.TryCreate` returned false and
+   the caller fell back to `Rasterizer`) → read the rest of the message ([06 § 3D](06-diagnostics.md#rendering3d)):
+   - A GLFW or windowing message (no suitable platform, `DllNotFoundException` for `glfw3`) → **Cause:** `glfw3.dll`
+     is missing from `runtimes/<rid>/native/` (partial copy of the output folder), or no desktop session (service,
+     SSH, CI) ([07 § Q13](07-checks.md#q13)). **Fix:** copy the whole output folder; run in a desktop session. Stop.
+   - A context/version message from GLFW (WGL, "version", "pixel format") → **Cause:** the driver has no OpenGL 3.3
+     core profile: no GPU driver installed (Microsoft Basic Display Adapter), a remote desktop session or a VM
+     **[external]**. **Fix:** install the GPU vendor's driver, or use `Rasterizer` (the same picture on the CPU). Stop.
+   - `the R8UI framebuffer is not complete (<status>)` → **Cause:** the driver cannot render to an `R8UI` target, or
+     width/height is 0. **Fix:** use `Rasterizer`; report the GPU and driver (the `RGBA8` reserve in
+     `docs/design/gpu-rendering-plan.md` § 7 is not built). Stop.
+   - `the <shader type> did not compile: …` / `the shaders did not link: …` / `setting up failed with <error>` →
+     **Cause:** driver bug or a shader change. **Fix:** escalate with the message and GPU/driver. Stop.
+2. Crash or black frame later, from another thread → **Cause:** the GL context belongs to the thread that created the
+   renderer ([03](03-rules.md) `GlRenderer` row). **Fix:** create and use it on the game-loop
+   thread. Stop.
+3. A mesh changed in place but the GPU still shows the old one → **Cause:** `Mesh.MarkChanged()` was not called; the
+   GPU copy is only refreshed when `Mesh.Version` moves. **Fix:** call `MarkChanged()` after editing the arrays. Stop.
+4. GPU and CPU pictures differ → only edge pixels may differ (fill rules); `GlRendererTests` require ≥ 97 % equal
+   pixels and measure 100 % on the test scenes. True colour: `GlRendererTrueColorTests` require ≥ 99 % of
+   pixels within 2 per channel and measure 100 % (blends differ by at most 1). More than edges → escalate with
+   both frames. Stop.
+
+<a id="p22"></a>
+## P22 — Asset not found / no loader / asset fails to load
 
 Applies to code that loads through `GameBase.Assets` (TerraForM, TerraForM.Ecs, a game's own loaders). Rules:
-[03 § Assets](03-rules.md#assets), flow: [04 § F15](04-flows.md#f15), messages: [06](06-diagnostics.md#engine--logger).
+[03 § Assets](03-rules.md#assets), flow: [04 § F17](04-flows.md#f17), messages: [06](06-diagnostics.md#engine--logger).
 
 1. `Asset '…' not found at '…'.` → the message has the full path. Check that the file is in the build output
-   ([07 § Q12](07-checks.md#q12)): the game's `.csproj` must copy it (`CopyToOutputDirectory`). The working directory
+   ([07 § Q17](07-checks.md#q17)): the game's `.csproj` must copy it (`CopyToOutputDirectory`). The working directory
    doesn't matter for `GameBase.Assets`. On macOS/Linux the case of every folder and file name must match. Stop.
 2. `No loader for …` → the message lists the extensions that type has. Either the path has the wrong extension or type,
    or the game didn't call `Assets.RegisterLoader` before loading (do it in `OnInitialize`). Stop.

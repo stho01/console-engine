@@ -17,6 +17,13 @@ internal static class GameCatalog
         new("Physics Sandbox", "PhysicsSandbox", "Space ball, B box, Enter 50 balls, R clear, Esc quit"),
         new("Physics Showcase", "PhysicsShowcase",
             "1-5 shapes, Enter shower, A D W move, E blast, G gravity, I smooth, R clear"),
-        new("EternalDigger", "EternalDigger", "Arrows walk/dig, Space ladder, E deliver/buy, hold R rescue")
+        new("EternalDigger", "EternalDigger", "Arrows walk/dig, Space ladder, E deliver/buy, hold R rescue"),
+        new("SkyStack", "SkyStack", "A D / arrows run, Space / W / Up jump, Esc title")
+,
+        new("Starguard", "Starguard", "A D / arrows move, Space fire, Enter restart"),
+        new("Scripted (Lua)", "Scripted", "Arrows move, F5 reload scripts, Esc quit"),
+        new("Kartster (3D)", "Kartster",
+            "Menus arrows Enter Esc (MODE race or time trial); race W gas, S brake, A D steer, Space handbrake, " +
+            "E power-up (T throw, B drop), R restart, Enter/Esc pause; G GPU, C 24-bit")
     ];
 }

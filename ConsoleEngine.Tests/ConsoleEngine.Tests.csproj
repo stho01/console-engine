@@ -19,6 +19,7 @@
 
     <ItemGroup>
       <ProjectReference Include="..\ConsoleEngine\ConsoleEngine.csproj" />
+      <ProjectReference Include="..\ConsoleEngine.Scripting\ConsoleEngine.Scripting.csproj" />
     </ItemGroup>
 
 </Project>

@@ -32,6 +32,10 @@
       <ProjectReference Include="..\PhysicsSandbox\PhysicsSandbox.csproj" />
       <ProjectReference Include="..\PhysicsShowcase\PhysicsShowcase.csproj" />
       <ProjectReference Include="..\EternalDigger\EternalDigger.csproj" />
+      <ProjectReference Include="..\SkyStack\SkyStack.csproj" />
+      <ProjectReference Include="..\Scripted\Scripted.csproj" />
+      <ProjectReference Include="..\Starguard\Starguard.csproj" />
+      <ProjectReference Include="..\Kartster\Kartster.csproj" />
     </ItemGroup>
 
     <ItemGroup>

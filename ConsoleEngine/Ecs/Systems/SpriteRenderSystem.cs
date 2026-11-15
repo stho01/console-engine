@@ -46,7 +46,7 @@ public sealed class SpriteRenderSystem(
                     screen += offsets[i].Position;
                 var x = (int)MathF.Floor(screen.X) + refs[i].Offset.X;
                 var y = (int)MathF.Floor(screen.Y) + refs[i].Offset.Y;
-                CopyClipped(sprite.Data, x, y, pixels, width, height);
+                CopyClipped(sprite.Data, x, y, pixels, width, height, console);
             }
         }
     }
@@ -59,7 +59,8 @@ public sealed class SpriteRenderSystem(
     /// Copies the part of the sprite that is on screen straight into the frame buffer. The visible rectangle is worked
     /// out once, so the inner loop has no bounds checks of its own. Sprite data is indexed <c>[x, y]</c>.
     /// </summary>
-    private static void CopyClipped(Pixel[,] data, int x, int y, Span<Pixel> pixels, int width, int height)
+    private static void CopyClipped(Pixel[,] data, int x, int y, Span<Pixel> pixels, int width, int height,
+        RenderConsole console)
     {
         var fromX = Math.Max(0, -x);
         var toX = Math.Min(data.GetLength(0), width - x);
@@ -72,6 +73,8 @@ public sealed class SpriteRenderSystem(
             var rowStart = (y + spriteY) * width + x;
             for (var spriteX = fromX; spriteX < toX; spriteX++)
                 pixels[rowStart + spriteX] = data[spriteX, spriteY];
+            if (toX > fromX)
+                console.UsePalette(rowStart + fromX, toX - fromX);
         }
     }
 }

@@ -33,6 +33,21 @@ internal static class Kernel32
     [DllImport("kernel32.dll", EntryPoint = "WriteConsoleOutputW", CharSet = CharSet.Unicode, SetLastError = true)]
     internal static extern bool WriteConsoleOutput(IntPtr hConsoleOutput, [MarshalAs(UnmanagedType.LPArray), In] CharInfo[] lpBuffer, Coord dwBufferSize, Coord dwBufferCoord, ref SmallRect lpWriteRegion);
 
+    internal const uint ENABLE_PROCESSED_OUTPUT = 0x0001;
+    internal const uint ENABLE_WRAP_AT_EOL_OUTPUT = 0x0002;
+    internal const uint ENABLE_VIRTUAL_TERMINAL_PROCESSING = 0x0004;
+
+    [DllImport("kernel32.dll", SetLastError = true)]
+    internal static extern bool GetConsoleMode(IntPtr hConsoleHandle, out uint lpMode);
+
+    [DllImport("kernel32.dll", SetLastError = true)]
+    internal static extern bool SetConsoleMode(IntPtr hConsoleHandle, uint dwMode);
+
+    /// <summary>Writes UTF-16 text (with VT sequences when they are on) at the cursor.</summary>
+    [DllImport("kernel32.dll", EntryPoint = "WriteConsoleW", CharSet = CharSet.Unicode, SetLastError = true)]
+    internal static extern bool WriteConsole(IntPtr hConsoleOutput, [In] char[] lpBuffer, uint nNumberOfCharsToWrite,
+        out uint lpNumberOfCharsWritten, IntPtr lpReserved);
+
     [DllImport("kernel32.dll", ExactSpelling = true, CharSet = CharSet.Unicode)]
     internal static extern IntPtr GetConsoleWindow();
         
@@ -45,6 +60,12 @@ internal static class Kernel32
     [DllImport("kernel32.dll", SetLastError = true, CharSet = CharSet.Unicode)]
     internal static extern bool SetConsoleScreenBufferSize(IntPtr hConsoleOutput, Coord dwSize);
         
+    [DllImport("kernel32.dll", SetLastError = true)]
+    internal static extern bool GetConsoleScreenBufferInfoEx(IntPtr hConsoleOutput, ref ConsoleScreenBufferInfoEx info);
+
+    [DllImport("kernel32.dll", SetLastError = true)]
+    internal static extern bool SetConsoleScreenBufferInfoEx(IntPtr hConsoleOutput, ref ConsoleScreenBufferInfoEx info);
+
     [DllImport("user32.dll")]
     internal static extern int GetAsyncKeyState(int vKeys);
         

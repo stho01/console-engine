@@ -43,7 +43,7 @@ internal static class LauncherScreen
 
     private static void DrawEntry(int index, GameEntry game, bool built, bool selected)
     {
-        var label = $" {index + 1}  {game.Title.PadRight(TitleColumnWidth)}";
+        var label = $"{index + 1,2}  {game.Title.PadRight(TitleColumnWidth)}";
         Console.Write(selected ? "  ▶ " : "    ");
 
         if (selected)

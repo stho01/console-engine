@@ -19,7 +19,8 @@ Run **in the same kind of window the game opens in**:
 if ($env:WT_SESSION) { 'Windows Terminal' } else { 'Not Windows Terminal (likely conhost)' }
 ```
 Windows Terminal sets `WT_SESSION`. A double-clicked exe opens in whatever the Windows "default terminal application"
-setting says. Ask the user what that setting is. Windows Terminal → [P2](05-triage.md#p2) step 1.
+setting says. Ask the user what that setting is. Windows Terminal → [P2](05-triage.md#p2) step 1. A game started with
+`start-conhost.cmd` or `run-game.ps1` runs in conhost regardless.
 
 <a id="q3"></a>
 ## Q3 — Is the working directory the game's output folder?
@@ -29,7 +30,7 @@ From the folder the game is launched in:
 Get-Location; Get-ChildItem -Name *.exe, ConsoleEngine.Logger.exe
 ```
 Only matters for games with `EnableLogger`: the logger exe is started by relative name ([P1](05-triage.md#p1) step 4).
-Map files no longer depend on it: they are read next to the exe ([Q12](#q12), [P1](05-triage.md#p1) step 5).
+Map files no longer depend on it: they are read next to the exe ([Q17](#q17), [P1](05-triage.md#p1) step 5).
 
 <a id="q4"></a>
 ## Q4 — Is the logger exe where `Log.Start` will look?
@@ -123,7 +124,70 @@ On macOS: `ls -l ~/Library/Application\ Support/EternalDigger`; on Linux: `ls -l
 
 
 <a id="q12"></a>
-## Q12 — Is the asset where `GameBase.Assets` looks?
+## Q12 — Are the Lua scripts and `lua54.dll` in the output folder?
+
+From the game's output folder (the one holding the exe):
+```powershell
+Get-ChildItem -Recurse -Name -Include *.lua; Get-ChildItem -Recurse -Name -Filter lua54.dll
+```
+No `.lua` files → the `.csproj` lacks `CopyToOutputDirectory` for them ([P19](05-triage.md#p19) step 1). No
+`runtimes\<rid>\native\lua54.dll` for this machine's architecture → [P19](05-triage.md#p19) step 2.
+
+<a id="q13"></a>
+## Q13 — Can this machine make the OpenGL 3.3 context `GlRenderer` needs?
+
+From the output folder of the program that uses `GlRenderer`:
+```powershell
+Get-ChildItem -Recurse -Name -Filter glfw3.dll; Get-CimInstance Win32_VideoController | Select-Object Name, DriverVersion
+```
+No `runtimes\win-x64\native\glfw3.dll` (or the folder for this machine's architecture) → [P21](05-triage.md#p21)
+step 1 (partial copy). A video controller named `Microsoft Basic Display Adapter`, or a remote desktop / VM session,
+usually means no OpenGL 3.3 core profile **[external]**. In a developer checkout, `dotnet test
+ConsoleEngine.Rendering3D.OpenGL.Tests` answers it: tests ignored with `OpenGL 3.3 not available` mean no context.
+
+<a id="q14"></a>
+## Q14 — Can this console do 24-bit colour (VT sequences)?
+
+In the same kind of window the game opens in:
+```powershell
+[System.Environment]::OSVersion.Version; Write-Host "$([char]27)[48;2;255;128;0m  orange?  $([char]27)[0m"
+```
+Build 14393 (Windows 10 1607) or newer and an orange block → VT works in that console, so `SetTrueColor` should
+succeed. Literal `[48;2;...` text instead → VT is not available there ([P2](05-triage.md#p2) step 7). **[external]**:
+PowerShell turns VT on for its own output, so an orange block is strong, not certain, evidence for the game.
+
+macOS/Linux (`CrossPlatformConsoleHandler`): `echo $COLORTERM $CONSOLE_ENGINE_COLORS`. `truecolor` or `24bit` (or
+`CONSOLE_ENGINE_COLORS=truecolor`) → 24-bit is used; anything else → 16 colours. `printf '\e[48;2;255;128;0m  orange?
+\e[0m\n'` shows whether the terminal can, if the variable is missing.
+
+<a id="q15"></a>
+## Q15 — Can this checkout export Kartster tracks? (developer checkout)
+
+From the repo root:
+```powershell
+Test-Path C:\Forse\kartster-server\src\Kartster\Kartster.csproj; Test-Path C:\Forse\kartster-server\src\Kartster\bin
+```
+`tools/KartsterExport` references the original Kartster's `Kartster.csproj` through `KartsterRoot` (default
+`C:\Forse\kartster-server`; another folder needs `-p:KartsterRoot=<folder>`). `False` on the first line → no
+original here, so no exporting; the game itself only needs the files already in `Examples/Kartster/Assets/Tracks`.
+`False` on the second → build the original first (`dotnet build src/Kartster/Kartster.csproj` in its folder). Then
+`dotnet run --project tools/KartsterExport -- list` prints the built-in track ids.
+
+<a id="q16"></a>
+## Q16 — Is there a saved Kartster time-trial ghost?
+
+```powershell
+Get-ChildItem "$env:LOCALAPPDATA\Kartster\ghosts" -ErrorAction SilentlyContinue | Select-Object Name, Length, LastWriteTime
+```
+One `<track>.<kart>.ghost` per track and kart with a best lap (`GhostFile.PathFor`), written the moment a lap beats
+the best. Its size is 20 + 16 bytes per fixed step of the lap (about 77 KB for a 40 s lap). No folder or no file for
+that track and kart = no best lap yet, so no ghost. A file that is there but shows no ghost is unreadable
+(`GhostFile.Read`: damaged, cut short, or from another format version or step) and is ignored; the next best lap
+overwrites it. `<file>.tmp` left behind = a save was interrupted (the old file is intact). Delete the file to drop
+the ghost.
+
+<a id="q17"></a>
+## Q17 — Is the asset where `GameBase.Assets` looks?
 
 `GameBase.Assets` reads `<exe folder>\Assets\<path>`, whatever the working directory is. From the game's output folder
 (the one with the exe), with the path from the `Asset '…' not found at '…'` message:
@@ -131,4 +195,4 @@ On macOS: `ls -l ~/Library/Application\ Support/EternalDigger`; on Linux: `ls -l
 Test-Path .\Assets\Maps\map1.txt; Get-ChildItem -Recurse -Name .\Assets
 ```
 `False` → the `.csproj` doesn't copy the file to the output (`CopyToOutputDirectory`), or the name differs. On macOS
-and Linux compare the case of each folder and file name too. → [P19](05-triage.md#p19) step 1.
+and Linux compare the case of each folder and file name too. → [P22](05-triage.md#p22) step 1.

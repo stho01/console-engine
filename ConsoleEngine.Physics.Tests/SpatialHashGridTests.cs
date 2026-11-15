@@ -72,12 +72,12 @@ public class SpatialHashGridTests
     {
         var grid = new SpatialHashGrid(4f);
         var pairs = new ArrayBuffer<BodyPair>();
-        grid.Build([Box(0, 0, 1), Box(1, 0, 1)]);
+        grid.Build([Box(0, 0, 1), Box(1, 0, 1)], All(2));
         grid.FindPairs(pairs);
 
         var moved = new[] { Box(0, 0, 1), Box(20, 0, 1), Box(20.5f, 0, 1) };
         pairs.Clear();
-        grid.Build(moved);
+        grid.Build(moved, All(moved.Length));
         grid.FindPairs(pairs);
 
         Assert.That(pairs.Count, Is.EqualTo(1));
@@ -89,6 +89,33 @@ public class SpatialHashGridTests
     [TestCase(float.NaN)]
     public void Ctor_InvalidCellSize_Throws(float cellSize) =>
         Assert.Throws<ArgumentOutOfRangeException>(() => _ = new SpatialHashGrid(cellSize));
+
+    [Test]
+    public void FindPairs_OtherGrid_ReportsPairsAcrossGridsOnceWithBodyIndices()
+    {
+        BodyProxy[] bodies = [Box(0, 0, 3), Box(50, 0, 1), Box(2, 2, 3), Box(51, 0, 1), Box(4, 0, 1)];
+        var moving = new SpatialHashGrid(2f);
+        var statics = new SpatialHashGrid(2f);
+        moving.Build(bodies, [0, 1]);
+        statics.Build(bodies, [2, 3, 4]);
+        var pairs = new ArrayBuffer<BodyPair>();
+
+        moving.FindPairs(statics, pairs);
+
+        var result = new List<(int, int)>();
+        foreach (var pair in pairs.AsSpan())
+            result.Add((pair.A, pair.B));
+        result.Sort();
+        Assert.That(result, Is.EqualTo(new[] { (0, 2), (0, 4), (1, 3) }));
+    }
+
+    private static int[] All(int count)
+    {
+        var indices = new int[count];
+        for (var i = 0; i < count; i++)
+            indices[i] = i;
+        return indices;
+    }
 
     private static BodyProxy Box(float x, float y, float halfSize) => new()
     {
@@ -104,7 +131,7 @@ public class SpatialHashGridTests
     {
         var grid = new SpatialHashGrid(cellSize);
         var pairs = new ArrayBuffer<BodyPair>();
-        grid.Build(bodies);
+        grid.Build(bodies, All(bodies.Length));
         grid.FindPairs(pairs);
 
         var result = new List<(int, int)>();

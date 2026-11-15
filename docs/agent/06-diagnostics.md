@@ -4,7 +4,9 @@
 ## There are no logs
 
 - The engine and the example games **never write a log line**. No `ILogger`, no file, no level, no event log entry of
-  their own. `Log.WriteLine` exists for game authors, but no code in this repo calls it.
+  their own. The only callers of `Log.WriteLine` are `ConsoleEngine.Scripting` (Lua errors and Lua `print`) and
+  the Scripted demo's `ScriptReloadSystem`, and they reach the logger window only with `EnableLogger = true`, which
+  no game that uses Lua sets.
 - Consequence: **absence of output is never evidence.** Every success path and almost every failure path is silent.
   Win32 return values are all ignored ([04 § F1](04-flows.md#f1)).
 - Evidence sources, best first:
@@ -43,8 +45,11 @@ Grep these to locate the code path. None of them has a log level.
 | `#<FPS>:` + n | `Log.ReportFps` (wire format, never shown) | — |
 | `Input handler not set` | `Input.GetKey` (`InvalidOperationException`) | Unreachable in practice: `Handler` is a static readonly `new InputHandler()` |
 | `Empty deque` | `Deque<T>.PopFront` / `PopBack` (`InvalidOperationException`) | Game popped an empty `Deque` |
+| `A palette needs exactly 16 colours.` (`ArgumentException`, param `value`; `ConsoleEngine.Rendering3D.ConsolePalette` ctor: param `colors`) | `RenderConsole.Palette` setter | A palette with another number of colours |
 | `no go` | `Move.OnUpdate` / `GetVisualRepresentation` (`Exception`) | Invalid `Direction` value. Unreachable via the UI |
 | `worldName` (param name of `ArgumentNullException`) | `GameScene` ctor | `GameScene` created with null name |
+| `No game exe found next to start-conhost.cmd.` | `Examples/start-conhost.cmd` | The launcher was run outside a game's output folder, or the folder holds only `ConsoleEngine.Logger.exe` |
+| Window title = `GameBase.Name` | `GameBase.Initialize` → `SetTitle` | Default `"Game"`. Platformer `"Platformer game"` |
 | `Entity(<id>v<version>) is not alive.` | `World` (`EcsThrowHelper.ThrowNotAlive`, `InvalidOperationException`) | Entity destroyed, stale handle or `Entity.Null`. After `World.Dispose()` the same calls throw `ObjectDisposedException` instead ([03 § ECS](03-rules.md#ecs)) |
 | `Entity(<id>v<version>) has no <Type> component.` | `World.Get`/`Set`/`Remove` (`InvalidOperationException`) | Component missing |
 | `Entity(<id>v<version>) already has a <Type> component.` | `World.Add` (`InvalidOperationException`) | Use `Set` to overwrite |
@@ -66,7 +71,7 @@ Grep these to locate the code path. None of them has a log level.
 | `AssetHandle<<Type>>(<index>v<generation>) is not loaded: the scope that loaded it was disposed, or the AssetManager was cleared.` | `AssetManager.Get`, `AssetScope.Get`, `AssetStore<T>.Get` (`InvalidOperationException`) | A handle kept after its scene unloaded (or `AssetHandle<T>.Null`, `(0v0)`). Load it in a longer-lived scope (`Game.Assets`) or reload it ([03 § Assets](03-rules.md#assets)) |
 | `Scene.Assets is available once the scene is pushed onto the SceneManager (in OnLoad and later).` | `Scene.Assets` (`InvalidOperationException`) | A scene used its assets in its constructor, or a scene that was never pushed |
 | .NET's own `ObjectDisposedException` message naming `ConsoleEngine.Assets.AssetScope` | `AssetScope.Load` / `TryLoad` / `LoadHandle` | Code loaded through a scope after disposing it |
-| `Asset '<path>' not found at '<location>'.` | `DirectoryAssetSource.Open` / `MemoryAssetSource.Open` (`AssetNotFoundException`) | No file for the asset. `<location>` is the full file path (`<exe folder>\Assets\…`) or `memory:<path>` ([04 § F15](04-flows.md#f15) step 5) |
+| `Asset '<path>' not found at '<location>'.` | `DirectoryAssetSource.Open` / `MemoryAssetSource.Open` (`AssetNotFoundException`) | No file for the asset. `<location>` is the full file path (`<exe folder>\Assets\…`) or `memory:<path>` ([04 § F17](04-flows.md#f17) step 5) |
 | `No loader for <Type> assets with extension '.<ext>' (asset '<path>'). Registered extensions for <Type>: <.a, .b or none>. Register one with AssetManager.RegisterLoader.` | `AssetManager.FindLoader` (`AssetLoaderNotFoundException`) | Wrong type or extension asked for, or the game never registered its loader |
 | `Failed to load asset '<path>' as <Type> with <Loader>: <inner message>` | `AssetManager.LoadUncached` (`AssetLoadException`) | The loader threw. The real cause is `InnerException` (bad data, or a dependency that failed) |
 | `<Loader> returned null for asset '<path>'.` | `AssetManager.LoadUncached` (`AssetLoadException`) | Bug in the loader |
@@ -76,12 +81,99 @@ Grep these to locate the code path. None of them has a log level.
 | `The header has no '---' line to end it.` / `The sprite has no rows.` / `Line <n>: expected '!key: value' in the header, got '<line>'.` / `Line <n>: unknown header key '<key>'. Known keys: fg, bg.` / `Line <n>: '<value>' is not a ConsoleColor.` (`FormatException`, the `InnerException` of "Failed to load asset … as Sprite with SpriteLoader") | `SpriteLoader.Load` | A broken `.sprite` file ([03 § Assets](03-rules.md#assets)) |
 | .NET's own `JsonException` message (line and byte position), as the `InnerException` of "Failed to load asset … with JsonLoader`1" | `JsonLoader<T>.Load` | Invalid JSON, or JSON that doesn't fit the type. A file holding `null` → "JsonLoader`1 returned null for asset '<path>'." |
 | `An asset path can't be empty.` / `Asset path '<path>' must be relative to the asset root.` / `Asset path '<path>' leaves the asset root.` / `Asset path '<path>' names no file.` (`ArgumentException`) | `AssetPath.Parse` / `Resolve`, `MemoryAssetSource.Add` | Bad asset path ([03 § Assets](03-rules.md#assets)) |
-| Window title = `GameBase.Name` | `GameBase.Initialize` → `SetTitle` | Default `"Game"`. Platformer `"Platformer game"`, Asteroids.Ecs `"Asteroids (ECS)"`, Snake.Ecs `"Snake (ECS)"`, TerraForM.Ecs `"TerraForM (ECS)"`, Platformer.Ecs `"Platformer (ECS)"`, Swarm `"Swarm (ECS)"`, PhysicsSandbox `"Physics Sandbox"`, PhysicsShowcase `"Physics Showcase"`, EternalDigger `"EternalDigger"` |
+| Window title = `GameBase.Name` | `GameBase.Initialize` → `SetTitle` | Default `"Game"`. Platformer `"Platformer game"`, Asteroids.Ecs `"Asteroids (ECS)"`, Snake.Ecs `"Snake (ECS)"`, TerraForM.Ecs `"TerraForM (ECS)"`, Platformer.Ecs `"Platformer (ECS)"`, Swarm `"Swarm (ECS)"`, PhysicsSandbox `"Physics Sandbox"`, PhysicsShowcase `"Physics Showcase"`, EternalDigger `"EternalDigger"`, Starguard `"Starguard"` |
+
+### Lua scripting (`ConsoleEngine.Scripting`)
+
+All entity errors below are what `LuaScriptSystem.GetError(entity)` returns once the entity has the `ScriptFaulted`
+tag.
+
+| Text | Emitted by | Meaning |
+|---|---|---|
+| `Lua script '<name>': <message>` | `LuaScriptException` (thrown by `LuaRuntime.Load`, `LuaScript.Reload`; returned by `LuaRuntime.ReloadAll`) | Script could not be loaded. `<name>` is the path as passed to `Load` ([04 § F15](04-flows.md#f15)) |
+| `the script must return a table` | `LuaScript.Reload` (inside `LuaScriptException`) | The file ran but did not `return` its module table |
+| `<name>:<line>: <message>` | Lua itself (syntax and runtime errors), inside `LuaScriptException` or an entity error | Where the script failed. Names over 60 bytes are shortened to `...<end>` |
+| `<name>:<line>: unknown field '<key>' on an entity, put script data in self.data` | `guard` in `LuaRuntime.EngineSource` (`__newindex` of every `self`) | Script wrote a field that is no component field |
+| `<name>:<line>: self.<field> needs a <Component> component on the entity` | `guard` in `LuaRuntime.EngineSource` | Script wrote e.g. `self.vx` on an entity without `Velocity` |
+| `self.x must be a number` (also `self.y`, `self.vx`, `self.vy`, `self.color`, `self.background`) | `LuaRuntime.ReadResults` | Hook stored a non-number in that field |
+| `self.char must be a string or a code point` | `LuaRuntime.ReadResults` | Hook stored something else in `self.char` |
+| `<ExceptionType>: <message>` | `LuaRuntime.Call` | A .NET exception inside `input.*`, `console.*` or `print` |
+| `Lua: <error>` | `LuaScriptSystem.RunHook` (`Log.WriteLine`) | An entity faulted ([04 § F16](04-flows.md#f16)). Logger only |
+| `Lua: <print arguments, tab-separated>` | Lua `print` (`LuaRuntime.Print`) | Script debug output. Logger only |
+| The error text on the bottom row, white on dark red | `ScriptErrorSystem` | Scripted demo: first `ScriptFaulted` entity's error |
 
 Runtime exceptions without repo-authored text (message comes from .NET and varies): `DllNotFoundException`,
 `SocketException`, `Win32Exception`, `FileNotFoundException`, `DirectoryNotFoundException`, `FormatException`,
 `IndexOutOfRangeException`, `NullReferenceException`, `TypeInitializationException`. Match by **type + stack frame**
 using [04](04-flows.md).
+
+<a id="rendering3d"></a>
+### 3D rendering (`ConsoleEngine.Rendering3D.OpenGL`)
+
+| Text | Emitted by | Meaning |
+|---|---|---|
+| `OpenGL 3.3 is not available: <reason>` | `GlRenderer` ctor (`InvalidOperationException`, the original exception as `InnerException`). `GlRenderer.TryCreate` returns false instead | No GPU renderer: the caller should fall back to `Rasterizer` ([P21](05-triage.md#p21)). `<reason>` is one of the rows below or a GLFW/Silk.NET message |
+| `the <R8UI\|RGBA8> framebuffer is not complete (<status>)` | `GlRenderer.CreateFramebuffer` (inside the message above; RGBA8 in true-colour mode) | The driver can't render to the palette-index (or colour) target, or the size is 0 (`FramebufferIncompleteAttachment`) |
+| `the background framebuffer is not complete (<status>)` | `GlRenderer.CreateBackground` (inside the message above, true-colour mode only) | The driver can't attach the RGBA8 background texture, or the size is 0 |
+| `the <VertexShader\|FragmentShader> did not compile: <log>` | `GlRenderer.CompileShader` (inside the message above) | Driver rejected a shader |
+| `the shaders did not link: <log>` | `GlRenderer.CreateProgram` (inside the message above) | Driver rejected the program |
+| `setting up failed with <GL error>` | `GlRenderer` ctor (inside the message above) | A GL call during setup failed |
+| `This renderer is in true-colour mode: call Clear(ReadOnlySpan<uint>) with a 0xRRGGBB background.` (`InvalidOperationException`) | `Rasterizer.Clear` / `GlRenderer.Clear` with `ConsoleColor`s | The renderer was made with `trueColor: true` |
+| `This renderer is in palette mode: call Clear(ReadOnlySpan<ConsoleColor>), or create it with trueColor: true.` (`InvalidOperationException`) | `Rasterizer.Clear` / `GlRenderer.Clear` with `uint`s | The renderer was made in palette mode |
+| `OpenGL 3.3 not available` | `GlRendererTests`, `GlRendererTrueColorTests` (`Assert.Ignore`) | GPU tests skipped: no context, or not Windows (CI) |
+
+### Kartster
+
+| Text | Emitted by | Meaning |
+|---|---|---|
+| `PAUSED`, `RESUME`, `RESTART`, `QUIT TO TITLE`, `ENTER SELECT   ESC RESUME` (pause overlay) | `PauseMenu` constants | The race is paused (Enter or Esc) |
+| `FINISHING RACE` and `<n>/<karts> HOME` (full screen) | `RaceFinish.Draw` | The player finished 4 s ago; the karts still out are being run to the line (at most 2 × the winner's time + 30 s of race time, then DNF) |
+| `No kart folders in <full path>` | `KartsterGame.OnInitialize` (`DirectoryNotFoundException`) | The karts folder (default `Assets/Karts`, relative to the working directory) has no sub-folders |
+| `No kart parts (*.obj) in <folder>` | `KartModel.Load` (`InvalidDataException`) | A kart folder has no drawable OBJ parts |
+| `<path>:<line>: a face needs at least three corners` | `ObjFile.Read` (`InvalidDataException`) | Broken OBJ file |
+| `<id>.spline.obj needs at least two centerline points` | `Track.Load` (`InvalidDataException`) | Broken or empty track spline export |
+| `<file>:<line>: expected 'terrain originX originZ cellSize columns rows r g b'` | `Terrain.Parse` (`InvalidDataException`) | The first line of `<id>.terrain.txt` is not the header |
+| `<file>:<line>: needs a cell size above 0 and at least 2 columns and rows` | `Terrain.Parse` (`InvalidDataException`) | The header's grid is empty |
+| `<file>:<line>: expected <columns> heights, found <n>` / `more than <rows> rows` | `Terrain.Parse` (`InvalidDataException`) | A height row is the wrong length, or there are too many rows |
+| `<file>:<line>: '<text>' is not a number` | `Terrain.Parse` (`InvalidDataException`) | A value does not parse (invariant culture; `NaN` is no ground) |
+| `<file>: expected a terrain header and <rows> rows, found <n>` | `Terrain.Parse` (`InvalidDataException`) | The file ends early (an empty file: `<rows>` is 0) |
+| `<file>:<line>: expected 'model <name> x y z yawDegrees scaleX scaleY scaleZ r g b'` | `Scenery.Parse` (`InvalidDataException`) | A `model` line without exactly 11 values |
+| `<file>:<line>: expected 'tri x1 y1 z1 x2 y2 z2 x3 y3 z3 r g b'` | `Scenery.Parse` (`InvalidDataException`) | A `tri` line without exactly 12 values |
+| `<file>:<line>: '<text>' is not a number` | `Scenery.Parse` (`InvalidDataException`) | A value in a scenery line does not parse (invariant culture) |
+| `<file>:<line>: unknown line '<word>', expected model or tri` | `Scenery.Parse` (`InvalidDataException`) | A scenery line starts with something else |
+| `<file>:<line>: model file <full path> not found` | `Scenery.Parse` (`InvalidDataException`) | A `model` line names an OBJ that is not in the `Scenery` folder beside the tracks folder |
+| `<file>:<line>: expected 'segment x1 y1 x2 y2 halfThickness'` / `expected 'circle x y radius'` | `TrackCollision.Parse` (`InvalidDataException`) | A `segment` line without exactly 5 values, a `circle` line without exactly 3 |
+| `<file>:<line>: '<text>' is not a number` | `TrackCollision.Parse` (`InvalidDataException`) | A value does not parse (invariant culture) or is not finite |
+| `<file>:<line>: '<text>' must be more than 0` | `TrackCollision.Parse` (`InvalidDataException`) | A half thickness or radius of 0 or less |
+| `<file>:<line>: segment has no length` | `TrackCollision.Parse` (`InvalidDataException`) | Both end points are the same |
+| `<file>:<line>: unknown line '<word>', expected segment or circle` | `TrackCollision.Parse` (`InvalidDataException`) | A collision line starts with something else |
+| `Kartster - <kart> on <track> - <n> km/h - gear <g> - <rpm> rpm - <CPU\|GPU\|CPU (no GPU)> 3D <ms> ms - <colours> - <fps> fps` (window title; 3D = `Clear` to `Finish`, smoothed) | `KartsterGame.OnInitialize` interval, every 250 ms | Running, track mode |
+| `Kartster - <kart> (<n> triangles) - <CPU\|GPU\|CPU (no GPU)> 3D <ms> ms - <colours> - <fps> fps` (window title) | `KartsterGame.OnInitialize` interval, every 250 ms | Running, garage mode |
+| `Kartster - <scene type> - <CPU\|GPU\|CPU (no GPU)> 3D <ms> ms - <colours> - <fps> fps` (window title, e.g. `Kartster - TitleScene - CPU 3D 0.40 ms - 24-bit - 60 fps`) | `KartsterGame.OnInitialize` interval, every 250 ms | Running, a menu (`TitleScene`, `SelectKartScene`, `SelectTrackScene`, `ResultsScene`) |
+| `<colours>` in the titles: `24-bit`, `16 colours`, or `16 colours (no 24-bit)` | `KartsterGame.ColorLabel` | 24-bit on / off / asked for (`--truecolor`, C) but `Console.TrueColorActive` is false ([05 § P2](05-triage.md#p2) step 7) |
+| `<file>:<line>: expected 'pad x y z setId'` | `PowerUpPads.Parse` (`InvalidDataException`) | A line of `<id>.powerups.txt` is not `pad` with three invariant-culture numbers and a set id |
+| HUD power-up slot (top right, a box with the first letter, the name under it): `SPEED BOOST`, `ENGINE TUNE`, `GRIP TUNE`, `BANANAS`, `LAPSKAUS`, `TRIPLE LAPSKAUS`, `HOMING JOIKA`, `TRIPLE HOMING JOIKA`, `INVULNERABLE`, `MAGNET`, `ANVIL`, `LIGHTNING`, `VAMPIRE`, `EARTHQUAKE`, `GLITCH`, `SMOKE BOMB`, `FAKE FINISH`, `FAKE POWER-UP`, `ROADBLOCK`, `CONCRETE ROADBLOCK`, `LOCOMOTIVE` | `PowerUpCatalog.Name`, via `PowerUpSystem.HudName` → `HudState.PowerUp` | What the player holds; changing quickly while the reel spins (2.5 s after a pad); empty when nothing is held |
+| `<id>.race.txt:<line>: unknown marker '<word>'` | `RaceMarkers.Parse` (`InvalidDataException`) | A line is not `laps`, `start`, `checkpoint` or `grid` |
+| `<id>.race.txt:<line>: '<marker>' needs <n> numbers, got <m>` | `RaceMarkers.Parse` (`InvalidDataException`) | Wrong number of values on a marker line |
+| `<id>.race.txt:<line>: '<word>' is not a number` | `RaceMarkers.Parse` (`InvalidDataException`) | Not an invariant-culture finite number |
+| `<id>.race.txt:<line>: '<marker>' needs a forward direction, not zero` | `RaceMarkers.Parse` (`InvalidDataException`) | A gate's forward is (0, 0) |
+| `<id>.race.txt:<line>: '<marker>' needs left and right of 0 or more` | `RaceMarkers.Parse` (`InvalidDataException`) | A gate's reach is negative |
+| `<id>.race.txt:<line>: laps must be a whole number of at least 1` | `RaceMarkers.Parse` (`InvalidDataException`) | Bad `laps` value |
+| `<id>.race.txt:<line>: '<marker>' is given twice` | `RaceMarkers.Parse` (`InvalidDataException`) | A second `laps` or `start` line |
+| `<id>.race.txt: no 'laps' line` / `<id>.race.txt: no 'start' line` | `RaceMarkers.Parse` (`InvalidDataException`) | A required marker is missing |
+| `Kart <id> is already registered with the race` | `RaceSession.Register` (`ArgumentException`) | The same id registered twice |
+| `Kart <id> is not registered with the race` | `RaceSession.Update`/`Get` (`KeyNotFoundException`), so also `RaceSystem` | A kart with `RaceProgress` was not registered by its `Kart.Index` |
+| `LAP <n>/<m>` then `<m:ss.t>` | `Hud.Draw` (bottom-left) | Race HUD lap line; only `<m:ss.t>` in a one-lap race |
+| `<pos>  <name>  <m:ss.t>` (leader) / `+<m:ss.t>` (others) | `Hud.Draw` (standings) | Top 3 and the player's row when further back; names: the player's kart folder, bots `<KART FOLDER> <n>`, cut to 10 chars |
+| `POS <p>/<n>` | `Hud.Draw` | No standings given, more than one kart |
+| `<speed>` and `KM/H` | `Hud.Draw` (bottom-right dial) | Speed in km/h, rounded |
+| `<power-up name>` | `Hud.Draw` (top-right) | Whatever `HudState.PowerUp` holds (always empty until power-ups, wave 3) |
+| `3`, `2`, `1`, `GO!`, `FINISHED` | `Hud.Draw` (top-centre) | Countdown, start, player finished |
+| `KARTSTER`, `PRESS ENTER`, `SPACE GARAGE   ESC QUIT` | `TitleScene` (`Logo`, `Prompt`, `Footer`) | Title menu, the first scene |
+| `SELECT KART`, `UP/DOWN CHOOSE   ENTER OK   ESC BACK` | `SelectKartScene` | Kart menu |
+| `SELECT TRACK`, `TRACK`, `LAPS`, `MODE`, `RACE`, `TIME TRIAL`, `START RACE`, `NONE`, `LEFT/RIGHT CHANGE   ENTER START   ESC BACK` | `SelectTrackScene` (`ModeChoices`) | Race setup menu; `NONE` when there are no tracks (then Enter does nothing) |
+| `BEST <m:ss.cc>` or `BEST -`, and above it one `<n>  <m:ss.cc>` row per lap done | `TimeTrial.DrawUi` (`BestLabel`, `NoTime`), bottom-left over the lap line instead of the standings | Time trial: this attempt's lap times (the one equal to the best in yellow) and the best lap so far; `BEST -` = no best lap saved for this track and kart, or the file couldn't be read ([Q16](07-checks.md#q16)) |
+| `RESULTS`, `POS`, `NAME`, `TIME`, `BEST`, `DNF`, `ENTER RACE AGAIN   ESC TITLE` | `ResultsScene` | Results table once the race is over: 4 s of `FINISHED` after the player finishes, then `FINISHING RACE` until everybody is home or the cap; the track name in upper case |
 
 ### Launcher (`LauncherTexts`, `GameLocator`)
 
@@ -146,6 +238,17 @@ using [04](04-flows.md).
 | `HOUSE UPGRADE!` / `TOOL SHOP OPEN` (yellow, floating) | `FloatingTextRenderSystem.HouseUpgradeText`, `ToolShopOpenText` | A sale reached a gold milestone / first time below the wall |
 | ` EternalDigger `, `SHOP`, `MINE` | `HouseRenderSystem` (house sign, shop, shaft frame) | Scenery |
 
+### SkyStack screen text (`SkyStackTexts`)
+
+| Text | Where | Meaning |
+|---|---|---|
+| `Run. Jump. Bounce. Don't look down.`, `PRESS SPACE TO CLIMB` (blinking), `← → / A D  run      SPACE / ↑ / W  jump      ESC  quit`, `Run fast to jump higher. Skip floors to chain combos.` | `TitleScene` | Title screen |
+| `BEST SCORE <n>`, `BEST FLOOR <n>` | `TitleScene.DrawBest` | Shown once a run in this session scored more than 0 |
+| `SKYSTACK`, `FLOOR`, `SCORE`, `BEST`, `COMBO`, `x<jumps>  <floors> floors` + timer bar, `SPEED` + 6 level blocks or `reach floor 5`, `ZONE` + zone name, `← → A D   run`, `SPACE ↑ W jump`, `ESC       title` | `HudRenderSystem` | HUD right of the tower |
+| `THE TOWER RISES!` / `FASTER!` (red, blinking, 2 s) | `MessageRenderSystem` | The view started rising / got faster |
+| `COMBO <floors> FLOORS  +<points>` (yellow, 2 s) | `MessageRenderSystem.DrawComboResult` | A combo of 2+ jumps paid out |
+| `YOU FELL!`, `FLOOR`, `SCORE`, `BEST COMBO`, `NEW BEST!`, `SPACE  climb again`, `ESC    title` | `MessageRenderSystem.DrawGameOver` | Game-over box; the two key lines appear after 0.75 s |
+
 ### TerraForM screen text (`HudTexts`, `Assets/Sprites/*.sprite`)
 
 | Text | Where | Meaning |
@@ -161,6 +264,17 @@ using [04](04-flows.md).
 | `QUEUED COMMANDS ` + `→←↑↓P` | `HudTexts.QueuedCommands`, `Move`/`Plant.GetVisualRepresentation` | Typed, not yet sent with SPACE |
 | `SCORE:` | `HudTexts.Score` | Top-right. **Hidden during game over** |
 | `PRESS R TO RESTART` (inside the GAME OVER art) | `game-over.sprite` (`SpritePaths.GameOver`) | `GameScene.GameOver` is true |
+
+### Starguard screen text (`HudTexts`)
+
+| Text | Where | Meaning |
+|---|---|---|
+| `SCORE ` + 6 digits | `HudTexts.Score`, row 0 left | Score of this match, zero-padded (`D6`) |
+| `HI ` + 6 digits | `HudTexts.HighScore`, row 0 centre | Best of `StarguardGame.HighScore` and the current score |
+| `WAVE n` | `HudTexts.Wave`, row 0 right | Current wave, from 1 |
+| `LIVES n` + one `▲` per life in reserve | `HudTexts.Lives`, row below the ground line | Lives left, including the cannon on screen |
+| `G A M E   O V E R` | `HudTexts.GameOver`, screen centre | `Match.IsOver` |
+| `PRESS ENTER TO PLAY AGAIN` | `HudTexts.PlayAgain`, below it | `Match.IsOver` |
 
 ## Reading the screen as state (TerraForM)
 

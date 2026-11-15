@@ -1,0 +1,11 @@
+# norbergring power-up pads, exported from Kartster by PowerUpExport (TrackPowerUpPadResolver).
+# pad x y z setId   (world metres, Kartster axes; the pads a normal race has, extra ones left out)
+pad 81.35 1.045 -3 normal
+pad 81.35 1.045 0 normal
+pad 81.35 1.045 3 normal
+pad 37.383 4.757 115.39 normal
+pad 40.213 4.757 114.394 normal
+pad 43.043 4.757 113.398 normal
+pad -215.098 1 -162.967 normal
+pad -217.388 1 -164.906 normal
+pad -219.677 1 -166.845 normal

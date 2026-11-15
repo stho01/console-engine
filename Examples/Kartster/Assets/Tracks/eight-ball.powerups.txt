@@ -1,0 +1,11 @@
+# eight-ball power-up pads, exported from Kartster by PowerUpExport (TrackPowerUpPadResolver).
+# pad x y z setId   (world metres, Kartster axes; the pads a normal race has, extra ones left out)
+pad -23.62 1 -18.695 normal
+pad -21.691 1 -20.993 normal
+pad -19.762 1 -23.29 normal
+pad -30.529 1.012 23.854 normal
+pad -28.947 1.012 26.404 normal
+pad -27.366 1.012 28.953 normal
+pad 82.991 1 -4.933 normal
+pad 80.02 1 -4.514 normal
+pad 77.05 1 -4.094 normal
