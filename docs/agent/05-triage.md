@@ -334,13 +334,13 @@ gone". Rules: [03 § SkyStack](03-rules.md#skystack).
    save file. A run left with ESC is not recorded. Escalate as a feature request if a saved high score is wanted.
 
 <a id="p21"></a>
-## P21 — 3D: GPU mode not available / falls back to CPU / GPU picture differs
+## P21 — 3D: GPU mode not available / falls back to CPU / GPU picture differs / GPU mode is slow
 
 **Symptom [inferred]:** "GPU mode doesn't work", "it always uses the CPU", "`GlRenderer` throws", "glfw3.dll is
-missing", "the GPU picture looks different".
+missing", "the GPU picture looks different", "GPU mode is no faster", "it uses the wrong graphics card".
 
-No game uses `GlRenderer` yet (`ConsoleEngine.Rendering3D.OpenGL`, [01](01-system-map.md)); this is for code that
-does.
+Kartster uses `GlRenderer` (`ConsoleEngine.Rendering3D.OpenGL`, [01](01-system-map.md)) with `--gpu` or G; the same
+goes for any other code that creates one.
 
 1. `InvalidOperationException` starting `OpenGL 3.3 is not available: ` (or `GlRenderer.TryCreate` returned false and
    the caller fell back to `Rasterizer`) → read the rest of the message ([06 § 3D](06-diagnostics.md#rendering3d)):
@@ -361,6 +361,14 @@ does.
 3. A mesh changed in place but the GPU still shows the old one → **Cause:** `Mesh.MarkChanged()` was not called; the
    GPU copy is only refreshed when `Mesh.Version` moves. **Fix:** call `MarkChanged()` after editing the arrays. Stop.
 4. GPU and CPU pictures differ → only edge pixels may differ (fill rules); `GlRendererTests` require ≥ 97 % equal
-   pixels and measure 100 % on the test scenes. True colour: `GlRendererTrueColorTests` require ≥ 99 % of
+   pixels and measure 100 % on the test scenes (one of them 1 pixel of 4 096 off). True colour: `GlRendererTrueColorTests` require ≥ 99 % of
    pixels within 2 per channel and measure 100 % (blends differ by at most 1). More than edges → escalate with
    both frames. Stop.
+5. GPU mode works but is slow, on a laptop with two graphics adapters ([07 § Q13](07-checks.md#q13)) → read
+   `GlRenderer.Description`. It names the integrated adapter (e.g. `Intel(R) UHD Graphics`) → **Cause:** the driver
+   put OpenGL on the integrated GPU. `GlRenderer` asks for the discrete one only on Windows with an NVIDIA driver
+   (`GlRenderer.PreferDiscreteGpu`, [03](03-rules.md) `GlRenderer` row), once, when the process's first renderer is
+   created (not checked: whether it still works after other code in the process has made an OpenGL context);
+   measured on an RTX 3050 Ti laptop the integrated GPU takes 3–6× as long a frame. **Fix:** leave
+   `PreferDiscreteGpu` true; on an AMD laptop, or when that is not enough, set the program to "High performance" in
+   Windows Settings → System → Display → Graphics **[external]**. Stop.

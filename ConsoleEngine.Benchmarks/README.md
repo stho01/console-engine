@@ -1,11 +1,55 @@
 # ConsoleEngine.Benchmarks
 
 BenchmarkDotNet micro-benchmarks for the engine: `Baseline/` (OOP vs. struct arrays), `Ecs/` (world, queries,
-command buffer, rendering) and `Scripting/` (Lua). Always Release:
+command buffer, rendering), `Scripting/` (Lua) and `Rendering3D/` (CPU vs. GPU renderer). Always Release, and
+in-process (`-i`): BenchmarkDotNet 0.15.8 does not recognise .NET 11 and stops with
+`GetRuntimeVersion not implemented for NotRecognized` without it:
 
 ```bash
-dotnet run -c Release --project ConsoleEngine.Benchmarks -- --filter "*"
+dotnet run -c Release --project ConsoleEngine.Benchmarks -- -i --filter "*"
 ```
+
+## Rendering3D/RendererBenchmarks
+
+One 3D frame (`Clear`, 13 `Draw`s, `Finish`) on the CPU `Rasterizer` and on the OpenGL `GlRenderer`: a chequered
+floor and twelve spheres whose triangles share vertices, 20 000 or 240 000 triangles in all, at 320×180 (Kartster's
+size) and 1280×720, in palette mode and in 24-bit colour. `Gpu` prints the adapter it ran on
+(`// GlRenderer on …`). On a laptop with two GPUs it runs on the discrete one; set `BENCHMARK_INTEGRATED_GPU=1` to
+measure the integrated one.
+
+```bash
+dotnet run -c Release --project ConsoleEngine.Benchmarks -- -i --filter "*RendererBenchmarks*" --job short
+```
+
+### Results (2026-11-15)
+
+i7-11800H, Intel UHD Graphics (driver 32.0.101.7088) and NVIDIA GeForce RTX 3050 Ti Laptop GPU (driver 610.74),
+Windows 11, .NET 11.0.100, BenchmarkDotNet 0.15.8, short job, in-process. Mean ms per frame, 0 B allocated in every
+row. "Before" is the `GlRenderer` of 2026-11-14 (three vertices per triangle, rows flipped on the CPU, always the
+integrated GPU).
+
+| Size, colours, triangles | CPU `Rasterizer` | GPU before (Intel UHD) | GPU now, Intel UHD | GPU now, RTX 3050 Ti |
+|---|---:|---:|---:|---:|
+| 320×180, palette, 20 000 | 1.20 | 0.68 | 0.44 | 0.09 |
+| 320×180, palette, 240 000 | 6.36 | 1.85 | 1.12 | 0.20 |
+| 320×180, 24-bit, 20 000 | 1.32 | 0.61 | 0.63 | 0.25 |
+| 320×180, 24-bit, 240 000 | 6.70 | 1.67 | 1.46 | 0.38 |
+| 1280×720, palette, 20 000 | 8.98 | 2.91 | 2.35 | 1.11 |
+| 1280×720, palette, 240 000 | 16.41 | 5.75 | 3.81 | 1.11 |
+| 1280×720, 24-bit, 20 000 | 9.53 | 5.12 | 4.12 | 2.41 |
+| 1280×720, 24-bit, 240 000 | 16.14 | 7.56 | 4.76 | 2.66 |
+
+Notes:
+- Where a GPU frame's time goes (Kartster's six-kart race frame, 320×180, split with `glFinish`): the draw calls
+  themselves are 0.02–0.1 ms for 40–170 draws, so batching or caching uniforms would gain nothing. The rest is the
+  GPU working through the vertices and the read-back.
+- Which GPU matters most. The driver put OpenGL on the integrated GPU; `GlRenderer.PreferDiscreteGpu` moves it to the
+  NVIDIA one, 3–6× faster a frame.
+- Indexed vertex buffers (about one vertex per triangle instead of three) cut the vertex work: Kartster's frame with
+  six full-detail karts (229 000 triangles) went from 3.4 to 1.2 ms on the integrated GPU.
+- At 1280×720 the read-back and, in 24-bit, the background upload in `Clear` are what is left: 0.6–0.9 ms and
+  0.9 ms of the RTX frame. Not worth more work at console sizes.
+- The short job's error bars are wide (often ±30 %): read the table for the ratios, not the last digit.
 
 ## Scripting/LuaScriptBenchmarks
 

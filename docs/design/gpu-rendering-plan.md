@@ -146,6 +146,35 @@ like raskt). Medlemmet har en standardimplementasjon i grensesnittet (gjør inge
   0,7 → 0,8 ms (24-bit). 0 byte allokert. Målingen er `KartLightsTests.Frame_OnStarCircuit_ReportsTheRenderTimes`
   (`[Explicit]`, kjør i Release).
 
+## 4d. Bedre bruk av GPU-en (2026-11-15)
+
+Målt først (Kartster-frame med seks karter, 320×180, delt opp med `glFinish`): selve `Draw`-kallene koster
+0,02–0,1 ms for 40–170 kall, så færre kall eller mellomlagrede uniformer gir ingenting. Tiden går til at GPU-en
+behandler hjørnene, og til tilbakelesingen. Og: på en bærbar med to GPU-er la driveren OpenGL på den integrerte
+(Intel UHD), mens RTX 3050 Ti sto ubrukt. Tallene «Intel Arc» lenger opp er fra en annen maskin. Tre endringer, som
+erstatter det § 4 sier om ekspanderte mesher, radsnuing og Bayer-cella:
+
+- **Riktig GPU:** `GlRenderer.PreferDiscreteGpu` (statisk, standard true). På Windows laster konstruktøren
+  `nvapi64.dll` én gang før den første konteksten; da kjører NVIDIA-driveren OpenGL på den dedikerte GPU-en. Uten
+  NVIDIA-driver finnes ikke filen, og driverens valg står. AMD har ingen tilsvarende vei for en .NET-prosess (der
+  må brukeren velge «Høy ytelse» i Windows-innstillingene). `GlRenderer.Description` sier hvilket kort det ble.
+- **Indekserte mesher:** en trekants flate egenskaper kommer fra det første hjørnet
+  (`ProvokingVertex(FirstVertexConvention)`), så hjørner kan deles: ett hjørne per posisjon, og hver trekant tar et
+  av sine hjørner som ingen annen har tatt (rekkefølgen roteres, vindingen er den samme) eller får et ekstra. En
+  lukket mesh får omtrent ett hjørne per trekant i stedet for tre. Bildet er det samme.
+- **Tilbakelesing uten radsnuing:** hjørneshaderen speiler y (og forsiden er satt til med klokka), så rad 0 i
+  framebufferet er øverste rad. 24-bit leses rett inn i `Rgb` og alfa maskeres bort; palettmodus leses som byte og
+  utvides åtte piksler om gangen. (Å la driveren utvide til `int` rett inn i `Colors` var tregere.)
+
+**Målt (Release, 320×180, Kartsters seks tunge karter på Star Circuit, dag, palettmodus):** før 1,8 ms med `KartLod`
+og 3,4 ms med full detalj; etter, på Intel UHD, 0,5–0,7 og 0,9–1,2 ms; på RTX 3050 Ti 0,28 og 0,40 ms. CPU-en
+bruker 5 og 10 ms. Hele tabellen (også 1280×720) står i `ConsoleEngine.Benchmarks/README.md`
+(`Rendering3D/RendererBenchmarks`). GPU-mot-CPU-testene er uendret (samme piksler som før).
+
+**Ikke gjort, med vilje:** asynkron tilbakelesing (PBO) ville gitt en frame forsinkelse for under 0,1 ms ved
+320×180; mindre hjørneformat og å hoppe over bakgrunnsopplastingen når himmelen er uendret gir lite ved
+konsollstørrelser. Konsollskrivingen (1–10 ms) er fortsatt det som begrenser Kartster.
+
 ## 5. Testing
 
 - Tester som trenger OpenGL er merket `[Category("Gpu")]` og hopper over seg selv (`Assert.Ignore`) når konteksten

@@ -34,7 +34,7 @@ scripting loads the native `lua54.dll` that the KeraLua package ships for each r
 | Vector/matrix math | `Libs/Microsoft.Xna.Framework/` (copied from MonoGame, change only with good reason) |
 | ECS (entities, components, archetypes, chunks) | `ConsoleEngine/Ecs/`, design and phases in [`docs/design/ecs-plan.md`](docs/design/ecs-plan.md) |
 | 2D physics (bodies, circles/boxes/polygons, rotation, forces and torque (`Force`), broadphase, Soft Step contact solver, contact/sensor events, tile grid, sleeping, interpolation, raycasts and box casts, `CharacterMover.MoveAndSlide`) | `ConsoleEngine.Physics/` (own assembly and NuGet package, optional), rules in [`docs/agent/03-rules.md` § Physics](docs/agent/03-rules.md#physics), design and phases in [`docs/design/physics-plan.md`](docs/design/physics-plan.md). Examples: `Examples/PhysicsShowcase` (every feature), `Examples/PhysicsSandbox` (solver), `Examples/Asteroids.Ecs` (sensors, layers), `Examples/Platformer.Ecs` (tile grid, character controller) |
-| Performance measurements | `ConsoleEngine.Benchmarks/` (BenchmarkDotNet) |
+| Performance measurements | `ConsoleEngine.Benchmarks/` (BenchmarkDotNet; CPU vs. GPU 3D frames in `Rendering3D/RendererBenchmarks`, results in its `README.md`) |
 | Exporting Kartster tracks (ribbon, spline, scenery, race markers, collision, power-up pads, terrain) from the original game | `tools/KartsterExport/` and its [`README.md`](tools/KartsterExport/README.md): `list`, `export <outDir> <trackId...>`, one `ITrackExporter` class per file. Not in the solution: needs the original's source (`KartsterRoot`, default `C:\Forse\kartster-server`) |
 | Lua scripting: components, `self` fields, hooks, errors, reload | [`docs/agent/03-rules.md § Lua`](docs/agent/03-rules.md#lua), `ConsoleEngine.Scripting/`, `Examples/Scripted` |
 | 3D rendering (`IRenderer3D`, software `Rasterizer`, OpenGL `GlRenderer`, near-plane clipping, OBJ models, 16-colour dithering or 24-bit true colour with alpha blending, lighting: `SceneLighting` ambient + sun + up to 16 per-pixel point/spot `PointLight`s) | `ConsoleEngine.Rendering3D/` (own assembly and NuGet package, optional), GPU renderer in `ConsoleEngine.Rendering3D.OpenGL/` (same picture; callers fall back to `Rasterizer` when `GlRenderer.TryCreate` fails), GPU plan in [`docs/design/gpu-rendering-plan.md`](docs/design/gpu-rendering-plan.md), rules in [`docs/agent/03-rules.md`](docs/agent/03-rules.md) (Kartster rows, "3D (any game)" lighting row); Kartster's headlights, night and blob shadows in `Examples/Kartster/Lighting/` |
@@ -74,7 +74,7 @@ Every name in `docs/agent/` is grep-able. Search for the identifier you are inte
 | `ConsoleEngine.Physics.Tests` | `ConsoleEngine.Physics.Tests/` | NUnit 5 | ConsoleEngine.Physics |
 | `ConsoleEngine.Rendering3D.Tests` | `ConsoleEngine.Rendering3D.Tests/` | NUnit 5 | ConsoleEngine.Rendering3D |
 | `ConsoleEngine.Rendering3D.OpenGL.Tests` | `ConsoleEngine.Rendering3D.OpenGL.Tests/` | NUnit 5, `[Category("Gpu")]`, ignored without OpenGL 3.3 (CI) | ConsoleEngine.Rendering3D.OpenGL |
-| `ConsoleEngine.Benchmarks` | `ConsoleEngine.Benchmarks/` | Exe: BenchmarkDotNet 0.15.8 | ConsoleEngine, Physics, Scripting |
+| `ConsoleEngine.Benchmarks` | `ConsoleEngine.Benchmarks/` | Exe: BenchmarkDotNet 0.15.8 | ConsoleEngine, Physics, Scripting, Rendering3D, Rendering3D.OpenGL |
 | `KartsterExport` | `tools/KartsterExport/` | Exe, **not in `ConsoleEngine.sln`**: exports the original Kartster's tracks | the original's `Kartster.csproj` (`$(KartsterRoot)`) |
 
 All projects: `net11.0`, `LangVersion` 15, `TreatWarningsAsErrors` = `True`. Solution: `ConsoleEngine.sln`.
@@ -103,10 +103,10 @@ dotnet reportgenerator -reports:"TestResults/**/coverage.cobertura.xml" -targetd
 
 Benchmarks (always `Release`; `--job short` for a quick run; `--affinity 1` pins the process to one core, so runs on a
 hybrid CPU are comparable (without it results can vary up to 1.8×); add `--counters CacheMisses+BranchMispredictions`
-for hardware counters, which needs an elevated prompt on Windows):
+for hardware counters, which needs an elevated prompt on Windows; `-i` runs them in-process, which BenchmarkDotNet 0.15.8 needs on .NET 11: without it it stops with `GetRuntimeVersion not implemented for NotRecognized`):
 
 ```bash
-dotnet run -c Release --project ConsoleEngine.Benchmarks -- --filter "*"
+dotnet run -c Release --project ConsoleEngine.Benchmarks -- -i --filter "*"
 ```
 
 `coverage.runsettings` excludes `Microsoft.Xna.Framework`, `ConsoleEngine.Windows`, `ConsoleEngine.Logger` and `Program.cs`.
@@ -187,7 +187,8 @@ ConsoleEngine.Rendering3D/        3D (namespace ConsoleEngine.Rendering3D): IRen
                                   PointLight, Mesh
                                   (Version/MarkChanged), ObjFile, ConsolePalette
 ConsoleEngine.Rendering3D.Tests/  RasterizerTests, ScreenDoorTests, TrueColorTests, LightingTests, ObjFileTests, MeshTests
-ConsoleEngine.Rendering3D.OpenGL/ GlRenderer (OpenGL 3.3: R8UI or RGBA8 framebuffer, shaders, per-mesh GPU cache)
+ConsoleEngine.Rendering3D.OpenGL/ GlRenderer (OpenGL 3.3: R8UI or RGBA8 framebuffer, shaders, per-mesh indexed GPU cache,
+                                  asks for a laptop's discrete GPU)
 ConsoleEngine.Rendering3D.OpenGL.Tests/  GlRendererTests, GlRendererTrueColorTests, LitScenes (GPU vs. CPU pixels, lights,
                                   allocation, fallback)
 ConsoleEngine.Scripting/          Script + ScriptFaulted (components), LuaScriptSystem, LuaRenderSystem,
@@ -196,7 +197,8 @@ ConsoleEngine.Scripting/          Script + ScriptFaulted (components), LuaScript
 ConsoleEngine.Benchmarks/         BenchmarkDotNet: Baseline/ (OOP vs. struct arrays), Ecs/ (World, Query),
                                   Physics/ (brute-force baseline, whole PhysicsSystem step, static-heavy step, queries),
                                   Scripting/ (Lua vs. C# system, mover.lua),
-                                  Rendering/ (per-cell Draw copy, ConsoleHandler row diff)
+                                  Rendering/ (per-cell Draw copy, ConsoleHandler row diff),
+                                  Rendering3D/ (one 3D frame on the CPU Rasterizer vs. the GlRenderer)
 ConsoleEngine.Abstractions/
   Inputs/  IInputHandler, Key, KeyState
   Rendering/  IConsoleHandler, Pixel, FontInfo
