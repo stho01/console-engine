@@ -6,7 +6,7 @@ namespace Kartster.Tests;
 
 public class TrackTests
 {
-    private static Track StarCircuit() => Track.Load(Path.Combine("Assets", "Tracks"), "star-circuit");
+    private static Track StarCircuit() => TestAssets.Track("star-circuit");
 
     [Test]
     public void Load_ShippedTrack_IsAClosedLoopWithARoad()

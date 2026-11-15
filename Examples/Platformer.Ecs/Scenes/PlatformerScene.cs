@@ -2,16 +2,17 @@ using ConsoleEngine.Ecs;
 using ConsoleEngine.Ecs.Components;
 using ConsoleEngine.Ecs.Rendering;
 using ConsoleEngine.Ecs.Systems;
+using ConsoleEngine.Infrastructure.Rendering;
 using ConsoleEngine.Physics;
 using Microsoft.Xna.Framework;
-using Platformer.Ecs.Assets;
 using Platformer.Ecs.Components;
 using Platformer.Ecs.Systems;
 
 namespace Platformer.Ecs.Scenes;
 
 /// <summary>
-/// The whole game: one player entity, one entity per wall tile of <see cref="Maps.Level"/> (to draw it), the level as
+/// The whole game: one player entity, one entity per wall tile of the level (<c>Assets/Maps/level.txt</c>: one string
+/// per row, <c>'.'</c> is empty, anything else is a wall) to draw it, the level as
 /// the physics' tile grid (to collide with it), and the systems from <c>Systems/</c>. The player moves in the fixed
 /// step; input, camera and drawing run every frame. The order of <c>Add</c> calls is the order they run. The draw order
 /// matches
@@ -30,18 +31,26 @@ public sealed class PlatformerScene : EcsScene<PlatformerEcsGame>
     private const float JumpSpeed = 50f;
     private static readonly Vector2 Drag = new(3f, .1f);
 
+    // The level, player and tile of Examples/Platformer, unchanged, as files under Assets/.
+    private const string LevelPath = "Maps/level.txt";
+    private const string PlayerSpritePath = "Sprites/player.sprite";
+    private const string TileSpritePath = "Sprites/tile.sprite";
+
     //**********************************************************
     //** lifecycle
     //**********************************************************
 
     protected override void OnCreate()
     {
-        var sprites = new SpriteLibrary();
-        var playerSprite = sprites.Add(Sprites.Player);
-        var tileSprite = sprites.Add(Sprites.Tile);
-        var map = new TileMap(Maps.Level, Sprites.Tile.Width, Sprites.Tile.Height);
+        var player = Assets.Load<Sprite>(PlayerSpritePath);
+        var tile = Assets.Load<Sprite>(TileSpritePath);
 
-        CreatePlayer(new Vector2(10, Console.Height - 5), playerSprite);
+        var sprites = new SpriteLibrary();
+        var playerSprite = sprites.Add(player);
+        var tileSprite = sprites.Add(tile);
+        var map = new TileMap(Assets.Load<string[]>(LevelPath), tile.Width, tile.Height);
+
+        CreatePlayer(new Vector2(10, Console.Height - 5), new Vector2(player.Width, player.Height), playerSprite);
         CreateTiles(map, tileSprite);
 
         // No bodies here: the physics only answers the player's moves against the level's tile grid.
@@ -62,14 +71,14 @@ public sealed class PlatformerScene : EcsScene<PlatformerEcsGame>
     //** internals
     //**********************************************************
 
-    private void CreatePlayer(Vector2 position, int sprite) =>
+    private void CreatePlayer(Vector2 position, Vector2 size, int sprite) =>
         World.Create(
             new Position(position),
             new Velocity(Vector2.Zero),
             new SpriteRef(sprite),
             new PlayerBody
             {
-                Size = new Vector2(Sprites.Player.Width, Sprites.Player.Height),
+                Size = size,
                 GroundAcceleration = GroundAcceleration,
                 AirAcceleration = AirAcceleration,
                 JumpSpeed = JumpSpeed,

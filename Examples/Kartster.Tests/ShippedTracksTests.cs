@@ -28,7 +28,7 @@ public class ShippedTracksTests
     [TestCaseSource(nameof(TrackIds))]
     public void Load_ShippedTrack_HasRoadSceneryAndAClosedRoute(string id)
     {
-        var track = Track.Load(Folder, id);
+        var track = TestAssets.Track(id);
 
         Assert.That(track.Road.TriangleCount, Is.GreaterThan(500));
         Assert.That(track.Scenery.Count, Is.GreaterThan(0), "scenery and its models load");
@@ -38,7 +38,7 @@ public class ShippedTracksTests
     [TestCaseSource(nameof(TrackIds))]
     public void Load_ShippedTrack_HasWalls(string id)
     {
-        var collision = TrackCollision.Load(Folder, id);
+        var collision = TestAssets.Collision(id);
 
         Assert.That(collision, Is.Not.SameAs(TrackCollision.Empty), "the exporter writes collision for this track");
         Assert.That(collision.Segments.Length + collision.Posts.Length, Is.GreaterThan(0));
@@ -47,8 +47,8 @@ public class ShippedTracksTests
     [TestCaseSource(nameof(TrackIds))]
     public void Load_ShippedTrack_TerrainIsUnderTheGrid(string id)
     {
-        var track = Track.Load(Folder, id);
-        var markers = RaceMarkers.Load(Folder, id);
+        var track = TestAssets.Track(id);
+        var markers = TestAssets.Markers(id);
 
         Assert.That(track.Terrain != null, Is.EqualTo(File.Exists(Path.Combine(Folder, id + ".terrain.txt"))));
         if (track.Terrain == null)
@@ -65,7 +65,7 @@ public class ShippedTracksTests
     [TestCaseSource(nameof(TrackIds))]
     public void Load_ShippedTrack_PowerUpPadsAreOnTheRoad(string id)
     {
-        var track = Track.Load(Folder, id);
+        var track = TestAssets.Track(id);
 
         Assert.That(File.Exists(Path.Combine(Folder, id + ".powerups.txt")), Is.True);
         Assert.That(track.PowerUpPads, Is.Not.Empty);
@@ -79,8 +79,8 @@ public class ShippedTracksTests
     [TestCaseSource(nameof(TrackIds))]
     public void Load_ShippedTrack_StartCheckpointsAndGridAreOnTheRoad(string id)
     {
-        var track = Track.Load(Folder, id);
-        var markers = RaceMarkers.Load(Folder, id);
+        var track = TestAssets.Track(id);
+        var markers = TestAssets.Markers(id);
 
         Assert.That(markers.Grid, Has.Length.EqualTo(8));
         Assert.That(OnRoad(track, markers.Start.Point), Is.True, "start");

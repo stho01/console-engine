@@ -20,7 +20,7 @@ public class BotTrafficTests
     private const float Step = TrackScene.StepSeconds;
 
     private static readonly Lazy<Track> StarCircuit =
-        new(() => Track.Load(Path.Combine("Assets", "Tracks"), "star-circuit"));
+        new(() => TestAssets.Track("star-circuit"));
 
     private static readonly Lazy<BotRoad> StarRoad = new(() => new BotRoad(StarCircuit.Value));
 
@@ -335,7 +335,7 @@ public class BotTrafficTests
         var tunings = new KartTuning[6];
         for (var i = 0; i < tunings.Length; i++)
             tunings[i] = catalog[i % catalog.Length];
-        var markers = RaceMarkers.Load(Path.Combine("Assets", "Tracks"), "star-circuit");
+        var markers = TestAssets.Markers("star-circuit");
         var race = TrackScene.CreateSession(track, markers, laps: 5);
         var karts = TrackScene.CreateKarts(world, track, markers, tunings, playerIndex: -1, race);
         var (group, bots) = Driving(world, track, tunings, race);

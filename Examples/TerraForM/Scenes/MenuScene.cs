@@ -2,6 +2,7 @@
 using System.Linq;
 using ConsoleEngine.Abstractions.Inputs;
 using ConsoleEngine.Infrastructure.Inputs;
+using ConsoleEngine.Infrastructure.Rendering;
 using ConsoleEngine.Infrastructure.Scenery;
 using TerraForM.Assets;
 
@@ -9,12 +10,15 @@ namespace TerraForM.Scenes;
 
 public class MenuScene : Scene<TerraformGame>
 {
+    private Sprite _story;
+
     public override void OnLoad()
     {
+        // A copy: the name is drawn into it, and the loaded sprite is shared.
+        _story = Assets.Load<Sprite>(SpritePaths.Story).Clone();
         if (!string.IsNullOrEmpty(Game.Playername))
         {
-            var sprite = Sprites.Story;
-            sprite.Draw(32, 22, string.Concat(Game.Playername.Take(30)), ConsoleColor.Red, ConsoleColor.Black);    
+            _story.Draw(32, 22, string.Concat(Game.Playername.Take(30)), ConsoleColor.Red, ConsoleColor.Black);
         }
     }
 
@@ -33,6 +37,6 @@ public class MenuScene : Scene<TerraformGame>
 
     public override void OnRender()
     {
-        Game.Console.Draw(3, 5, Sprites.Story);    
+        Game.Console.Draw(3, 5, _story);
     }
 }

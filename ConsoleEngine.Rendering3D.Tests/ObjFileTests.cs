@@ -54,4 +54,18 @@ public class ObjFileTests
 
         Assert.That(indices, Is.EqualTo(new[] { 0, 1, 2 }));
     }
+
+    [Test]
+    public void Read_FromAReader_ReadsTheSameAndNamesTheSourceInErrors()
+    {
+        var positions = new List<Vector3>();
+        var indices = new List<int>();
+
+        ObjFile.Read(new StringReader("v 0 0 0\nv 1 0 0\nv 0 1 0\nf 1 2 3\n"), "Karts/wagon/body.obj", positions, indices);
+        var exception = Assert.Throws<InvalidDataException>(() =>
+            ObjFile.Read(new StringReader("v 0 0 0\nf 1 1\n"), "Karts/wagon/body.obj", positions, indices));
+
+        Assert.That(indices, Is.EqualTo(new[] { 0, 1, 2 }));
+        Assert.That(exception.Message, Does.StartWith("Karts/wagon/body.obj:2: "));
+    }
 }

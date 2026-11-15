@@ -1,14 +1,17 @@
 using System;
+using System.Collections.Generic;
 using System.Diagnostics;
 using System.IO;
 using System.Numerics;
 using ConsoleEngine;
 using ConsoleEngine.Abstractions.Inputs;
+using ConsoleEngine.Assets;
 using ConsoleEngine.Infrastructure;
 using ConsoleEngine.Infrastructure.Inputs;
 using ConsoleEngine.Rendering3D;
 using ConsoleEngine.Rendering3D.OpenGL;
 using Kartster.Driving;
+using Kartster.Loading;
 using Kartster.Modes;
 using Kartster.Race;
 using Kartster.Scenes;
@@ -28,7 +31,13 @@ namespace Kartster;
 /// is 1 metre, +Y up, -Z forward. The game holds what the scenes share (<see cref="IKartsterMenus"/>): renderer, sky,
 /// projection, the karts and the track, and draws a scene's UI (<see cref="IUiLayer"/>) over the 3D picture.
 /// </summary>
-public class KartsterGame(string kartsFolder, string tracksFolder, bool startOnGpu = false, bool startInTrueColor = false)
+/// <param name="kartsFolder">A folder of kart folders anywhere on disk; null: <c>Assets/Karts</c> next to the exe.</param>
+/// <param name="tracksFolder">A folder of exported tracks anywhere on disk; null: <c>Assets/Tracks</c>.</param>
+public class KartsterGame(
+    string kartsFolder = null,
+    string tracksFolder = null,
+    bool startOnGpu = false,
+    bool startInTrueColor = false)
     : GameBase(ScreenWidth, ScreenHeight, fontWidth: 3, fontHeight: 3), IKartsterMenus
 {
     //**********************************************************
@@ -40,6 +49,7 @@ public class KartsterGame(string kartsFolder, string tracksFolder, bool startOnG
     private const float FieldOfView = 50f * MathF.PI / 180f;
     private const float NearPlane = 0.2f;
     private const float FarPlane = 400f;
+    private const string RibbonSuffix = ".ribbon.obj";
 
     public static readonly Vector3 ToSun = Vector3.Normalize(new Vector3(0.5f, 0.8f, 0.3f));
     private static readonly Vector3 PlayerColor = new(0.1f, 0.35f, 0.85f);
@@ -70,7 +80,11 @@ public class KartsterGame(string kartsFolder, string tracksFolder, bool startOnG
     /// <summary>The UI's frames over the finished 3D picture; <c>Frame</c> follows the renderer each frame.</summary>
     private readonly PaletteTarget _paletteTarget = new(null, ScreenWidth, ScreenHeight, ScenePalette);
     private readonly RgbTarget _rgbTarget = new(null, ScreenWidth, ScreenHeight);
-    private string[] _kartFolders;
+    private AssetManager _kartAssets;
+    private AssetPath _kartsFolder;
+    private AssetManager _trackAssets;
+    private AssetPath _tracksFolder;
+    private AssetPath[] _kartFolders;
     private string[] _kartNames;
     private int _kartIndex;
     private string[] _trackNames = [];
@@ -104,8 +118,17 @@ public class KartsterGame(string kartsFolder, string tracksFolder, bool startOnG
     /// <summary>The track's <c>race.txt</c>; null when it has none (then the race uses a stand-in grid and line).</summary>
     public RaceMarkers Markers { get; private set; }
 
-    /// <summary>The kart folders, sorted: the player picks one, the bots take them in turn.</summary>
-    public string[] KartFolders => _kartFolders;
+    /// <summary>Where the karts are read from: <c>Assets</c>, or the karts folder given on the command line.</summary>
+    public AssetManager KartAssets => _kartAssets;
+
+    /// <summary>The kart folders in <see cref="KartAssets"/>, sorted: the player picks one, the bots take them in turn.</summary>
+    public AssetPath[] KartFolders => _kartFolders;
+
+    /// <summary>Where the tracks are read from: <c>Assets</c>, or the tracks folder given on the command line.</summary>
+    public AssetManager TrackAssets => _trackAssets;
+
+    /// <summary>The folder in <see cref="TrackAssets"/> that holds the tracks.</summary>
+    public AssetPath TracksFolder => _tracksFolder;
 
     public string[] KartNames => _kartNames;
     public int KartIndex => _kartIndex;
@@ -130,16 +153,28 @@ public class KartsterGame(string kartsFolder, string tracksFolder, bool startOnG
         Console.TrueColor = startInTrueColor; // the renderers follow Console.TrueColorActive once it is known
         ClearScreenOnEachFrame = false; // every cell is drawn each frame
 
-        _kartFolders = Directory.GetDirectories(kartsFolder);
+        KartsterAssets.Register(Assets);
+        (_kartAssets, _kartsFolder) = kartsFolder == null
+            ? (Assets, KartsterAssets.Karts)
+            : KartsterAssets.OpenFolder(kartsFolder);
+        (_trackAssets, _tracksFolder) = tracksFolder == null
+            ? (Assets, KartsterAssets.Tracks)
+            : KartsterAssets.OpenFolder(tracksFolder);
+
+        _kartFolders = [.. _kartAssets.EnumerateDirectories(_kartsFolder)];
         if (_kartFolders.Length == 0)
-            throw new DirectoryNotFoundException($"No kart folders in {Path.GetFullPath(kartsFolder)}");
-        Array.Sort(_kartFolders, StringComparer.Ordinal);
-        _kartNames = Array.ConvertAll(_kartFolders, Path.GetFileName);
+            throw new DirectoryNotFoundException($"No kart folders in {_kartAssets.Source.Describe(_kartsFolder)}");
+        _kartNames = Array.ConvertAll(_kartFolders, folder => folder.FileName);
         LoadKart(0);
 
-        var ribbons = Directory.Exists(tracksFolder) ? Directory.GetFiles(tracksFolder, "*.ribbon.obj") : [];
-        Array.Sort(ribbons, StringComparer.Ordinal);
-        _trackNames = Array.ConvertAll(ribbons, ribbon => Path.GetFileName(ribbon)[..^".ribbon.obj".Length]);
+        var trackNames = new List<string>();
+        foreach (var file in _trackAssets.Enumerate(_tracksFolder, "obj"))
+        {
+            if (file.FileName.EndsWith(RibbonSuffix, StringComparison.Ordinal))
+                trackNames.Add(file.FileName[..^RibbonSuffix.Length]);
+        }
+
+        _trackNames = [.. trackNames];
 
         for (var y = 0; y < ScreenHeight; y++)
         for (var x = 0; x < ScreenWidth; x++)
@@ -241,8 +276,10 @@ public class KartsterGame(string kartsFolder, string tracksFolder, bool startOnG
         if (trackIndex != _trackIndex)
         {
             var id = _trackNames[trackIndex];
-            Track = Track.Load(tracksFolder, id);
-            Markers = File.Exists(Path.Combine(tracksFolder, id + ".race.txt")) ? RaceMarkers.Load(tracksFolder, id) : null;
+            Track = Track.Load(_trackAssets, _tracksFolder, id);
+            Markers = RaceMarkers.Exists(_trackAssets, _tracksFolder, id)
+                ? RaceMarkers.Load(_trackAssets, _tracksFolder, id)
+                : null;
             _trackIndex = trackIndex;
         }
 
@@ -312,8 +349,8 @@ public class KartsterGame(string kartsFolder, string tracksFolder, bool startOnG
     private void LoadKart(int index)
     {
         _kartIndex = index;
-        KartName = Path.GetFileName(_kartFolders[index]);
-        Kart = KartModel.Load(_kartFolders[index], PlayerColor);
+        KartName = _kartFolders[index].FileName;
+        Kart = KartModel.Load(_kartAssets, _kartFolders[index], PlayerColor);
         Tuning = KartCatalog.ForKart(KartName);
 
         var min = new Vector3(float.MaxValue);

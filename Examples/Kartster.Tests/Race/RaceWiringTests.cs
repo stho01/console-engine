@@ -19,10 +19,10 @@ public class RaceWiringTests
     private const int Karts = TrackScene.DefaultBotCount + 1;
 
     private static readonly Lazy<Track> StarCircuit =
-        new(() => Track.Load(Path.Combine("Assets", "Tracks"), "star-circuit"));
+        new(() => TestAssets.Track("star-circuit"));
 
     private static readonly Lazy<RaceMarkers> Markers =
-        new(() => RaceMarkers.Load(Path.Combine("Assets", "Tracks"), "star-circuit"));
+        new(() => TestAssets.Markers("star-circuit"));
 
     private static KartTuning[] Tunings()
     {

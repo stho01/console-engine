@@ -15,10 +15,20 @@ public static class ObjFile
     /// <summary>Appends the file's positions and triangle indices to the lists, so several files make one mesh.</summary>
     public static void Read(string path, List<Vector3> positions, List<int> indices)
     {
+        using var reader = new StreamReader(path);
+        Read(reader, path, positions, indices);
+    }
+
+    /// <summary>
+    /// The same from any text, for example the stream an asset loader was given. <paramref name="path"/> is only what
+    /// error messages call it.
+    /// </summary>
+    public static void Read(TextReader reader, string path, List<Vector3> positions, List<int> indices)
+    {
         var first = positions.Count;
         var lineNumber = 0;
 
-        foreach (var line in File.ReadLines(path))
+        while (reader.ReadLine() is { } line)
         {
             lineNumber++;
             var parts = line.Split(' ', StringSplitOptions.RemoveEmptyEntries);

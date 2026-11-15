@@ -3,6 +3,7 @@ using System.Collections.Generic;
 using System.Globalization;
 using System.IO;
 using System.Numerics;
+using ConsoleEngine.Assets;
 
 namespace Kartster.Race;
 
@@ -51,11 +52,17 @@ public sealed class RaceMarkers
     //**********************************************************
 
     /// <summary>Loads <c>&lt;id&gt;.race.txt</c> from <paramref name="folder"/>.</summary>
-    public static RaceMarkers Load(string folder, string id)
+    /// <exception cref="AssetNotFoundException">The track has no <c>race.txt</c> (<see cref="Exists"/>).</exception>
+    public static RaceMarkers Load(AssetManager assets, AssetPath folder, string id)
     {
-        var fileName = id + ".race.txt";
-        return Parse(File.ReadAllLines(Path.Combine(folder, fileName)), fileName);
+        using var files = assets.CreateScope();
+        var path = PathFor(folder, id);
+        return Parse(files.Load<string[]>(path), path.FileName);
     }
+
+    /// <summary>Whether track <paramref name="id"/> has a <c>race.txt</c>.</summary>
+    public static bool Exists(AssetManager assets, AssetPath folder, string id) =>
+        assets.Source.Exists(PathFor(folder, id));
 
     /// <param name="lines">The file's lines.</param>
     /// <param name="source">Names the file in error messages.</param>
@@ -113,6 +120,8 @@ public sealed class RaceMarkers
     //**********************************************************
     //** internals
     //**********************************************************
+
+    private static AssetPath PathFor(AssetPath folder, string id) => folder.Resolve(id + ".race.txt");
 
     private static RaceGate Gate(string[] words, string at)
     {

@@ -2,7 +2,9 @@ using System;
 using System.Collections.Generic;
 using System.IO;
 using System.Numerics;
+using ConsoleEngine.Assets;
 using ConsoleEngine.Rendering3D;
+using Kartster.Loading;
 
 namespace Kartster;
 
@@ -116,13 +118,16 @@ public sealed class Track
 
     /// <summary>
     /// Loads <c>&lt;id&gt;.ribbon.obj</c>, <c>&lt;id&gt;.spline.obj</c> and, if they are there, <c>&lt;id&gt;.terrain.txt</c>,
-    /// <c>&lt;id&gt;.scenery.txt</c> and <c>&lt;id&gt;.powerups.txt</c> from <paramref name="folder"/>.
+    /// <c>&lt;id&gt;.scenery.txt</c> and <c>&lt;id&gt;.powerups.txt</c> from <paramref name="folder"/> of
+    /// <paramref name="assets"/> (<see cref="KartsterAssets.Tracks"/> in the game).
     /// </summary>
-    public static Track Load(string folder, string id)
+    public static Track Load(AssetManager assets, AssetPath folder, string id)
     {
+        // The files are only needed while the track is built: the scope takes them out of the cache again.
+        using var files = assets.CreateScope();
         var positions = new List<Vector3>();
         var indices = new List<int>();
-        ObjFile.Read(Path.Combine(folder, id + ".ribbon.obj"), positions, indices);
+        files.Load<ObjGeometry>(folder.Resolve(id + ".ribbon.obj")).AppendTo(positions, indices);
 
         var road = new Mesh(positions.ToArray(), indices.ToArray(), new Vector3[indices.Count / 3]);
         for (var t = 0; t < road.TriangleCount; t++)
@@ -131,7 +136,7 @@ public sealed class Track
         // The spline file has only points and polylines; the points in file order are the route, up to the first jump.
         // After it come the track's other branches (Prism Loop's north section), which are not part of the route.
         var splinePoints = new List<Vector3>();
-        ObjFile.Read(Path.Combine(folder, id + ".spline.obj"), splinePoints, []);
+        files.Load<ObjGeometry>(folder.Resolve(id + ".spline.obj")).AppendTo(splinePoints, []);
         var centerline = new List<Vector3>(splinePoints.Count);
         foreach (var point in splinePoints)
         {
@@ -145,15 +150,17 @@ public sealed class Track
         if (centerline.Count < 2)
             throw new InvalidDataException($"{id}.spline.obj needs at least two centerline points");
 
-        var terrainPath = Path.Combine(folder, id + ".terrain.txt");
-        var terrain = File.Exists(terrainPath) ? Terrain.Load(terrainPath) : null;
+        var terrainPath = folder.Resolve(id + ".terrain.txt");
+        var terrain = files.TryLoad<string[]>(terrainPath, out var terrainLines)
+            ? Terrain.Parse(terrainLines, terrainPath.FileName)
+            : null;
         var track = new Track(id, road, centerline.ToArray(), terrain);
-        var scenery = Path.Combine(folder, id + ".scenery.txt");
+        var scenery = folder.Resolve(id + ".scenery.txt");
         // On the original's terrain the scenery's heights are its own; on the chequer y = 0 moves down onto it.
-        if (File.Exists(scenery))
-            track.Scenery = Scenery.Load(scenery, Path.Combine(folder, "..", "Scenery"),
+        if (files.TryLoad<string[]>(scenery, out var sceneryLines))
+            track.Scenery = Scenery.Parse(sceneryLines, scenery.FileName, assets, folder.Resolve("../Scenery"),
                 terrain == null ? track.GroundHeight : 0f);
-        track.PowerUpPads = PowerUps.PowerUpPads.Load(folder, id);
+        track.PowerUpPads = PowerUps.PowerUpPads.Load(assets, folder, id);
 
         return track;
     }

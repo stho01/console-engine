@@ -8,7 +8,7 @@ team's process differs.
 
 | Action | Effect | Use for |
 |---|---|---|
-| Launch the exe from its own output folder (double-click it there, or `cd` there first) | Relative paths resolve: `Assets/Maps/*.txt`, `ConsoleEngine.Logger.exe` | [P1](05-triage.md#p1) |
+| Launch the exe from its own output folder (double-click it there, or `cd` there first) | The relative path to `ConsoleEngine.Logger.exe` resolves. Assets loaded through `GameBase.Assets` (TerraForM maps) don't need it: they are read next to the exe | [P1](05-triage.md#p1) |
 | Double-click `start-conhost.cmd` in the game's output folder (developers: `run-game.ps1 <Game>`) | Starts the game in `conhost.exe` from its own folder, so size/font calls take effect and relative paths resolve | [P1](05-triage.md#p1), [P2](05-triage.md#p2) |
 | Or make the classic console the default: Settings → System → For developers → Terminal → "Windows Console Host" **[external]** | Every console app opens in conhost | [P2](05-triage.md#p2) |
 | Lower display scaling / use a larger screen | Window can reach the requested size | [P2](05-triage.md#p2) |
@@ -80,7 +80,7 @@ team's process differs.
 | Kartster | `--gpu` (command-line flag, any position) | Start on the GPU renderer | `Program.cs` |
 | Kartster (any scene) | C | Switch between 16 colours and 24-bit colour (`Console.TrueColor`); stays on 16 colours (title `16 colours (no 24-bit)`) when the console can't show 24-bit | `KartsterGame.OnUpdate`, `MatchConsoleColors` |
 | Kartster | `--truecolor` (command-line flag, any position) | Start in 24-bit colour | `Program.cs` |
-| Kartster | first / second command-line argument | Folder of kart folders (e.g. Kartster's `Content/3D/Rendered/Karts`; the bots race in the same folders) / folder of exported tracks | `Program.cs` |
+| Kartster | first / second command-line argument | Folder of kart folders (e.g. Kartster's `Content/3D/Rendered/Karts`; the bots race in the same folders) / folder of exported tracks (its scenery models come from a `Scenery` folder beside it). Without them: `Assets/Karts` and `Assets/Tracks` next to the exe, whatever the working directory | `Program.cs`, `KartsterAssets.OpenFolder` |
 
 There is **no** way to skip a TerraForM level, choose a map, reset the score, or enable TerraForM debug mode without a
 code change.

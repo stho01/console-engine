@@ -74,8 +74,6 @@ public sealed class Terrain
     //** public methods
     //**********************************************************
 
-    public static Terrain Load(string path) => Parse(File.ReadLines(path), Path.GetFileName(path));
-
     /// <param name="source">The file name, for error messages.</param>
     /// <exception cref="InvalidDataException">The header or a row is malformed.</exception>
     public static Terrain Parse(IEnumerable<string> lines, string source)

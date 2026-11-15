@@ -22,10 +22,10 @@ public class RaceEndingTests
     private const int Player = TrackScene.PlayerSlot;
 
     private static readonly Lazy<Track> StarCircuit =
-        new(() => Track.Load(Path.Combine("Assets", "Tracks"), "star-circuit"));
+        new(() => TestAssets.Track("star-circuit"));
 
     private static readonly Lazy<RaceMarkers> Markers =
-        new(() => RaceMarkers.Load(Path.Combine("Assets", "Tracks"), "star-circuit"));
+        new(() => TestAssets.Markers("star-circuit"));
 
     private static (SystemGroup Group, Entity[] Karts, RaceSession Race) Setup(World world, int laps,
         Func<Key, bool> isHeld = null)
