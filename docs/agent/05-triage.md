@@ -5,7 +5,7 @@
 
 | Fact | Why | How to get it |
 |---|---|---|
-| **Which game** (TerraForM, Snake, Asteroids, Platformer, ConsoleGame, their `.Ecs` ports, Swarm, PhysicsSandbox, PhysicsShowcase, EternalDigger, SkyStack, Starguard, Scripted, Kartster, or their own game on `ConsoleEngine`) | Rules differ per game ([03](03-rules.md)) | Ask, or the exe name |
+| **Which game** (TerraForM, Snake, Asteroids, Platformer, ConsoleGame, their `.Ecs` ports, Swarm, PhysicsSandbox, PhysicsShowcase, EternalDigger, SkyStack, Starguard, Scripted, Kartster, Doom, or their own game on `ConsoleEngine`) | Rules differ per game ([03](03-rules.md)) | Ask, or the exe name |
 | **OS and console host** | Windows only. Windows Terminal ignores the sizing/font calls **[external]** | [07 § Q1, Q2](07-checks.md#q1) |
 | **How it was launched and from which folder** (double-click the exe, `dotnet run`, IDE, a shortcut, a terminal in another folder) | The logger exe is found by **relative path**. Map files are read next to the exe, so the folder doesn't matter for them | [07 § Q3](07-checks.md#q3) |
 | **The exact error text**, if any | There are no log files. The exception printed to the console is the only record | Ask them to start it from an already-open terminal so the text stays ([06 § Capturing a crash](06-diagnostics.md#capture)) |
@@ -388,3 +388,22 @@ Applies to code that loads through `GameBase.Assets` (TerraForM, TerraForM.Ecs, 
    gives them) or the dependency that failed. Fix the file or the loader. Stop.
 4. `A loader for … is already registered` → a game registered a second loader for the same type and extension; the
    built-in `TextLoader`/`LinesLoader` already own `txt` for `string`/`string[]`. Use another type or extension. Stop.
+
+<a id="p23"></a>
+## P23 — Doom: no WAD, unreadable WAD, too dark, door won't open, can't find the exit
+
+**Symptom [inferred]:** "it says DOOM1.WAD NOT FOUND", "COULD NOT LOAD THE WAD", "it's too dark to see", "the door
+won't open", "I can't find the exit". Rules: [03 § Doom](03-rules.md#doom).
+
+1. `DOOM1.WAD NOT FOUND` → the WAD is not shipped with the repository. Run [Q18](07-checks.md#q18). Put the shareware
+   `DOOM1.WAD` next to `Doom.exe` (or in a `wad` folder there), or set `DOOM_WAD` to its full path
+   (`WadLocator.Candidates` lists every place tried, also shown on screen). Stop.
+2. `COULD NOT LOAD THE WAD` + a message → the file is not a WAD or is cut short (`WadFile.Parse`, `MapLoader`,
+   `Picture.Decode` messages in [06](06-diagnostics.md#doom-text)). Get a fresh copy. Stop.
+3. Too dark / colours muddy → the console has 16 colours; press F11 to raise the gamma (`ConsoleShades.GammaLevels`).
+   Check that the game runs in conhost with the 6 × 12 font ([P2](#p2)). Stop.
+4. Door won't open → stand in front of it (within 64 units) and press E or ENTER; keyed doors need that key
+   (`You need a … key to open this.`). Some doors open from a switch or a walk-over line elsewhere, and line specials
+   not in `LineActions` do nothing. Escalate with the map name and place if a needed special is missing. Stop.
+5. Can't find the exit → TAB shows the automap of the walls seen so far. Exits are switches (special 11/51) or
+   walk-over lines (52/124). Stop.

@@ -61,7 +61,7 @@ Every name in `docs/agent/` is grep-able. Search for the identifier you are inte
 | `ConsoleEngine.CrossPlatform` | `Libs/ConsoleEngine.CrossPlatform/` | Library: ANSI/VT terminal handlers (macOS, Linux) | Abstractions |
 | `ConsoleEngine.Logger` | `Libs/ConsoleEngine.Logger/` | Exe: TCP log viewer (port 11000) | — |
 | `Microsoft.Xna.Framework` | `Libs/Microsoft.Xna.Framework/` | Library: math types | — |
-| `TerraForM`, `Snake`, `Asteroids`, `Platformer`, `ConsoleGame`, their ports `<Game>.Ecs`, `Swarm` (ECS stress test), `PhysicsSandbox` and `PhysicsShowcase` (physics demos) and `EternalDigger`, `SkyStack` and `Starguard` (ECS games) | `Examples/*` | Exe | ConsoleEngine |
+| `TerraForM`, `Snake`, `Asteroids`, `Platformer`, `ConsoleGame`, their ports `<Game>.Ecs`, `Swarm` (ECS stress test), `PhysicsSandbox` and `PhysicsShowcase` (physics demos) and `EternalDigger`, `SkyStack` and `Starguard` (ECS games) and `Doom` (plays a user-supplied Doom WAD) | `Examples/*` | Exe | ConsoleEngine |
 | `Scripted` | `Examples/Scripted/` | Exe: Lua-scripted ECS demo | ConsoleEngine, Scripting |
 | `Kartster` | `Examples/Kartster/` | Exe: 3D experiment, a Kartster kart driving a Kartster track, drawn by a software rasterizer (`System.Numerics`, not Xna), driven by Kartster's kart model on the engine's physics | ConsoleEngine, Physics, Rendering3D |
 | `Launcher` | `Examples/Launcher/` | Exe: text menu that starts the ECS games (plain `System.Console`, no engine) | ECS games (build order only) |
@@ -70,6 +70,7 @@ Every name in `docs/agent/` is grep-able. Search for the identifier you are inte
 | `Launcher.Tests` | `Examples/Launcher.Tests/` | NUnit 5 | Launcher |
 | `EternalDigger.Tests` | `Examples/EternalDigger.Tests/` | NUnit 5, hand-written `Fakes/FakeConsoleHandler` | EternalDigger |
 | `SkyStack.Tests` | `Examples/SkyStack.Tests/` | NUnit 5, hand-written `Fakes/FakeConsoleHandler` | SkyStack |
+| `Doom.Tests` | `Examples/Doom.Tests/` | NUnit 5, `Fakes/TestWad` (a WAD built in memory), `Fakes/FakeConsoleHandler` | Doom |
 | `Starguard.Tests` | `Examples/Starguard.Tests/` | NUnit 5, no mocks: systems run on a real `World` | Starguard |
 | `Kartster.Tests` | `Examples/Kartster.Tests/` | NUnit 5 | Kartster |
 | `ConsoleEngine.Tests` | `ConsoleEngine.Tests/` | NUnit 5, hand-written fakes in `Fakes/` | ConsoleEngine, Scripting |
@@ -252,6 +253,12 @@ Examples/
                                   PixelSprite, PixelFont, ClimberLooks, TowerLooks, ConsoleText), Scenes/ (TitleScene,
                                   TowerScene), Layout, SkyStackTexts
   SkyStack.Tests/                 Tower, ClimbPhysics (fixed steps), RunStats, Scroller, PixelCanvas tests, Fakes/
+  Doom/                           plays a Doom WAD the user supplies (not in the repo, *.wad gitignored): Wad/ (WadFile,
+                                  WadLocator), Graphics/ (Palette, Picture, Texture/Flat, TextureLibrary, SpriteLibrary,
+                                  ConsoleShades), Maps/ (Map, MapLoader, MapNames), Play/ (Level partials, Actor, Player,
+                                  ThingTypes, Weapons, LineActions, SectorMover), Rendering/ (WorldRenderer, WeaponRenderer,
+                                  Automap, Hud, Presenter, FrameBuffer, Camera), Scenes/, GameAssets, DoomTexts, README.md
+  Doom.Tests/                     WAD, graphics, map, level (tic by tic) and rendering tests on Fakes/TestWad
   TerraForM/Scenes/               GameScene, MenuScene, InputNameScene
   TerraForM/Commands/             Command, Move, Plant, Wait
   TerraForM/Assets/               Maps/*.txt, Sprites/*.sprite + SpritePaths.cs (paths), Texts/HudTexts.cs,
@@ -532,7 +539,7 @@ Use [Conventional Commits 1.0.0](https://www.conventionalcommits.org/en/v1.0.0/#
 
 - **Scopes** (optional): `engine`, `abstractions`, `windows`, `crossplatform`, `logger`, `xna`, `terraform`, `snake`,
   `asteroids`, `physics`, `scripting`, `benchmarks`, `platformer`, `consolegame`, `swarm`, `physicssandbox`,
-  `physicsshowcase`, `scripted`, `starguard`, `launcher`, `skystack`, `docs`, `ci`.
+  `physicsshowcase`, `scripted`, `starguard`, `launcher`, `skystack`, `doom`, `docs`, `ci`.
 - **Description:** imperative, lower case, no trailing period. For example `fix(terraform): reset score on restart`.
 - **Breaking changes** to the public `ConsoleEngine` API or target framework: `!` after the type/scope and/or a
   `BREAKING CHANGE:` footer. For example `chore!: net8.0` (#10).

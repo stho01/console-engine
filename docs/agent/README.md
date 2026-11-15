@@ -6,9 +6,9 @@ repository and can be grepped.
 
 **What this system is:** a Windows-only .NET 11 library that draws games into a console window via Win32 P/Invoke
 (`ConsoleEngine`, `ConsoleEngine.Windows`), an optional out-of-process TCP logger (`ConsoleEngine.Logger`), optional
-Lua 5.4 scripting for ECS entities (`ConsoleEngine.Scripting`), and eighteen example games (`TerraForM`, `Snake`,
+Lua 5.4 scripting for ECS entities (`ConsoleEngine.Scripting`), and nineteen example games (`TerraForM`, `Snake`,
 `Asteroids`, `Platformer`, `ConsoleGame`, an ECS port `*.Ecs` of each, the ECS stress test `Swarm`, the physics demos
-`PhysicsSandbox` and `PhysicsShowcase`, the ECS games `EternalDigger`, `SkyStack` and `Starguard`, the Lua demo `Scripted`, and the 3D racer `Kartster`),
+`PhysicsSandbox` and `PhysicsShowcase`, the ECS games `EternalDigger`, `SkyStack` and `Starguard`, the Lua demo `Scripted`, the 3D racer `Kartster`, and `Doom`, which plays a Doom WAD the user supplies),
 plus `Launcher`, a text menu that starts the ECS games. There is **no server, no database, no
 queue, no tenant, no log file**. Each game is a single local process. See [01-system-map](01-system-map.md).
 
@@ -51,6 +51,7 @@ Tags used throughout:
 | "Things pass through each other", "things sink into the floor", "bullet didn't hit", "hit counted twice", "physics events don't fire", "raycast misses", "platformer player stuck or falls through", "bodies hang in the air", "box doesn't spin" | [P18](05-triage.md#p18) |
 | 3D: "GPU mode not available", "it falls back to CPU", "`GlRenderer` throws", "glfw3.dll missing", "GPU picture differs from CPU", "GPU mode is slow / uses the integrated graphics" | [P21](05-triage.md#p21) |
 | SkyStack: "can't reach the next floor", "my combo vanished", "the screen killed me", "high score is gone" | [P20](05-triage.md#p20) |
+| Doom: "DOOM1.WAD NOT FOUND", "COULD NOT LOAD THE WAD", "it's too dark", "the door won't open", "I can't find the exit" | [P23](05-triage.md#p23) |
 | Lua: "my script doesn't load / run", "the object stands still", "F5 doesn't reload my change", "lua54.dll missing" | [P19](05-triage.md#p19) |
 | "Asset not found", "No loader for …", "Failed to load asset …" | [P22](05-triage.md#p22) |
 
@@ -62,7 +63,7 @@ Tags used throughout:
 | [02-state-model.md](02-state-model.md) | Runtime state (no DB): engine objects, TerraForM state, map file format |
 | [03-rules.md](03-rules.md) | Disputable rules: frame timing, key semantics, scenes, asset loading, TerraForM power/score/sequences/maps |
 | [04-flows.md](04-flows.md) | Startup, frame loop, scenes, logger, map load, TerraForM command flow, launcher, EternalDigger miner frame and start/save, physics step and queries, Lua script load and hooks, asset load — each with "stops here if" |
-| [05-triage.md](05-triage.md) | **Entry point.** Facts to collect, first checks, playbooks P1–P22 |
+| [05-triage.md](05-triage.md) | **Entry point.** Facts to collect, first checks, playbooks P1–P23 |
 | [06-diagnostics.md](06-diagnostics.md) | Where evidence lives (there are no log files), every user-visible message verbatim |
 | [07-checks.md](07-checks.md) | Read-only diagnostic commands, one per named question (replaces SQL, since there is no DB) |
 | [08-operator-actions.md](08-operator-actions.md) | What a user/support can do without a code change, and what to escalate |

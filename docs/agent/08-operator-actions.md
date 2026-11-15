@@ -13,7 +13,7 @@ team's process differs.
 | Or make the classic console the default: Settings → System → For developers → Terminal → "Windows Console Host" **[external]** | Every console app opens in conhost | [P2](05-triage.md#p2) |
 | Lower display scaling / use a larger screen | Window can reach the requested size | [P2](05-triage.md#p2) |
 | Close the other process holding port 11000 / the other game instance | `Log.Start` can bind | [P1](05-triage.md#p1) |
-| Close the window | Only way to exit every game except ConsoleGame, ConsoleGame.Ecs, Swarm, PhysicsSandbox, PhysicsShowcase, EternalDigger and SkyStack | [P5](05-triage.md#p5) |
+| Close the window | Only way to exit every game except ConsoleGame, ConsoleGame.Ecs, Swarm, PhysicsSandbox, PhysicsShowcase, EternalDigger, SkyStack and Doom | [P5](05-triage.md#p5) |
 | Close a leftover logger window | — | [P5](05-triage.md#p5) |
 | Start the exe from an open terminal to keep crash text | Captures the exception | [06 § Capture](06-diagnostics.md#capture) |
 | Start an ECS game from the launcher (`dotnet run --project Examples/Launcher`) | Builds the games, then starts the chosen one in its own classic console window (`conhost.exe`, Windows) or in the same terminal (macOS/Linux) from its output folder, so relative paths resolve | [P16](05-triage.md#p16) |
@@ -61,6 +61,11 @@ team's process differs.
 | SkyStack | SPACE / ↑ / W (held) | Jump whenever standing on a floor | same |
 | SkyStack | ESC | In a run: back to the title (the run is not recorded). On the title: quit | `SkyStackGame.OnUpdate` |
 | SkyStack (title / game over) | SPACE / ENTER | Start a run / climb again (game over: only after 0.75 s) | `TitleScene`, `RestartSystem` |
+| Doom | W S / ↑ ↓ (held), A D (held), ← → (held) | Move, strafe, turn | `LevelScene.ReadCommand` |
+| Doom | SPACE (held) / E or ENTER / 1-7 / R | Fire / use (doors, switches) / pick a weapon slot / toggle run | `LevelScene`, `Level.PlayerThink` |
+| Doom | TAB / PAGE UP, PAGE DOWN / F11 | Automap on/off / automap zoom / next gamma level | `LevelScene.ReadToggles` |
+| Doom | ESC | In a level or between maps: back to the title. On the title or the missing-WAD screen: quit | `LevelScene`, `TitleScene` |
+| Doom (no code) | Put `DOOM1.WAD` next to `Doom.exe`, or set `DOOM_WAD` | Gives the game a WAD to play | `WadLocator` |
 | Scripted | ←→↑↓ | Move the player | `player.lua` |
 | Scripted | `F5` | Reload all Lua scripts from the output folder | `ScriptReloadSystem` → `LuaRuntime.ReloadAll` |
 | Scripted | ESC | Quit (`Stop()`) | `ScriptedGame.OnUpdate` |

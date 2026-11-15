@@ -390,3 +390,7 @@ FodyWeavers.xsd
 # JetBrains Rider
 .idea/
 *.sln.iml
+
+# Doom WADs are not part of the repository (Examples/Doom loads one at run time)
+*.wad
+*.WAD

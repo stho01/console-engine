@@ -196,3 +196,13 @@ Test-Path .\Assets\Maps\map1.txt; Get-ChildItem -Recurse -Name .\Assets
 ```
 `False` → the `.csproj` doesn't copy the file to the output (`CopyToOutputDirectory`), or the name differs. On macOS
 and Linux compare the case of each folder and file name too. → [P22](05-triage.md#p22) step 1.
+
+<a id="q18"></a>
+## Q18 — Can Doom find a WAD?
+
+From the Doom output folder (the one holding `Doom.exe`):
+```powershell
+$env:DOOM_WAD; Test-Path .\DOOM1.WAD; Test-Path .\wad\DOOM1.WAD; if (Test-Path .\DOOM1.WAD) { (Get-Item .\DOOM1.WAD).Length }
+```
+All empty/False → no WAD where `WadLocator` looks ([P23](05-triage.md#p23) step 1). The shareware v1.9 `DOOM1.WAD`
+is 4 196 020 bytes; a much smaller file is likely cut short ([P23](05-triage.md#p23) step 2).
