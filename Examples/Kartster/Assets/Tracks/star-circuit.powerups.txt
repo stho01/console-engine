@@ -1,0 +1,11 @@
+# star-circuit power-up pads, exported from Kartster by PowerUpExport (TrackPowerUpPadResolver).
+# pad x y z setId   (world metres, Kartster axes; the pads a normal race has, extra ones left out)
+pad 55.651 1 -84.84 normal
+pad 53.876 1 -86.6 normal
+pad -78.518 1 -99.847 normal
+pad -79.045 1 -102.291 normal
+pad -79.573 1 -104.734 normal
+pad 51.605 1 60.945 normal
+pad 21.74 1 85.777 normal
+pad 21.151 1 88.206 normal
+pad 20.562 1 90.636 normal

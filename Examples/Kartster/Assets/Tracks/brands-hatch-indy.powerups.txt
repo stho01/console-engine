@@ -1,0 +1,11 @@
+# brands-hatch-indy power-up pads, exported from Kartster by PowerUpExport (TrackPowerUpPadResolver).
+# pad x y z setId   (world metres, Kartster axes; the pads a normal race has, extra ones left out)
+pad 227.767 18.571 -254.293 normal
+pad 226.735 18.685 -251.478 normal
+pad 225.703 18.8 -248.663 normal
+pad 79.605 8.681 -116.697 normal
+pad 78.826 8.681 -119.594 normal
+pad 78.046 8.681 -122.491 normal
+pad -421.977 25.579 81.795 normal
+pad -419.212 25.579 82.957 normal
+pad -416.446 25.579 84.12 normal

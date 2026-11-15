@@ -48,6 +48,7 @@ public sealed class GlyphRenderSystem(RenderConsole console, Camera camera) : En
                 cell.Char = glyphs[i].Character;
                 cell.ForegroundColor = glyphs[i].Foreground;
                 cell.BackgroundColor = glyphs[i].Background;
+                console.UsePalette(y * width + x, 1);
             }
         }
     }

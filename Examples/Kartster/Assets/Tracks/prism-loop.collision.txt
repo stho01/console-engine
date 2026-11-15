@@ -1,0 +1,7 @@
+# prism-loop collision, exported from Kartster by CollisionExport. Format: Examples/Kartster/Collision/TrackCollision.cs
+# segment x1 y1 x2 y2 halfThickness   (a wall box standing on the line, metres)
+# circle x y radius                    (a post)
+# start gate poles
+segment 629.975 448.65 629.975 448.95 0.15
+segment 629.975 467.05 629.975 467.35 0.15
+# pipes (Kartster: an eight-sided post with corners on this radius)

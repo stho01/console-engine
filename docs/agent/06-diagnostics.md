@@ -45,6 +45,7 @@ Grep these to locate the code path. None of them has a log level.
 | `#<FPS>:` + n | `Log.ReportFps` (wire format, never shown) | — |
 | `Input handler not set` | `Input.GetKey` (`InvalidOperationException`) | Unreachable in practice: `Handler` is a static readonly `new InputHandler()` |
 | `Empty deque` | `Deque<T>.PopFront` / `PopBack` (`InvalidOperationException`) | Game popped an empty `Deque` |
+| `A palette needs exactly 16 colours.` (`ArgumentException`, param `value`; `ConsoleEngine.Rendering3D.ConsolePalette` ctor: param `colors`) | `RenderConsole.Palette` setter | A palette with another number of colours |
 | `no go` | `Move.OnUpdate` / `GetVisualRepresentation` (`Exception`) | Invalid `Direction` value. Unreachable via the UI |
 | `worldName` (param name of `ArgumentNullException`) | `GameScene` ctor | `GameScene` created with null name |
 | `No game exe found next to start-conhost.cmd.` | `Examples/start-conhost.cmd` | The launcher was run outside a game's output folder, or the folder holds only `ConsoleEngine.Logger.exe` |
@@ -92,6 +93,74 @@ Runtime exceptions without repo-authored text (message comes from .NET and varie
 `SocketException`, `Win32Exception`, `FileNotFoundException`, `DirectoryNotFoundException`, `FormatException`,
 `IndexOutOfRangeException`, `NullReferenceException`, `TypeInitializationException`. Match by **type + stack frame**
 using [04](04-flows.md).
+
+<a id="rendering3d"></a>
+### 3D rendering (`ConsoleEngine.Rendering3D.OpenGL`)
+
+| Text | Emitted by | Meaning |
+|---|---|---|
+| `OpenGL 3.3 is not available: <reason>` | `GlRenderer` ctor (`InvalidOperationException`, the original exception as `InnerException`). `GlRenderer.TryCreate` returns false instead | No GPU renderer: the caller should fall back to `Rasterizer` ([P21](05-triage.md#p21)). `<reason>` is one of the rows below or a GLFW/Silk.NET message |
+| `the <R8UI\|RGBA8> framebuffer is not complete (<status>)` | `GlRenderer.CreateFramebuffer` (inside the message above; RGBA8 in true-colour mode) | The driver can't render to the palette-index (or colour) target, or the size is 0 (`FramebufferIncompleteAttachment`) |
+| `the background framebuffer is not complete (<status>)` | `GlRenderer.CreateBackground` (inside the message above, true-colour mode only) | The driver can't attach the RGBA8 background texture, or the size is 0 |
+| `the <VertexShader\|FragmentShader> did not compile: <log>` | `GlRenderer.CompileShader` (inside the message above) | Driver rejected a shader |
+| `the shaders did not link: <log>` | `GlRenderer.CreateProgram` (inside the message above) | Driver rejected the program |
+| `setting up failed with <GL error>` | `GlRenderer` ctor (inside the message above) | A GL call during setup failed |
+| `This renderer is in true-colour mode: call Clear(ReadOnlySpan<uint>) with a 0xRRGGBB background.` (`InvalidOperationException`) | `Rasterizer.Clear` / `GlRenderer.Clear` with `ConsoleColor`s | The renderer was made with `trueColor: true` |
+| `This renderer is in palette mode: call Clear(ReadOnlySpan<ConsoleColor>), or create it with trueColor: true.` (`InvalidOperationException`) | `Rasterizer.Clear` / `GlRenderer.Clear` with `uint`s | The renderer was made in palette mode |
+| `OpenGL 3.3 not available` | `GlRendererTests`, `GlRendererTrueColorTests` (`Assert.Ignore`) | GPU tests skipped: no context, or not Windows (CI) |
+
+### Kartster
+
+| Text | Emitted by | Meaning |
+|---|---|---|
+| `PAUSED`, `RESUME`, `RESTART`, `QUIT TO TITLE`, `ENTER SELECT   ESC RESUME` (pause overlay) | `PauseMenu` constants | The race is paused (Enter or Esc) |
+| `FINISHING RACE` and `<n>/<karts> HOME` (full screen) | `RaceFinish.Draw` | The player finished 4 s ago; the karts still out are being run to the line (at most 2 × the winner's time + 30 s of race time, then DNF) |
+| `No kart folders in <full path>` | `KartsterGame.OnInitialize` (`DirectoryNotFoundException`) | The karts folder (default `Assets/Karts`, relative to the working directory) has no sub-folders |
+| `No kart parts (*.obj) in <folder>` | `KartModel.Load` (`InvalidDataException`) | A kart folder has no drawable OBJ parts |
+| `<path>:<line>: a face needs at least three corners` | `ObjFile.Read` (`InvalidDataException`) | Broken OBJ file |
+| `<id>.spline.obj needs at least two centerline points` | `Track.Load` (`InvalidDataException`) | Broken or empty track spline export |
+| `<file>:<line>: expected 'terrain originX originZ cellSize columns rows r g b'` | `Terrain.Parse` (`InvalidDataException`) | The first line of `<id>.terrain.txt` is not the header |
+| `<file>:<line>: needs a cell size above 0 and at least 2 columns and rows` | `Terrain.Parse` (`InvalidDataException`) | The header's grid is empty |
+| `<file>:<line>: expected <columns> heights, found <n>` / `more than <rows> rows` | `Terrain.Parse` (`InvalidDataException`) | A height row is the wrong length, or there are too many rows |
+| `<file>:<line>: '<text>' is not a number` | `Terrain.Parse` (`InvalidDataException`) | A value does not parse (invariant culture; `NaN` is no ground) |
+| `<file>: expected a terrain header and <rows> rows, found <n>` | `Terrain.Parse` (`InvalidDataException`) | The file ends early (an empty file: `<rows>` is 0) |
+| `<file>:<line>: expected 'model <name> x y z yawDegrees scaleX scaleY scaleZ r g b'` | `Scenery.Parse` (`InvalidDataException`) | A `model` line without exactly 11 values |
+| `<file>:<line>: expected 'tri x1 y1 z1 x2 y2 z2 x3 y3 z3 r g b'` | `Scenery.Parse` (`InvalidDataException`) | A `tri` line without exactly 12 values |
+| `<file>:<line>: '<text>' is not a number` | `Scenery.Parse` (`InvalidDataException`) | A value in a scenery line does not parse (invariant culture) |
+| `<file>:<line>: unknown line '<word>', expected model or tri` | `Scenery.Parse` (`InvalidDataException`) | A scenery line starts with something else |
+| `<file>:<line>: model file <full path> not found` | `Scenery.Parse` (`InvalidDataException`) | A `model` line names an OBJ that is not in the `Scenery` folder beside the tracks folder |
+| `<file>:<line>: expected 'segment x1 y1 x2 y2 halfThickness'` / `expected 'circle x y radius'` | `TrackCollision.Parse` (`InvalidDataException`) | A `segment` line without exactly 5 values, a `circle` line without exactly 3 |
+| `<file>:<line>: '<text>' is not a number` | `TrackCollision.Parse` (`InvalidDataException`) | A value does not parse (invariant culture) or is not finite |
+| `<file>:<line>: '<text>' must be more than 0` | `TrackCollision.Parse` (`InvalidDataException`) | A half thickness or radius of 0 or less |
+| `<file>:<line>: segment has no length` | `TrackCollision.Parse` (`InvalidDataException`) | Both end points are the same |
+| `<file>:<line>: unknown line '<word>', expected segment or circle` | `TrackCollision.Parse` (`InvalidDataException`) | A collision line starts with something else |
+| `Kartster - <kart> on <track> - <n> km/h - gear <g> - <rpm> rpm - <CPU\|GPU\|CPU (no GPU)> 3D <ms> ms - <colours> - <fps> fps` (window title; 3D = `Clear` to `Finish`, smoothed) | `KartsterGame.OnInitialize` interval, every 250 ms | Running, track mode |
+| `Kartster - <kart> (<n> triangles) - <CPU\|GPU\|CPU (no GPU)> 3D <ms> ms - <colours> - <fps> fps` (window title) | `KartsterGame.OnInitialize` interval, every 250 ms | Running, garage mode |
+| `Kartster - <scene type> - <CPU\|GPU\|CPU (no GPU)> 3D <ms> ms - <colours> - <fps> fps` (window title, e.g. `Kartster - TitleScene - CPU 3D 0.40 ms - 24-bit - 60 fps`) | `KartsterGame.OnInitialize` interval, every 250 ms | Running, a menu (`TitleScene`, `SelectKartScene`, `SelectTrackScene`, `ResultsScene`) |
+| `<colours>` in the titles: `24-bit`, `16 colours`, or `16 colours (no 24-bit)` | `KartsterGame.ColorLabel` | 24-bit on / off / asked for (`--truecolor`, C) but `Console.TrueColorActive` is false ([05 § P2](05-triage.md#p2) step 7) |
+| `<file>:<line>: expected 'pad x y z setId'` | `PowerUpPads.Parse` (`InvalidDataException`) | A line of `<id>.powerups.txt` is not `pad` with three invariant-culture numbers and a set id |
+| HUD power-up slot (top right, a box with the first letter, the name under it): `SPEED BOOST`, `ENGINE TUNE`, `GRIP TUNE`, `BANANAS`, `LAPSKAUS`, `TRIPLE LAPSKAUS`, `HOMING JOIKA`, `TRIPLE HOMING JOIKA`, `INVULNERABLE`, `MAGNET`, `ANVIL`, `LIGHTNING`, `VAMPIRE`, `EARTHQUAKE`, `GLITCH`, `SMOKE BOMB`, `FAKE FINISH`, `FAKE POWER-UP`, `ROADBLOCK`, `CONCRETE ROADBLOCK`, `LOCOMOTIVE` | `PowerUpCatalog.Name`, via `PowerUpSystem.HudName` → `HudState.PowerUp` | What the player holds; changing quickly while the reel spins (2.5 s after a pad); empty when nothing is held |
+| `<id>.race.txt:<line>: unknown marker '<word>'` | `RaceMarkers.Parse` (`InvalidDataException`) | A line is not `laps`, `start`, `checkpoint` or `grid` |
+| `<id>.race.txt:<line>: '<marker>' needs <n> numbers, got <m>` | `RaceMarkers.Parse` (`InvalidDataException`) | Wrong number of values on a marker line |
+| `<id>.race.txt:<line>: '<word>' is not a number` | `RaceMarkers.Parse` (`InvalidDataException`) | Not an invariant-culture finite number |
+| `<id>.race.txt:<line>: '<marker>' needs a forward direction, not zero` | `RaceMarkers.Parse` (`InvalidDataException`) | A gate's forward is (0, 0) |
+| `<id>.race.txt:<line>: '<marker>' needs left and right of 0 or more` | `RaceMarkers.Parse` (`InvalidDataException`) | A gate's reach is negative |
+| `<id>.race.txt:<line>: laps must be a whole number of at least 1` | `RaceMarkers.Parse` (`InvalidDataException`) | Bad `laps` value |
+| `<id>.race.txt:<line>: '<marker>' is given twice` | `RaceMarkers.Parse` (`InvalidDataException`) | A second `laps` or `start` line |
+| `<id>.race.txt: no 'laps' line` / `<id>.race.txt: no 'start' line` | `RaceMarkers.Parse` (`InvalidDataException`) | A required marker is missing |
+| `Kart <id> is already registered with the race` | `RaceSession.Register` (`ArgumentException`) | The same id registered twice |
+| `Kart <id> is not registered with the race` | `RaceSession.Update`/`Get` (`KeyNotFoundException`), so also `RaceSystem` | A kart with `RaceProgress` was not registered by its `Kart.Index` |
+| `LAP <n>/<m>` then `<m:ss.t>` | `Hud.Draw` (bottom-left) | Race HUD lap line; only `<m:ss.t>` in a one-lap race |
+| `<pos>  <name>  <m:ss.t>` (leader) / `+<m:ss.t>` (others) | `Hud.Draw` (standings) | Top 3 and the player's row when further back; names: the player's kart folder, bots `<KART FOLDER> <n>`, cut to 10 chars |
+| `POS <p>/<n>` | `Hud.Draw` | No standings given, more than one kart |
+| `<speed>` and `KM/H` | `Hud.Draw` (bottom-right dial) | Speed in km/h, rounded |
+| `<power-up name>` | `Hud.Draw` (top-right) | Whatever `HudState.PowerUp` holds (always empty until power-ups, wave 3) |
+| `3`, `2`, `1`, `GO!`, `FINISHED` | `Hud.Draw` (top-centre) | Countdown, start, player finished |
+| `KARTSTER`, `PRESS ENTER`, `SPACE GARAGE   ESC QUIT` | `TitleScene` (`Logo`, `Prompt`, `Footer`) | Title menu, the first scene |
+| `SELECT KART`, `UP/DOWN CHOOSE   ENTER OK   ESC BACK` | `SelectKartScene` | Kart menu |
+| `SELECT TRACK`, `TRACK`, `LAPS`, `MODE`, `RACE`, `TIME TRIAL`, `START RACE`, `NONE`, `LEFT/RIGHT CHANGE   ENTER START   ESC BACK` | `SelectTrackScene` (`ModeChoices`) | Race setup menu; `NONE` when there are no tracks (then Enter does nothing) |
+| `BEST <m:ss.cc>` or `BEST -`, and above it one `<n>  <m:ss.cc>` row per lap done | `TimeTrial.DrawUi` (`BestLabel`, `NoTime`), bottom-left over the lap line instead of the standings | Time trial: this attempt's lap times (the one equal to the best in yellow) and the best lap so far; `BEST -` = no best lap saved for this track and kart, or the file couldn't be read ([Q16](07-checks.md#q16)) |
+| `RESULTS`, `POS`, `NAME`, `TIME`, `BEST`, `DNF`, `ENTER RACE AGAIN   ESC TITLE` | `ResultsScene` | Results table once the race is over: 4 s of `FINISHED` after the player finishes, then `FINISHING RACE` until everybody is home or the cap; the track name in upper case |
 
 ### Launcher (`LauncherTexts`, `GameLocator`)
 

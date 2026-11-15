@@ -1,0 +1,24 @@
+# norbergring race markers, exported from Kartster by KartsterExport (route lap). Format: Examples/Kartster/Race/RaceMarkers.cs
+# metres, planar: x = world X, y = world Z. forward is the gate's normal (along the road), left/right its reach
+# either side of the point, right = (-forward.y, forward.x). heading: 0 faces -Z, positive is turned left
+laps 3
+start -189.83 0 1 0 11.5 11.5
+checkpoint -50.823 0.619 0.98781 -0.15566 11.5 11.5
+checkpoint 99.385 0 1 0 11.5 11.5
+checkpoint 244.365 26.758 0.77648 0.63014 11.5 11.5
+checkpoint 301.036 152.866 -0.26398 0.96453 11.5 11.5
+checkpoint 185.916 223.459 -0.99122 0.13222 11.5 11.5
+checkpoint 58.115 165.373 -0.33323 -0.94284 11.5 11.5
+checkpoint 8.112 23.709 -0.32413 -0.94601 11.5 11.5
+checkpoint -41.511 -118.088 -0.33153 -0.94345 11.5 11.5
+checkpoint -103.532 -247.008 -0.68855 -0.72518 11.5 11.5
+checkpoint -205.742 -178.668 -0.64594 0.76339 11.5 11.5
+checkpoint -295.593 -62.033 -0.19505 0.98079 11.5 11.5
+grid -191.83 -1.5 -1.5708
+grid -193.33 1.5 -1.5708
+grid -194.83 -1.5 -1.5708
+grid -196.33 1.5 -1.5708
+grid -197.83 -1.5 -1.5708
+grid -199.33 1.5 -1.5708
+grid -200.83 -1.5 -1.5708
+grid -202.33 1.5 -1.5708

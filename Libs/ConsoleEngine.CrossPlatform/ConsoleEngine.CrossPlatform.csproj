@@ -9,6 +9,9 @@
         <TreatWarningsAsErrors>True</TreatWarningsAsErrors>
     </PropertyGroup>
     <ItemGroup>
+      <InternalsVisibleTo Include="ConsoleEngine.Tests" />
+    </ItemGroup>
+    <ItemGroup>
       <ProjectReference Include="..\..\ConsoleEngine.Abstractions\ConsoleEngine.Abstractions.csproj" />
     </ItemGroup>
 </Project>

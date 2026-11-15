@@ -35,6 +35,7 @@
       <ProjectReference Include="..\SkyStack\SkyStack.csproj" />
       <ProjectReference Include="..\Scripted\Scripted.csproj" />
       <ProjectReference Include="..\Starguard\Starguard.csproj" />
+      <ProjectReference Include="..\Kartster\Kartster.csproj" />
     </ItemGroup>
 
     <ItemGroup>

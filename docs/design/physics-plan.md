@@ -143,7 +143,16 @@ etter gruppen, som i dag.
 - **Cellestørrelse** ≥ en typisk kropp. Kropper som er større enn en celle legges i alle cellene de dekker.
 - **Duplikate par:** et par rapporteres bare i cellen som inneholder minimumshjørnet av overlappet deres.
 - **Utenfor gridet:** posisjonen klemmes inn til kantcellene (eller hashes), så ingenting faller ut.
-- Statiske kropper bygges inn i gridet bare når de endres, ikke hvert steg.
+- Statiske kropper bygges inn i gridet bare når de endres, ikke hvert steg. Gjort (2026-11-14): `PhysicsSystem` har to
+  `SpatialHashGrid`-er, ett for kropper som beveger seg (bygges hvert steg) og ett for statiske (`_staticGrid`). Gather
+  sammenligner hver statisk kropps indeks og omsluttende boks med forrige steg (`NoteStatic`); bare ved forskjell, ny
+  eller fjernet kropp bygges det statiske gridet på nytt. Par: bevegelig–bevegelig i sitt grid, bevegelig–statisk
+  ved oppslag i det statiske gridet; statisk–statisk testes aldri. Spørringer ser i begge. Måling i § 12b.
+- Uendrede statiske kropper hoppes over i Gather. Gjort (2026-11-14): hver kroppsindeks husker hva den statiske
+  kroppen ble lest fra (`StaticInput`: entitet, posisjon, rotasjon, `Collider`-bytene og steget). Er alt likt med
+  forrige steg, gjenbrukes plassene i kropps-arrayene (ingen sin/cos, transform eller boks). Statiske kropper har
+  fortsatt plass i arrayene (løserløkkene går over dem); helt ut av dem som i Box2D ville kreve egne indekser.
+  Måling i § 12b.
 - Filteret (`Category`/`Mask`) sjekkes før narrowphase.
 
 ### Statisk tilegrid
@@ -430,7 +439,45 @@ denne økten): sirkler uten tyngdekraft med demping 1/s, satt i ro i 600 steg, d
   broadphase, som fortsatt kjøres for sovende kropper (§ 12c).
 - 0 B allokert per steg i alle tilfellene.
 
+### Statiske kropper i broadphase (2026-11-14)
+
+`StaticBodiesStepBenchmarks` (16 dynamiske baller, N statiske bokser + 4 lange vegger, 1/120 s, uten sleep), `--job short
+--inProcess --affinity 1`, med andre agenter kjørende på maskinen, 0 B allokert:
+
+| Statiske | Før | Etter |
+|---:|---:|---:|
+| 30 | 12,1 µs | 10,8 µs |
+| 150 | 21,5 µs | 14,6 µs |
+| 1000 | 95,0 µs | 39,9 µs |
+
+`PhysicsStepBenchmarks` (bare dynamiske kropper) er uendret innenfor støyen (for eksempel 1000 uten sleep: 1 023 µs før,
+1 061 µs etter).
+
+### Uendrede statiske kropper hoppes over (2026-11-14)
+
+Samme benchmark, nå med `Layout`: `Boxes` som over, og `TurnedBoxesAndCircles` (N dreide bokser og N sirkler, som
+en banes vegger og trær, vinkler i [0, π)). `--job short --inProcess --affinity 1`, 0 B allokert. Maskinen var
+travel (andre agenter), så alle tall er rundt 3× høyere enn i tabellen over; sammenlign før mot etter:
+
+| Statiske | Layout | Før | Etter |
+|---:|---|---:|---:|
+| 30 | Boxes | 39,0 µs | 43,4 µs |
+| 30 | TurnedBoxesAndCircles | 68,6 µs | 58,8 µs |
+| 150 | Boxes | 44,7 µs | 46,8 µs |
+| 150 | TurnedBoxesAndCircles | 137,8 µs | 101,6 µs |
+| 1000 | Boxes | 181,1 µs | 186,1 µs |
+| 1000 | TurnedBoxesAndCircles | 637,8 µs | 214,2 µs |
+
+En roligere kjøring med vinkler opp til 370 rad (før `% MathF.PI` kom inn) ga 409,7 → 39,8 µs for 1000 dreide + 1000
+sirkler. Ujusterte bokser var billige fra før og vinner lite. En dreid statisk boks kostet ~0,2 µs i Gather (sin/cos,
+transform og boks); gjenbrukt koster den rundt 10 ns. `PhysicsStepBenchmarks` (bare dynamiske kropper) er uendret innenfor støyen. Det som er igjen per statisk kropp:
+sammenligningen i Gather og løserløkkene (`IntegrateVelocities`/`IntegratePositions`) som går over alle plassene.
+
 ### 12c. Det som gjenstår
+
+Gjort etter fase 5 (2026-11-14): krefter og moment (`Force`-komponenten, Box2D v3 sin modell: samles mellom stegene,
+konstant gjennom substegene, nullstilles etterpå), steg 1 i [`kart-physics-plan.md`](kart-physics-plan.md). Regelen står
+i `docs/agent/03-rules.md` § Physics.
 
 - Sovende kropper koster fortsatt gather og broadphase hvert steg. Box2D unngår det med «solver sets» og et
   vedvarende tre; her ville det kreve et grid som overlever mellom stegene.

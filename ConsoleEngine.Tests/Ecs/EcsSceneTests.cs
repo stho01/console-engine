@@ -65,6 +65,45 @@ public class EcsSceneTests
     }
 
     [Test]
+    public void RunSimulation_Paused_RunsNothingAndKeepsAlpha()
+    {
+        var scene = new TestScene();
+        _scenes.Push(scene);
+        var step = scene.Timestep.StepSeconds;
+        scene.RunSimulation(step * .5f);
+        var alpha = scene.Timestep.Alpha;
+        scene.Log.Clear();
+
+        scene.IsSimulationPaused = true;
+        for (var i = 0; i < 100; i++)
+            scene.RunSimulation(step);
+        _scenes.Render();
+
+        Assert.Multiple(() =>
+        {
+            Assert.That(scene.Log, Is.Empty);
+            Assert.That(scene.Timestep.Alpha, Is.EqualTo(alpha));
+            Assert.That(scene.PresentationRuns, Is.EqualTo(1), "drawing goes on");
+        });
+    }
+
+    [Test]
+    public void RunSimulation_Resumed_RunsOnlyTheNewFrameWithoutBacklog()
+    {
+        var scene = new TestScene();
+        _scenes.Push(scene);
+        var step = scene.Timestep.StepSeconds;
+        scene.IsSimulationPaused = true;
+        for (var i = 0; i < 100; i++)
+            scene.RunSimulation(step);
+
+        scene.IsSimulationPaused = false;
+        scene.RunSimulation(step * 1.5f);
+
+        Assert.That(scene.Log, Is.EqualTo(new[] { ("fixed", step), ("simulation", step * 1.5f) }));
+    }
+
+    [Test]
     public void Load_Always_CreatesDefaultFixedTimestep()
     {
         var scene = new TestScene();

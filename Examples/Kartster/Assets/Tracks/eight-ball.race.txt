@@ -1,0 +1,18 @@
+# eight-ball race markers, exported from Kartster by KartsterExport (route lap). Format: Examples/Kartster/Race/RaceMarkers.cs
+# metres, planar: x = world X, y = world Z. forward is the gate's normal (along the road), left/right its reach
+# either side of the point, right = (-forward.y, forward.x). heading: 0 faces -Z, positive is turned left
+laps 5
+start -80.332 0.49 0.01543 0.99988 48.5 48.5
+checkpoint -28.946 26.403 0.84982 -0.52708 48.5 48.5
+checkpoint 24.025 -22.907 0.78973 -0.61345 48.5 48.5
+checkpoint 80.02 -4.514 0.13984 0.99017 48.5 48.5
+checkpoint 31.552 27.925 -0.88305 -0.46928 47.5 48.5
+checkpoint -21.691 -20.993 -0.76586 -0.64301 48.5 48.5
+grid -78.803 -1.439 3.09492
+grid -81.69 -3.145 3.04831
+grid -78.537 -4.287 3.00235
+grid -81.254 -6.252 2.95614
+grid -78.009 -7.096 2.90878
+grid -80.53 -9.308 2.86138
+grid -77.219 -9.843 2.81513
+grid -79.523 -12.279 2.76914
