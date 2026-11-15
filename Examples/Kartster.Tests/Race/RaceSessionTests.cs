@@ -389,9 +389,8 @@ public class RaceSessionTests
     [Test]
     public void StarCircuit_DrivenAlongTheCenterline_FinishesAfterThreeLaps()
     {
-        var folder = Path.Combine("Assets", "Tracks");
-        var track = Track.Load(folder, "star-circuit");
-        var markers = RaceMarkers.Load(folder, "star-circuit");
+        var track = TestAssets.Track("star-circuit");
+        var markers = TestAssets.Markers("star-circuit");
         var session = new RaceSession(markers);
         session.Register(1, isHuman: true);
         session.Advance(RaceSession.CountdownSeconds);

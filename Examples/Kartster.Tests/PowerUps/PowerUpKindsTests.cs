@@ -24,7 +24,7 @@ public class PowerUpKindsTests
     private const float Step = 1f / 120f;
 
     private static readonly Lazy<BotRoutePlan> StarCircuitRoute = new(() => new BotRoutePlan(
-        Track.Load(Path.Combine("Assets", "Tracks"), "star-circuit"), KartCatalog.Kart,
+        TestAssets.Track("star-circuit"), KartCatalog.Kart,
         BotDriverSystem.CornerSpeedFactor(0.5f), BotDriverSystem.BrakingShare(0.5f)));
 
     private static PowerUpKart Kart(float x, float z, float heading = 0f, float speed = 0f, int position = 1)

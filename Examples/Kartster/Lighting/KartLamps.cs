@@ -2,7 +2,9 @@ using System;
 using System.Collections.Generic;
 using System.IO;
 using System.Numerics;
+using ConsoleEngine.Assets;
 using ConsoleEngine.Rendering3D;
+using Kartster.Loading;
 
 namespace Kartster.Lighting;
 
@@ -61,8 +63,11 @@ public sealed class KartLamps
     //** public methods
     //**********************************************************
 
-    public static KartLamps Load(string folder)
+    /// <param name="assets">Where the kart is read from.</param>
+    /// <param name="folder">The kart's folder in <paramref name="assets"/>, as <c>KartModel.Load</c> takes it.</param>
+    public static KartLamps Load(AssetManager assets, AssetPath folder)
     {
+        using var files = assets.CreateScope();
         var front = new List<Vector3>();
         var longRange = new List<Vector3>();
         var rear = new List<Vector3>();
@@ -70,20 +75,18 @@ public sealed class KartLamps
         var indices = new List<int>();
         var colors = new List<Vector3>();
         var corners = new List<Vector3>();
-        var files = Directory.GetFiles(folder, "*.obj");
-        Array.Sort(files, StringComparer.Ordinal);
 
-        foreach (var file in files)
+        foreach (var file in files.Enumerate(folder, "obj"))
         {
-            var part = Path.GetFileNameWithoutExtension(file);
+            var part = Path.GetFileNameWithoutExtension(file.FileName);
             if (part.StartsWith("light_front", StringComparison.OrdinalIgnoreCase))
-                front.Add(MiddleOf(file));
+                front.Add(MiddleOf(files.Load<ObjGeometry>(file)));
             else if (part.StartsWith("light_long", StringComparison.OrdinalIgnoreCase))
-                longRange.Add(MiddleOf(file));
+                longRange.Add(MiddleOf(files.Load<ObjGeometry>(file)));
             else if (part.StartsWith("light_rear", StringComparison.OrdinalIgnoreCase))
-                rear.Add(MiddleOf(file));
+                rear.Add(MiddleOf(files.Load<ObjGeometry>(file)));
             else if (LensColor(part) is { } color)
-                AddLens(file, color, positions, indices, colors, corners);
+                AddLens(files.Load<ObjGeometry>(file), color, positions, indices, colors, corners);
         }
 
         var lenses = indices.Count == 0
@@ -137,10 +140,10 @@ public sealed class KartLamps
         return null;
     }
 
-    private static Vector3 MiddleOf(string file)
+    private static Vector3 MiddleOf(ObjGeometry part)
     {
         var positions = new List<Vector3>();
-        ObjFile.Read(file, positions, []);
+        part.AppendTo(positions, []);
         var min = new Vector3(float.MaxValue);
         var max = new Vector3(float.MinValue);
         foreach (var position in positions)
@@ -156,12 +159,12 @@ public sealed class KartLamps
     /// Appends the lens, each corner moved <see cref="LensLift"/> out along the mean of its triangles' normals
     /// (several lenses in one file stay apart, as they would not when scaled about one middle).
     /// </summary>
-    private static void AddLens(string file, Vector3 color, List<Vector3> positions, List<int> indices,
+    private static void AddLens(ObjGeometry part, Vector3 color, List<Vector3> positions, List<int> indices,
         List<Vector3> colors, List<Vector3> corners)
     {
         var lens = new List<Vector3>();
         var lensIndices = new List<int>();
-        ObjFile.Read(file, lens, lensIndices);
+        part.AppendTo(lens, lensIndices);
         for (var i = 0; i < Math.Min(3, lens.Count); i++)
             corners.Add(lens[i]);
 

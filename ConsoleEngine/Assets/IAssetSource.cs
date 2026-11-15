@@ -22,6 +22,12 @@ public interface IAssetSource
     IReadOnlyList<AssetPath> Enumerate(AssetPath directory, string extension);
 
     /// <summary>
+    /// The folders directly in <paramref name="directory"/>, sorted ordinally. Empty if the folder doesn't exist. For
+    /// content that is one folder per asset, such as a model made of several files.
+    /// </summary>
+    IReadOnlyList<AssetPath> EnumerateDirectories(AssetPath directory);
+
+    /// <summary>
     /// Where <paramref name="path"/> is or would be stored, for error messages. A file path for a folder source.
     /// </summary>
     string Describe(AssetPath path);

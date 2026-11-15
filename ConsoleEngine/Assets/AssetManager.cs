@@ -148,6 +148,10 @@ public sealed class AssetManager
     public IReadOnlyList<AssetPath> Enumerate(AssetPath directory, string extension) =>
         Source.Enumerate(directory, extension);
 
+    /// <summary>The folders directly in <paramref name="directory"/>, sorted.</summary>
+    public IReadOnlyList<AssetPath> EnumerateDirectories(AssetPath directory) =>
+        Source.EnumerateDirectories(directory);
+
     /// <summary>
     /// Drops every cached asset, whoever owns it, and disposes the <see cref="IDisposable"/> ones. Every handle goes
     /// stale. Scopes stay usable; the next load reads from the source again.

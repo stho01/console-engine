@@ -339,4 +339,24 @@ public class AssetManagerTests
 
         Assert.That(maps, Is.EqualTo(new AssetPath[] { "Maps/map1.txt", "Maps/map2.txt" }));
     }
+
+    [Test]
+    public void EnumerateDirectories_Directory_ReturnsItsSubfoldersSorted()
+    {
+        var source = new MemoryAssetSource()
+            .Add("Karts/wagon/body.obj", "")
+            .Add("Karts/wagon/Parts/wheel.obj", "")
+            .Add("Karts/olabil/body.obj", "")
+            .Add("Karts/readme.txt", "")
+            .Add("Maps/map1.txt", "");
+        var assets = new AssetManager(source);
+
+        Assert.Multiple(() =>
+        {
+            Assert.That(assets.EnumerateDirectories("Karts"),
+                Is.EqualTo(new AssetPath[] { "Karts/olabil", "Karts/wagon" }));
+            Assert.That(assets.EnumerateDirectories(AssetPath.Root), Is.EqualTo(new AssetPath[] { "Karts", "Maps" }));
+            Assert.That(assets.EnumerateDirectories("Sprites"), Is.Empty);
+        });
+    }
 }

@@ -80,6 +80,20 @@ public sealed class DirectoryAssetSource : IAssetSource
         return paths;
     }
 
+    public IReadOnlyList<AssetPath> EnumerateDirectories(AssetPath directory)
+    {
+        var folder = Describe(directory);
+        if (!Directory.Exists(folder))
+            return [];
+
+        var paths = new List<AssetPath>();
+        foreach (var subfolder in Directory.GetDirectories(folder))
+            paths.Add(directory.Resolve(Path.GetFileName(subfolder)));
+
+        paths.Sort(static (a, b) => string.CompareOrdinal(a.Value, b.Value));
+        return paths;
+    }
+
     public string Describe(AssetPath path) => path.IsRoot
         ? RootDirectory
         : Path.Combine(RootDirectory, path.Value.Replace('/', Path.DirectorySeparatorChar));

@@ -2,7 +2,9 @@ using System;
 using System.Collections.Generic;
 using System.IO;
 using System.Numerics;
+using ConsoleEngine.Assets;
 using ConsoleEngine.Rendering3D;
+using Kartster.Loading;
 
 namespace Kartster;
 
@@ -79,10 +81,12 @@ public static class KartModel
     //** public methods
     //**********************************************************
 
-    public static Mesh Load(string folder, Vector3 playerColor)
+    /// <param name="assets">Where the kart is read from.</param>
+    /// <param name="folder">The kart's folder in <paramref name="assets"/>, for example <c>Karts/wagon</c>.</param>
+    public static Mesh Load(AssetManager assets, AssetPath folder, Vector3 playerColor)
     {
-        var files = Directory.GetFiles(folder, "*.obj");
-        Array.Sort(files, StringComparer.Ordinal);
+        // The parts' geometry is copied into the mesh: the scope takes the files out of the cache again.
+        using var files = assets.CreateScope();
 
         var positions = new List<Vector3>();
         var indices = new List<int>();
@@ -90,13 +94,13 @@ public static class KartModel
         var opacities = new List<float>();
         var hasGlass = false;
 
-        foreach (var file in files)
+        foreach (var file in files.Enumerate(folder, "obj"))
         {
-            var part = Path.GetFileNameWithoutExtension(file);
+            var part = Path.GetFileNameWithoutExtension(file.FileName);
             if (!IsDrawn(part))
                 continue;
 
-            ObjFile.Read(file, positions, indices);
+            files.Load<ObjGeometry>(file).AppendTo(positions, indices);
             var color = PartColor(part, playerColor);
             var opacity = PartOpacity(part);
             hasGlass |= opacity < 1f;
@@ -108,7 +112,7 @@ public static class KartModel
         }
 
         if (indices.Count == 0)
-            throw new InvalidDataException($"No kart parts (*.obj) in {folder}");
+            throw new InvalidDataException($"No kart parts (*.obj) in {assets.Source.Describe(folder)}");
 
         return new Mesh(positions.ToArray(), indices.ToArray(), colors.ToArray())
         {

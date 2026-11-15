@@ -3,6 +3,7 @@ using System.Collections.Generic;
 using System.Globalization;
 using System.IO;
 using System.Text;
+using ConsoleEngine.Assets;
 using ConsoleEngine.Ecs;
 using ConsoleEngine.Ecs.Components;
 using ConsoleEngine.Physics;
@@ -25,8 +26,7 @@ namespace Kartster.Tests;
 public class HeightTests
 {
     private const float Step = TrackScene.StepSeconds;
-    private static readonly string TracksFolder = Path.Combine(AppContext.BaseDirectory, "Assets", "Tracks");
-    private static readonly Lazy<Track> Norbergring = new(() => Track.Load(TracksFolder, "norbergring"));
+    private static readonly Lazy<Track> Norbergring = new(() => TestAssets.Track("norbergring"));
 
     //** slopes
 
@@ -200,7 +200,7 @@ public class HeightTests
     [TestCase("dunsfold-neon")]
     public void TryGetRoadHeight_RandomPoints_FindsWhatEveryTriangleFinds(string id)
     {
-        var track = id == "norbergring" ? Norbergring.Value : Track.Load(TracksFolder, id);
+        var track = id == "norbergring" ? Norbergring.Value : TestAssets.Track(id);
         var random = new Random(7);
         var hits = 0;
         for (var i = 0; i < 4000; i++)
@@ -299,10 +299,10 @@ public class HeightTests
     public void Race_ThreeBotsOnATrackWithHeight_EveryBotCompletesALap(string id)
     {
         const int capSeconds = 240;
-        var track = id == "norbergring" ? Norbergring.Value : Track.Load(TracksFolder, id);
+        var track = id == "norbergring" ? Norbergring.Value : TestAssets.Track(id);
         using var world = new World();
         var tunings = new[] { KartCatalog.Olabil, KartCatalog.Wagon, KartCatalog.Kart };
-        var markers = RaceMarkers.Load(TracksFolder, id);
+        var markers = TestAssets.Markers(id);
         var race = TrackScene.CreateSession(track, markers, laps: 5);
         var karts = TrackScene.CreateKarts(world, track, markers, tunings, playerIndex: -1, race);
         var group = new SystemGroup(world);
@@ -346,11 +346,11 @@ public class HeightTests
     [TestCase("norbergring")]
     public void FixedStep_SixKartsOnATrackWithHeight_DoesNotAllocate(string id)
     {
-        var track = id == "norbergring" ? Norbergring.Value : Track.Load(TracksFolder, id);
+        var track = id == "norbergring" ? Norbergring.Value : TestAssets.Track(id);
         using var world = new World();
         var tunings = new KartTuning[6];
         Array.Fill(tunings, KartCatalog.Kart);
-        var markers = RaceMarkers.Load(TracksFolder, id);
+        var markers = TestAssets.Markers(id);
         var race = TrackScene.CreateSession(track, markers, laps: 5);
         TrackScene.CreateKarts(world, track, markers, tunings, playerIndex: 5, race);
         var group = new SystemGroup(world);
@@ -379,7 +379,7 @@ public class HeightTests
     [TestCase("brands-hatch-indy")]
     public void Draw_ChaseViewsRoundTheTrack_DrawsTheGroundAndPrintsTheFrameTime(string id)
     {
-        var track = id == "norbergring" ? Norbergring.Value : Track.Load(TracksFolder, id);
+        var track = id == "norbergring" ? Norbergring.Value : TestAssets.Track(id);
         var sky = new uint[320 * 180];
         using var cpu = new ConsoleEngine.Rendering3D.Rasterizer(320, 180, KartsterGame.ScenePalette, trueColor: true);
         var cpuMs = Frames(cpu, track, sky, out var tiles);
@@ -511,7 +511,7 @@ public class HeightTests
         File.WriteAllText(Path.Combine(folder, id + ".spline.obj"), text.ToString());
         try
         {
-            return Track.Load(folder, id);
+            return Track.Load(TestAssets.In(folder), AssetPath.Root, id);
         }
         finally
         {

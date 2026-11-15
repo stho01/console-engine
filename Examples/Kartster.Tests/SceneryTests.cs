@@ -8,7 +8,6 @@ namespace Kartster.Tests;
 
 public class SceneryTests
 {
-    private static readonly string Models = Path.Combine("Assets", "Scenery");
     private static readonly Matrix4x4 Projection =
         Matrix4x4.CreatePerspectiveFieldOfView(50f * MathF.PI / 180f, 16f / 9f, 0.2f, 400f);
 
@@ -16,7 +15,7 @@ public class SceneryTests
     private static readonly Matrix4x4 ViewProjection =
         Matrix4x4.CreateLookAt(new Vector3(0, 2, 0), new Vector3(0, 2, -1), Vector3.UnitY) * Projection;
 
-    private static Scenery Parse(params string[] lines) => Scenery.Parse(lines, "test.scenery.txt", Models, -0.3f);
+    private static Scenery Parse(params string[] lines) => Scenery.Parse(lines, "test.scenery.txt", TestAssets.Shipped, TestAssets.Scenery, -0.3f);
 
     private static string Triangle(float x, float z) => FormattableString.Invariant(
         $"tri {x} 0.5 {z} {x + 1} 0.5 {z} {x} 1.5 {z} 1 0 0");
@@ -58,7 +57,7 @@ public class SceneryTests
     [Test]
     public void Load_ShippedStarCircuit_HasModelsAndTriangles()
     {
-        var track = Track.Load(Path.Combine("Assets", "Tracks"), "star-circuit");
+        var track = TestAssets.Track("star-circuit");
 
         Assert.That(track.Scenery.ModelCount, Is.EqualTo(10)); // the pipes (the power-up pads are PowerUpView's)
         Assert.That(track.Scenery.TriangleCount, Is.GreaterThan(1000)); // fences, signs, the start/finish line
@@ -99,7 +98,7 @@ public class SceneryTests
     [Test]
     public void Draw_InSteadyState_DoesNotAllocate()
     {
-        var scenery = Track.Load(Path.Combine("Assets", "Tracks"), "star-circuit").Scenery;
+        var scenery = TestAssets.Track("star-circuit").Scenery;
         var renderer = new CountingRenderer();
         scenery.Draw(renderer, ViewProjection, new Vector3(0, 2, 0), Vector3.UnitY);
 

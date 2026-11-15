@@ -98,4 +98,21 @@ public class DirectoryAssetSourceTests
 
         Assert.That(source.RootDirectory, Is.EqualTo(Path.Combine(AppContext.BaseDirectory, "Assets")));
     }
+
+    [Test]
+    public void EnumerateDirectories_Folder_ReturnsItsSubfoldersSorted()
+    {
+        Directory.CreateDirectory(Path.Combine(_root, "Karts", "wagon", "Parts"));
+        Directory.CreateDirectory(Path.Combine(_root, "Karts", "olabil"));
+        File.WriteAllText(Path.Combine(_root, "Karts", "readme.txt"), "not a folder");
+        var source = new DirectoryAssetSource(_root);
+
+        Assert.Multiple(() =>
+        {
+            Assert.That(source.EnumerateDirectories("Karts"),
+                Is.EqualTo(new AssetPath[] { "Karts/olabil", "Karts/wagon" }));
+            Assert.That(source.EnumerateDirectories(AssetPath.Root), Is.EqualTo(new AssetPath[] { "Karts", "Maps" }));
+            Assert.That(source.EnumerateDirectories("Sprites"), Is.Empty);
+        });
+    }
 }

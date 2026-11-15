@@ -3,6 +3,7 @@ using System.Collections.Generic;
 using System.Globalization;
 using System.IO;
 using System.Numerics;
+using ConsoleEngine.Assets;
 using ConsoleEngine.Ecs;
 using ConsoleEngine.Ecs.Components;
 using ConsoleEngine.Physics;
@@ -60,10 +61,11 @@ public sealed class TrackCollision(WallSegment[] segments, WallPost[] posts)
 
     /// <summary>Loads <c>&lt;id&gt;.collision.txt</c> from <paramref name="folder"/>; <see cref="Empty"/> if there is
     /// none (the track has no walls).</summary>
-    public static TrackCollision Load(string folder, string id)
+    public static TrackCollision Load(AssetManager assets, AssetPath folder, string id)
     {
-        var path = Path.Combine(folder, id + FileSuffix);
-        return File.Exists(path) ? Parse(File.ReadLines(path), Path.GetFileName(path)) : Empty;
+        using var files = assets.CreateScope();
+        var path = folder.Resolve(id + FileSuffix);
+        return files.TryLoad<string[]>(path, out var lines) ? Parse(lines, path.FileName) : Empty;
     }
 
     /// <param name="source">The file name, for error messages.</param>

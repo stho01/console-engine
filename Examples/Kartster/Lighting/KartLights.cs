@@ -1,6 +1,7 @@
 using System;
 using System.Numerics;
 using ConsoleEngine.Abstractions.Inputs;
+using ConsoleEngine.Assets;
 using ConsoleEngine.Infrastructure.Inputs;
 using ConsoleEngine.Rendering3D;
 
@@ -68,15 +69,16 @@ public sealed class KartLights
     //**********************************************************
 
     /// <param name="kartMeshes">One per kart, by kart index (<c>KartModel</c> meshes).</param>
+    /// <param name="assets">Where the kart folders are read from.</param>
     /// <param name="kartFolders">The kart folders the meshes may come from; each mesh finds its own by its lenses.</param>
     /// <param name="isPressed">Whether a key was pressed this frame; null reads <c>Input.Instance</c>.</param>
-    public KartLights(Mesh[] kartMeshes, string[] kartFolders, string trackName, int width, int height,
-        Func<Key, bool> isPressed = null)
+    public KartLights(Mesh[] kartMeshes, AssetManager assets, AssetPath[] kartFolders, string trackName, int width,
+        int height, Func<Key, bool> isPressed = null)
     {
         _isPressed = isPressed ?? (key => Input.Instance.GetKey(key).Pressed);
         Night = Array.IndexOf(NightTracks, trackName) >= 0;
 
-        var folders = Array.ConvertAll(kartFolders, KartLamps.Load);
+        var folders = Array.ConvertAll(kartFolders, folder => KartLamps.Load(assets, folder));
         _lamps = Array.ConvertAll(kartMeshes, mesh => KartLamps.Find(mesh, folders));
         _shadowScales = Array.ConvertAll(kartMeshes, ShadowScale);
         _order = new int[kartMeshes.Length];

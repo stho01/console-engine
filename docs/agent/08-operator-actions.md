@@ -80,7 +80,7 @@ team's process differs.
 | Kartster | `--gpu` (command-line flag, any position) | Start on the GPU renderer | `Program.cs` |
 | Kartster (any scene) | C | Switch between 16 colours and 24-bit colour (`Console.TrueColor`); stays on 16 colours (title `16 colours (no 24-bit)`) when the console can't show 24-bit | `KartsterGame.OnUpdate`, `MatchConsoleColors` |
 | Kartster | `--truecolor` (command-line flag, any position) | Start in 24-bit colour | `Program.cs` |
-| Kartster | first / second command-line argument | Folder of kart folders (e.g. Kartster's `Content/3D/Rendered/Karts`; the bots race in the same folders) / folder of exported tracks | `Program.cs` |
+| Kartster | first / second command-line argument | Folder of kart folders (e.g. Kartster's `Content/3D/Rendered/Karts`; the bots race in the same folders) / folder of exported tracks (its scenery models come from a `Scenery` folder beside it). Without them: `Assets/Karts` and `Assets/Tracks` next to the exe, whatever the working directory | `Program.cs`, `KartsterAssets.OpenFolder` |
 
 There is **no** way to skip a TerraForM level, choose a map, reset the score, or enable TerraForM debug mode without a
 code change.

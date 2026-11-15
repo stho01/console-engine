@@ -64,5 +64,23 @@ public sealed class MemoryAssetSource : IAssetSource
         return paths;
     }
 
+    public IReadOnlyList<AssetPath> EnumerateDirectories(AssetPath directory)
+    {
+        var paths = new List<AssetPath>();
+        foreach (var path in _assets.Keys)
+        {
+            // Walk up from the file to the folder that sits directly in the wanted one.
+            var folder = path.Directory;
+            while (!folder.IsRoot && folder.Directory != directory)
+                folder = folder.Directory;
+
+            if (!folder.IsRoot && !paths.Contains(folder))
+                paths.Add(folder);
+        }
+
+        paths.Sort(static (a, b) => string.CompareOrdinal(a.Value, b.Value));
+        return paths;
+    }
+
     public string Describe(AssetPath path) => $"memory:{path.Value}";
 }

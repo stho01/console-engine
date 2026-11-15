@@ -3,6 +3,7 @@ using System.Diagnostics;
 using System.IO;
 using System.Numerics;
 using ConsoleEngine.Abstractions.Inputs;
+using ConsoleEngine.Assets;
 using ConsoleEngine.Rendering3D;
 using ConsoleEngine.Rendering3D.OpenGL;
 using Kartster.Lighting;
@@ -14,9 +15,9 @@ public class KartLightsTests
 {
     private const int Width = 320;
     private const int Height = 180;
-    private static readonly string Karts = Path.Combine(AppContext.BaseDirectory, "Assets", "Karts");
-    private static readonly string Wagon = Path.Combine(Karts, "wagon");
-    private static readonly string Olabil = Path.Combine(Karts, "olabil");
+    private static readonly AssetManager Assets = TestAssets.Shipped;
+    private static readonly AssetPath Wagon = TestAssets.Kart("wagon");
+    private static readonly AssetPath Olabil = TestAssets.Kart("olabil");
     private static readonly Vector3 Body = new(0.2f, 0.4f, 0.8f);
     private static readonly Matrix4x4 Projection =
         Matrix4x4.CreatePerspectiveFieldOfView(50f * MathF.PI / 180f, 16f / 9f, 0.2f, 400f);
@@ -35,7 +36,7 @@ public class KartLightsTests
     [Test]
     public void Load_Wagon_HasTwoHeadlightsAtTheFrontAndTwoRearLightsAtTheBack()
     {
-        var lamps = KartLamps.Load(Wagon);
+        var lamps = KartLamps.Load(Assets, Wagon);
 
         Assert.That(lamps.Front, Has.Length.EqualTo(2));
         Assert.That(lamps.Rear, Has.Length.EqualTo(2));
@@ -47,9 +48,9 @@ public class KartLightsTests
     [Test]
     public void Find_RecolouredKartMesh_FindsItsOwnFolder()
     {
-        var wagon = KartLamps.Load(Wagon);
-        var olabil = KartLamps.Load(Olabil);
-        var mesh = KartModel.Recolor(KartModel.Load(Olabil, Body), Body, Vector3.One);
+        var wagon = KartLamps.Load(Assets, Wagon);
+        var olabil = KartLamps.Load(Assets, Olabil);
+        var mesh = KartModel.Recolor(KartModel.Load(Assets, Olabil, Body), Body, Vector3.One);
 
         Assert.That(KartLamps.Find(mesh, [wagon, olabil]), Is.SameAs(olabil));
         Assert.That(wagon.IsPartOf(mesh), Is.False);
@@ -76,7 +77,7 @@ public class KartLightsTests
     public void Begin_N_TogglesNight()
     {
         var pressed = false;
-        var lights = new KartLights([KartModel.Load(Wagon, Body)], [Wagon], "star-circuit", Width, Height,
+        var lights = new KartLights([KartModel.Load(Assets, Wagon, Body)], Assets, [Wagon], "star-circuit", Width, Height,
             key => pressed && key == Key.N);
         using var renderer = Cleared();
 
@@ -109,10 +110,10 @@ public class KartLightsTests
     [Test]
     public void Begin_AtNightWithMoreKartsThanLights_KeepsTheNearestKartsLights()
     {
-        var mesh = KartModel.Load(Wagon, Body);
+        var mesh = KartModel.Load(Assets, Wagon, Body);
         var meshes = new Mesh[6];
         Array.Fill(meshes, mesh);
-        var lights = new KartLights(meshes, [Wagon], "prism-loop", Width, Height, _ => false);
+        var lights = new KartLights(meshes, Assets, [Wagon], "prism-loop", Width, Height, _ => false);
         var worlds = new Matrix4x4[6];
         for (var i = 0; i < worlds.Length; i++)
             worlds[i] = Matrix4x4.CreateTranslation(0, 0, -10 * (worlds.Length - i)); // the last one nearest
@@ -143,7 +144,7 @@ public class KartLightsTests
     {
         var lights = Lights("star-circuit");
         var under = RoadPixel(Vector3.Zero);
-        var beside = RoadPixel(new Vector3(MaxX(KartModel.Load(Wagon, Body)) * 1.15f, 0, 0));
+        var beside = RoadPixel(new Vector3(MaxX(KartModel.Load(Assets, Wagon, Body)) * 1.15f, 0, 0));
 
         using var renderer = Cleared();
         renderer.Draw(Ground, Matrix4x4.Identity, ViewProjection, KartsterGame.ToSun);
@@ -161,7 +162,7 @@ public class KartLightsTests
     {
         var lights = Lights("prism-loop");
         using var renderer = new Rasterizer(Width, Height, KartsterGame.ScenePalette, trueColor: true);
-        var kart = KartModel.Load(Wagon, Body);
+        var kart = KartModel.Load(Assets, Wagon, Body);
         Matrix4x4[] worlds = [Matrix4x4.Identity];
         var sky = new uint[Width * Height];
         Draw();
@@ -193,9 +194,9 @@ public class KartLightsTests
     [Explicit("A measurement, slow in Debug: dotnet test -c Release --filter Frame_OnStarCircuit_ReportsTheRenderTimes")]
     public void Frame_OnStarCircuit_ReportsTheRenderTimes()
     {
-        var track = Track.Load(Path.Combine(AppContext.BaseDirectory, "Assets", "Tracks"), "star-circuit");
-        var wagon = KartModel.Load(Wagon, Body);
-        var olabil = KartModel.Load(Olabil, Body);
+        var track = TestAssets.Track("star-circuit");
+        var wagon = KartModel.Load(Assets, Wagon, Body);
+        var olabil = KartModel.Load(Assets, Olabil, Body);
         var meshes = new Mesh[6];
         var worlds = new Matrix4x4[6];
         for (var i = 0; i < meshes.Length; i++)
@@ -210,7 +211,7 @@ public class KartLightsTests
         var eye = playerPosition - playerForward * 5.5f + Vector3.UnitY * 2.2f;
         var viewProjection = Matrix4x4.CreateLookAt(eye, playerPosition + playerForward * 4f + Vector3.UnitY,
             Vector3.UnitY) * Projection;
-        var lights = new KartLights(meshes, [Wagon, Olabil], "star-circuit", Width, Height, _ => false);
+        var lights = new KartLights(meshes, Assets, [Wagon, Olabil], "star-circuit", Width, Height, _ => false);
         var sky = new ConsoleColor[Width * Height];
         var skyRgb = new uint[Width * Height];
 
@@ -272,7 +273,7 @@ public class KartLightsTests
     //**********************************************************
 
     private static KartLights Lights(string track) =>
-        new([KartModel.Load(Wagon, Body)], [Olabil, Wagon], track, Width, Height, _ => false);
+        new([KartModel.Load(Assets, Wagon, Body)], Assets, [Olabil, Wagon], track, Width, Height, _ => false);
 
     private static Rasterizer Cleared()
     {

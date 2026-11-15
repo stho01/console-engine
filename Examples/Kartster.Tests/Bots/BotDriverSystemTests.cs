@@ -13,7 +13,7 @@ public class BotDriverSystemTests
     private const float Step = 1f / 120f;
 
     private static readonly Lazy<Track> StarCircuit =
-        new(() => Track.Load(Path.Combine("Assets", "Tracks"), "star-circuit"));
+        new(() => TestAssets.Track("star-circuit"));
 
     private static readonly KartTuning Tuning = KartCatalog.Kart;
 

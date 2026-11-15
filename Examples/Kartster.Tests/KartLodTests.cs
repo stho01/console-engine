@@ -4,6 +4,7 @@ using System.Diagnostics;
 using System.IO;
 using System.Linq;
 using System.Numerics;
+using ConsoleEngine.Assets;
 using ConsoleEngine.Rendering3D;
 using ConsoleEngine.Rendering3D.OpenGL;
 using Kartster.Lighting;
@@ -16,7 +17,7 @@ public class KartLodTests
 {
     private const int Width = 320;
     private const int Height = 180;
-    private static readonly string Karts = Path.Combine(AppContext.BaseDirectory, "Assets", "Karts");
+    private static readonly AssetManager Assets = TestAssets.Shipped;
     private static readonly Vector3 Body = new(0.2f, 0.4f, 0.8f);
     private static readonly Matrix4x4 Projection =
         Matrix4x4.CreatePerspectiveFieldOfView(50f * MathF.PI / 180f, 16f / 9f, 0.2f, 400f);
@@ -27,7 +28,7 @@ public class KartLodTests
     private static readonly string[] HeavyKarts = ["whosp", "hektor", "lasagna", "baffi", "raleur", "itg"];
 
     private static IEnumerable<string> KartNames() =>
-        Directory.GetDirectories(Karts).Select(Path.GetFileName).Order(StringComparer.Ordinal);
+        Assets.EnumerateDirectories(TestAssets.Karts).Select(folder => folder.FileName);
 
     //**********************************************************
     //** tests
@@ -63,7 +64,7 @@ public class KartLodTests
     [TestCaseSource(nameof(KartNames))]
     public void Levels_ShippedKart_FewerTrianglesSameColoursAndGlass(string kart)
     {
-        var lod = new KartLod(KartModel.Load(Path.Combine(Karts, kart), Body));
+        var lod = new KartLod(KartModel.Load(Assets, TestAssets.Kart(kart), Body));
         var full = lod.Levels[0];
 
         for (var level = 1; level < lod.Levels.Length; level++)
@@ -87,7 +88,7 @@ public class KartLodTests
     [TestCaseSource(nameof(KartNames))]
     public void Pick_WhereEachLevelStarts_ChangesNoMoreThanASubpixelShift(string kart)
     {
-        var lod = new KartLod(KartModel.Load(Path.Combine(Karts, kart), Body));
+        var lod = new KartLod(KartModel.Load(Assets, TestAssets.Kart(kart), Body));
         using var renderer = new Rasterizer(Width, Height, KartsterGame.ScenePalette, trueColor: true);
         var background = new uint[Width * Height];
         for (var level = 1; level < lod.Levels.Length; level++)
@@ -128,9 +129,9 @@ public class KartLodTests
     {
         foreach (var trackName in new[] { "star-circuit", "norbergring" })
         {
-            var track = Track.Load(Path.Combine(AppContext.BaseDirectory, "Assets", "Tracks"), trackName);
-            var folders = Array.ConvertAll(HeavyKarts, kart => Path.Combine(Karts, kart));
-            var meshes = Array.ConvertAll(folders, folder => KartModel.Load(folder, Body));
+            var track = TestAssets.Track(trackName);
+            var folders = Array.ConvertAll(HeavyKarts, TestAssets.Kart);
+            var meshes = Array.ConvertAll(folders, folder => KartModel.Load(Assets, folder, Body));
             var lods = Array.ConvertAll(meshes, mesh => new KartLod(mesh));
             var worlds = new Matrix4x4[meshes.Length];
             for (var i = 0; i < meshes.Length; i++)
@@ -144,7 +145,7 @@ public class KartLodTests
             var eye = player - playerForward * 5.5f + Vector3.UnitY * 2.2f;
             var viewProjection = Matrix4x4.CreateLookAt(eye, player + playerForward * 4f + Vector3.UnitY,
                 Vector3.UnitY) * Projection;
-            var lights = new KartLights(meshes, folders, trackName, Width, Height, _ => false);
+            var lights = new KartLights(meshes, Assets, folders, trackName, Width, Height, _ => false);
             var sky = new ConsoleColor[Width * Height];
             var skyRgb = new uint[Width * Height];
             var triangles = 0;

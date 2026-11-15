@@ -105,7 +105,7 @@ assembly: `SpriteLoader` trenger `Sprite`, og alle spill trenger asset-lasting (
 | Type | Ansvar | Standard |
 |---|---|---|
 | `AssetPath` | `readonly struct`. Normalisert relativ sti: `/` som skilletegn, ingen `.`/`..`-segmenter, ingen rot. `Extension` uten punktum, små bokstaver. Sammenlignes ordinal (skiller store/små bokstaver, likt på Windows og macOS) | Godot `res://`, Bevy `AssetPath` |
-| `IAssetSource` | `bool Exists(AssetPath)`, `Stream Open(AssetPath)`, `IEnumerable<AssetPath> Enumerate(AssetPath directory, string extension)` | Bevy `AssetReader`, MonoGame `TitleContainer` |
+| `IAssetSource` | `bool Exists(AssetPath)`, `Stream Open(AssetPath)`, `IEnumerable<AssetPath> Enumerate(AssetPath directory, string extension)`, `EnumerateDirectories(AssetPath directory)` (undermapper, lagt til for Kartster) | Bevy `AssetReader`, MonoGame `TitleContainer` |
 | `DirectoryAssetSource` | Rot = `Path.Combine(AppContext.BaseDirectory, "Assets")` som standard. Avviser stier som havner utenfor roten | — |
 | `MemoryAssetSource` | `Dictionary<AssetPath, byte[]>`. For tester | — |
 | `EmbeddedAssetSource` (fase 4) | Innebygde ressurser i en `Assembly` | .NET `EmbeddedResource` |
@@ -345,6 +345,10 @@ Legg til en linje per beslutning, nyeste nederst.
 | 2026-11-12 | `AssetStore<T>` er offentlig, med `AssetManager.GetStore<T>()` | Målingen i § 7: oppslag via manageren er 2× `SpriteLibrary` for referansetyper, via et beholdt lager 1,3× |
 | 2026-11-12 | Generasjonssjekken i `Get` er på i alle bygg | Én sammenligning; uten den ville en gammel handle stille gi en annen asset etter at slotten er gjenbrukt |
 | 2026-11-12 | TerraForM.Ecs `HudSystem` laster game-over-skjermen i rot-scopet | Samme skjerm i alle baner. Viser bruken av begge scopene |
+| 2026-11-15 | Kartster leser karter, baner og kulisser gjennom `AssetManager`, men `Track` og kart-meshene er ikke assets: hver `Load` leser i et eget `AssetScope` som avsluttes med metoden | Banen og meshene bygges av kopier og eies av spillet. Råfilene (10 MB OBJ, høydekart) skal ikke bli liggende i cachen |
+| 2026-11-15 | `IAssetSource.EnumerateDirectories` lister undermapper | En kart er en mappe med én OBJ per del. `Enumerate` gir bare filer |
+| 2026-11-15 | OBJ-loaderen (`ObjLoader`, `ObjGeometry`) eies av Kartster, ikke motoren | `ConsoleEngine` og `ConsoleEngine.Rendering3D` kjenner ikke hverandre. `ObjFile.Read` fikk en `TextReader`-variant |
+| 2026-11-15 | En mappe fra kommandolinjen får egen `AssetManager` med mappens forelder som rot (`KartsterAssets.OpenFolder`) | `GameBase.Assets` har fast rot. Med forelderen som rot når banemappen fortsatt `../Scenery` |
 
 ## 12. Åpne spørsmål
 

@@ -34,7 +34,7 @@ scripting loads the native `lua54.dll` that the KeraLua package ships for each r
 | Vector/matrix math | `Libs/Microsoft.Xna.Framework/` (copied from MonoGame, change only with good reason) |
 | ECS (entities, components, archetypes, chunks) | `ConsoleEngine/Ecs/`, design and phases in [`docs/design/ecs-plan.md`](docs/design/ecs-plan.md) |
 | 2D physics (bodies, circles/boxes/polygons, rotation, forces and torque (`Force`), broadphase, Soft Step contact solver, contact/sensor events, tile grid, sleeping, interpolation, raycasts and box casts, `CharacterMover.MoveAndSlide`) | `ConsoleEngine.Physics/` (own assembly and NuGet package, optional), rules in [`docs/agent/03-rules.md` § Physics](docs/agent/03-rules.md#physics), design and phases in [`docs/design/physics-plan.md`](docs/design/physics-plan.md). Examples: `Examples/PhysicsShowcase` (every feature), `Examples/PhysicsSandbox` (solver), `Examples/Asteroids.Ecs` (sensors, layers), `Examples/Platformer.Ecs` (tile grid, character controller) |
-| Asset loading (`GameBase.Assets`, `AssetManager`, `IAssetLoader<T>` for a game's own formats, `IAssetSource`) | `ConsoleEngine/Assets/`, rules in [`docs/agent/03-rules.md` § Assets](docs/agent/03-rules.md#assets), plan, phases and decision log in [`docs/design/asset-loader-plan.md`](docs/design/asset-loader-plan.md). Phases 0–3 are built (built-in loaders for text, lines, `.sprite`, JSON; `Scene.Assets` scopes released on unload; `AssetHandle<T>` for ECS components). A game's own loader: `Examples/TerraForM.Ecs/MapLoader.cs` (`IAssetLoader<Map>`, registered in `TerraformEcsGame.OnInitialize`, tested in `Examples/TerraForM.Ecs.Tests`) |
+| Asset loading (`GameBase.Assets`, `AssetManager`, `IAssetLoader<T>` for a game's own formats, `IAssetSource`) | `ConsoleEngine/Assets/`, rules in [`docs/agent/03-rules.md` § Assets](docs/agent/03-rules.md#assets), plan, phases and decision log in [`docs/design/asset-loader-plan.md`](docs/design/asset-loader-plan.md). Phases 0–3 are built (built-in loaders for text, lines, `.sprite`, JSON; `Scene.Assets` scopes released on unload; `AssetHandle<T>` for ECS components). A game's own loader: `Examples/TerraForM.Ecs/MapLoader.cs` (`IAssetLoader<Map>`, registered in `TerraformEcsGame.OnInitialize`, tested in `Examples/TerraForM.Ecs.Tests`). Kartster reads its karts, tracks and scenery through it too (`Examples/Kartster/Loading`: `KartsterAssets`, `ObjLoader`) |
 | Performance measurements | `ConsoleEngine.Benchmarks/` (BenchmarkDotNet) |
 | Exporting Kartster tracks (ribbon, spline, scenery, race markers, collision, power-up pads, terrain) from the original game | `tools/KartsterExport/` and its [`README.md`](tools/KartsterExport/README.md): `list`, `export <outDir> <trackId...>`, one `ITrackExporter` class per file. Not in the solution: needs the original's source (`KartsterRoot`, default `C:\Forse\kartster-server`) |
 | Lua scripting: components, `self` fields, hooks, errors, reload | [`docs/agent/03-rules.md § Lua`](docs/agent/03-rules.md#lua), `ConsoleEngine.Scripting/`, `Examples/Scripted` |
@@ -299,13 +299,16 @@ Examples/
                                   trees, buildings and lamps;
                                   written by tools/KartsterExport) and Assets/Scenery/ (Pipe.obj, TreeCrown,
                                   TreeTrunk, BroadleafCrown, BroadleafTrunk from Kartster, Box.obj), copied to output,
+                                  Loading/ (KartsterAssets: asset folders, Register, OpenFolder for a folder from the
+                                  command line; ObjLoader + ObjGeometry: .obj through GameBase.Assets),
                                   Bots/ (see above),
                                   Components/ (Kart with Index, PlayerKart, Bot),
                                   Ui/ (pixel UI kit: IPixelTarget, PaletteTarget, RgbTarget, PixelFont 3×5,
                                   TextFormat, Shapes, UiColors, Hud + HudState, Minimap, RaceResults, IKartsterMenus,
                                   IUiLayer, ViewEffects: glitch flip and smoke wash), Scenes/Menus/ (MenuScreen,
                                   MenuItem, MenuKeys, TitleScene, SelectKartScene, SelectTrackScene, ResultsScene)
-  Kartster.Tests/               KartModelTests, KartLodTests, TrackTests, ShippedTracksTests, SceneryTests, KartPhysicsSystemTests,
+  Kartster.Tests/               TestAssets (the shipped Assets/ as an AssetManager), Loading/KartsterAssetsTests,
+                                  KartModelTests, KartLodTests, TrackTests, ShippedTracksTests, SceneryTests, KartPhysicsSystemTests,
                                   KartFrameTests, KartInputSystemTests, Driving/KartDynamicsTests, Driving/KartReferenceTests,
                                   Driving/KartCatalogTests,
                                   Effects/EffectsTests (skid marks, slide smoke), Lighting/KartLightsTests, Race/ (RaceMarkersTests,

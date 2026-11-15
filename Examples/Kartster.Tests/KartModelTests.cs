@@ -16,19 +16,19 @@ public class KartModelTests
     [Test]
     public void Load_ShippedKart_SkipsMarkerParts()
     {
-        var mesh = KartModel.Load(Path.Combine("Assets", "Karts", "olabil"), Vector3.One);
+        var mesh = KartModel.Load(TestAssets.Shipped, TestAssets.Kart("olabil"), Vector3.One);
 
         Assert.That(mesh.TriangleCount, Is.GreaterThan(1000));
         Assert.That(mesh.TriangleColors, Has.Length.EqualTo(mesh.TriangleCount));
     }
 
     [TestCaseSource(nameof(ShippedKarts))]
-    public void Load_EveryShippedKart_HasTrianglesAndAColourForEveryPart(string folder)
+    public void Load_EveryShippedKart_HasTrianglesAndAColourForEveryPart(string kart)
     {
-        var mesh = KartModel.Load(folder, Player);
+        var mesh = KartModel.Load(TestAssets.Shipped, TestAssets.Kart(kart), Player);
 
         Assert.That(mesh.TriangleCount, Is.GreaterThan(0));
-        foreach (var file in Directory.GetFiles(folder, "*.obj"))
+        foreach (var file in Directory.GetFiles(Path.Combine(TestAssets.Root, "Karts", kart), "*.obj"))
         {
             var part = Path.GetFileNameWithoutExtension(file);
             if (!KartModel.IsDrawn(part))
@@ -61,7 +61,11 @@ public class KartModelTests
         Assert.That(recolored.TriangleColors[0], Is.EqualTo(KartModel.PartColor("muted_body", Vector3.UnitX)));
     }
 
-    private static IEnumerable<string> ShippedKarts() => Directory.GetDirectories(Path.Combine("Assets", "Karts"));
+    private static IEnumerable<string> ShippedKarts()
+    {
+        foreach (var folder in TestAssets.Shipped.EnumerateDirectories(TestAssets.Karts))
+            yield return folder.FileName;
+    }
 
     private static bool StartsWithAny(string part, string[] words) =>
         Array.Exists(words, word => part.StartsWith(word, StringComparison.OrdinalIgnoreCase));

@@ -18,9 +18,8 @@ namespace Kartster.Tests.Collision;
 public class TrackCollisionTests
 {
     private const float Step = TrackScene.StepSeconds;
-    private static readonly string TracksFolder = Path.Combine("Assets", "Tracks");
 
-    private static readonly Lazy<Track> StarCircuit = new(() => Track.Load(TracksFolder, "star-circuit"));
+    private static readonly Lazy<Track> StarCircuit = new(() => TestAssets.Track("star-circuit"));
 
     //** parsing
 
@@ -53,7 +52,7 @@ public class TrackCollisionTests
     [Test]
     public void Load_NoFile_IsEmpty()
     {
-        var collision = TrackCollision.Load(TracksFolder, "no-such-track");
+        var collision = TestAssets.Collision("no-such-track");
 
         Assert.That(collision, Is.SameAs(TrackCollision.Empty));
     }
@@ -61,7 +60,7 @@ public class TrackCollisionTests
     [Test]
     public void Load_StarCircuit_HasOuterWallFencesAndPipes()
     {
-        var collision = TrackCollision.Load(TracksFolder, "star-circuit");
+        var collision = TestAssets.Collision("star-circuit");
         using var world = new World();
         var group = new SystemGroup(world);
         var physics = new PhysicsSystem();
@@ -170,13 +169,13 @@ public class TrackCollisionTests
     public void Race_ThreeBotsWithWalls_EveryBotCompletesALapWithoutGettingStuck(string id)
     {
         const int capSeconds = 150;
-        var track = id == "star-circuit" ? StarCircuit.Value : Track.Load(TracksFolder, id);
+        var track = id == "star-circuit" ? StarCircuit.Value : TestAssets.Track(id);
         using var world = new World();
         var tunings = Tunings(3);
-        var markers = RaceMarkers.Load(TracksFolder, id);
+        var markers = TestAssets.Markers(id);
         var race = TrackScene.CreateSession(track, markers, laps: 5);
         var karts = TrackScene.CreateKarts(world, track, markers, tunings, playerIndex: -1, race);
-        Assert.That(TrackCollision.Load(TracksFolder, id).AddTo(world), Is.GreaterThan(0), "the track has walls");
+        Assert.That(TestAssets.Collision(id).AddTo(world), Is.GreaterThan(0), "the track has walls");
         var group = new SystemGroup(world);
         TrackScene.AddDriving(group, track, tunings, race);
         var reversals = new int[karts.Length];
@@ -223,7 +222,7 @@ public class TrackCollisionTests
     [TestCase("brands-hatch-indy")] // the most posts
     public void FixedStep_SixKartsWithWalls_DoesNotAllocate(string id)
     {
-        var track = id == "star-circuit" ? StarCircuit.Value : Track.Load(TracksFolder, id);
+        var track = id == "star-circuit" ? StarCircuit.Value : TestAssets.Track(id);
         MeasureSixKarts(id, track, walls: true, out _); // warms the JIT up, so the two runs compare
         var withoutWalls = MeasureSixKarts(id, track, walls: false, out _);
         var withWalls = MeasureSixKarts(id, track, walls: true, out var allocated);
@@ -239,11 +238,11 @@ public class TrackCollisionTests
     {
         using var world = new World();
         var tunings = Tunings(6);
-        var markers = RaceMarkers.Load(TracksFolder, id);
+        var markers = TestAssets.Markers(id);
         var race = TrackScene.CreateSession(track, markers, laps: 5);
         var karts = TrackScene.CreateKarts(world, track, markers, tunings, playerIndex: 5, race);
         if (walls)
-            TrackCollision.Load(TracksFolder, id).AddTo(world);
+            TestAssets.Collision(id).AddTo(world);
         var group = new SystemGroup(world);
         TrackScene.AddDriving(group, track, tunings, race);
         world.Get<KartControls>(karts[5]) = new KartControls { Throttle = 1f, Steer = 0.2f };

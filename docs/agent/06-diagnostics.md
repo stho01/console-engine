@@ -128,9 +128,10 @@ using [04](04-flows.md).
 |---|---|---|
 | `PAUSED`, `RESUME`, `RESTART`, `QUIT TO TITLE`, `ENTER SELECT   ESC RESUME` (pause overlay) | `PauseMenu` constants | The race is paused (Enter or Esc) |
 | `FINISHING RACE` and `<n>/<karts> HOME` (full screen) | `RaceFinish.Draw` | The player finished 4 s ago; the karts still out are being run to the line (at most 2 × the winner's time + 30 s of race time, then DNF) |
-| `No kart folders in <full path>` | `KartsterGame.OnInitialize` (`DirectoryNotFoundException`) | The karts folder (default `Assets/Karts`, relative to the working directory) has no sub-folders |
-| `No kart parts (*.obj) in <folder>` | `KartModel.Load` (`InvalidDataException`) | A kart folder has no drawable OBJ parts |
-| `<path>:<line>: a face needs at least three corners` | `ObjFile.Read` (`InvalidDataException`) | Broken OBJ file |
+| `No kart folders in <full path>` | `KartsterGame.OnInitialize` (`DirectoryNotFoundException`) | The karts folder (default `Assets/Karts` next to the exe, read through `GameBase.Assets`; or the folder given as the first argument) has no sub-folders |
+| `No kart parts (*.obj) in <full path of the kart folder>` | `KartModel.Load` (`InvalidDataException`) | A kart folder has no drawable OBJ parts |
+| `<path>:<line>: a face needs at least three corners` | `ObjFile.Read` (`InvalidDataException`) | Broken OBJ file. In Kartster `<path>` is the asset path (`Karts/wagon/body.obj`) and it is the `InnerException` of "Failed to load asset … as ObjGeometry with ObjLoader" |
+| `Asset '<path>' not found at '<full path>'.` for `Tracks/<id>.ribbon.obj`, `Tracks/<id>.spline.obj` or `Tracks/<id>.race.txt` | `Track.Load`, `RaceMarkers.Load` (`AssetNotFoundException`) | A track's ribbon without its spline, or a file removed after the menu listed it ([P22](05-triage.md#p22)) |
 | `<id>.spline.obj needs at least two centerline points` | `Track.Load` (`InvalidDataException`) | Broken or empty track spline export |
 | `<file>:<line>: expected 'terrain originX originZ cellSize columns rows r g b'` | `Terrain.Parse` (`InvalidDataException`) | The first line of `<id>.terrain.txt` is not the header |
 | `<file>:<line>: needs a cell size above 0 and at least 2 columns and rows` | `Terrain.Parse` (`InvalidDataException`) | The header's grid is empty |
