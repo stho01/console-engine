@@ -11,7 +11,7 @@ public static class DoomTexts
     public const string TitleHint = "↑ ↓ pick a map   ENTER start   ESC quit";
     public const string TitleWad = "WAD: {0}";
     public const string TitleControls1 = "W S / ↑ ↓ move   A D strafe   ← → turn";
-    public const string TitleControls2 = "SPACE fire   E use   1-7 weapon   TAB map   F11 gamma   C colours";
+    public const string TitleControls2 = "SPACE fire   E use   1-7 weapon   TAB map   F11 gamma   C colours   V view";
 
     //**********************************************************
     //** resolution (plain console text before the game starts: ASCII only)
@@ -50,6 +50,10 @@ public static class DoomTexts
     public const string HudCells = "CELL";
     public const string HudKills = "K {0}/{1}  I {2}/{3}  S {4}/{5}";
     public const string HudDead = "YOU DIED - press SPACE or E to restart the level";
+    public const string HudView = "VIEW";
+    public const string HudViewBsp = "BSP";
+    public const string HudViewMesh = "3D MESH";
+    public const string HudFps = "FPS";
 
     //**********************************************************
     //** messages

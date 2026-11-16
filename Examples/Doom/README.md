@@ -63,6 +63,7 @@ report 24-bit colour (`COLORTERM`) gets the dither; `CONSOLE_ENGINE_COLORS=truec
 | TAB | Automap; PAGE UP / PAGE DOWN zoom |
 | F11 | Gamma |
 | C | Exact colours / 16-colour dither |
+| V | Switch the view: Doom's BSP renderer / the engine's 3D mesh renderer (see below) |
 | ESC | Back to the title; on the title, quit |
 
 ## What is in
@@ -76,6 +77,20 @@ report 24-bit colour (`COLORTERM`) gets the dither; `CONSOLE_ENGINE_COLORS=truec
   ceilings, crushers, teleports, exits, light specials, damaging and secret sectors; weapons from fist to BFG;
   pickups and power-ups; monsters that wake on sight or sound, chase, open doors, shoot, throw fireballs, bite and
   charge; barrels that explode; kills, items, secrets and an intermission between maps.
+
+## Two views: BSP and 3D mesh
+
+V switches between two renderers of the same level, to compare them; the HUD shows which one (`VIEW BSP` /
+`VIEW 3D MESH`) and the frame rate.
+
+- **BSP** (`WorldRenderer`, the default) works like Doom: columns front to back, textured walls and floors, light
+  that fades with distance.
+- **3D mesh** (`Rendering/Meshes/MeshRenderer`) turns the level into triangles and draws them with the engine's
+  `ConsoleEngine.Rendering3D` `Rasterizer`, the renderer Kartster uses. That renderer colours whole triangles and has
+  no textures, so walls and floors are cut into 8 × 8 texel blocks in their average colour (a mosaic), while
+  monsters and items stay texel-exact (one quad per run of a colour). Each sector and thing has one brightness: no
+  fading with distance. It costs far more CPU (E1M1: about 180 000 triangles a frame, 7–14 ms on an Apple-silicon
+  Mac, against under 0.5 ms for BSP). Built the first time you switch to it in a level.
 
 ## What is not (yet)
 
@@ -94,7 +109,8 @@ Doom's, not a port of its code. The exact numbers are in
 | `Play/` | `Level` (split into movement and map collision, combat, monster rules, the player and specials), `Player`, `ThingTypes`/`ThingInfo`, `Animator`, `Weapons`, `LineActions`, `SectorMover` |
 | `Components/` | The ECS components of a thing: `Thing` (kind, flags, state, health), `Body` (position, footprint, sector), `Momentum`, `Animation`, `Monster`, `Missile`, `Explosive`, `Collectible` |
 | `Systems/` | One tic of the things: `PickupSystem`, `MonsterSystem`, `MissileSystem`, `DyingSystem`, `StaticThingSystem`. `Level.Tick` runs them after the player |
-| `Rendering/` | `WorldRenderer`, `WeaponRenderer`, `Automap`, `Hud`, `Presenter`, `FrameBuffer`, `Camera` |
+| `Rendering/` | `IViewRenderer` (`ViewMode`), `WorldRenderer` (BSP), `WeaponRenderer`, `Automap`, `Hud`, `Presenter`, `FrameBuffer`, `Camera` |
+| `Rendering/Meshes/` | The 3D mesh view: `MeshRenderer`, `LevelMeshes` (sector meshes), `SubsectorPolygons` (floor shapes from the BSP), `ConvexPolygon`, `BlockColors` (texture mosaics), `SpriteMeshes`, `MeshBuilder`, `PaletteQuantizer` (24-bit → palette) |
 | `Scenes/` | `TitleScene`, `LevelScene`, `IntermissionScene`, `MissingWadScene` |
 
 Tests (`Examples/Doom.Tests`) build a tiny WAD in memory (`Fakes/TestWad`) with two rooms and a door, and play it tic

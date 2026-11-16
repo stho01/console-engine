@@ -13,7 +13,7 @@ namespace Doom.Rendering;
 /// See-through middle textures and sprites are drawn last against the depth buffer. Lighting picks a
 /// <c>COLORMAP</c> table from the sector light and the distance. Nothing is allocated per frame.
 /// </summary>
-public sealed class WorldRenderer
+public sealed class WorldRenderer : IViewRenderer
 {
     //**********************************************************
     //** fields

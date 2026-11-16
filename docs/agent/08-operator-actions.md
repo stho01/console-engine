@@ -66,6 +66,7 @@ team's process differs.
 | Doom | SPACE (held) / E or ENTER / 1-7 / R | Fire / use (doors, switches) / pick a weapon slot / toggle run | `LevelScene`, `Level.PlayerThink` |
 | Doom | C (any screen) | Exact 24-bit colours (default, where the terminal supports them) / 16-colour dither | `DoomGame.OnUpdate` |
 | Doom | TAB / PAGE UP, PAGE DOWN / F11 | Automap on/off / automap zoom / next gamma level | `LevelScene.ReadToggles` |
+| Doom | V (in a level) | Switch the view between Doom's BSP renderer and the engine's 3D mesh renderer (`ConsoleEngine.Rendering3D`); stays for the next maps | `LevelScene.ReadToggles`, `DoomGame.ViewMode` |
 | Doom | ESC | In a level or between maps: back to the title. On the title or the missing-WAD screen: quit | `LevelScene`, `TitleScene` |
 | Doom (no code) | Put `DOOM1.WAD` next to `Doom.exe`, or set `DOOM_WAD` | Gives the game a WAD to play | `WadLocator` |
 | Scripted | ←→↑↓ | Move the player | `player.lua` |

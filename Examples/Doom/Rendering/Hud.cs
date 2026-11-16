@@ -1,12 +1,14 @@
 using System;
+using ConsoleEngine.Infrastructure;
 using ConsoleEngine.Infrastructure.Rendering;
 using Doom.Play;
 
 namespace Doom.Rendering;
 
 /// <summary>
-/// The text status bar below the view: health, armor, ammo, weapons, keys, the map name and level stats, and the
-/// latest message. Numbers are written into a reused buffer, so drawing it allocates nothing.
+/// The text status bar below the view: health, armor, ammo, weapons, keys, the map name and level stats, the
+/// renderer (V) with the frame rate, and the latest message. Numbers are written into a reused buffer, so drawing it
+/// allocates nothing.
 /// </summary>
 public sealed class Hud
 {
@@ -20,6 +22,9 @@ public sealed class Hud
     private const ConsoleColor MessageColor = ConsoleColor.Yellow;
     private const ConsoleColor BarColor = ConsoleColor.DarkRed;
 
+    /// <summary>Columns from the right edge where the renderer name and frame rate start.</summary>
+    private const int ViewWidth = 26;
+
     private static readonly AmmoType[] AmmoTypes = [AmmoType.Bullets, AmmoType.Shells, AmmoType.Rockets, AmmoType.Cells];
     private static readonly string[] AmmoLabels = [DoomTexts.HudBullets, DoomTexts.HudShells, DoomTexts.HudRockets,
         DoomTexts.HudCells];
@@ -30,7 +35,7 @@ public sealed class Hud
     //** public methods
     //**********************************************************
 
-    public void Draw(RenderConsole console, Level level, string mapName, int top)
+    public void Draw(RenderConsole console, Level level, string mapName, int top, ViewMode viewMode = ViewMode.Bsp)
     {
         var player = level.Player;
         for (var x = 0; x < console.Width; x++)
@@ -92,6 +97,11 @@ public sealed class Hud
         x0 = Label(console, x0, row, "S");
         x0 = Number(console, x0, row, stats.Secrets, ValueColor, "/");
         Number(console, x0 - 1, row, stats.TotalSecrets, ValueColor, "");
+
+        x0 = Label(console, console.Width - ViewWidth, row, DoomTexts.HudView);
+        var view = viewMode == ViewMode.Mesh ? DoomTexts.HudViewMesh : DoomTexts.HudViewBsp;
+        console.Draw(x0, row, view, ConsoleColor.Cyan);
+        Number(console, x0 + view.Length + 2, row, GameTime.Fps, ValueColor, DoomTexts.HudFps);
 
         row++;
         if (player.Dead)

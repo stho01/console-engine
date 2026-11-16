@@ -3,6 +3,7 @@ using System.IO;
 using ConsoleEngine;
 using ConsoleEngine.Abstractions.Inputs;
 using ConsoleEngine.Infrastructure.Inputs;
+using Doom.Rendering;
 using Doom.Scenes;
 using Doom.Wad;
 
@@ -23,6 +24,9 @@ public class DoomGame(Layout layout)
 
     /// <summary>The screen size picked at start-up.</summary>
     public Layout Layout { get; } = layout;
+
+    /// <summary>Which renderer draws the view; V switches it while playing, and it carries over to the next map.</summary>
+    public ViewMode ViewMode { get; set; } = ViewMode.Bsp;
 
     /// <summary>The loaded WAD, or null when none was found.</summary>
     public GameAssets Wad { get; private set; }

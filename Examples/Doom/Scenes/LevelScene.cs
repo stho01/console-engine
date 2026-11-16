@@ -7,6 +7,7 @@ using Doom.Graphics;
 using Doom.Maps;
 using Doom.Play;
 using Doom.Rendering;
+using Doom.Rendering.Meshes;
 
 namespace Doom.Scenes;
 
@@ -34,6 +35,7 @@ public sealed class LevelScene(string mapName, PlayerLoadout loadout) : Scene<Do
     private Level _level;
     private FrameBuffer _frame;
     private WorldRenderer _world;
+    private MeshRenderer _mesh; // built the first time the view is switched to it
     private WeaponRenderer _weapon;
     private Automap _automap;
     private readonly Hud _hud = new();
@@ -62,7 +64,11 @@ public sealed class LevelScene(string mapName, PlayerLoadout loadout) : Scene<Do
         _sky = assets.SkyFor(mapName);
     }
 
-    public override void OnUnload() => _level.Dispose();
+    public override void OnUnload()
+    {
+        _level.Dispose();
+        _mesh?.Dispose();
+    }
 
     public override void OnUpdate()
     {
@@ -113,18 +119,27 @@ public sealed class LevelScene(string mapName, PlayerLoadout loadout) : Scene<Do
         {
             ref var body = ref _level.PlayerBody;
             var fixedLight = FixedLight(player);
-            _world.Render(_level, new Camera(body.X, body.Y, player.ViewZ, body.Angle), _sky, fixedLight);
+            ViewRenderer().Render(_level, new Camera(body.X, body.Y, player.ViewZ, body.Angle), _sky, fixedLight);
             _weapon.Draw(player, _level.Tic, _level.Map.Sectors[body.Sector].LightLevel, fixedLight);
         }
 
         var assets = Game.Wad;
         Presenter.Present(_frame, assets.Shades, player.TintPalette(), Console);
-        _hud.Draw(Console, _level, mapName, Game.Layout.HudTop);
+        _hud.Draw(Console, _level, mapName, Game.Layout.HudTop, Game.ViewMode);
     }
 
     //**********************************************************
     //** internals
     //**********************************************************
+
+    private IViewRenderer ViewRenderer()
+    {
+        if (Game.ViewMode == ViewMode.Bsp)
+            return _world;
+
+        var assets = Game.Wad;
+        return _mesh ??= new MeshRenderer(_frame, assets.Palette, assets.Textures, _level.Map);
+    }
 
     private int FixedLight(Player player)
     {
@@ -141,6 +156,8 @@ public sealed class LevelScene(string mapName, PlayerLoadout loadout) : Scene<Do
     {
         if (input.GetKey(Key.TAB).Pressed)
             _showAutomap = !_showAutomap;
+        if (input.GetKey(Key.V).Pressed)
+            Game.ViewMode = Game.ViewMode == ViewMode.Bsp ? ViewMode.Mesh : ViewMode.Bsp;
         if (input.GetKey(Key.F11).Pressed)
             Game.Wad.Shades.SetGamma(Game.Wad.Shades.GammaLevel + 1);
         if (input.GetKey(Key.PRIOR).Pressed)

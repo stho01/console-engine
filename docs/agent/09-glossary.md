@@ -130,3 +130,4 @@ Support/user words are **[inferred]**. The team may also use Norwegian terms. Ad
 | special / tag (Doom) | A line's action number (door, lift, exit…) and the sector tag it acts on | `Line.Special`, `LineActions`, `Sector.Tag` |
 | tic (Doom) | 1/35 s, the game's fixed time step | `Level.TicRate` |
 | gamma (Doom) | How much the WAD colours are brightened before matching the console's 16 (F11) | `ConsoleShades.GammaLevels` |
+| view, BSP view, mesh view (Doom) | Which renderer draws the level (V): `WorldRenderer` (Doom's column renderer) or `MeshRenderer` (the level as triangles on `ConsoleEngine.Rendering3D`) | `ViewMode`, `IViewRenderer` |

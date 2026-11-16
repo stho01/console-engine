@@ -1,0 +1,200 @@
+using System;
+using System.Linq;
+using ConsoleEngine.Rendering3D;
+using Doom.Graphics;
+using Doom.Play;
+using Doom.Rendering;
+using Doom.Rendering.Meshes;
+using Doom.Tests.Fakes;
+using NUnit.Framework;
+
+namespace Doom.Tests;
+
+public class MeshRenderingTests
+{
+    /// <summary>The test map's sectors are lit 160: Doom's light table 8 of 32 at the renderer's light distance.</summary>
+    private const float SectorBrightness = 0.75f;
+
+    /// <summary>The door faces along x, so it is drawn a little lighter (Doom's fake contrast).</summary>
+    private const float DoorShade = 1.1f;
+
+    private Level _level;
+    private MeshRenderer _renderer;
+
+    [TearDown]
+    public void DisposeLevel()
+    {
+        _level?.Dispose();
+        _renderer?.Dispose();
+    }
+
+    private (Level Level, MeshRenderer Renderer, FrameBuffer Frame) Setup(Layout layout = null)
+    {
+        layout ??= Layout.Standard;
+        var (_, palette, textures, _) = TestWad.Load();
+        var level = _level = TestWad.CreateLevel();
+        var frame = new FrameBuffer(layout.ViewWidth, layout.ViewHeight);
+        _renderer = new MeshRenderer(frame, palette, textures, level.Map);
+        return (level, _renderer, frame);
+    }
+
+    private static Camera CameraOf(Level level)
+    {
+        ref var body = ref level.PlayerBody;
+        return new Camera(body.X, body.Y, level.Player.ViewZ, body.Angle);
+    }
+
+    private static int Lit(byte color, float shade = 1) => (int)MathF.Round(color * SectorBrightness * shade);
+
+    /// <summary>Triangles that are not padding (padding repeats one corner).</summary>
+    private static int RealTriangles(Mesh mesh)
+    {
+        if (mesh == null)
+            return 0;
+
+        var count = 0;
+        for (var t = 0; t < mesh.TriangleCount; t++)
+        {
+            if (mesh.Indices[t * 3] != mesh.Indices[t * 3 + 1])
+                count++;
+        }
+
+        return count;
+    }
+
+    [Test]
+    public void Build_TestMap_SubsectorPolygonsCoverTheRooms()
+    {
+        using var level = TestWad.CreateLevel();
+
+        var polygons = SubsectorPolygons.Build(level.Map);
+
+        var areas = polygons.Select(p => ConvexPolygon.DoubleArea(p.ToList()) / 2).ToArray();
+        Assert.That(areas, Is.EqualTo(new[] { 256f * 256, 16f * 64, 128f * 256 }).Within(0.5f));
+    }
+
+    [Test]
+    public void Build_TestMap_SkyCeilingIsItsOwnUnlitMesh()
+    {
+        var (level, renderer, _) = Setup();
+
+        var sky = renderer.LevelMeshes.Sectors[2].Sky;
+
+        Assert.That(sky, Is.Not.Null);
+        Assert.That(sky.IsUnlit, Is.True);
+        Assert.That(sky.TriangleColors, Has.All.EqualTo(LevelMeshes.SkyColor));
+        Assert.That(renderer.LevelMeshes.Sectors[0].Sky, Is.Null);
+        Assert.That(level.Map.Sectors, Has.Length.EqualTo(3));
+    }
+
+    [Test]
+    public void Render_FacingClosedDoor_DrawsCeilingWallAndFloor()
+    {
+        var (level, renderer, frame) = Setup();
+
+        renderer.Render(level, CameraOf(level), -1);
+
+        var middle = frame.Width / 2;
+        Assert.That(frame.Get(middle, 0), Is.EqualTo(Lit(TestWad.CeilingColor)).Within(2));
+        Assert.That(frame.Get(middle, frame.Height / 2), Is.EqualTo(Lit(TestWad.WallColor, DoorShade)).Within(2));
+        Assert.That(frame.Get(middle, frame.Height - 1), Is.EqualTo(Lit(TestWad.FloorColor)).Within(2));
+    }
+
+    [TestCase(false)]
+    [TestCase(true)]
+    public void Render_EveryDirection_LeavesNoHole(bool high)
+    {
+        var (level, renderer, frame) = Setup(high ? Layout.High : Layout.Standard);
+        var body = level.PlayerBody;
+
+        for (var turn = 0; turn < 16; turn++)
+        {
+            renderer.Render(level, new Camera(body.X, body.Y, level.Player.ViewZ, turn * MathF.PI / 8), -1);
+            for (var i = 0; i < frame.Pixels.Length; i++)
+                Assert.That(frame.Pixels[i], Is.Not.Zero, $"turn {turn}, pixel {i % frame.Width}, {i / frame.Width}");
+        }
+    }
+
+    [Test]
+    public void Render_UnderSkyCeiling_DrawsTheSkyPicture()
+    {
+        var (level, renderer, frame) = Setup();
+        var (_, _, textures, _) = TestWad.Load();
+        var sky = textures.FindTexture("STARTAN");
+
+        renderer.Render(level, new Camera(336, 10, 41, MathF.PI / 2), sky);
+
+        Assert.That(frame.Get(frame.Width / 2, 0), Is.EqualTo(TestWad.WallColor));
+    }
+
+    [Test]
+    public void Render_ThingInView_DrawsItsSprite()
+    {
+        var (level, renderer, frame) = Setup();
+
+        renderer.Render(level, new Camera(10, 128, 41, 0), -1);
+
+        // The stimpack (4 × 4, colour 200) at x = 96 on the floor, 86 units ahead: rows 84 to 88.
+        Assert.That(frame.Get(frame.Width / 2, 86), Is.EqualTo(Lit(200)).Within(2));
+    }
+
+    [Test]
+    public void Render_FixedLight_UsesTheLightTable()
+    {
+        var (level, renderer, frame) = Setup();
+
+        renderer.Render(level, CameraOf(level), -1, fixedLight: 0);
+
+        Assert.That(frame.Get(frame.Width / 2, frame.Height / 2), Is.EqualTo(TestWad.WallColor * DoorShade).Within(2));
+    }
+
+    [Test]
+    public void Update_DoorOpened_RebuildsTheWallsAroundIt()
+    {
+        var (level, renderer, _) = Setup();
+        var walls = renderer.LevelMeshes.Sectors[0];
+        var closed = RealTriangles(walls.Walls);
+
+        level.Map.Sectors[TestWad.DoorSector].CeilingHeight = 128;
+        renderer.LevelMeshes.Update();
+
+        Assert.That(RealTriangles(walls.Walls), Is.LessThan(closed));
+        Assert.That(RealTriangles(renderer.LevelMeshes.Sectors[TestWad.DoorSector].Walls), Is.GreaterThan(0));
+    }
+
+    [Test]
+    public void Render_SeenSectors_AreMarkedForTheAutomap()
+    {
+        var (level, renderer, _) = Setup();
+
+        renderer.Render(level, CameraOf(level), -1);
+
+        Assert.That(level.Map.Lines[4].Mapped, Is.True);
+    }
+
+    [Test]
+    public void Render_SteadyState_DoesNotAllocate()
+    {
+        var (level, renderer, _) = Setup();
+        var camera = new Camera(10, 128, 41, 0);
+        renderer.Render(level, camera, 0);
+        renderer.Render(level, camera, 0);
+
+        var before = GC.GetAllocatedBytesForCurrentThread();
+        renderer.Render(level, camera, 0);
+        var allocated = GC.GetAllocatedBytesForCurrentThread() - before;
+
+        Assert.That(allocated, Is.Zero);
+    }
+
+    [Test]
+    public void Nearest_PaletteExtremesAndGreys_AreTheClosestColours()
+    {
+        var (_, palette, _, _) = TestWad.Load();
+        var quantizer = new PaletteQuantizer(palette);
+
+        Assert.That(quantizer.Nearest(0x000000), Is.LessThanOrEqualTo(2));
+        Assert.That(quantizer.Nearest(0xFFFFFF), Is.GreaterThanOrEqualTo(253));
+        Assert.That(quantizer.Nearest(0x646464), Is.EqualTo(100).Within(2));
+    }
+}
