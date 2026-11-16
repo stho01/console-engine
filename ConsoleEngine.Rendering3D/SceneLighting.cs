@@ -7,7 +7,9 @@ namespace ConsoleEngine.Rendering3D;
 /// The light an <see cref="IRenderer3D"/> draws with (<see cref="IRenderer3D.Lighting"/>): an ambient, a directional
 /// sun (its direction is <c>Draw</c>'s <c>toLight</c>) and up to <see cref="MaxLights"/> <see cref="PointLight"/>s.
 /// A lit triangle's colour is <c>albedo · (Ambient + SunColor · max(0, n·toLight))</c>, flat, plus per pixel
-/// <c>albedo · Σ light</c>. Unlit meshes ignore all of it. Allocates nothing after construction: fill it each frame.
+/// <c>albedo · Σ light</c>. Then <see cref="FogEnd"/> above <see cref="FogStart"/> fades lit pixels towards
+/// <see cref="FogColor"/> with their distance along the view (linear, per pixel). Unlit meshes ignore all of it.
+/// Allocates nothing after construction: fill it each frame.
 /// </summary>
 public sealed class SceneLighting
 {
@@ -32,6 +34,24 @@ public sealed class SceneLighting
 
     public Vector3 Ambient { get; set; } = DefaultAmbient;
     public Vector3 SunColor { get; set; } = DefaultSunColor;
+
+    /// <summary>What lit pixels fade to with distance; black by default (darkness).</summary>
+    public Vector3 FogColor { get; set; }
+
+    /// <summary>The view distance (world units) where the fog begins.</summary>
+    public float FogStart { get; set; }
+
+    /// <summary>
+    /// The view distance where a pixel is all <see cref="FogColor"/>; at or below <see cref="FogStart"/>: no fog.
+    /// </summary>
+    public float FogEnd { get; set; }
+
+    /// <summary>Whether there is fog (<see cref="FogEnd"/> beyond <see cref="FogStart"/>).</summary>
+    public bool HasFog => FogEnd > FogStart;
+
+    /// <summary>How much <see cref="FogColor"/> a pixel at <paramref name="distance"/> along the view gets, 0..1.</summary>
+    public float FogAmount(float distance) =>
+        HasFog ? Math.Clamp((distance - FogStart) / (FogEnd - FogStart), 0f, 1f) : 0f;
 
     public int LightCount { get; private set; }
 

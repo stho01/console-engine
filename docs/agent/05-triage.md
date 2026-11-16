@@ -5,7 +5,7 @@
 
 | Fact | Why | How to get it |
 |---|---|---|
-| **Which game** (TerraForM, Snake, Asteroids, Platformer, ConsoleGame, their `.Ecs` ports, Swarm, PhysicsSandbox, PhysicsShowcase, EternalDigger, SkyStack, Starguard, Scripted, Kartster, or their own game on `ConsoleEngine`) | Rules differ per game ([03](03-rules.md)) | Ask, or the exe name |
+| **Which game** (TerraForM, Snake, Asteroids, Platformer, ConsoleGame, their `.Ecs` ports, Swarm, PhysicsSandbox, PhysicsShowcase, EternalDigger, SkyStack, Starguard, Scripted, Kartster, Doom, or their own game on `ConsoleEngine`) | Rules differ per game ([03](03-rules.md)) | Ask, or the exe name |
 | **OS and console host** | Windows only. Windows Terminal ignores the sizing/font calls **[external]** | [07 § Q1, Q2](07-checks.md#q1) |
 | **How it was launched and from which folder** (double-click the exe, `dotnet run`, IDE, a shortcut, a terminal in another folder) | The logger exe is found by **relative path**. Map files are read next to the exe, so the folder doesn't matter for them | [07 § Q3](07-checks.md#q3) |
 | **The exact error text**, if any | There are no log files. The exception printed to the console is the only record | Ask them to start it from an already-open terminal so the text stays ([06 § Capturing a crash](06-diagnostics.md#capture)) |
@@ -388,3 +388,33 @@ Applies to code that loads through `GameBase.Assets` (TerraForM, TerraForM.Ecs, 
    gives them) or the dependency that failed. Fix the file or the loader. Stop.
 4. `A loader for … is already registered` → a game registered a second loader for the same type and extension; the
    built-in `TextLoader`/`LinesLoader` already own `txt` for `string`/`string[]`. Use another type or extension. Stop.
+
+<a id="p23"></a>
+## P23 — Doom: no WAD, unreadable WAD, too dark, speckled, laggy, door won't open, can't find the exit
+
+**Symptom [inferred]:** "it says DOOM1.WAD NOT FOUND", "COULD NOT LOAD THE WAD", "it's too dark to see", "the door
+won't open", "I can't find the exit". Rules: [03 § Doom](03-rules.md#doom).
+
+1. `DOOM1.WAD NOT FOUND` → the WAD is not shipped with the repository. Run [Q18](07-checks.md#q18). Put the shareware
+   `DOOM1.WAD` next to `Doom.exe` (or in a `wad` folder there), or set `DOOM_WAD` to its full path
+   (`WadLocator.Candidates` lists every place tried, also shown on screen). Stop.
+2. `COULD NOT LOAD THE WAD` + a message → the file is not a WAD or is cut short (`WadFile.Parse`, `MapLoader`,
+   `Picture.Decode` messages in [06](06-diagnostics.md#doom-text)). Get a fresh copy. Stop.
+3. Too dark / colours muddy / checkerboard speckle and black dots → the game is in 16-colour mode: each WAD colour is
+   a dithered mix of two console colours (`ConsoleShades`), and a terminal whose 16 colours differ from the classic
+   console's (macOS, Linux themes) makes the mixes loud. 24-bit colour removes the dither: Doom asks for it at start
+   (`RenderConsole.TrueColor`); it is only shown when the terminal reports it (`COLORTERM` = `truecolor`/`24bit`, or
+   set `CONSOLE_ENGINE_COLORS=truecolor`; Windows 10 1607+). C switches between exact and dithered colours. Then
+   press F11 to raise the gamma (`ConsoleShades.GammaLevels`). Stop.
+3a. Laggy / low frame rate with 24-bit colour → **Cause:** a textured Doom frame changes colour in almost every cell,
+   so the VT text per frame is large (four times as large at 320 × 200 as at 160 × 100), and how fast the terminal
+   parses it decides the frame rate. Checked by the owner on macOS (2026-11-16, by eye): kitty (GPU-drawn) plays
+   smoothly at 320 × 200; Terminal.app shows the colours correctly but is very laggy at 320 × 200 and plays "ok" at
+   160 × 100. Windows 11 Command Prompt (checked by the owner, 2026-11-16): plays and renders well at 320 × 200 and
+   160 × 100, in 24-bit and with the dither. Windows Terminal not checked separately. **Fix:** pick 160 × 100 at
+   start-up (`--resolution 160x100`), use a GPU terminal (kitty), or press C for the 16-colour dither. Stop.
+4. Door won't open → stand in front of it (within 64 units) and press E or ENTER; keyed doors need that key
+   (`You need a … key to open this.`). Some doors open from a switch or a walk-over line elsewhere, and line specials
+   not in `LineActions` do nothing. Escalate with the map name and place if a needed special is missing. Stop.
+5. Can't find the exit → TAB shows the automap of the walls seen so far. Exits are switches (special 11/51) or
+   walk-over lines (52/124). Stop.

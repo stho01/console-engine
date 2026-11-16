@@ -36,6 +36,7 @@
       <ProjectReference Include="..\Scripted\Scripted.csproj" />
       <ProjectReference Include="..\Starguard\Starguard.csproj" />
       <ProjectReference Include="..\Kartster\Kartster.csproj" />
+      <ProjectReference Include="..\Doom\Doom.csproj" />
     </ItemGroup>
 
     <ItemGroup>

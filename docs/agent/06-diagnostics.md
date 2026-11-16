@@ -250,6 +250,23 @@ using [04](04-flows.md).
 | `COMBO <floors> FLOORS  +<points>` (yellow, 2 s) | `MessageRenderSystem.DrawComboResult` | A combo of 2+ jumps paid out |
 | `YOU FELL!`, `FLOOR`, `SCORE`, `BEST COMBO`, `NEW BEST!`, `SPACE  climb again`, `ESC    title` | `MessageRenderSystem.DrawGameOver` | Game-over box; the two key lines appear after 0.75 s |
 
+<a id="doom-text"></a>
+### Doom screen text (`DoomTexts`)
+
+| Text | Where | Meaning |
+|---|---|---|
+| `D O O M   ( c o n s o l e )`, `WAD: <path>`, map names, `↑ ↓ pick a map   ENTER start   ESC quit`, `W S / ↑ ↓ move   A D strafe   ← → turn`, `SPACE fire   E use   1-7 weapon   TAB map   F11 gamma   C colours   V view` | `TitleScene` | Title screen |
+| `DOOM (console): pick a resolution`, `  1  160 x 100   6 x 12 font (default)`, `  2  320 x 200   3 x 6 font, Doom's own resolution`, `     Needs a console 320 columns wide. If it doesn't fit, zoom out with`, `     Ctrl + "-" (Cmd + "-" on macOS); Ctrl / Cmd + "+" zooms back in.`, `Press 1 or 2 (ENTER = 1). Or start with --resolution 160x100 / 320x200.` | `ResolutionPrompt.Choose` (plain `System.Console`, before the game window is set up) | Start-up resolution choice; not shown with `--resolution` or redirected input |
+| `DOOM1.WAD NOT FOUND`, `This example plays the levels of the shareware Doom WAD,`, `which is not part of this repository. Get DOOM1.WAD (shareware v1.9)`, `and put it next to Doom.exe, or set the DOOM_WAD environment variable`, `to its full path. Places searched:` + the paths, `ESC quit` | `MissingWadScene` | No WAD found |
+| `COULD NOT LOAD THE WAD` + the exception message | `MissingWadScene` | The WAD could not be read |
+| `HEALTH <n>%`, `ARMOR <n>%`, `AMMO <n>` + weapon name (`FIST`, `CHAINSAW`, `PISTOL`, `SHOTGUN`, `CHAINGUN`, `ROCKET L.`, `PLASMA`, `BFG`), `BULL`/`SHEL`/`RCKT`/`CELL <n>/<max>`, `KEYS` + `■`/`·` per key, owned weapon slots, map name, `K <kills>/<total>  I <items>/<total>  S <secrets>/<total>`, `VIEW` + `BSP` or `3D MESH` + `<n>FPS` at the right | `Hud` | HUD rows below the view |
+| `YOU DIED - press SPACE or E to restart the level` | `Hud` | The player is dead |
+| `You need a blue key to open this.` (yellow, red) | `Level.ActivateLine` | Keyed door or switch without the key |
+| `SECRET FOUND` | `Level.TickSectorSpecial` | Entered a secret sector |
+| `+10 health (stimpack)`, `+25 health (medikit)`, `+1 health`, `+100 health (soul sphere)`, `+1 armor`, `Armor (100)`, `Mega armor (200)`, `Bullets`, `Shells`, `Rockets`, `Cells`, `Backpack: more ammo room`, `Blue key`, `Yellow key`, `Red key`, `Chainsaw!`, `Shotgun!`, `Chaingun!`, `Rocket launcher!`, `Plasma gun!`, `BFG!`, `Berserk!`, `Invulnerability!`, `Radiation suit`, `Partial invisibility`, `Computer map`, `Light amplification goggles` | `Level.TryPickup` | Pickup messages (4 s) |
+| `<map> FINISHED`, `KILLS   <n>%`, `ITEMS   <n>%`, `SECRETS <n>%`, `TIME    <m>:<ss>`, `ENTER  on to <map>` or `EPISODE COMPLETE - thanks for playing!` + `ENTER  back to the title` | `IntermissionScene` | Between maps |
+| `Not a WAD file: shorter than its 12 byte header.`, `Not a WAD file: it starts with "<id>" instead of IWAD or PWAD.`, `Broken WAD file: the lump directory lies outside the file.`, `Broken WAD file: lump <name> lies outside the file.`, `The WAD has no lump named <name>.`, `Lump <name> is too short.`, `The WAD has no map <map>.`, `Map <map> has no <lump> lump.`, `Broken picture lump: <name>.` | `InvalidDataException` from `WadFile`, `Palette`, `MapLoader`, `Picture` | Shown under `COULD NOT LOAD THE WAD` at start-up; a broken map lump while starting a level crashes the game |
+
 ### TerraForM screen text (`HudTexts`, `Assets/Sprites/*.sprite`)
 
 | Text | Where | Meaning |

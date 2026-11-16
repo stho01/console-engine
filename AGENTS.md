@@ -38,7 +38,7 @@ scripting loads the native `lua54.dll` that the KeraLua package ships for each r
 | Performance measurements | `ConsoleEngine.Benchmarks/` (BenchmarkDotNet; CPU vs. GPU 3D frames in `Rendering3D/RendererBenchmarks`, results in its `README.md`) |
 | Exporting Kartster tracks (ribbon, spline, scenery, race markers, collision, power-up pads, terrain) from the original game | `tools/KartsterExport/` and its [`README.md`](tools/KartsterExport/README.md): `list`, `export <outDir> <trackId...>`, one `ITrackExporter` class per file. Not in the solution: needs the original's source (`KartsterRoot`, default `C:\Forse\kartster-server`) |
 | Lua scripting: components, `self` fields, hooks, errors, reload | [`docs/agent/03-rules.md § Lua`](docs/agent/03-rules.md#lua), `ConsoleEngine.Scripting/`, `Examples/Scripted` |
-| 3D rendering (`IRenderer3D`, software `Rasterizer`, OpenGL `GlRenderer`, near-plane clipping, OBJ models, 16-colour dithering or 24-bit true colour with alpha blending, lighting: `SceneLighting` ambient + sun + up to 16 per-pixel point/spot `PointLight`s) | `ConsoleEngine.Rendering3D/` (own assembly and NuGet package, optional), GPU renderer in `ConsoleEngine.Rendering3D.OpenGL/` (same picture; callers fall back to `Rasterizer` when `GlRenderer.TryCreate` fails), GPU plan in [`docs/design/gpu-rendering-plan.md`](docs/design/gpu-rendering-plan.md), rules in [`docs/agent/03-rules.md`](docs/agent/03-rules.md) (Kartster rows, "3D (any game)" lighting row); Kartster's headlights, night and blob shadows in `Examples/Kartster/Lighting/` |
+| 3D rendering (`IRenderer3D`, software `Rasterizer`, OpenGL `GlRenderer`, near-plane clipping, OBJ models, 16-colour dithering or 24-bit true colour with alpha blending, textures (`MeshTexture`, CPU only so far), lighting: `SceneLighting` ambient + sun + up to 16 per-pixel point/spot `PointLight`s + distance fog) | `ConsoleEngine.Rendering3D/` (own assembly and NuGet package, optional), GPU renderer in `ConsoleEngine.Rendering3D.OpenGL/` (same picture; callers fall back to `Rasterizer` when `GlRenderer.TryCreate` fails), GPU plan in [`docs/design/gpu-rendering-plan.md`](docs/design/gpu-rendering-plan.md), rules in [`docs/agent/03-rules.md`](docs/agent/03-rules.md) (Kartster rows, "3D (any game)" lighting row); Kartster's headlights, night and blob shadows in `Examples/Kartster/Lighting/`. Doom's switchable mesh view (`Examples/Doom/Rendering/Meshes/MeshRenderer`) draws a BSP map on the CPU `Rasterizer` |
 | Why KeraLua, and what Lua costs per entity | `ConsoleEngine.Benchmarks/README.md` |
 | How to use the engine | `Examples/Snake` (smallest), `Examples/TerraForM` (scenes, assets, tests), `Examples/<Game>.Ecs` (ECS port of each game: components, systems, queries, `EcsScene`; compare with `Examples/<Game>`. `Snake.Ecs` is the smallest, `TerraForM.Ecs` the fullest), `Examples/Swarm` (ECS at scale, system ordering attributes), `Examples/PhysicsSandbox` (physics: bodies, colliders, fixed step, kinematic platform), `Examples/PhysicsShowcase` (every physics feature), `Examples/EternalDigger` (a full original ECS game: endless grid world, particle effects, lighting; start at [`Examples/EternalDigger/README.md`](Examples/EternalDigger/README.md), design contract in [`docs/design/eternal-digger.md`](docs/design/eternal-digger.md)), `Examples/Starguard` (ECS-only game with every system unit-tested through `Starguard.Tests/Battle`) |
 | Build/test pipeline | `.github/workflows/build-and-test.yml` |
@@ -61,7 +61,7 @@ Every name in `docs/agent/` is grep-able. Search for the identifier you are inte
 | `ConsoleEngine.CrossPlatform` | `Libs/ConsoleEngine.CrossPlatform/` | Library: ANSI/VT terminal handlers (macOS, Linux) | Abstractions |
 | `ConsoleEngine.Logger` | `Libs/ConsoleEngine.Logger/` | Exe: TCP log viewer (port 11000) | — |
 | `Microsoft.Xna.Framework` | `Libs/Microsoft.Xna.Framework/` | Library: math types | — |
-| `TerraForM`, `Snake`, `Asteroids`, `Platformer`, `ConsoleGame`, their ports `<Game>.Ecs`, `Swarm` (ECS stress test), `PhysicsSandbox` and `PhysicsShowcase` (physics demos) and `EternalDigger`, `SkyStack` and `Starguard` (ECS games) | `Examples/*` | Exe | ConsoleEngine |
+| `TerraForM`, `Snake`, `Asteroids`, `Platformer`, `ConsoleGame`, their ports `<Game>.Ecs`, `Swarm` (ECS stress test), `PhysicsSandbox` and `PhysicsShowcase` (physics demos) and `EternalDigger`, `SkyStack` and `Starguard` (ECS games) and `Doom` (plays a user-supplied Doom WAD) | `Examples/*` | Exe | ConsoleEngine (Doom also Rendering3D, for its switchable mesh view) |
 | `Scripted` | `Examples/Scripted/` | Exe: Lua-scripted ECS demo | ConsoleEngine, Scripting |
 | `Kartster` | `Examples/Kartster/` | Exe: 3D experiment, a Kartster kart driving a Kartster track, drawn by a software rasterizer (`System.Numerics`, not Xna), driven by Kartster's kart model on the engine's physics | ConsoleEngine, Physics, Rendering3D |
 | `Launcher` | `Examples/Launcher/` | Exe: text menu that starts the ECS games (plain `System.Console`, no engine) | ECS games (build order only) |
@@ -70,6 +70,7 @@ Every name in `docs/agent/` is grep-able. Search for the identifier you are inte
 | `Launcher.Tests` | `Examples/Launcher.Tests/` | NUnit 5 | Launcher |
 | `EternalDigger.Tests` | `Examples/EternalDigger.Tests/` | NUnit 5, hand-written `Fakes/FakeConsoleHandler` | EternalDigger |
 | `SkyStack.Tests` | `Examples/SkyStack.Tests/` | NUnit 5, hand-written `Fakes/FakeConsoleHandler` | SkyStack |
+| `Doom.Tests` | `Examples/Doom.Tests/` | NUnit 5, `Fakes/TestWad` (a WAD built in memory), `Fakes/FakeConsoleHandler`; thing systems run through `Level.Tick` | Doom |
 | `Starguard.Tests` | `Examples/Starguard.Tests/` | NUnit 5, no mocks: systems run on a real `World` | Starguard |
 | `Kartster.Tests` | `Examples/Kartster.Tests/` | NUnit 5 | Kartster |
 | `ConsoleEngine.Tests` | `ConsoleEngine.Tests/` | NUnit 5, hand-written fakes in `Fakes/` | ConsoleEngine, Scripting |
@@ -195,8 +196,10 @@ ConsoleEngine.Tests/              engine unit tests (mirrors ConsoleEngine/ fold
                                   CrossPlatformConsoleHandler frame text)
 ConsoleEngine.Rendering3D/        3D (namespace ConsoleEngine.Rendering3D): IRenderer3D, Rasterizer (CPU), SceneLighting +
                                   PointLight, Mesh
-                                  (Version/MarkChanged), ObjFile, ConsolePalette
-ConsoleEngine.Rendering3D.Tests/  RasterizerTests, ScreenDoorTests, TrueColorTests, LightingTests, ObjFileTests, MeshTests
+                                  (Version/MarkChanged, TriangleTextures + TextureCoordinates), MeshTexture, ObjFile,
+                                  ConsolePalette
+ConsoleEngine.Rendering3D.Tests/  RasterizerTests, ScreenDoorTests, TrueColorTests, LightingTests, TextureTests (textures,
+                                  fog), ObjFileTests, MeshTests
 ConsoleEngine.Rendering3D.OpenGL/ GlRenderer (OpenGL 3.3: R8UI or RGBA8 framebuffer, shaders, per-mesh indexed GPU cache,
                                   asks for a laptop's discrete GPU)
 ConsoleEngine.Rendering3D.OpenGL.Tests/  GlRendererTests, GlRendererTrueColorTests, LitScenes (GPU vs. CPU pixels, lights,
@@ -252,6 +255,21 @@ Examples/
                                   PixelSprite, PixelFont, ClimberLooks, TowerLooks, ConsoleText), Scenes/ (TitleScene,
                                   TowerScene), Layout, SkyStackTexts
   SkyStack.Tests/                 Tower, ClimbPhysics (fixed steps), RunStats, Scroller, PixelCanvas tests, Fakes/
+  Doom/                           plays a Doom WAD the user supplies (not in the repo, *.wad gitignored): Wad/ (WadFile,
+                                  WadLocator), Graphics/ (Palette, Picture, Texture/Flat, TextureLibrary, SpriteLibrary,
+                                  ConsoleShades), Maps/ (Map, MapLoader, MapNames), Play/ (Level partials: the map,
+                                  collision, damage and specials; Player, ThingTypes/ThingInfo, Animator, Weapons,
+                                  LineActions, SectorMover), Components/ (Thing, Body, Momentum, Animation, Monster,
+                                  Missile, Explosive, Tags), Systems/ (PickupSystem, MonsterSystem, MissileSystem,
+                                  DyingSystem, StaticThingSystem; run by Level.Tick), Rendering/ (IViewRenderer + ViewMode,
+                                  WorldRenderer (BSP), WeaponRenderer, Automap, Hud, Presenter, FrameBuffer, Camera;
+                                  Meshes/: MeshRenderer on ConsoleEngine.Rendering3D, LevelMeshes, Visibility,
+                                  SubsectorPolygons, ConvexPolygon, TextureCache, SpriteMeshes, MeshBuilder,
+                                  PaletteQuantizer), Scenes/, GameAssets,
+                                  Layout (Standard 160×100 / High 320×200), ResolutionPrompt (start-up choice),
+                                  DoomTexts, README.md
+  Doom.Tests/                     WAD, graphics, map, level (tic by tic), rendering (both layouts), mesh rendering,
+                                  Layout and ResolutionPrompt tests on Fakes/TestWad
   TerraForM/Scenes/               GameScene, MenuScene, InputNameScene
   TerraForM/Commands/             Command, Move, Plant, Wait
   TerraForM/Assets/               Maps/*.txt, Sprites/*.sprite + SpritePaths.cs (paths), Texts/HudTexts.cs,
@@ -532,7 +550,7 @@ Use [Conventional Commits 1.0.0](https://www.conventionalcommits.org/en/v1.0.0/#
 
 - **Scopes** (optional): `engine`, `abstractions`, `windows`, `crossplatform`, `logger`, `xna`, `terraform`, `snake`,
   `asteroids`, `physics`, `scripting`, `benchmarks`, `platformer`, `consolegame`, `swarm`, `physicssandbox`,
-  `physicsshowcase`, `scripted`, `starguard`, `launcher`, `skystack`, `docs`, `ci`.
+  `physicsshowcase`, `scripted`, `starguard`, `launcher`, `skystack`, `doom`, `docs`, `ci`.
 - **Description:** imperative, lower case, no trailing period. For example `fix(terraform): reset score on restart`.
 - **Breaking changes** to the public `ConsoleEngine` API or target framework: `!` after the type/scope and/or a
   `BREAKING CHANGE:` footer. For example `chore!: net8.0` (#10).
