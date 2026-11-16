@@ -37,13 +37,14 @@ The font makes the half-block pixels square. Windows Terminal (and macOS termina
 (the launcher and `run-game.ps1` do), or zoom the terminal out with Ctrl + "-" (Cmd + "-" on macOS) until 320 columns
 fit; Ctrl / Cmd + "+" zooms back in.
 
-How it runs depends on the terminal, because a 24-bit textured frame is a lot of text (checked by eye on macOS):
+How it runs depends on the terminal, because a 24-bit textured frame is a lot of text (checked by eye):
 
 | Terminal | 24-bit colour | 320 × 200 | 160 × 100 |
 |---|---|---|---|
 | kitty | Yes, exact colours | Smooth, high frame rate | Smooth |
 | Terminal.app | Yes, exact colours | Very laggy | Plays OK |
-| conhost, Windows Terminal | Should (Windows 10 1607+) | Not checked yet | Not checked yet |
+| Command Prompt (Windows 11) | Yes, exact colours | Smooth (24-bit and dither) | Smooth (24-bit and dither) |
+| Windows Terminal | Should (Windows 10 1607+) | Not checked yet | Not checked yet |
 
 If it lags, pick 160 × 100, or press C for the 16-colour dither, which sends less text. A terminal that doesn't
 report 24-bit colour (`COLORTERM`) gets the dither; `CONSOLE_ENGINE_COLORS=truecolor` forces 24-bit.

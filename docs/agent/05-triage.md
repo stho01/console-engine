@@ -410,8 +410,9 @@ won't open", "I can't find the exit". Rules: [03 § Doom](03-rules.md#doom).
    so the VT text per frame is large (four times as large at 320 × 200 as at 160 × 100), and how fast the terminal
    parses it decides the frame rate. Checked by the owner on macOS (2026-11-16, by eye): kitty (GPU-drawn) plays
    smoothly at 320 × 200; Terminal.app shows the colours correctly but is very laggy at 320 × 200 and plays "ok" at
-   160 × 100. Windows (conhost, Windows Terminal) not checked yet. **Fix:** pick 160 × 100 at start-up
-   (`--resolution 160x100`), use a GPU terminal (kitty), or press C for the 16-colour dither. Stop.
+   160 × 100. Windows 11 Command Prompt (checked by the owner, 2026-11-16): plays and renders well at 320 × 200 and
+   160 × 100, in 24-bit and with the dither. Windows Terminal not checked separately. **Fix:** pick 160 × 100 at
+   start-up (`--resolution 160x100`), use a GPU terminal (kitty), or press C for the 16-colour dither. Stop.
 4. Door won't open → stand in front of it (within 64 units) and press E or ENTER; keyed doors need that key
    (`You need a … key to open this.`). Some doors open from a switch or a walk-over line elsewhere, and line specials
    not in `LineActions` do nothing. Escalate with the map name and place if a needed special is missing. Stop.
