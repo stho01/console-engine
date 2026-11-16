@@ -1,7 +1,7 @@
 # Doom (console)
 
-Plays the levels of a Doom WAD in the console: a 160 × 100 pixel 3D view drawn as half blocks (`▀`), dithered to
-the console's 16 colours, with a text status bar below.
+Plays the levels of a Doom WAD in the console: a 160 × 100 or 320 × 200 pixel 3D view drawn as half blocks
+(`▀`), dithered to the console's 16 colours, with a text status bar below.
 
 The rendering and game code are this example's own. Every level, texture, flat, sprite and colour comes from the
 WAD file at run time. **The WAD is not part of this repository** (`*.wad` is gitignored), so don't commit one.
@@ -23,9 +23,18 @@ Without a WAD the game shows the places it searched and quits on ESC.
 dotnet run --project Examples/Launcher
 ```
 
-Pick **Doom (needs DOOM1.WAD)** in the launcher, or on Windows run `pwsh -File run-game.ps1 Doom`. The 6 × 12 font
-makes the half-block pixels square. Windows Terminal ignores the font, so use conhost (the launcher and
-`run-game.ps1` do).
+Pick **Doom (needs DOOM1.WAD)** in the launcher, or on Windows run `pwsh -File run-game.ps1 Doom`. At start-up the game
+asks for a resolution: **1** (or ENTER) for 160 × 100 in a 6 × 12 font, **2** for Doom's own 320 × 200 in a 3 × 6 font
+(320 console columns, same window size in conhost; the HUD text is half as big). `--resolution 160x100` or
+`--resolution 320x200` skips the question:
+
+```bash
+dotnet run --project Examples/Doom -- --resolution 320x200
+```
+
+The font makes the half-block pixels square. Windows Terminal (and macOS terminals) ignore the font, so use conhost
+(the launcher and `run-game.ps1` do), or zoom the terminal out with Ctrl + "-" (Cmd + "-" on macOS) until 320 columns
+fit; Ctrl / Cmd + "+" zooms back in.
 
 ## Controls
 

@@ -14,6 +14,17 @@ public static class DoomTexts
     public const string TitleControls2 = "SPACE fire   E use   1-7 weapon   TAB map   F11 gamma";
 
     //**********************************************************
+    //** resolution (plain console text before the game starts: ASCII only)
+    //**********************************************************
+
+    public const string ResolutionTitle = "DOOM (console): pick a resolution";
+    public const string ResolutionStandard = "  1  160 x 100   6 x 12 font (default)";
+    public const string ResolutionHigh = "  2  320 x 200   3 x 6 font, Doom's own resolution";
+    public const string ResolutionWarning1 = "     Needs a console 320 columns wide. If it doesn't fit, zoom out with";
+    public const string ResolutionWarning2 = "     Ctrl + \"-\" (Cmd + \"-\" on macOS); Ctrl / Cmd + \"+\" zooms back in.";
+    public const string ResolutionHint = "Press 1 or 2 (ENTER = 1). Or start with --resolution 160x100 / 320x200.";
+
+    //**********************************************************
     //** missing wad
     //**********************************************************
 

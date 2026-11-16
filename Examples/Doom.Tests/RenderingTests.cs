@@ -15,11 +15,12 @@ public class RenderingTests
     [TearDown]
     public void DisposeLevel() => _level?.Dispose();
 
-    private (Level Level, WorldRenderer Renderer, FrameBuffer Frame, Palette Palette) Setup()
+    private (Level Level, WorldRenderer Renderer, FrameBuffer Frame, Palette Palette) Setup(Layout layout = null)
     {
+        layout ??= Layout.Standard;
         var (_, palette, textures, _) = TestWad.Load();
         var level = _level = TestWad.CreateLevel();
-        var frame = new FrameBuffer(Layout.ViewWidth, Layout.ViewHeight);
+        var frame = new FrameBuffer(layout.ViewWidth, layout.ViewHeight);
         return (level, new WorldRenderer(frame, palette, textures), frame, palette);
     }
 
@@ -97,22 +98,64 @@ public class RenderingTests
     {
         var (level, renderer, frame, palette) = Setup();
         renderer.Render(level, CameraOf(level), -1);
-        var console = new RenderConsole(new FakeConsoleHandler(Layout.ScreenWidth, Layout.ScreenHeight));
+        var console = new RenderConsole(new FakeConsoleHandler(Layout.Standard.ScreenWidth, Layout.Standard.ScreenHeight));
 
         Presenter.Present(frame, new ConsoleShades(palette, 0), 0, console);
 
         Assert.That(console.GetCharAt(0, 0), Is.EqualTo(Presenter.HalfBlock));
-        Assert.That(console.GetCharAt(Layout.ViewWidth - 1, Layout.ViewRows - 1), Is.EqualTo(Presenter.HalfBlock));
+        Assert.That(console.GetCharAt(Layout.Standard.ViewWidth - 1, Layout.Standard.ViewRows - 1), Is.EqualTo(Presenter.HalfBlock));
     }
 
     [Test]
     public void Draw_Hud_ShowsHealth()
     {
         using var level = TestWad.CreateLevel();
-        var console = new RenderConsole(new FakeConsoleHandler(Layout.ScreenWidth, Layout.ScreenHeight));
+        var console = new RenderConsole(new FakeConsoleHandler(Layout.Standard.ScreenWidth, Layout.Standard.ScreenHeight));
 
-        new Hud().Draw(console, level, "E1M1", Layout.HudTop);
+        new Hud().Draw(console, level, "E1M1", Layout.Standard.HudTop);
 
-        Assert.That(console.GetCharAt(1, Layout.HudTop + 1), Is.EqualTo(DoomTexts.HudHealth[0]));
+        Assert.That(console.GetCharAt(1, Layout.Standard.HudTop + 1), Is.EqualTo(DoomTexts.HudHealth[0]));
+    }
+
+    [Test]
+    public void Render_HighLayoutEveryDirection_LeavesNoColumnOpen()
+    {
+        var (level, renderer, frame, _) = Setup(Layout.High);
+        var body = level.PlayerBody;
+
+        for (var turn = 0; turn < 16; turn++)
+        {
+            var camera = new Camera(body.X, body.Y, level.Player.ViewZ, turn * MathF.PI / 8);
+            renderer.Render(level, camera, -1);
+            for (var x = 0; x < frame.Width; x++)
+                Assert.That(frame.Depth[frame.Height / 2 * frame.Width + x], Is.LessThan(float.MaxValue),
+                    $"turn {turn}, column {x}");
+        }
+    }
+
+    [Test]
+    public void Render_HighLayout_WallDepthMatchesStandard()
+    {
+        var (level, renderer, frame, _) = Setup(Layout.High);
+
+        renderer.Render(level, CameraOf(level), -1);
+
+        var depth = frame.Depth[frame.Height / 2 * frame.Width + frame.Width / 2];
+        Assert.That(depth, Is.EqualTo(256 - 64).Within(2f));
+        Assert.That(frame.Get(frame.Width / 2, frame.Height / 2), Is.EqualTo(TestWad.WallColor));
+    }
+
+    [Test]
+    public void Present_HighLayoutFrame_FillsTheViewWithHalfBlocks()
+    {
+        var layout = Layout.High;
+        var (level, renderer, frame, palette) = Setup(layout);
+        renderer.Render(level, CameraOf(level), -1);
+        var console = new RenderConsole(new FakeConsoleHandler(layout.ScreenWidth, layout.ScreenHeight));
+
+        Presenter.Present(frame, new ConsoleShades(palette, 0), 0, console);
+
+        Assert.That(console.GetCharAt(layout.ViewWidth - 1, layout.ViewRows - 1), Is.EqualTo(Presenter.HalfBlock));
+        Assert.That(console.GetCharAt(0, layout.HudTop), Is.Not.EqualTo(Presenter.HalfBlock));
     }
 }

@@ -61,6 +61,7 @@ team's process differs.
 | SkyStack | SPACE / ↑ / W (held) | Jump whenever standing on a floor | same |
 | SkyStack | ESC | In a run: back to the title (the run is not recorded). On the title: quit | `SkyStackGame.OnUpdate` |
 | SkyStack (title / game over) | SPACE / ENTER | Start a run / climb again (game over: only after 0.75 s) | `TitleScene`, `RestartSystem` |
+| Doom | 1 or ENTER / 2 at start-up | 160 × 100 view (6 × 12 font) / 320 × 200 view (3 × 6 font); start with `--resolution 160x100` or `--resolution 320x200` to skip the question. If 320 columns don't fit (Windows Terminal, macOS), zoom out with Ctrl/Cmd + "-" | `ResolutionPrompt` |
 | Doom | W S / ↑ ↓ (held), A D (held), ← → (held) | Move, strafe, turn | `LevelScene.ReadCommand` |
 | Doom | SPACE (held) / E or ENTER / 1-7 / R | Fire / use (doors, switches) / pick a weapon slot / toggle run | `LevelScene`, `Level.PlayerThink` |
 | Doom | TAB / PAGE UP, PAGE DOWN / F11 | Automap on/off / automap zoom / next gamma level | `LevelScene.ReadToggles` |

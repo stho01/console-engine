@@ -55,10 +55,10 @@ public sealed class LevelScene(string mapName, PlayerLoadout loadout) : Scene<Do
         var assets = Game.Wad;
         var map = MapLoader.Load(assets.Wad, mapName, assets.Textures);
         _level = Level.Create(map, assets.Textures, assets.Sprites, loadout, seed: Environment.TickCount);
-        _frame = new FrameBuffer(Layout.ViewWidth, Layout.ViewHeight);
+        _frame = new FrameBuffer(Game.Layout.ViewWidth, Game.Layout.ViewHeight);
         _world = new WorldRenderer(_frame, assets.Palette, assets.Textures);
         _weapon = new WeaponRenderer(_frame, assets.Palette, assets.Sprites);
-        _automap = new Automap(assets.Palette);
+        _automap = new Automap(assets.Palette) { Zoom = Automap.DefaultZoom / Game.Layout.PixelScale };
         _sky = assets.SkyFor(mapName);
     }
 
@@ -119,7 +119,7 @@ public sealed class LevelScene(string mapName, PlayerLoadout loadout) : Scene<Do
 
         var assets = Game.Wad;
         Presenter.Present(_frame, assets.Shades, player.TintPalette(), Console);
-        _hud.Draw(Console, _level, mapName, Layout.HudTop);
+        _hud.Draw(Console, _level, mapName, Game.Layout.HudTop);
     }
 
     //**********************************************************
@@ -144,9 +144,9 @@ public sealed class LevelScene(string mapName, PlayerLoadout loadout) : Scene<Do
         if (input.GetKey(Key.F11).Pressed)
             Game.Wad.Shades.SetGamma(Game.Wad.Shades.GammaLevel + 1);
         if (input.GetKey(Key.PRIOR).Pressed)
-            _automap.Zoom = Math.Max(Automap.MinZoom, _automap.Zoom / AutomapZoomStep);
+            _automap.Zoom = Math.Max(Automap.MinZoom / Game.Layout.PixelScale, _automap.Zoom / AutomapZoomStep);
         if (input.GetKey(Key.NEXT).Pressed)
-            _automap.Zoom = Math.Min(Automap.MaxZoom, _automap.Zoom * AutomapZoomStep);
+            _automap.Zoom = Math.Min(Automap.MaxZoom / Game.Layout.PixelScale, _automap.Zoom * AutomapZoomStep);
         if (input.GetKey(Key.E).Pressed || input.GetKey(Key.ENTER).Pressed)
             _usePressed = true;
         if (input.GetKey(Key.R).Pressed)

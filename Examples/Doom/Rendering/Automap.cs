@@ -19,6 +19,9 @@ public sealed class Automap
     public const float MinZoom = 2;
     public const float MaxZoom = 64;
 
+    /// <summary>The starting <see cref="Zoom"/> for a <see cref="Layout.Standard"/> view.</summary>
+    public const float DefaultZoom = 8;
+
     private readonly byte _wallColor;
     private readonly byte _floorStepColor;
     private readonly byte _ceilingStepColor;
@@ -45,7 +48,7 @@ public sealed class Automap
     //**********************************************************
 
     /// <summary>World units per pixel.</summary>
-    public float Zoom { get; set; } = 8;
+    public float Zoom { get; set; } = DefaultZoom;
 
     /// <summary>Also show things (a cheat; off by default).</summary>
     public bool ShowThings { get; set; }

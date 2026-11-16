@@ -12,11 +12,15 @@ namespace Doom;
 /// The rendering and game code are this example's own. Starts on the <see cref="TitleScene"/>, or the
 /// <see cref="MissingWadScene"/> when no WAD is found or it can't be read.
 /// </summary>
-public class DoomGame() : GameBase(Layout.ScreenWidth, Layout.ScreenHeight, Layout.FontWidth, Layout.FontHeight)
+public class DoomGame(Layout layout)
+    : GameBase(layout.ScreenWidth, layout.ScreenHeight, layout.FontWidth, layout.FontHeight)
 {
     //**********************************************************
     //** props
     //**********************************************************
+
+    /// <summary>The screen size picked at start-up.</summary>
+    public Layout Layout { get; } = layout;
 
     /// <summary>The loaded WAD, or null when none was found.</summary>
     public GameAssets Wad { get; private set; }

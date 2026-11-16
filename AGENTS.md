@@ -261,8 +261,10 @@ Examples/
                                   Missile, Explosive, Tags), Systems/ (PickupSystem, MonsterSystem, MissileSystem,
                                   DyingSystem, StaticThingSystem; run by Level.Tick), Rendering/ (WorldRenderer,
                                   WeaponRenderer, Automap, Hud, Presenter, FrameBuffer, Camera), Scenes/, GameAssets,
+                                  Layout (Standard 160×100 / High 320×200), ResolutionPrompt (start-up choice),
                                   DoomTexts, README.md
-  Doom.Tests/                     WAD, graphics, map, level (tic by tic) and rendering tests on Fakes/TestWad
+  Doom.Tests/                     WAD, graphics, map, level (tic by tic), rendering (both layouts), Layout and
+                                  ResolutionPrompt tests on Fakes/TestWad
   TerraForM/Scenes/               GameScene, MenuScene, InputNameScene
   TerraForM/Commands/             Command, Move, Plant, Wait
   TerraForM/Assets/               Maps/*.txt, Sprites/*.sprite + SpritePaths.cs (paths), Texts/HudTexts.cs,

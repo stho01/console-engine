@@ -34,7 +34,8 @@ public sealed class WorldRenderer
     private const int FakeContrast = 16;
 
     private const int MaskedSpanCapacity = 256;
-    private const int MaskedClipCapacity = 32 * 1024;
+    /// <summary>Clip rows kept per view column for see-through middle textures (two per column of a span).</summary>
+    private const int MaskedClipsPerColumn = 200;
 
     /// <summary>Sky texture columns per full turn.</summary>
     private const float SkyColumnsPerTurn = 1024;
@@ -56,7 +57,7 @@ public sealed class WorldRenderer
     private readonly float[] _columnSlope;
     private readonly int[] _skyColumn;
     private readonly MaskedSpan[] _masked = new MaskedSpan[MaskedSpanCapacity];
-    private readonly int[] _maskedClips = new int[MaskedClipCapacity];
+    private readonly int[] _maskedClips;
     private int _maskedCount;
     private int _maskedClipCount;
     private int _openColumns;
@@ -96,6 +97,7 @@ public sealed class WorldRenderer
         _rayY = new float[_width];
         _columnSlope = new float[_width];
         _skyColumn = new int[_width];
+        _maskedClips = new int[MaskedClipsPerColumn * _width];
         for (var x = 0; x < _width; x++)
             _columnSlope[x] = (x + 0.5f - _halfWidth) / _focal;
     }
@@ -259,7 +261,7 @@ public sealed class WorldRenderer
         var span = screenX2 - screenX1;
         var maskedClipStart = -1;
         var recordMasked = back != null && middle >= 0 && _maskedCount < MaskedSpanCapacity
-                           && _maskedClipCount + 2 * (x2 - x1) <= MaskedClipCapacity;
+                           && _maskedClipCount + 2 * (x2 - x1) <= _maskedClips.Length;
         if (recordMasked)
         {
             maskedClipStart = _maskedClipCount;
