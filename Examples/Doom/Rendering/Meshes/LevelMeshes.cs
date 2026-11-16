@@ -8,12 +8,13 @@ using Doom.Maps;
 namespace Doom.Rendering.Meshes;
 
 /// <summary>
-/// A map as <c>ConsoleEngine.Rendering3D</c> meshes, three per sector: its floors and ceilings (cut into
-/// <see cref="BlockColors.Size"/>-unit squares on the flat's grid), its sky ceilings (drawn in
-/// <see cref="SkyColor"/>, which the renderer swaps for the sky picture) and the walls on its side of its lines
-/// (cut into texture blocks). Walls follow Doom's rules: upper and lower parts, pegging, the sky hack, see-through
-/// middle textures drawn once inside the opening. The colours are unlit; the renderer lights each sector by its
-/// light level. <see cref="Update"/> rebuilds the meshes of sectors whose heights, textures or offsets changed.
+/// A map as <c>ConsoleEngine.Rendering3D</c> meshes, three per subsector (Doom's convex BSP leaves, so the renderer
+/// can skip what it can't see): its floor and ceiling (cut into <see cref="BlockColors.Size"/>-unit squares on the
+/// flat's grid), its sky ceiling (drawn in <see cref="SkyColor"/>, which the renderer swaps for the sky picture) and
+/// the walls of its segs (cut into texture blocks). Walls follow Doom's rules: upper and lower parts, pegging, the
+/// sky hack, see-through middle textures drawn once inside the opening. The colours are unlit; the renderer lights
+/// each sector by its light level. <see cref="Update"/> rebuilds the subsectors of sectors whose heights, textures
+/// or offsets changed.
 /// </summary>
 public sealed class LevelMeshes
 {
@@ -43,7 +44,9 @@ public sealed class LevelMeshes
     private readonly Map _map;
     private readonly TextureLibrary _textures;
     private readonly BlockColors _blocks;
-    private readonly List<Vector2[]>[] _sectorPolygons;
+    private readonly List<int>[] _sectorSubsectors;
+    private readonly long[] _flatKeys;
+    private readonly long[] _wallKeys;
     private readonly MeshBuilder _builder = new();
     private readonly List<Vector2> _strip = new(16);
     private readonly List<Vector2> _cell = new(16);
@@ -59,20 +62,22 @@ public sealed class LevelMeshes
         _map = map;
         _textures = textures;
         _blocks = blocks;
-        var subsectorPolygons = SubsectorPolygons.Build(map);
-        _sectorPolygons = new List<Vector2[]>[map.Sectors.Length];
-        Sectors = new SectorMeshes[map.Sectors.Length];
-        for (var i = 0; i < Sectors.Length; i++)
-        {
-            _sectorPolygons[i] = [];
-            Sectors[i] = new SectorMeshes { FlatKey = -1, WallKey = -1 };
-        }
+        Polygons = SubsectorPolygons.Build(map);
+        _sectorSubsectors = new List<int>[map.Sectors.Length];
+        _flatKeys = new long[map.Sectors.Length];
+        _wallKeys = new long[map.Sectors.Length];
+        Array.Fill(_flatKeys, -1);
+        Array.Fill(_wallKeys, -1);
+        for (var i = 0; i < _sectorSubsectors.Length; i++)
+            _sectorSubsectors[i] = [];
 
-        for (var i = 0; i < map.Subsectors.Length; i++)
+        Subsectors = new SubsectorMeshes[map.Subsectors.Length];
+        for (var i = 0; i < Subsectors.Length; i++)
         {
+            Subsectors[i] = new SubsectorMeshes();
             var sector = map.Subsectors[i].Sector;
-            if (sector != null && subsectorPolygons[i].Length > 0)
-                _sectorPolygons[sector.Index].Add(subsectorPolygons[i]);
+            if (sector != null)
+                _sectorSubsectors[sector.Index].Add(i);
         }
 
         Update();
@@ -82,8 +87,11 @@ public sealed class LevelMeshes
     //** props
     //**********************************************************
 
-    /// <summary>In <see cref="Map.Sectors"/> order.</summary>
-    public SectorMeshes[] Sectors { get; }
+    /// <summary>In <see cref="Map.Subsectors"/> order.</summary>
+    public SubsectorMeshes[] Subsectors { get; }
+
+    /// <summary>Each subsector's floor shape (<see cref="SubsectorPolygons"/>), in subsector order.</summary>
+    public Vector2[][] Polygons { get; }
 
     //**********************************************************
     //** public methods
@@ -99,19 +107,20 @@ public sealed class LevelMeshes
         for (var i = 0; i < sectors.Length; i++)
         {
             var sector = sectors[i];
-            var meshes = Sectors[i];
             var flatKey = FlatKey(sector);
-            if (flatKey != meshes.FlatKey)
+            if (flatKey != _flatKeys[i])
             {
-                meshes.FlatKey = flatKey;
-                BuildFlats(sector, meshes);
+                _flatKeys[i] = flatKey;
+                foreach (var subsector in _sectorSubsectors[i])
+                    BuildFlats(sector, subsector);
             }
 
             var wallKey = WallKey(sector);
-            if (wallKey != meshes.WallKey)
+            if (wallKey != _wallKeys[i])
             {
-                meshes.WallKey = wallKey;
-                BuildWalls(sector, meshes);
+                _wallKeys[i] = wallKey;
+                foreach (var subsector in _sectorSubsectors[i])
+                    BuildWalls(subsector);
             }
         }
     }
@@ -169,22 +178,20 @@ public sealed class LevelMeshes
     //** internals: floors and ceilings
     //**********************************************************
 
-    private void BuildFlats(Sector sector, SectorMeshes meshes)
+    private void BuildFlats(Sector sector, int subsector)
     {
-        var polygons = _sectorPolygons[sector.Index];
+        var polygon = Polygons[subsector];
+        var meshes = Subsectors[subsector];
         var sky = _textures.SkyFlat;
         var ceilingIsSky = sky >= 0 && sector.CeilingFlat == sky;
         var floorFlat = FlatFrame(sector.FloorFlat);
         var ceilingFlat = FlatFrame(sector.CeilingFlat);
 
         _builder.Clear();
-        foreach (var polygon in polygons)
-        {
-            if (floorFlat >= 0 && sector.FloorFlat != sky)
-                AddFlat(polygon, sector.FloorHeight, floorFlat, ceiling: false);
-            if (ceilingFlat >= 0 && !ceilingIsSky)
-                AddFlat(polygon, sector.CeilingHeight, ceilingFlat, ceiling: true);
-        }
+        if (floorFlat >= 0 && sector.FloorFlat != sky)
+            AddFlat(polygon, sector.FloorHeight, floorFlat, ceiling: false);
+        if (ceilingFlat >= 0 && !ceilingIsSky)
+            AddFlat(polygon, sector.CeilingHeight, ceilingFlat, ceiling: true);
 
         meshes.Flats = _builder.ToMesh(meshes.Flats);
         meshes.FlatsMin = _builder.Min;
@@ -192,10 +199,7 @@ public sealed class LevelMeshes
 
         _builder.Clear();
         if (ceilingIsSky)
-        {
-            foreach (var polygon in polygons)
-                AddFan(polygon, sector.CeilingHeight, SkyColor, ceiling: true);
-        }
+            AddFan(polygon, sector.CeilingHeight, SkyColor, ceiling: true);
 
         meshes.Sky = _builder.ToMesh(meshes.Sky, unlit: true);
         meshes.SkyMin = _builder.Min;
@@ -206,6 +210,9 @@ public sealed class LevelMeshes
     private void AddFlat(Vector2[] polygon, float height, int flat, bool ceiling)
     {
         const int size = BlockColors.Size;
+        if (polygon.Length < 3)
+            return;
+
         var min = new Vector2(float.MaxValue);
         var max = new Vector2(float.MinValue);
         foreach (var corner in polygon)
@@ -240,15 +247,16 @@ public sealed class LevelMeshes
     /// <summary>A convex counter-clockwise polygon at a height, facing up (floor) or down (ceiling).</summary>
     private void AddFan(IReadOnlyList<Vector2> polygon, float height, Vector3 color, bool ceiling)
     {
-        var first = _builder.VertexCount;
-        for (var i = 0; i < polygon.Count; i++)
-            _builder.AddVertex(MeshBuilder.ToWorld(polygon[i].X, polygon[i].Y, height));
-        for (var i = 1; i + 1 < polygon.Count; i++)
+        var first = _builder.AddVertex(MeshBuilder.ToWorld(polygon[0].X, polygon[0].Y, height));
+        var previous = _builder.AddVertex(MeshBuilder.ToWorld(polygon[1].X, polygon[1].Y, height));
+        for (var i = 2; i < polygon.Count; i++)
         {
+            var next = _builder.AddVertex(MeshBuilder.ToWorld(polygon[i].X, polygon[i].Y, height));
             if (ceiling)
-                _builder.AddTriangle(first, first + i + 1, first + i, color);
+                _builder.AddTriangle(first, next, previous, color);
             else
-                _builder.AddTriangle(first, first + i, first + i + 1, color);
+                _builder.AddTriangle(first, previous, next, color);
+            previous = next;
         }
     }
 
@@ -256,30 +264,33 @@ public sealed class LevelMeshes
     //** internals: walls
     //**********************************************************
 
-    private void BuildWalls(Sector sector, SectorMeshes meshes)
+    private void BuildWalls(int subsector)
     {
+        var meshes = Subsectors[subsector];
+        var info = _map.Subsectors[subsector];
+        var end = Math.Min(info.FirstSeg + info.SegCount, _map.Segs.Length);
         _builder.Clear();
-        foreach (var line in sector.Lines)
-        {
-            if (line.FrontSector == sector)
-                AddSide(line, line.Front, line.FrontSector, line.BackSector, line.V1, line.V2);
-            if (line.BackSector == sector)
-                AddSide(line, line.Back, line.BackSector, line.FrontSector, line.V2, line.V1);
-        }
+        for (var i = info.FirstSeg; i < end; i++)
+            AddSeg(_map.Segs[i]);
 
         meshes.Walls = _builder.ToMesh(meshes.Walls);
         meshes.WallsMin = _builder.Min;
         meshes.WallsMax = _builder.Max;
     }
 
-    /// <summary>One side's wall parts, seen from <paramref name="front"/> (<paramref name="start"/> on the left).</summary>
-    private void AddSide(Line line, Side side, Sector front, Sector back, Vertex start, Vertex end)
+    /// <summary>A seg's wall parts, seen from its front sector (its start on the left).</summary>
+    private void AddSeg(Seg seg)
     {
-        if (side == null || front == null)
+        var side = seg.Side;
+        var front = seg.FrontSector;
+        var back = seg.BackSector;
+        var line = seg.Line;
+        if (side == null || front == null || line == null)
             return;
 
         var shade = line.V1.Y == line.V2.Y ? DarkerWall : line.V1.X == line.V2.X ? LighterWall : 1f;
-        var wall = new Wall(new Vector2(start.X, start.Y), new Vector2(end.X, end.Y), side.XOffset, shade);
+        var wall = new Wall(new Vector2(seg.V1.X, seg.V1.Y), new Vector2(seg.V2.X, seg.V2.Y),
+            side.XOffset + seg.Offset, shade);
         var lowerUnpegged = (line.Flags & LineFlags.LowerUnpegged) != 0;
         var upperUnpegged = (line.Flags & LineFlags.UpperUnpegged) != 0;
 
@@ -379,8 +390,8 @@ public sealed class LevelMeshes
     }
 }
 
-/// <summary>The meshes of one sector (any may be null: nothing to draw) and their bounds.</summary>
-public sealed class SectorMeshes
+/// <summary>The meshes of one subsector (any may be null: nothing to draw) and their bounds.</summary>
+public sealed class SubsectorMeshes
 {
     public Mesh Flats { get; set; }
     public Vector3 FlatsMin { get; set; }
@@ -394,6 +405,4 @@ public sealed class SectorMeshes
     public Mesh Walls { get; set; }
     public Vector3 WallsMin { get; set; }
     public Vector3 WallsMax { get; set; }
-    internal long FlatKey { get; set; }
-    internal long WallKey { get; set; }
 }

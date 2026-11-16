@@ -78,12 +78,12 @@ public class MeshRenderingTests
     {
         var (level, renderer, _) = Setup();
 
-        var sky = renderer.LevelMeshes.Sectors[2].Sky;
+        var sky = renderer.LevelMeshes.Subsectors[2].Sky;
 
         Assert.That(sky, Is.Not.Null);
         Assert.That(sky.IsUnlit, Is.True);
         Assert.That(sky.TriangleColors, Has.All.EqualTo(LevelMeshes.SkyColor));
-        Assert.That(renderer.LevelMeshes.Sectors[0].Sky, Is.Null);
+        Assert.That(renderer.LevelMeshes.Subsectors[0].Sky, Is.Null);
         Assert.That(level.Map.Sectors, Has.Length.EqualTo(3));
     }
 
@@ -152,14 +152,14 @@ public class MeshRenderingTests
     public void Update_DoorOpened_RebuildsTheWallsAroundIt()
     {
         var (level, renderer, _) = Setup();
-        var walls = renderer.LevelMeshes.Sectors[0];
+        var walls = renderer.LevelMeshes.Subsectors[0];
         var closed = RealTriangles(walls.Walls);
 
         level.Map.Sectors[TestWad.DoorSector].CeilingHeight = 128;
         renderer.LevelMeshes.Update();
 
         Assert.That(RealTriangles(walls.Walls), Is.LessThan(closed));
-        Assert.That(RealTriangles(renderer.LevelMeshes.Sectors[TestWad.DoorSector].Walls), Is.GreaterThan(0));
+        Assert.That(RealTriangles(renderer.LevelMeshes.Subsectors[TestWad.DoorSector].Walls), Is.GreaterThan(0));
     }
 
     [Test]
@@ -196,5 +196,53 @@ public class MeshRenderingTests
         Assert.That(quantizer.Nearest(0x000000), Is.LessThanOrEqualTo(2));
         Assert.That(quantizer.Nearest(0xFFFFFF), Is.GreaterThanOrEqualTo(253));
         Assert.That(quantizer.Nearest(0x646464), Is.EqualTo(100).Within(2));
+    }
+
+    [Test]
+    public void Find_FacingClosedDoor_RoomBehindIsNotVisible()
+    {
+        var (level, renderer, _) = Setup();
+        var visibility = new Visibility(Layout.Standard.ViewWidth, level.Map.Sectors.Length,
+            renderer.LevelMeshes.Polygons);
+
+        visibility.Find(level.Map, CameraOf(level));
+
+        Assert.That(visibility.VisibleSubsectors.ToArray(), Is.EqualTo(new[] { 0 }));
+        Assert.That(visibility.IsSectorVisible(2), Is.False);
+    }
+
+    [Test]
+    public void Find_DoorOpen_RoomBehindIsVisible()
+    {
+        var (level, renderer, _) = Setup();
+        var visibility = new Visibility(Layout.Standard.ViewWidth, level.Map.Sectors.Length,
+            renderer.LevelMeshes.Polygons);
+        level.Map.Sectors[TestWad.DoorSector].CeilingHeight = 128;
+
+        visibility.Find(level.Map, CameraOf(level));
+
+        Assert.That(visibility.VisibleSubsectors.ToArray(), Is.EquivalentTo(new[] { 0, 1, 2 }));
+        Assert.That(visibility.IsSectorVisible(2), Is.True);
+    }
+
+    [TestCase(2f, 0)]
+    [TestCase(1f, 0)]
+    [TestCase(0.75f, 1)]
+    [TestCase(0.3f, 2)]
+    public void DetailFor_PixelsPerTexel_PicksTheLevel(float pixelsPerTexel, int expected) =>
+        Assert.That(SpriteMeshes.DetailFor(pixelsPerTexel), Is.EqualTo(expected));
+
+    [Test]
+    public void Get_LowerDetail_HasFewerTriangles()
+    {
+        var (_, palette, textures, _) = TestWad.Load();
+        var sprites = new SpriteMeshes(new BlockColors(palette, textures));
+        var picture = new Picture(4, 4, 2, 4);
+        Array.Fill(picture.Opaque, true);
+
+        var counts = Enumerable.Range(0, SpriteMeshes.DetailLevels)
+            .Select(detail => sprites.Get(picture, false, detail).TriangleCount).ToArray();
+
+        Assert.That(counts, Is.EqualTo(new[] { 8, 4, 2 }));
     }
 }

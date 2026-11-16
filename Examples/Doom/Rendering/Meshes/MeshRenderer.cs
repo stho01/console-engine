@@ -42,6 +42,7 @@ public sealed class MeshRenderer : IViewRenderer, IDisposable
     private readonly LevelMeshes _level;
     private readonly SpriteMeshes _sprites;
     private readonly PaletteQuantizer _quantizer;
+    private readonly Visibility _visibility;
     private readonly SceneLighting _lighting = new() { SunColor = Vector3.Zero };
     private readonly uint[] _background;
     private readonly int[] _skyColumn;
@@ -66,6 +67,7 @@ public sealed class MeshRenderer : IViewRenderer, IDisposable
         _level = new LevelMeshes(map, textures, colors);
         _sprites = new SpriteMeshes(colors);
         _quantizer = new PaletteQuantizer(palette);
+        _visibility = new Visibility(frame.Width, map.Sectors.Length, _level.Polygons);
         _background = new uint[frame.Width * frame.Height];
         _skyColumn = new int[frame.Width];
 
@@ -99,16 +101,15 @@ public sealed class MeshRenderer : IViewRenderer, IDisposable
         _rasterizer.Clear(_background);
         _rasterizer.Lighting = _lighting;
         TrianglesDrawn = 0;
-        var sectors = level.Map.Sectors;
-        for (var i = 0; i < sectors.Length; i++)
+        _visibility.Find(level.Map, camera);
+        var subsectors = level.Map.Subsectors;
+        foreach (var i in _visibility.VisibleSubsectors)
         {
-            var meshes = _level.Sectors[i];
-            var light = Brightness(sectors[i].LightLevel);
-            var walls = Draw(meshes.Walls, meshes.WallsMin, meshes.WallsMax, Matrix4x4.Identity, light);
-            var flats = Draw(meshes.Flats, meshes.FlatsMin, meshes.FlatsMax, Matrix4x4.Identity, light);
-            var sky = Draw(meshes.Sky, meshes.SkyMin, meshes.SkyMax, Matrix4x4.Identity, 1);
-            if (walls || flats || sky)
-                MarkMapped(sectors[i]);
+            var meshes = _level.Subsectors[i];
+            var light = Brightness(subsectors[i].Sector.LightLevel);
+            Draw(meshes.Walls, meshes.WallsMin, meshes.WallsMax, Matrix4x4.Identity, light);
+            Draw(meshes.Flats, meshes.FlatsMin, meshes.FlatsMax, Matrix4x4.Identity, light);
+            Draw(meshes.Sky, meshes.SkyMin, meshes.SkyMax, Matrix4x4.Identity, 1);
         }
 
         DrawThings(level, camera);
@@ -130,16 +131,15 @@ public sealed class MeshRenderer : IViewRenderer, IDisposable
         _viewProjection = Matrix4x4.CreateLookAt(eye, eye + _forward, Vector3.UnitY) * _projection;
     }
 
-    /// <summary>Draws a mesh lit by <paramref name="light"/>; false (and nothing drawn) when it is off screen.</summary>
-    private bool Draw(Mesh mesh, Vector3 min, Vector3 max, in Matrix4x4 world, float light)
+    /// <summary>Draws a mesh lit by <paramref name="light"/>, unless it is off screen.</summary>
+    private void Draw(Mesh mesh, Vector3 min, Vector3 max, in Matrix4x4 world, float light)
     {
         if (mesh == null || !IsOnScreen(min, max, world))
-            return false;
+            return;
 
         _lighting.Ambient = new Vector3(light);
         _rasterizer.Draw(mesh, world, _viewProjection, Vector3.UnitY);
         TrianglesDrawn += mesh.TriangleCount;
-        return true;
     }
 
     /// <summary>False when the box (in model space) is wholly outside one side of the view.</summary>
@@ -162,13 +162,6 @@ public sealed class MeshRenderer : IViewRenderer, IDisposable
         return left < 8 && right < 8 && below < 8 && above < 8 && behind < 8;
     }
 
-    /// <summary>The automap shows the lines of every sector that was drawn (more than the BSP renderer marks).</summary>
-    private static void MarkMapped(Sector sector)
-    {
-        foreach (var line in sector.Lines)
-            line.Mapped = true;
-    }
-
     private void DrawThings(Level level, in Camera camera)
     {
         var sprites = level.Sprites;
@@ -186,6 +179,9 @@ public sealed class MeshRenderer : IViewRenderer, IDisposable
                     continue;
 
                 ref var body = ref bodies[i];
+                if (!_visibility.IsSectorVisible(body.Sector))
+                    continue;
+
                 camera.ToView(body.X, body.Y, out _, out var depth);
                 if (depth < WorldRenderer.NearPlane * 2)
                     continue;
@@ -201,7 +197,8 @@ public sealed class MeshRenderer : IViewRenderer, IDisposable
                 if (picture == null)
                     continue;
 
-                var mesh = _sprites.Get(picture, mirrored);
+                var detail = SpriteMeshes.DetailFor(_frame.Width / 2f / depth);
+                var mesh = _sprites.Get(picture, mirrored, detail);
                 if (mesh == null)
                     continue;
 

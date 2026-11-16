@@ -1,4 +1,5 @@
 using System;
+using System.Collections.Generic;
 using System.Numerics;
 using ConsoleEngine.Rendering3D;
 
@@ -8,7 +9,8 @@ namespace Doom.Rendering.Meshes;
 /// Collects triangles (one colour each) in reused, growing arrays, then copies them into a <see cref="Mesh"/>:
 /// into the old one when it is big enough (the rest padded with empty triangles, which draw nothing), else into a
 /// new one with room to grow. So a sector that changes every tic (a door) stops allocating once its mesh is as big
-/// as it gets. Positions are world space for <c>ConsoleEngine.Rendering3D</c>: x east, y up, z south.
+/// as it gets. Cells that touch share their corners (each distinct position is one vertex), so the renderer
+/// transforms fewer vertices. Positions are world space for <c>ConsoleEngine.Rendering3D</c>: x east, y up, z south.
 /// </summary>
 public sealed class MeshBuilder
 {
@@ -19,6 +21,7 @@ public sealed class MeshBuilder
     private Vector3[] _positions = new Vector3[256];
     private int[] _indices = new int[384];
     private Vector3[] _colors = new Vector3[128];
+    private readonly Dictionary<Vector3, int> _vertexIndex = [];
 
     //**********************************************************
     //** props
@@ -40,6 +43,7 @@ public sealed class MeshBuilder
     {
         VertexCount = 0;
         TriangleCount = 0;
+        _vertexIndex.Clear();
         Min = new Vector3(float.MaxValue);
         Max = new Vector3(float.MinValue);
     }
@@ -47,8 +51,13 @@ public sealed class MeshBuilder
     /// <summary>A map point at a height: x east, y north, z up in Doom; x, y up, -y in the mesh.</summary>
     public static Vector3 ToWorld(float x, float y, float z) => new(x, z, -y);
 
+    /// <summary>The index of the vertex at <paramref name="position"/>, added if there is none there yet.</summary>
     public int AddVertex(Vector3 position)
     {
+        if (_vertexIndex.TryGetValue(position, out var existing))
+            return existing;
+
+        _vertexIndex.Add(position, VertexCount);
         if (VertexCount == _positions.Length)
             Array.Resize(ref _positions, _positions.Length * 2);
 
@@ -76,12 +85,10 @@ public sealed class MeshBuilder
     /// <summary>A quad, corners counter-clockwise as seen from the side that shows it.</summary>
     public void AddQuad(Vector3 a, Vector3 b, Vector3 c, Vector3 d, Vector3 color)
     {
-        var first = AddVertex(a);
-        AddVertex(b);
-        AddVertex(c);
-        AddVertex(d);
-        AddTriangle(first, first + 1, first + 2, color);
-        AddTriangle(first, first + 2, first + 3, color);
+        var ia = AddVertex(a);
+        var ic = AddVertex(c);
+        AddTriangle(ia, AddVertex(b), ic, color);
+        AddTriangle(ia, ic, AddVertex(d), color);
     }
 
     /// <summary>

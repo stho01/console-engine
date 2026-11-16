@@ -261,8 +261,9 @@ Examples/
                                   Missile, Explosive, Tags), Systems/ (PickupSystem, MonsterSystem, MissileSystem,
                                   DyingSystem, StaticThingSystem; run by Level.Tick), Rendering/ (IViewRenderer + ViewMode,
                                   WorldRenderer (BSP), WeaponRenderer, Automap, Hud, Presenter, FrameBuffer, Camera;
-                                  Meshes/: MeshRenderer on ConsoleEngine.Rendering3D, LevelMeshes, SubsectorPolygons,
-                                  ConvexPolygon, BlockColors, SpriteMeshes, MeshBuilder, PaletteQuantizer), Scenes/, GameAssets,
+                                  Meshes/: MeshRenderer on ConsoleEngine.Rendering3D, LevelMeshes, Visibility,
+                                  SubsectorPolygons, ConvexPolygon, BlockColors, SpriteMeshes, MeshBuilder,
+                                  PaletteQuantizer), Scenes/, GameAssets,
                                   Layout (Standard 160×100 / High 320×200), ResolutionPrompt (start-up choice),
                                   DoomTexts, README.md
   Doom.Tests/                     WAD, graphics, map, level (tic by tic), rendering (both layouts), mesh rendering,

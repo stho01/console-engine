@@ -88,9 +88,11 @@ V switches between two renderers of the same level, to compare them; the HUD sho
 - **3D mesh** (`Rendering/Meshes/MeshRenderer`) turns the level into triangles and draws them with the engine's
   `ConsoleEngine.Rendering3D` `Rasterizer`, the renderer Kartster uses. That renderer colours whole triangles and has
   no textures, so walls and floors are cut into 8 × 8 texel blocks in their average colour (a mosaic), while
-  monsters and items stay texel-exact (one quad per run of a colour). Each sector and thing has one brightness: no
-  fading with distance. It costs far more CPU (E1M1: about 180 000 triangles a frame, 7–14 ms on an Apple-silicon
-  Mac, against under 0.5 ms for BSP). Built the first time you switch to it in a level.
+  monsters and items stay texel-exact up close (one quad per run of a colour) and get coarser far away. Each sector
+  and thing has one brightness: no fading with distance. Like the BSP view it only draws what the BSP walk finds in
+  view (`Visibility`). It still costs more CPU: at 320 × 200 about 2 ms a frame in Release on an Apple-silicon Mac
+  (worst views about 12 ms), against 0.2–0.4 ms for BSP, and 3–4 times that in a Debug build (`dotnet run`
+  without `-c Release`). Built the first time you switch to it in a level.
 
 ## What is not (yet)
 
@@ -110,7 +112,7 @@ Doom's, not a port of its code. The exact numbers are in
 | `Components/` | The ECS components of a thing: `Thing` (kind, flags, state, health), `Body` (position, footprint, sector), `Momentum`, `Animation`, `Monster`, `Missile`, `Explosive`, `Collectible` |
 | `Systems/` | One tic of the things: `PickupSystem`, `MonsterSystem`, `MissileSystem`, `DyingSystem`, `StaticThingSystem`. `Level.Tick` runs them after the player |
 | `Rendering/` | `IViewRenderer` (`ViewMode`), `WorldRenderer` (BSP), `WeaponRenderer`, `Automap`, `Hud`, `Presenter`, `FrameBuffer`, `Camera` |
-| `Rendering/Meshes/` | The 3D mesh view: `MeshRenderer`, `LevelMeshes` (sector meshes), `SubsectorPolygons` (floor shapes from the BSP), `ConvexPolygon`, `BlockColors` (texture mosaics), `SpriteMeshes`, `MeshBuilder`, `PaletteQuantizer` (24-bit → palette) |
+| `Rendering/Meshes/` | The 3D mesh view: `MeshRenderer`, `LevelMeshes` (subsector meshes), `Visibility` (what the BSP walk can see), `SubsectorPolygons` (floor shapes from the BSP), `ConvexPolygon`, `BlockColors` (texture mosaics), `SpriteMeshes`, `MeshBuilder`, `PaletteQuantizer` (24-bit → palette) |
 | `Scenes/` | `TitleScene`, `LevelScene`, `IntermissionScene`, `MissingWadScene` |
 
 Tests (`Examples/Doom.Tests`) build a tiny WAD in memory (`Fakes/TestWad`) with two rooms and a door, and play it tic
