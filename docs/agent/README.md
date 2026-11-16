@@ -51,7 +51,7 @@ Tags used throughout:
 | "Things pass through each other", "things sink into the floor", "bullet didn't hit", "hit counted twice", "physics events don't fire", "raycast misses", "platformer player stuck or falls through", "bodies hang in the air", "box doesn't spin" | [P18](05-triage.md#p18) |
 | 3D: "GPU mode not available", "it falls back to CPU", "`GlRenderer` throws", "glfw3.dll missing", "GPU picture differs from CPU", "GPU mode is slow / uses the integrated graphics" | [P21](05-triage.md#p21) |
 | SkyStack: "can't reach the next floor", "my combo vanished", "the screen killed me", "high score is gone" | [P20](05-triage.md#p20) |
-| Doom: "DOOM1.WAD NOT FOUND", "COULD NOT LOAD THE WAD", "it's too dark", "the door won't open", "I can't find the exit" | [P23](05-triage.md#p23) |
+| Doom: "DOOM1.WAD NOT FOUND", "COULD NOT LOAD THE WAD", "it's too dark", "speckled / checkerboard colours", "laggy", "the door won't open", "I can't find the exit" | [P23](05-triage.md#p23) |
 | Lua: "my script doesn't load / run", "the object stands still", "F5 doesn't reload my change", "lua54.dll missing" | [P19](05-triage.md#p19) |
 | "Asset not found", "No loader for …", "Failed to load asset …" | [P22](05-triage.md#p22) |
 

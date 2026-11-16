@@ -390,7 +390,7 @@ Applies to code that loads through `GameBase.Assets` (TerraForM, TerraForM.Ecs, 
    built-in `TextLoader`/`LinesLoader` already own `txt` for `string`/`string[]`. Use another type or extension. Stop.
 
 <a id="p23"></a>
-## P23 — Doom: no WAD, unreadable WAD, too dark, door won't open, can't find the exit
+## P23 — Doom: no WAD, unreadable WAD, too dark, speckled, laggy, door won't open, can't find the exit
 
 **Symptom [inferred]:** "it says DOOM1.WAD NOT FOUND", "COULD NOT LOAD THE WAD", "it's too dark to see", "the door
 won't open", "I can't find the exit". Rules: [03 § Doom](03-rules.md#doom).
@@ -406,6 +406,12 @@ won't open", "I can't find the exit". Rules: [03 § Doom](03-rules.md#doom).
    (`RenderConsole.TrueColor`); it is only shown when the terminal reports it (`COLORTERM` = `truecolor`/`24bit`, or
    set `CONSOLE_ENGINE_COLORS=truecolor`; Windows 10 1607+). C switches between exact and dithered colours. Then
    press F11 to raise the gamma (`ConsoleShades.GammaLevels`). Stop.
+3a. Laggy / low frame rate with 24-bit colour → **Cause:** a textured Doom frame changes colour in almost every cell,
+   so the VT text per frame is large (four times as large at 320 × 200 as at 160 × 100), and how fast the terminal
+   parses it decides the frame rate. Checked by the owner on macOS (2026-11-16, by eye): kitty (GPU-drawn) plays
+   smoothly at 320 × 200; Terminal.app shows the colours correctly but is very laggy at 320 × 200 and plays "ok" at
+   160 × 100. Windows (conhost, Windows Terminal) not checked yet. **Fix:** pick 160 × 100 at start-up
+   (`--resolution 160x100`), use a GPU terminal (kitty), or press C for the 16-colour dither. Stop.
 4. Door won't open → stand in front of it (within 64 units) and press E or ENTER; keyed doors need that key
    (`You need a … key to open this.`). Some doors open from a switch or a walk-over line elsewhere, and line specials
    not in `LineActions` do nothing. Escalate with the map name and place if a needed special is missing. Stop.
