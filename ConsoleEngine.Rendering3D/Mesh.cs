@@ -3,8 +3,9 @@ using System.Numerics;
 namespace ConsoleEngine.Rendering3D;
 
 /// <summary>
-/// Triangles with one flat colour each. Counter-clockwise triangles (seen from outside) face outwards, the OBJ
-/// convention. Normals are per triangle and in model space.
+/// Triangles with one flat colour each, or textured (<see cref="TriangleTextures"/>, tinted by that colour).
+/// Counter-clockwise triangles (seen from outside) face outwards, the OBJ convention. Normals are per triangle and in
+/// model space.
 /// </summary>
 public sealed class Mesh
 {
@@ -46,6 +47,21 @@ public sealed class Mesh
     /// </summary>
     public float[] TriangleOpacity { get; init; }
 
+    /// <summary>
+    /// A texture per triangle (null entries: flat colour), read with <see cref="TextureCoordinates"/>. A textured
+    /// triangle's pixel is the texel times its <see cref="TriangleColors"/> entry (white: the texture as it is) and
+    /// the light; holes in the texture are not drawn. Null: no textures. Drawn by <see cref="Rasterizer"/>; a
+    /// renderer without texture support draws the triangle's colour.
+    /// </summary>
+    public MeshTexture[] TriangleTextures { get; init; }
+
+    /// <summary>
+    /// Per vertex (same order as <see cref="Positions"/>): where it is on its triangle's texture, 0..1 across
+    /// (more repeats the texture), v down from the top. Needed with <see cref="TriangleTextures"/>; interpolated
+    /// perspective-correct. A vertex shared by triangles with different coordinates has to be split.
+    /// </summary>
+    public Vector2[] TextureCoordinates { get; init; }
+
     /// <summary>Drawn in <see cref="TriangleColors"/> as they are, without the light (smoke, glowing things).</summary>
     public bool IsUnlit { get; init; }
 
@@ -59,7 +75,7 @@ public sealed class Mesh
     //** public methods
     //**********************************************************
 
-    /// <summary>Call after changing the arrays (positions, colours, opacity) in place.</summary>
+    /// <summary>Call after changing the arrays (positions, colours, opacity, textures, coordinates) in place.</summary>
     public void MarkChanged() => Version++;
 
     /// <summary>A flat chequered square on y = 0, centred on the origin, facing up.</summary>

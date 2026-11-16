@@ -9,12 +9,12 @@ namespace Doom.Rendering.Meshes;
 
 /// <summary>
 /// A map as <c>ConsoleEngine.Rendering3D</c> meshes, three per subsector (Doom's convex BSP leaves, so the renderer
-/// can skip what it can't see): its floor and ceiling (cut into <see cref="BlockColors.Size"/>-unit squares on the
-/// flat's grid), its sky ceiling (drawn in <see cref="SkyColor"/>, which the renderer swaps for the sky picture) and
-/// the walls of its segs (cut into texture blocks). Walls follow Doom's rules: upper and lower parts, pegging, the
-/// sky hack, see-through middle textures drawn once inside the opening. The colours are unlit; the renderer lights
-/// each sector by its light level. <see cref="Update"/> rebuilds the subsectors of sectors whose heights, textures
-/// or offsets changed.
+/// can skip what it can't see): its floor and ceiling (one textured fan each, the flat on its 64-unit world grid),
+/// its sky ceiling (drawn in <see cref="SkyColor"/>, which the renderer swaps for the sky picture) and the walls of
+/// its segs (one textured quad per part). Walls follow Doom's rules: upper and lower parts, pegging and offsets, the
+/// sky hack, see-through middle textures drawn once inside the opening (their holes are texture holes). Textures are
+/// tinted only by Doom's fake contrast; the renderer lights each subsector by its sector's light level.
+/// <see cref="Update"/> rebuilds the subsectors of sectors whose heights, textures or offsets changed.
 /// </summary>
 public sealed class LevelMeshes
 {
@@ -35,33 +35,28 @@ public sealed class LevelMeshes
 
     private const float LighterWall = 1.1f;
 
-    /// <summary>A see-through texture block is drawn when at least this share of its texels is.</summary>
-    private const float MinCoverage = 0.5f;
+    /// <summary>Walls thinner or shorter than this (map units) are left out.</summary>
+    private const float MinSize = 1 / 64f;
 
-    /// <summary>Wall and floor cells thinner than this (map units) are not cut further.</summary>
-    private const float MinStep = 1 / 64f;
+    private static readonly Vector3 White = Vector3.One;
 
     private readonly Map _map;
     private readonly TextureLibrary _textures;
-    private readonly BlockColors _blocks;
+    private readonly TextureCache _textureCache;
     private readonly List<int>[] _sectorSubsectors;
     private readonly long[] _flatKeys;
     private readonly long[] _wallKeys;
     private readonly MeshBuilder _builder = new();
-    private readonly List<Vector2> _strip = new(16);
-    private readonly List<Vector2> _cell = new(16);
-    private readonly List<Vector2> _scratch = new(16);
-    private readonly List<Vector2> _polygonCell = new(16);
 
     //**********************************************************
     //** ctor
     //**********************************************************
 
-    public LevelMeshes(Map map, TextureLibrary textures, BlockColors blocks)
+    public LevelMeshes(Map map, TextureLibrary textures, TextureCache textureCache)
     {
         _map = map;
         _textures = textures;
-        _blocks = blocks;
+        _textureCache = textureCache;
         Polygons = SubsectorPolygons.Build(map);
         _sectorSubsectors = new List<int>[map.Sectors.Length];
         _flatKeys = new long[map.Sectors.Length];
@@ -206,59 +201,34 @@ public sealed class LevelMeshes
         meshes.SkyMax = _builder.Max;
     }
 
-    /// <summary>The polygon cut into the flat's blocks, on a grid of <see cref="BlockColors.Size"/> units.</summary>
+    /// <summary>The polygon with the flat on it: texel (x, -y) of the world, repeating every 64 units.</summary>
     private void AddFlat(Vector2[] polygon, float height, int flat, bool ceiling)
     {
-        const int size = BlockColors.Size;
-        if (polygon.Length < 3)
-            return;
-
-        var min = new Vector2(float.MaxValue);
-        var max = new Vector2(float.MinValue);
-        foreach (var corner in polygon)
-        {
-            min = Vector2.Min(min, corner);
-            max = Vector2.Max(max, corner);
-        }
-
-        _scratch.Clear();
-        _scratch.AddRange(polygon);
-        for (var x0 = MathF.Floor(min.X / size) * size; x0 < max.X; x0 += size)
-        {
-            ConvexPolygon.Clip(_scratch, _cell, Vector2.UnitX, x0);
-            ConvexPolygon.Clip(_cell, _strip, -Vector2.UnitX, -(x0 + size));
-            if (_strip.Count < 3)
-                continue;
-
-            for (var y0 = MathF.Floor(min.Y / size) * size; y0 < max.Y; y0 += size)
-            {
-                ConvexPolygon.Clip(_strip, _cell, Vector2.UnitY, y0);
-                ConvexPolygon.Clip(_cell, _polygonCell, -Vector2.UnitY, -(y0 + size));
-                if (_polygonCell.Count < 3)
-                    continue;
-
-                // Flats are drawn with row = floor(-y) & 63 (see WorldRenderer.DrawPlane).
-                var color = _blocks.Flat(flat, (int)x0, -(int)y0 - size);
-                AddFan(_polygonCell, height, color, ceiling);
-            }
-        }
+        if (polygon.Length >= 3)
+            AddFan(polygon, height, White, ceiling, _textureCache.Flat(flat));
     }
 
     /// <summary>A convex counter-clockwise polygon at a height, facing up (floor) or down (ceiling).</summary>
-    private void AddFan(IReadOnlyList<Vector2> polygon, float height, Vector3 color, bool ceiling)
+    private void AddFan(IReadOnlyList<Vector2> polygon, float height, Vector3 color, bool ceiling,
+        MeshTexture texture = null)
     {
-        var first = _builder.AddVertex(MeshBuilder.ToWorld(polygon[0].X, polygon[0].Y, height));
-        var previous = _builder.AddVertex(MeshBuilder.ToWorld(polygon[1].X, polygon[1].Y, height));
+        var first = FlatVertex(polygon[0], height, texture);
+        var previous = FlatVertex(polygon[1], height, texture);
         for (var i = 2; i < polygon.Count; i++)
         {
-            var next = _builder.AddVertex(MeshBuilder.ToWorld(polygon[i].X, polygon[i].Y, height));
+            var next = FlatVertex(polygon[i], height, texture);
             if (ceiling)
-                _builder.AddTriangle(first, next, previous, color);
+                _builder.AddTriangle(first, next, previous, color, texture);
             else
-                _builder.AddTriangle(first, previous, next, color);
+                _builder.AddTriangle(first, previous, next, color, texture);
             previous = next;
         }
     }
+
+    /// <summary>A floor or ceiling corner; flats are drawn with row = -y (see WorldRenderer.DrawPlane).</summary>
+    private int FlatVertex(Vector2 corner, float height, MeshTexture texture) =>
+        _builder.AddVertex(MeshBuilder.ToWorld(corner.X, corner.Y, height),
+            texture == null ? default : new Vector2(corner.X, -corner.Y) / Graphics.Flat.Size);
 
     //**********************************************************
     //** internals: walls
@@ -302,7 +272,7 @@ public sealed class LevelMeshes
 
             var anchor = (lowerUnpegged ? front.FloorHeight + _textures.Textures[middle].Height
                 : front.CeilingHeight) + side.YOffset;
-            AddWallPart(wall, front.FloorHeight, front.CeilingHeight, middle, anchor, tiled: true);
+            AddWallPart(wall, front.FloorHeight, front.CeilingHeight, middle, anchor);
             return;
         }
 
@@ -313,16 +283,14 @@ public sealed class LevelMeshes
         {
             var anchor = (upperUnpegged ? front.CeilingHeight
                 : back.CeilingHeight + _textures.Textures[upper].Height) + side.YOffset;
-            AddWallPart(wall, MathF.Max(back.CeilingHeight, front.FloorHeight), front.CeilingHeight, upper, anchor,
-                tiled: true);
+            AddWallPart(wall, MathF.Max(back.CeilingHeight, front.FloorHeight), front.CeilingHeight, upper, anchor);
         }
 
         var lower = TextureFrame(side.Lower);
         if (back.FloorHeight > front.FloorHeight && lower >= 0)
         {
             var anchor = (lowerUnpegged ? front.CeilingHeight : back.FloorHeight) + side.YOffset;
-            AddWallPart(wall, front.FloorHeight, MathF.Min(back.FloorHeight, front.CeilingHeight), lower, anchor,
-                tiled: true);
+            AddWallPart(wall, front.FloorHeight, MathF.Min(back.FloorHeight, front.CeilingHeight), lower, anchor);
         }
 
         var masked = TextureFrame(side.Middle);
@@ -332,8 +300,7 @@ public sealed class LevelMeshes
             var openTop = MathF.Min(front.CeilingHeight, back.CeilingHeight);
             var height = _textures.Textures[masked].Height;
             var anchor = (lowerUnpegged ? openBottom + height : openTop) + side.YOffset;
-            AddWallPart(wall, MathF.Max(openBottom, anchor - height), MathF.Min(openTop, anchor), masked, anchor,
-                tiled: false);
+            AddWallPart(wall, MathF.Max(openBottom, anchor - height), MathF.Min(openTop, anchor), masked, anchor);
         }
     }
 
@@ -341,52 +308,26 @@ public sealed class LevelMeshes
     private readonly record struct Wall(Vector2 Start, Vector2 End, float XOffset, float Shade);
 
     /// <summary>
-    /// The wall from <paramref name="bottom"/> to <paramref name="top"/>, cut where texture blocks (or the
-    /// texture's edges) begin. Row 0 of the texture is at height <paramref name="anchor"/>. Untiled (see-through
-    /// middle) parts drop blocks that are mostly holes.
+    /// The wall from <paramref name="bottom"/> to <paramref name="top"/> as one textured quad. Row 0 of the texture
+    /// is at height <paramref name="anchor"/>, column 0 at the start of the line (plus the offsets); it repeats.
     /// </summary>
-    private void AddWallPart(in Wall wall, float bottom, float top, int texture, float anchor, bool tiled)
+    private void AddWallPart(in Wall wall, float bottom, float top, int texture, float anchor)
     {
-        if (top - bottom < MinStep)
+        var length = Vector2.Distance(wall.Start, wall.End);
+        if (top - bottom < MinSize || length < MinSize)
             return;
 
         var source = _textures.Textures[texture];
-        var length = Vector2.Distance(wall.Start, wall.End);
-        if (length < MinStep)
-            return;
-
-        var direction = (wall.End - wall.Start) / length;
-        for (var s = 0f; s < length;)
-        {
-            var e = MathF.Min(length, s + StepToNextBlock(wall.XOffset + s, source.Width));
-            var column = (int)MathF.Floor(wall.XOffset + (s + e) / 2);
-            var left = wall.Start + direction * s;
-            var right = wall.Start + direction * e;
-            for (var z = top; z > bottom;)
-            {
-                var z2 = MathF.Max(bottom, z - StepToNextBlock(anchor - z, source.Height));
-                var row = (int)MathF.Floor(anchor - (z + z2) / 2);
-                var (color, coverage) = _blocks.Texture(texture, column, row);
-                if (tiled || coverage >= MinCoverage)
-                    _builder.AddQuad(MeshBuilder.ToWorld(left.X, left.Y, z2), MeshBuilder.ToWorld(right.X, right.Y, z2),
-                        MeshBuilder.ToWorld(right.X, right.Y, z), MeshBuilder.ToWorld(left.X, left.Y, z),
-                        color * wall.Shade);
-                z = z2;
-            }
-
-            s = e;
-        }
-    }
-
-    /// <summary>
-    /// Texels from <paramref name="position"/> to the next block start or texture edge (at least <see cref="MinStep"/>).
-    /// </summary>
-    private static float StepToNextBlock(float position, int textureSize)
-    {
-        var local = position - MathF.Floor(position / textureSize) * textureSize;
-        var next = MathF.Min((MathF.Floor(local / BlockColors.Size) + 1) * BlockColors.Size, textureSize);
-        var step = next - local;
-        return step < MinStep ? step + MathF.Min(BlockColors.Size, textureSize) : step;
+        var u1 = wall.XOffset / source.Width;
+        var u2 = (wall.XOffset + length) / source.Width;
+        var vTop = (anchor - top) / source.Height;
+        var vBottom = (anchor - bottom) / source.Height;
+        _builder.AddQuad(
+            MeshBuilder.ToWorld(wall.Start.X, wall.Start.Y, bottom), new Vector2(u1, vBottom),
+            MeshBuilder.ToWorld(wall.End.X, wall.End.Y, bottom), new Vector2(u2, vBottom),
+            MeshBuilder.ToWorld(wall.End.X, wall.End.Y, top), new Vector2(u2, vTop),
+            MeshBuilder.ToWorld(wall.Start.X, wall.Start.Y, top), new Vector2(u1, vTop),
+            White * wall.Shade, _textureCache.Wall(texture));
     }
 }
 

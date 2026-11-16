@@ -12,8 +12,11 @@ namespace Doom.Tests;
 
 public class MeshRenderingTests
 {
-    /// <summary>The test map's sectors are lit 160: Doom's light table 8 of 32 at the renderer's light distance.</summary>
-    private const float SectorBrightness = 0.75f;
+    /// <summary>The test map's sectors are lit 160: Doom's light table 7 of 32 right in front.</summary>
+    private const float SectorBrightness = 25 / 32f;
+
+    /// <summary>Where the mesh view's fog is black: (32 + 4) light tables of 96 units.</summary>
+    private const float FogEnd = 36 * 96;
 
     /// <summary>The door faces along x, so it is drawn a little lighter (Doom's fake contrast).</summary>
     private const float DoorShade = 1.1f;
@@ -44,7 +47,9 @@ public class MeshRenderingTests
         return new Camera(body.X, body.Y, level.Player.ViewZ, body.Angle);
     }
 
-    private static int Lit(byte color, float shade = 1) => (int)MathF.Round(color * SectorBrightness * shade);
+    /// <summary>A texel at <paramref name="distance"/> along the view in a test-map sector.</summary>
+    private static int Lit(byte color, float distance, float shade = 1) =>
+        (int)MathF.Round(color * SectorBrightness * shade * (1 - distance / FogEnd));
 
     /// <summary>Triangles that are not padding (padding repeats one corner).</summary>
     private static int RealTriangles(Mesh mesh)
@@ -95,9 +100,11 @@ public class MeshRenderingTests
         renderer.Render(level, CameraOf(level), -1);
 
         var middle = frame.Width / 2;
-        Assert.That(frame.Get(middle, 0), Is.EqualTo(Lit(TestWad.CeilingColor)).Within(2));
-        Assert.That(frame.Get(middle, frame.Height / 2), Is.EqualTo(Lit(TestWad.WallColor, DoorShade)).Within(2));
-        Assert.That(frame.Get(middle, frame.Height - 1), Is.EqualTo(Lit(TestWad.FloorColor)).Within(2));
+        // Distances along the view: the ceiling (87 above the eye) at the top row, the door at 192, the floor (41 below)
+        // at the bottom row; a row is 1/80 of a unit of slope.
+        Assert.That(frame.Get(middle, 0), Is.EqualTo(Lit(TestWad.CeilingColor, 87 / (49.5f / 80))).Within(2));
+        Assert.That(frame.Get(middle, frame.Height / 2), Is.EqualTo(Lit(TestWad.WallColor, 192, DoorShade)).Within(2));
+        Assert.That(frame.Get(middle, frame.Height - 1), Is.EqualTo(Lit(TestWad.FloorColor, 41 / (49.5f / 80))).Within(2));
     }
 
     [TestCase(false)]
@@ -135,7 +142,7 @@ public class MeshRenderingTests
         renderer.Render(level, new Camera(10, 128, 41, 0), -1);
 
         // The stimpack (4 × 4, colour 200) at x = 96 on the floor, 86 units ahead: rows 84 to 88.
-        Assert.That(frame.Get(frame.Width / 2, 86), Is.EqualTo(Lit(200)).Within(2));
+        Assert.That(frame.Get(frame.Width / 2, 86), Is.EqualTo(Lit(200, 86)).Within(2));
     }
 
     [Test]
@@ -225,24 +232,33 @@ public class MeshRenderingTests
         Assert.That(visibility.IsSectorVisible(2), Is.True);
     }
 
-    [TestCase(2f, 0)]
-    [TestCase(1f, 0)]
-    [TestCase(0.75f, 1)]
-    [TestCase(0.3f, 2)]
-    public void DetailFor_PixelsPerTexel_PicksTheLevel(float pixelsPerTexel, int expected) =>
-        Assert.That(SpriteMeshes.DetailFor(pixelsPerTexel), Is.EqualTo(expected));
-
     [Test]
-    public void Get_LowerDetail_HasFewerTriangles()
+    public void Get_SpritePicture_IsOneTexturedQuad()
     {
         var (_, palette, textures, _) = TestWad.Load();
-        var sprites = new SpriteMeshes(new BlockColors(palette, textures));
+        var sprites = new SpriteMeshes(new TextureCache(palette, textures));
         var picture = new Picture(4, 4, 2, 4);
         Array.Fill(picture.Opaque, true);
 
-        var counts = Enumerable.Range(0, SpriteMeshes.DetailLevels)
-            .Select(detail => sprites.Get(picture, false, detail).TriangleCount).ToArray();
+        var mesh = sprites.Get(picture, mirrored: false);
+        var mirrored = sprites.Get(picture, mirrored: true);
 
-        Assert.That(counts, Is.EqualTo(new[] { 8, 4, 2 }));
+        Assert.That(mesh.TriangleCount, Is.EqualTo(2));
+        Assert.That(mesh.TriangleTextures, Has.All.Not.Null);
+        Assert.That(mesh.TextureCoordinates[0].X, Is.EqualTo(1 - mirrored.TextureCoordinates[0].X));
+        Assert.That(sprites.Get(picture, mirrored: false, fullBright: true).IsUnlit, Is.True);
+    }
+
+    [Test]
+    public void Build_TestMap_WallsAndFlatsAreTexturedQuadsAndFans()
+    {
+        var (_, renderer, _) = Setup();
+
+        var roomA = renderer.LevelMeshes.Subsectors[0];
+
+        // Room A: a square floor and ceiling (two triangles each), five solid walls and the door's upper part.
+        Assert.That(RealTriangles(roomA.Flats), Is.EqualTo(4));
+        Assert.That(RealTriangles(roomA.Walls), Is.EqualTo(12));
+        Assert.That(roomA.Walls.TriangleTextures, Has.Some.Not.Null);
     }
 }

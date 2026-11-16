@@ -13,7 +13,9 @@ namespace ConsoleEngine.Rendering3D;
 /// Allocates nothing per frame once its vertex buffer has grown to the largest mesh.
 /// In <see cref="TrueColor"/> mode it fills a float RGB buffer instead (no dither), packed into <see cref="Rgb"/> by
 /// <see cref="Finish"/>. A mesh's opaque triangles are drawn first, then its see-through ones, blended
-/// <c>dst = lerp(dst, src, opacity)</c>, depth-tested but not writing depth.
+/// <c>dst = lerp(dst, src, opacity)</c>, depth-tested but not writing depth. Textured triangles
+/// (<see cref="Mesh.TriangleTextures"/>) sample their texture per pixel, perspective-correct, nearest texel, skipping
+/// holes; lit meshes fade into <see cref="SceneLighting.FogColor"/> per pixel when the lighting has fog.
 /// </summary>
 public sealed class Rasterizer : IRenderer3D
 {
@@ -34,6 +36,10 @@ public sealed class Rasterizer : IRenderer3D
     private Vector3 _albedo; // of the triangle being filled, while _lightMask != 0
     private Vector3 _normal; // of the triangle being filled, world space, while _lightMask != 0
     private int _meshLights; // of the mesh being drawn: bit i set = Lighting.Lights[i] reaches its bounding box
+    private MeshTexture _texture; // of the triangle being filled, or null
+    private bool _fog; // of the mesh being drawn: lit, and the lighting has fog
+    private float _fogStart, _fogScale; // amount = (distance - start) * scale
+    private Vector3 _fogColor;
 
     // Lights sorted into 8×8-pixel screen tiles (bit i: light i's bounds cover the tile), so a pixel only evaluates
     // the lights that can reach it. Rebuilt when the lights or the camera change.
@@ -137,6 +143,15 @@ public sealed class Rasterizer : IRenderer3D
                                                  || viewProjection != _tiledViewProjection))
             TileLights(viewProjection);
 
+        var uvs = mesh.TriangleTextures != null ? mesh.TextureCoordinates : null;
+        _fog = !mesh.IsUnlit && Lighting != null && Lighting.HasFog;
+        if (_fog)
+        {
+            _fogStart = Lighting.FogStart;
+            _fogScale = 1f / (Lighting.FogEnd - Lighting.FogStart);
+            _fogColor = Lighting.FogColor;
+        }
+
         var worldViewProjection = world * viewProjection;
         var min = new Vector3(float.MaxValue);
         var max = new Vector3(float.MinValue);
@@ -147,7 +162,7 @@ public sealed class Rasterizer : IRenderer3D
             min = Vector3.Min(min, worldPosition);
             max = Vector3.Max(max, worldPosition);
             // garbage behind the near plane, those corners are clipped first
-            _corners[i] = ToCorner(_clip[i], worldPosition);
+            _corners[i] = ToCorner(_clip[i], worldPosition, uvs == null ? default : uvs[i]);
         }
 
         if (lit)
@@ -205,6 +220,8 @@ public sealed class Rasterizer : IRenderer3D
                 continue;
 
             var color = mesh.TriangleColors[t];
+            _texture = mesh.TextureCoordinates != null ? mesh.TriangleTextures?[t] : null;
+            _albedo = color;
             _lightMask = 0;
             if (!mesh.IsUnlit)
             {
@@ -212,7 +229,6 @@ public sealed class Rasterizer : IRenderer3D
                 if (lit)
                 {
                     _lightMask = LightsReaching(_corners[ia].World, _corners[ib].World, _corners[ic].World, normal);
-                    _albedo = color;
                     _normal = normal;
                 }
 
@@ -312,9 +328,9 @@ public sealed class Rasterizer : IRenderer3D
     }
 
     /// <summary>The flat colour plus what the lights in <paramref name="mask"/> add at world position
-    /// <paramref name="position"/>.</summary>
+    /// <paramref name="position"/> to a surface of colour <paramref name="albedo"/>.</summary>
     [MethodImpl(MethodImplOptions.NoInlining)] // keeps the unlit pixel loop small
-    private Vector3 AddLights(Vector3 flat, int mask, Vector3 position)
+    private Vector3 AddLights(Vector3 flat, Vector3 albedo, int mask, Vector3 position)
     {
         // SceneLighting.Contribution, leaving each light as soon as it is known to add nothing.
         var lights = Lighting.Lights;
@@ -350,12 +366,12 @@ public sealed class Rasterizer : IRenderer3D
                 sum += light.Color * (fraction * fraction * MathF.Min(facing, 1f) * cone);
         }
 
-        var color = flat + _albedo * sum;
+        var color = flat + albedo * sum;
         return TrueColor ? Vector3.Clamp(color, Vector3.Zero, Vector3.One) : color;
     }
 
-    private Corner ToCorner(Vector4 clip, Vector3 world) =>
-        new() { Screen = ToScreen(clip), InverseW = 1f / clip.W, World = world };
+    private Corner ToCorner(Vector4 clip, Vector3 world, Vector2 uv) =>
+        new() { Screen = ToScreen(clip), InverseW = 1f / clip.W, World = world, Uv = uv };
 
     private Vector3 ToScreen(Vector4 clip)
     {
@@ -393,7 +409,8 @@ public sealed class Rasterizer : IRenderer3D
         {
             var t = fromClip.Z / (fromClip.Z - toClip.Z);
             kept[count++] = ToCorner(Vector4.Lerp(fromClip, toClip, t),
-                Vector3.Lerp(_corners[from].World, _corners[to].World, t));
+                Vector3.Lerp(_corners[from].World, _corners[to].World, t),
+                Vector2.Lerp(_corners[from].Uv, _corners[to].Uv, t));
         }
     }
 
@@ -420,6 +437,12 @@ public sealed class Rasterizer : IRenderer3D
 
     private void Fill(in Corner cornerA, in Corner cornerB, in Corner cornerC, float area, Vector3 color)
     {
+        if (_texture != null || _fog)
+        {
+            FillPerPixel(cornerA, cornerB, cornerC, area, color);
+            return;
+        }
+
         var a = cornerA.Screen;
         var b = cornerB.Screen;
         var c = cornerC.Screen;
@@ -469,7 +492,7 @@ public sealed class Rasterizer : IRenderer3D
                         var lights = _lightMask == 0 ? 0 : _lightMask & _tileLights[tiles + (x >> TileShift)];
                         var pixel = lights == 0
                             ? flat
-                            : AddLights(color, lights, (weightA * worldA + weightB * worldB + weightC * worldC)
+                            : AddLights(color, _albedo, lights, (weightA * worldA + weightB * worldB + weightC * worldC)
                                                / (weightA * cornerA.InverseW + weightB * cornerB.InverseW
                                                   + weightC * cornerC.InverseW));
                         if (TrueColor)
@@ -505,11 +528,136 @@ public sealed class Rasterizer : IRenderer3D
         }
     }
 
-    /// <summary>A transformed vertex: screen position and depth, 1 / w, and (lit meshes only) world position.</summary>
+    /// <summary>
+    /// <see cref="Fill"/> for triangles that need more per pixel: a texture (sampled perspective-correct, holes
+    /// skipped; the pixel is the texel times <paramref name="color"/>) and fog (by the pixel's distance along the
+    /// view, w). Kept apart so the flat loop stays small.
+    /// </summary>
+    private void FillPerPixel(in Corner cornerA, in Corner cornerB, in Corner cornerC, float area, Vector3 color)
+    {
+        var a = cornerA.Screen;
+        var b = cornerB.Screen;
+        var c = cornerC.Screen;
+        var minX = Math.Max(0, (int)MathF.Floor(MathF.Min(a.X, MathF.Min(b.X, c.X))));
+        var maxX = Math.Min(Width - 1, (int)MathF.Ceiling(MathF.Max(a.X, MathF.Max(b.X, c.X))));
+        var minY = Math.Max(0, (int)MathF.Floor(MathF.Min(a.Y, MathF.Min(b.Y, c.Y))));
+        var maxY = Math.Min(Height - 1, (int)MathF.Ceiling(MathF.Max(a.Y, MathF.Max(b.Y, c.Y))));
+        if (minX > maxX || minY > maxY)
+            return;
+
+        var inverseArea = 1f / area;
+        var startX = minX + 0.5f;
+        var startY = minY + 0.5f;
+        var rowA = Edge(b, c, startX, startY) * inverseArea;
+        var rowB = Edge(c, a, startX, startY) * inverseArea;
+        var rowC = Edge(a, b, startX, startY) * inverseArea;
+        var stepXA = (b.Y - c.Y) * inverseArea;
+        var stepXB = (c.Y - a.Y) * inverseArea;
+        var stepXC = (a.Y - b.Y) * inverseArea;
+        var stepYA = (c.X - b.X) * inverseArea;
+        var stepYB = (a.X - c.X) * inverseArea;
+        var stepYC = (b.X - a.X) * inverseArea;
+
+        // Texture coordinates, world position / w and 1 / w are linear on screen: their ratios are perspective-correct.
+        var uvA = cornerA.Uv * cornerA.InverseW;
+        var uvB = cornerB.Uv * cornerB.InverseW;
+        var uvC = cornerC.Uv * cornerC.InverseW;
+        var worldA = cornerA.World * cornerA.InverseW;
+        var worldB = cornerB.World * cornerB.InverseW;
+        var worldC = cornerC.World * cornerC.InverseW;
+        var texture = _texture;
+        var texels = texture != null ? texture.Colors : default;
+        var opaque = texture != null ? texture.Opaque : default;
+
+        for (var y = minY; y <= maxY; y++)
+        {
+            var weightA = rowA;
+            var weightB = rowB;
+            var weightC = rowC;
+            var index = y * Width + minX;
+            var tiles = (y >> TileShift) * _tilesX;
+
+            for (var x = minX; x <= maxX; x++, index++)
+            {
+                if (weightA >= 0 && weightB >= 0 && weightC >= 0)
+                {
+                    var depth = weightA * a.Z + weightB * b.Z + weightC * c.Z;
+                    if (depth < _depth[index]
+                        && (_opacity >= 1f || TrueColor || ScreenDoor[((y & 3) << 2) | (x & 3)] < _opacity))
+                    {
+                        var inverseW = weightA * cornerA.InverseW + weightB * cornerB.InverseW
+                                                                  + weightC * cornerC.InverseW;
+                        var flat = color;
+                        var albedo = _albedo;
+                        var drawn = true;
+                        if (texture != null)
+                        {
+                            var uv = (weightA * uvA + weightB * uvB + weightC * uvC) / inverseW;
+                            var texel = texture.IndexOf(uv.X, uv.Y);
+                            drawn = opaque[texel];
+                            flat *= texels[texel];
+                            albedo *= texels[texel];
+                        }
+
+                        if (drawn)
+                        {
+                            var lights = _lightMask == 0 ? 0 : _lightMask & _tileLights[tiles + (x >> TileShift)];
+                            var pixel = lights == 0
+                                ? flat
+                                : AddLights(flat, albedo, lights,
+                                    (weightA * worldA + weightB * worldB + weightC * worldC) / inverseW);
+                            if (_fog)
+                            {
+                                var amount = Math.Clamp((1f / inverseW - _fogStart) * _fogScale, 0f, 1f);
+                                pixel += (_fogColor - pixel) * amount;
+                            }
+
+                            if (TrueColor)
+                                pixel = Vector3.Clamp(pixel, Vector3.Zero, Vector3.One);
+                            Plot(index, x, y, depth, pixel);
+                        }
+                    }
+                }
+
+                weightA += stepXA;
+                weightB += stepXB;
+                weightC += stepXC;
+            }
+
+            rowA += stepYA;
+            rowB += stepYB;
+            rowC += stepYC;
+        }
+    }
+
+    /// <summary>Writes a pixel that passed the depth test (and, in palette mode, the screen door).</summary>
+    private void Plot(int index, int x, int y, float depth, Vector3 pixel)
+    {
+        if (!TrueColor)
+        {
+            _depth[index] = depth;
+            Colors[index] = _palette.ToConsoleColor(pixel, x, y);
+        }
+        else if (_opacity >= 1f)
+        {
+            _depth[index] = depth;
+            _shaded[index] = pixel;
+        }
+        else
+        {
+            _shaded[index] = pixel * _opacity + _shaded[index] * (1f - _opacity);
+        }
+    }
+
+    /// <summary>
+    /// A transformed vertex: screen position and depth, 1 / w, (lit meshes only) world position and (textured
+    /// meshes only) texture coordinates.
+    /// </summary>
     private struct Corner
     {
         public Vector3 Screen;
         public float InverseW;
         public Vector3 World;
+        public Vector2 Uv;
     }
 }

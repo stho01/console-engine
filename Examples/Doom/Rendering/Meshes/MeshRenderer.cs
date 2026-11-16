@@ -11,11 +11,12 @@ namespace Doom.Rendering.Meshes;
 /// <summary>
 /// The view drawn by the engine's 3D renderer (<c>ConsoleEngine.Rendering3D</c>'s CPU <see cref="Rasterizer"/>, the
 /// one Kartster uses) instead of Doom's BSP columns, to compare the two (V while playing). The level is
-/// <see cref="LevelMeshes"/>, things are <see cref="SpriteMeshes"/> turned to face the view plane. The rasterizer
-/// has one colour per triangle and one light per draw, so: textures are 8 × 8 mosaics, each sector and thing is lit
-/// by its light level (no fading with distance), and sky ceilings come out in a key colour that is swapped for the
-/// sky picture. The 24-bit frame is turned back into palette indices (<see cref="PaletteQuantizer"/>). Nothing is
-/// allocated per frame, except while a moving sector's mesh grows and the first time a sprite picture is seen.
+/// <see cref="LevelMeshes"/> (textured walls and flats), things are <see cref="SpriteMeshes"/> turned to face the
+/// view plane; only what <see cref="Visibility"/> finds is drawn. Light: each subsector and thing gets its sector's
+/// brightness (Doom's light table right in front), and the lighting's fog darkens with distance, as Doom's tables
+/// do. Sky ceilings come out in a key colour that is swapped for the sky picture. The 24-bit frame is turned back
+/// into palette indices (<see cref="PaletteQuantizer"/>). Nothing is allocated per frame, except while a moving
+/// sector's mesh grows and the first time a texture or sprite picture is seen.
 /// </summary>
 public sealed class MeshRenderer : IViewRenderer, IDisposable
 {
@@ -23,13 +24,16 @@ public sealed class MeshRenderer : IViewRenderer, IDisposable
     //** fields
     //**********************************************************
 
-    /// <summary>The distance a sector's light is taken at, for Doom's light tables (which fade with distance).</summary>
-    private const float LightDistance = 128;
-
-    /// <summary>Light tables per world unit of distance, and how many tables brighter things right in front are.</summary>
-    private const float DistanceShade = 1 / 96f;
+    /// <summary>World units per light table further away, and how many tables brighter things right in front are.</summary>
+    private const float UnitsPerLightTable = 96;
 
     private const int NearBoost = 4;
+
+    /// <summary>
+    /// Where the fog is black: Doom's light fades one table (of 32) per 96 units; the fog fades the brightness right in
+    /// front (4 tables up) to nothing over the same span.
+    /// </summary>
+    private const float FogEnd = (Palette.LightLevels + NearBoost) * UnitsPerLightTable;
     private const float FarPlane = 16384;
 
     /// <summary>Sky texture columns per full turn (as <see cref="WorldRenderer"/>).</summary>
@@ -63,9 +67,9 @@ public sealed class MeshRenderer : IViewRenderer, IDisposable
         _palette = palette;
         _textures = textures;
         _rasterizer = new Rasterizer(frame.Width, frame.Height, ConsolePalette.Campbell, trueColor: true);
-        var colors = new BlockColors(palette, textures);
-        _level = new LevelMeshes(map, textures, colors);
-        _sprites = new SpriteMeshes(colors);
+        var textureCache = new TextureCache(palette, textures);
+        _level = new LevelMeshes(map, textures, textureCache);
+        _sprites = new SpriteMeshes(textureCache);
         _quantizer = new PaletteQuantizer(palette);
         _visibility = new Visibility(frame.Width, map.Sectors.Length, _level.Polygons);
         _background = new uint[frame.Width * frame.Height];
@@ -99,6 +103,7 @@ public sealed class MeshRenderer : IViewRenderer, IDisposable
         SetView(camera);
 
         _rasterizer.Clear(_background);
+        _lighting.FogEnd = fixedLight >= 0 ? 0 : FogEnd;
         _rasterizer.Lighting = _lighting;
         TrianglesDrawn = 0;
         _visibility.Find(level.Map, camera);
@@ -197,12 +202,8 @@ public sealed class MeshRenderer : IViewRenderer, IDisposable
                 if (picture == null)
                     continue;
 
-                var detail = SpriteMeshes.DetailFor(_frame.Width / 2f / depth);
-                var mesh = _sprites.Get(picture, mirrored, detail);
-                if (mesh == null)
-                    continue;
-
                 var bright = (thing.Flags & ThingFlags.FullBright) != 0;
+                var mesh = _sprites.Get(picture, mirrored, bright);
                 var light = bright ? 1 : Brightness(sectors[body.Sector].LightLevel);
                 var position = MeshBuilder.ToWorld(body.X, body.Y, body.Z);
                 var world = new Matrix4x4(
@@ -217,13 +218,16 @@ public sealed class MeshRenderer : IViewRenderer, IDisposable
         }
     }
 
-    /// <summary>A sector light level (0..255) as a brightness for the rasterizer, from Doom's light tables.</summary>
+    /// <summary>
+    /// A sector light level (0..255) as a brightness for the rasterizer: Doom's light table right in front of the
+    /// viewer. The fog takes it down with distance.
+    /// </summary>
     private float Brightness(int lightLevel)
     {
         if (_fixedLight >= 0)
             return 1;
 
-        var table = ((255 - Math.Clamp(lightLevel, 0, 255)) >> 3) + (int)(LightDistance * DistanceShade) - NearBoost;
+        var table = ((255 - Math.Clamp(lightLevel, 0, 255)) >> 3) - NearBoost;
         return 1 - Math.Clamp(table, 0, Palette.LightLevels - 1) / (float)Palette.LightLevels;
     }
 
