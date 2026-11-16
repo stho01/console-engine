@@ -1,7 +1,8 @@
 # Doom (console)
 
 Plays the levels of a Doom WAD in the console: a 160 × 100 or 320 × 200 pixel 3D view drawn as half blocks
-(`▀`), dithered to the console's 16 colours, with a text status bar below.
+(`▀`) in exact 24-bit colour where the terminal supports it (else dithered to the console's 16 colours; C switches),
+with a text status bar below.
 
 The rendering and game code are this example's own. Every level, texture, flat, sprite and colour comes from the
 WAD file at run time. **The WAD is not part of this repository** (`*.wad` is gitignored), so don't commit one.
@@ -49,6 +50,7 @@ fit; Ctrl / Cmd + "+" zooms back in.
 | R | Toggle run (on by default) |
 | TAB | Automap; PAGE UP / PAGE DOWN zoom |
 | F11 | Gamma |
+| C | Exact colours / 16-colour dither |
 | ESC | Back to the title; on the title, quit |
 
 ## What is in

@@ -400,8 +400,12 @@ won't open", "I can't find the exit". Rules: [03 § Doom](03-rules.md#doom).
    (`WadLocator.Candidates` lists every place tried, also shown on screen). Stop.
 2. `COULD NOT LOAD THE WAD` + a message → the file is not a WAD or is cut short (`WadFile.Parse`, `MapLoader`,
    `Picture.Decode` messages in [06](06-diagnostics.md#doom-text)). Get a fresh copy. Stop.
-3. Too dark / colours muddy → the console has 16 colours; press F11 to raise the gamma (`ConsoleShades.GammaLevels`).
-   Check that the game runs in conhost with the 6 × 12 font ([P2](#p2)). Stop.
+3. Too dark / colours muddy / checkerboard speckle and black dots → the game is in 16-colour mode: each WAD colour is
+   a dithered mix of two console colours (`ConsoleShades`), and a terminal whose 16 colours differ from the classic
+   console's (macOS, Linux themes) makes the mixes loud. 24-bit colour removes the dither: Doom asks for it at start
+   (`RenderConsole.TrueColor`); it is only shown when the terminal reports it (`COLORTERM` = `truecolor`/`24bit`, or
+   set `CONSOLE_ENGINE_COLORS=truecolor`; Windows 10 1607+). C switches between exact and dithered colours. Then
+   press F11 to raise the gamma (`ConsoleShades.GammaLevels`). Stop.
 4. Door won't open → stand in front of it (within 64 units) and press E or ENTER; keyed doors need that key
    (`You need a … key to open this.`). Some doors open from a switch or a walk-over line elsewhere, and line specials
    not in `LineActions` do nothing. Escalate with the map name and place if a needed special is missing. Stop.

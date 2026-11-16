@@ -103,7 +103,8 @@ public class RenderingTests
         Presenter.Present(frame, new ConsoleShades(palette, 0), 0, console);
 
         Assert.That(console.GetCharAt(0, 0), Is.EqualTo(Presenter.HalfBlock));
-        Assert.That(console.GetCharAt(Layout.Standard.ViewWidth - 1, Layout.Standard.ViewRows - 1), Is.EqualTo(Presenter.HalfBlock));
+        var layout = Layout.Standard;
+        Assert.That(console.GetCharAt(layout.ViewWidth - 1, layout.ViewRows - 1), Is.EqualTo(Presenter.HalfBlock));
     }
 
     [Test]

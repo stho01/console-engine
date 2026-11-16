@@ -64,6 +64,7 @@ team's process differs.
 | Doom | 1 or ENTER / 2 at start-up | 160 × 100 view (6 × 12 font) / 320 × 200 view (3 × 6 font); start with `--resolution 160x100` or `--resolution 320x200` to skip the question. If 320 columns don't fit (Windows Terminal, macOS), zoom out with Ctrl/Cmd + "-" | `ResolutionPrompt` |
 | Doom | W S / ↑ ↓ (held), A D (held), ← → (held) | Move, strafe, turn | `LevelScene.ReadCommand` |
 | Doom | SPACE (held) / E or ENTER / 1-7 / R | Fire / use (doors, switches) / pick a weapon slot / toggle run | `LevelScene`, `Level.PlayerThink` |
+| Doom | C (any screen) | Exact 24-bit colours (default, where the terminal supports them) / 16-colour dither | `DoomGame.OnUpdate` |
 | Doom | TAB / PAGE UP, PAGE DOWN / F11 | Automap on/off / automap zoom / next gamma level | `LevelScene.ReadToggles` |
 | Doom | ESC | In a level or between maps: back to the title. On the title or the missing-WAD screen: quit | `LevelScene`, `TitleScene` |
 | Doom (no code) | Put `DOOM1.WAD` next to `Doom.exe`, or set `DOOM_WAD` | Gives the game a WAD to play | `WadLocator` |

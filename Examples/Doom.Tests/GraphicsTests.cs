@@ -124,4 +124,38 @@ public class GraphicsTests
 
         Assert.That(shades.GammaLevel, Is.EqualTo(0));
     }
+
+    [TestCase(0, 0x000000u)]
+    [TestCase(255, 0xFFFFFFu)]
+    public void Rgb_GreyPaletteExtremes_AreExact(int color, uint expected)
+    {
+        var (_, palette, _, _) = TestWad.Load();
+        var shades = new ConsoleShades(palette, 0);
+
+        Assert.That(shades.Rgb(0, (byte)color), Is.EqualTo(expected));
+    }
+
+    [Test]
+    public void Rgb_HigherGamma_IsBrighter()
+    {
+        var (_, palette, _, _) = TestWad.Load();
+        var shades = new ConsoleShades(palette, 0);
+        var before = shades.Rgb(0, 96) & 0xFF;
+
+        shades.SetGamma(2);
+
+        Assert.That(shades.Rgb(0, 96) & 0xFF, Is.GreaterThan(before));
+    }
+
+    [Test]
+    public void Rgb_GammaOne_IsThePaletteColour()
+    {
+        var (_, palette, _, _) = TestWad.Load();
+        var shades = new ConsoleShades(palette, 0);
+        var (r, g, b) = palette.GetColor(0, 96);
+
+        var rgb = shades.Rgb(0, 96);
+
+        Assert.That(rgb, Is.EqualTo((uint)r << 16 | (uint)g << 8 | b));
+    }
 }

@@ -38,6 +38,7 @@ public sealed class ConsoleShades
     private readonly ConsoleColor[] _low;
     private readonly ConsoleColor[] _high;
     private readonly byte[] _mix;
+    private readonly uint[] _rgb;
 
     //**********************************************************
     //** ctor
@@ -50,6 +51,7 @@ public sealed class ConsoleShades
         _low = new ConsoleColor[size];
         _high = new ConsoleColor[size];
         _mix = new byte[size];
+        _rgb = new uint[size];
         SetGamma(gammaLevel);
     }
 
@@ -78,7 +80,10 @@ public sealed class ConsoleShades
             for (var c = 0; c < Palette.ColorCount; c++)
             {
                 var (r, g, b) = _palette.GetColor(p, c);
-                Match(Brighten(r, inverse), Brighten(g, inverse), Brighten(b, inverse), p * Palette.ColorCount + c);
+                var index = p * Palette.ColorCount + c;
+                float red = Brighten(r, inverse), green = Brighten(g, inverse), blue = Brighten(b, inverse);
+                Match(red, green, blue, index);
+                _rgb[index] = ToRgb(red) << 16 | ToRgb(green) << 8 | ToRgb(blue);
             }
         }
     }
@@ -89,6 +94,11 @@ public sealed class ConsoleShades
         var i = palette * Palette.ColorCount + color;
         return _mix[i] > Bayer[((y & 3) << 2) | (x & 3)] ? _high[i] : _low[i];
     }
+
+    /// <summary>
+    /// The exact colour (<c>0xRRGGBB</c>, after gamma) of palette colour <paramref name="color"/>, for 24-bit consoles.
+    /// </summary>
+    public uint Rgb(int palette, byte color) => _rgb[palette * Palette.ColorCount + color];
 
     /// <summary>The two console colours and the mix (sixteenths of the second) chosen for a palette colour.</summary>
     public (ConsoleColor Low, ConsoleColor High, int Mix) Describe(int palette, byte color)
@@ -102,6 +112,8 @@ public sealed class ConsoleShades
     //**********************************************************
 
     private static float Brighten(byte value, float inverseGamma) => 255f * MathF.Pow(value / 255f, inverseGamma);
+
+    private static uint ToRgb(float value) => (uint)Math.Clamp(MathF.Round(value), 0f, 255f);
 
     /// <summary>
     /// Tries every pair of console colours: the best mix along the line between them is the target's projection onto
